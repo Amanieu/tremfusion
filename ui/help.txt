@@ -1,0 +1,121 @@
+{
+  "^3Welcome to MGDev!^7"
+  {
+    "This mod is under ongoing development. It is probably buggy and new "
+    "features will come and go, please be patient and report any bugs you "
+    "find!\n\n"
+    "Please visit the Mercenaries Guild at:\n"
+    "http://www.mercenariesguild.net/\n\n"
+    "We can also be reached on Freenode IRC:\n"
+    "#mercenariesguild"
+  }
+  "^3Release Notes r148^7"
+  {
+    "See svn.mercenariesguild.net for details."
+  }
+  "Alien Healing"
+  {
+    "The most important change for Alien players to know is that their healing "
+    "rate is slower away from creep. To counter this, healing near Boosters "
+    "and Basilisks is greatly accelerated.\n\n"
+    "Watch the health cross icon on your "
+    "HUD to see what your healing rate is. If the icon glows, you are on "
+    "creep. If you are near a booster or basilisk, you will see two "
+    "(2X healing) or four (3X healing) barbs around the health cross."
+  }
+  "Anti-Camping"
+  {
+    "Aliens will no longer be as frustrated by camping Human players because "
+    "the Adv. Dragoon is now available at Stage 2. The Adv. "
+    "Dragoon snipe attack has splash damage.\n\n"
+    "Also, because Human turrets "
+    "have a slight spinup delay, skillful Dretches can run inside the Human "
+    "base and get a few kills before being shot by turrets."
+  }
+  "Barricades"
+  {
+    "Nearly useless in 1.1, Barricades now have more health, are cheaper to "
+    "build, and will shrink to allow Aliens to pass through them. Acid tubes "
+    "will fire from behind barricades, providing a formidable defense. "
+    "Experiment with blocking off hallways and building staged defenses, but "
+    "keep in mind that low ceilings will prevent Tyrants from returning inside "
+    "the base."
+  }
+  "Human Buildables"
+  {
+    "While turrets now have a small spin up delay before firing, they have "
+    "increased damage output.\n\n"
+    "To protect against small Aliens getting inside "
+    "the base, build Tesla Generators at Stage 3. Tesla Generators no longer "
+    "require the Defense Computer to function. Instead, the Defense Computer "
+    "will automatically repair Human buildables. Tesla Generators can fire "
+    "over turrets."
+  }
+  "Human Weapons"
+  {
+    "The Lucifer Cannon projectile can be fired faster but now takes longer "
+    "to charge. You will be able to hear other players overcharge "
+    "their Lucifer Cannon.\n\n"
+    "The Mass Driver can now fire through players and buildables. The same "
+    "amount of damage is dealt to all targets along the path. Keep in mind "
+    "that you cannot shoot through friendly targets if friendly fire is off."
+  }
+  "Lag Correction"
+  {
+    "While the Tremulous implementation of Neil Toronto's unlagged is "
+    "becoming widely accepted, MGDev also implements client-side improvements "
+    "not possible in 1.1 servers. Because attacking is more "
+    "accurate on account of lag correction, Humans no longer need to lead "
+    "their weapons and Alien ranges and attack widths have generally been "
+    "decreased."
+  }
+  "Marauder"
+  {
+    "The Adv. Marauder now has a simpler, area-effect electric shock attack "
+    "that does not need to be aimed. Use this to attack large groups of Humans "
+    "or Human bases.\n\n"
+    "The Marauder's walljump mechanics have changed subtly. To walljump, "
+    "jump at a wall, look in the direction you wish to push and press jump "
+    "again. You can use the new walljump to gain speed in hallways, climb, "
+    "and swoop down on Humans."
+  }
+  "Mark Deconstruction"
+  {
+    "The deconstruction method has changed. Buildables are no longer instantly "
+    "deconstructed. Instead, a deconstruct mark appears on the health bar. "
+    "Go ahead and build a new buildable somewhere else and the old one will "
+    "be removed automatically. Buildables that are about to be removed by "
+    "constructing the selected buildable glow red."
+  }
+  "Sprint / Dodge"
+  {
+    "Human players will find their old binds for sprinting will no longer "
+    "work. Sprinting has been merged with a new Human ability, dodging. You "
+    "can bind a key for Sprint and Dodge via the Options menu or bind a "
+    "key (\\bind shift +button6). When you are strafing or walking backwards, "
+    "press the dodge key to make a quick sideways jump. When running forward, "
+    "press the dodge key to start a sprint. The sprint will last until you let "
+    "go of the forward key."
+  }
+  "Tyrant"
+  {
+    "The Tyrant is now a weaker class as its health has been lowered and "
+    "turret damage is greater. To counter this, Tyrants can charge for longer "
+    "periods of time, hit targets multiple times in a single charge, "
+    "and crush any Humans they land on top of. Trample charge does not "
+    "instantly release when full but can be held for two seconds. "
+    "The Tyrant's healing aura has been removed, find a booster or a basilisk "
+    "to heal faster."
+  }
+  "^3Credits^7"
+  {
+    "MGDev is developed and hosted by the Mercenaries Guild. "
+    "Contributing developers:\n\n"
+    "Asa ''Norfenstein'' Kravets\n"
+    "Tony J. White\n"
+    "Michael ''Risujin'' Levin\n"
+    "Ben Millwood (''benmachine'')\n"
+    "Chris ''Lakitu7'' Schwarz\n"
+    "Roman ''Kevlarman'' Tetelman\n"
+  }
+}
