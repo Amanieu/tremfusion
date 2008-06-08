@@ -96,51 +96,6 @@ static client_t *SV_GetPlayerByHandle( void ) {
 	return NULL;
 }
 
-/*
-==================
-SV_GetPlayerByNum
-
-Returns the player with idnum from Cmd_Argv(1)
-==================
-*/
-static client_t *SV_GetPlayerByNum( void ) {
-	client_t	*cl;
-	int			i;
-	int			idnum;
-	char		*s;
-
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		return NULL;
-	}
-
-	if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "No player specified.\n" );
-		return NULL;
-	}
-
-	s = Cmd_Argv(1);
-
-	for (i = 0; s[i]; i++) {
-		if (s[i] < '0' || s[i] > '9') {
-			Com_Printf( "Bad slot number: %s\n", s);
-			return NULL;
-		}
-	}
-	idnum = atoi( s );
-	if ( idnum < 0 || idnum >= sv_maxclients->integer ) {
-		Com_Printf( "Bad client slot: %i\n", idnum );
-		return NULL;
-	}
-
-	cl = &svs.clients[idnum];
-	if ( !cl->state ) {
-		Com_Printf( "Client %i is not active\n", idnum );
-		return NULL;
-	}
-	return cl;
-}
-
 //=========================================================
 
 
