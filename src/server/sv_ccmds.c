@@ -387,38 +387,6 @@ static void SV_Status_f( void ) {
 	Com_Printf ("\n");
 }
 
-/*
-==================
-SV_ConSay_f
-==================
-*/
-static void SV_ConSay_f(void) {
-	char	*p;
-	char	text[1024];
-
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		Com_Printf( "Server is not running.\n" );
-		return;
-	}
-
-	if ( Cmd_Argc () < 2 ) {
-		return;
-	}
-
-	strcpy (text, "console: ");
-	p = Cmd_Args();
-
-	if ( *p == '"' ) {
-		p++;
-		p[strlen(p)-1] = 0;
-	}
-
-	strcat(text, p);
-
-	SV_SendServerCommand(NULL, "chat \"%s\n\"", text);
-}
-
 
 /*
 ==================
@@ -524,9 +492,6 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("map", SV_Map_f);
 	Cmd_AddCommand ("devmap", SV_Map_f);
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
-	if( com_dedicated->integer ) {
-		Cmd_AddCommand ("say", SV_ConSay_f);
-	}
 }
 
 /*
