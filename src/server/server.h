@@ -185,9 +185,7 @@ typedef struct client_s {
 typedef struct {
 	netadr_t	adr;
 	int			challenge;
-	int			time;				// time the last packet was sent to the autherize server
-	int			pingTime;			// time the challenge response was sent to client
-	int			firstTime;			// time the adr was first used, for authorize timeout checks
+	int			time;			// time the challenge response was sent to client
 	qboolean	connected;
 } challenge_t;
 
@@ -210,8 +208,6 @@ typedef struct {
 	int			nextHeartbeatTime;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 	netadr_t	redirectAddress;			// for rcon return messages
-
-	netadr_t	authorizeAddress;			// for rcon return messages
 } serverStatic_t;
 
 //=============================================================================

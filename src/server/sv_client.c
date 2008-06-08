@@ -71,14 +71,11 @@ void SV_GetChallenge( netadr_t from ) {
 
 		challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
 		challenge->adr = from;
-		challenge->firstTime = svs.time;
 		challenge->time = svs.time;
 		challenge->connected = qfalse;
-		i = oldest;
 	}
 
 	// send the challengeResponse
-	challenge->pingTime = svs.time;
 	NET_OutOfBandPrint( NS_SERVER, from, "challengeResponse %i", challenge->challenge );
 }
 
@@ -162,7 +159,6 @@ void SV_DirectConnect( netadr_t from ) {
 			NET_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address\n" );
 			return;
 		}
-
 		svs.challenges[i].connected = qtrue;
 	}
 
