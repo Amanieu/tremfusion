@@ -44,6 +44,7 @@ extern	field_t	g_consoleField;
 extern	field_t	chatField;
 extern	int				anykeydown;
 extern	qboolean	chat_team;
+extern	qboolean	chat_admins;
 extern	int			chat_playerNum;
 
 void Key_WriteBindings( fileHandle_t f );

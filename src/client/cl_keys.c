@@ -37,6 +37,7 @@ int			historyLine;	// the line being displayed from history buffer
 field_t		g_consoleField;
 field_t		chatField;
 qboolean	chat_team;
+qboolean	chat_admins;
 
 int			chat_playerNum;
 
@@ -736,10 +737,13 @@ void Message_Key( int key ) {
 			else if (chat_team)
 
 				Com_sprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", chatField.buffer );
+
+			else if (chat_admins)
+
+				Com_sprintf( buffer, sizeof( buffer ), "say_admins \"%s\"\n", chatField.buffer );
+
 			else
 				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
-
-
 
 			CL_AddReliableCommand( buffer );
 		}
