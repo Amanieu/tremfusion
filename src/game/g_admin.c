@@ -269,7 +269,7 @@ qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
   char testName[ MAX_NAME_LENGTH ] = {""};
   char name2[ MAX_NAME_LENGTH ] = {""};
 
-  G_SanitiseName( name, name2 );
+  G_SanitiseString( name, name2, sizeof( name2 ) );
 
   if( !Q_stricmp( name2, "UnnamedPlayer" ) )
     return qtrue;
@@ -284,11 +284,10 @@ qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
     if( i == ( ent - g_entities ) )
       continue;
 
-    G_SanitiseName( client->pers.netname, testName );
+    G_SanitiseString( client->pers.netname, testName, sizeof( testName ) );
     if( !Q_stricmp( name2, testName ) )
     {
-      Q_strncpyz( err, va( "The name '%s^7' is already in use", name ),
-        len );
+      Com_sprintf( err, len, "The name '%s^7' is already in use", name );
       return qfalse;
     }
   }
@@ -300,12 +299,12 @@ qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
   {
     if( g_admin_admins[ i ]->level < 1 )
       continue;
-    G_SanitiseName( g_admin_admins[ i ]->name, testName );
+    G_SanitiseString( g_admin_admins[ i ]->name, testName, sizeof( testName ) );
     if( !Q_stricmp( name2, testName ) &&
       Q_stricmp( ent->client->pers.guid, g_admin_admins[ i ]->guid ) )
     {
-      Q_strncpyz( err, va( "The name '%s^7' belongs to an admin, "
-        "please use another name", name ), len );
+      Com_sprintf( err, len, "The name '%s^7' belongs to an admin, "
+        "please use another name", name );
       return qfalse;
     }
   }
@@ -748,7 +747,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
 
     l = vic->client->pers.adminLevel;
 
-    G_SanitiseName( vic->client->pers.netname, name );
+    G_SanitiseString( vic->client->pers.netname, name, sizeof( name ) );
     if( !strstr( name, search ) )
       continue;
 
@@ -762,7 +761,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
     {
       if( g_admin_levels[ j ]->level == l )
       {
-        G_DecolorString( g_admin_levels[ j ]->name, lname );
+        G_DecolorString( g_admin_levels[ j ]->name, lname, sizeof( lname ) );
         Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
           ( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
             - strlen( lname ) ) );
@@ -785,7 +784,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
   {
     if( search[ 0 ] )
     {
-      G_SanitiseName( g_admin_admins[ i ]->name, name );
+      G_SanitiseString( g_admin_admins[ i ]->name, name, sizeof( name ) );
       if( !strstr( name, search ) )
         continue;
 
@@ -797,7 +796,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
         vic = &g_entities[ j ];
         if( !vic->client || vic->client->pers.connected != CON_CONNECTED )
           continue;
-        G_SanitiseName( vic->client->pers.netname, name2 );
+        G_SanitiseString( vic->client->pers.netname, name2, sizeof( name2 ) );
         if( !Q_stricmp( vic->client->pers.guid, g_admin_admins[ i ]->guid ) &&
           strstr( name2, search ) )
         {
@@ -818,7 +817,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
     {
       if( g_admin_levels[ j ]->level == g_admin_admins[ i ]->level )
       {
-        G_DecolorString( g_admin_levels[ j ]->name, lname );
+        G_DecolorString( g_admin_levels[ j ]->name, lname, sizeof( lname ) );
         Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
           ( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
             - strlen( lname ) ) );
@@ -1004,7 +1003,7 @@ void G_admin_namelog_update( gclient_t *client, qboolean disconnect )
   char n2[ MAX_NAME_LENGTH ];
   int clientNum = ( client - level.clients );
 
-  G_SanitiseName( client->pers.netname, n1 );
+  G_SanitiseString( client->pers.netname, n1, sizeof( n1 ) );
   for( i = 0; i < MAX_ADMIN_NAMELOGS && g_admin_namelog[ i ]; i++ )
   {
     if( disconnect && g_admin_namelog[ i ]->slot != clientNum )
@@ -1022,7 +1021,7 @@ void G_admin_namelog_update( gclient_t *client, qboolean disconnect )
       for( j = 0; j < MAX_ADMIN_NAMELOG_NAMES &&
          g_admin_namelog[ i ]->name[ j ][ 0 ]; j++ )
       {
-        G_SanitiseName( g_admin_namelog[ i ]->name[ j ], n2 );
+        G_SanitiseString( g_admin_namelog[ i ]->name[ j ], n2, sizeof( n2 ) );
         if( !Q_stricmp( n1, n2 ) )
           break;
       }
@@ -1314,7 +1313,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
     // max printable name length for formatting
     for( i = 0; i < MAX_ADMIN_LEVELS && g_admin_levels[ i ]; i++ )
     {
-      G_DecolorString( l->name, n );
+      G_DecolorString( l->name, n, sizeof( n ) );
       if( strlen( n ) > admin_level_maxname )
         admin_level_maxname = strlen( n );
     }
@@ -1342,9 +1341,8 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
   char lstr[ 11 ]; // 10 is max strlen() for 32-bit int
   char adminname[ MAX_NAME_LENGTH ] = {""};
   char testname[ MAX_NAME_LENGTH ] = {""};
-  char testname2[ MAX_NAME_LENGTH ] = {""};
   char guid[ 33 ];
-  int l, i, j;
+  int l, i;
   gentity_t *vic = NULL;
   qboolean updated = qfalse;
   g_admin_admin_t *a;
@@ -1362,7 +1360,7 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
   G_SayArgv( 1 + skiparg, testname, sizeof( testname ) );
   G_SayArgv( 2 + skiparg, lstr, sizeof( lstr ) );
   l = atoi( lstr );
-  G_SanitiseName( testname, name );
+  G_SanitiseString( testname, name, sizeof( name ) );
   for( i = 0; i < sizeof( name ) && name[ i ]; i++ )
   {
     if( !isdigit( name[ i ] ) )
@@ -1422,7 +1420,7 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
   {
     for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ] && matches < 2; i++ )
     {
-      G_SanitiseName( g_admin_admins[ i ]->name, testname );
+      G_SanitiseString( g_admin_admins[ i ]->name, testname, sizeof( testname ) );
       if( strstr( testname, name ) )
       {
         Q_strncpyz( adminname, g_admin_admins[ i ]->name, sizeof( adminname ) );
@@ -1439,7 +1437,8 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
         vic = &g_entities[ i ];
         continue;
       }
-      G_SanitiseName( level.clients[ i ].pers.netname, testname );
+      G_SanitiseString( level.clients[ i ].pers.netname, testname,
+        sizeof( testname ) );
       if( strstr( testname, name ) )
       {
         vic = &g_entities[ i ];
@@ -1539,10 +1538,9 @@ static qboolean admin_create_ban( gentity_t *ent,
   Q_strncpyz( b->ip, ip, sizeof( b->ip ) );
 
   //strftime( b->made, sizeof( b->made ), "%m/%d/%y %H:%M:%S", lt );
-  Q_strncpyz( b->made, va( "%02i/%02i/%02i %02i:%02i:%02i",
-    (qt.tm_mon + 1), qt.tm_mday, (qt.tm_year - 100),
-    qt.tm_hour, qt.tm_min, qt.tm_sec ),
-    sizeof( b->made ) );
+  Com_sprintf( b->made, sizeof( b->made ), "%02i/%02i/%02i %02i:%02i:%02i",
+    qt.tm_mon + 1, qt.tm_mday, qt.tm_year % 100,
+    qt.tm_hour, qt.tm_min, qt.tm_sec );
 
   if( ent )
     Q_strncpyz( b->banner, ent->client->pers.netname, sizeof( b->banner ) );
@@ -1659,7 +1657,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
     return qfalse;
   }
   G_SayArgv( 1 + skiparg, search, sizeof( search ) );
-  G_SanitiseName( search, s2 );
+  G_SanitiseString( search, s2, sizeof( s2 ) );
   G_SayArgv( 2 + skiparg, secs, sizeof( secs ) );
 
   // support "w" (weeks), "d" (days), "h" (hours), and "m" (minutes) modifiers
@@ -1736,7 +1734,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
     for( j = 0; j < MAX_ADMIN_NAMELOG_NAMES &&
        g_admin_namelog[ i ]->name[ j ][ 0 ]; j++ )
     {
-      G_SanitiseName( g_admin_namelog[ i ]->name[ j ], n2 );
+      G_SanitiseString( g_admin_namelog[ i ]->name[ j ], n2, sizeof( n2 ) );
       if( strstr( n2, s2 ) )
       {
         if( logmatch != i )
@@ -1763,7 +1761,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
       for( j = 0; j < MAX_ADMIN_NAMELOG_NAMES &&
          g_admin_namelog[ i ]->name[ j ][ 0 ]; j++ )
       {
-        G_SanitiseName( g_admin_namelog[ i ]->name[ j ], n2 );
+        G_SanitiseString( g_admin_namelog[ i ]->name[ j ], n2, sizeof( n2 ) );
         if( strstr( n2, s2 ) )
         {
           if( g_admin_namelog[ i ]->slot > -1 )
@@ -2124,7 +2122,7 @@ qboolean G_admin_listadmins( gentity_t *ent, int skiparg )
         start = found + start;
     }
     else
-      G_SanitiseName( s, search );
+      G_SanitiseString( s, search, sizeof( search ) );
   }
 
   if( start >= found || start < 0 )
@@ -2261,7 +2259,7 @@ qboolean G_admin_listplayers( gentity_t *ent, int skiparg )
     }
 
     l = 0;
-    G_SanitiseName( p->pers.netname, n2 );
+    G_SanitiseString( p->pers.netname, n2, sizeof( n2 ) );
     n[ 0 ] = '\0';
     for( j = 0; j < MAX_ADMIN_ADMINS && g_admin_admins[ j ]; j++ )
     {
@@ -2273,7 +2271,7 @@ qboolean G_admin_listplayers( gentity_t *ent, int skiparg )
           break;
         }
         l = g_admin_admins[ j ]->level;
-        G_SanitiseName( g_admin_admins[ j ]->name, n3 );
+        G_SanitiseString( g_admin_admins[ j ]->name, n3, sizeof( n3 ) );
         if( Q_stricmp( n2, n3 ) )
         {
           Q_strncpyz( n, g_admin_admins[ j ]->name, sizeof( n ) );
@@ -2290,7 +2288,7 @@ qboolean G_admin_listplayers( gentity_t *ent, int skiparg )
         Q_strncpyz( lname, g_admin_levels[ j ]->name, sizeof( lname ) );
         if( *lname )
         {
-          G_DecolorString( lname, lname2 );
+          G_DecolorString( lname, lname2, sizeof( lname2 ) );
           Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
             ( admin_level_maxname + strlen( lname ) - strlen( lname2 ) ) );
           Com_sprintf( lname2, sizeof( lname2 ), lname_fmt, lname );
@@ -2377,8 +2375,8 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
   for( i = start; i < MAX_ADMIN_BANS && g_admin_bans[ i ] &&
      ( i - start ) < MAX_ADMIN_SHOWBANS; i++ )
   {
-    G_DecolorString( g_admin_bans[ i ]->name, n1 );
-    G_DecolorString( g_admin_bans[ i ]->banner, n2 );
+    G_DecolorString( g_admin_bans[ i ]->name, n1, sizeof( n1 ) );
+    G_DecolorString( g_admin_bans[ i ]->banner, n2, sizeof( n2 ) );
     if( strlen( n1 ) > max_name )
     {
       max_name = strlen( n1 );
@@ -2417,12 +2415,12 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
     secs = ( g_admin_bans[ i ]->expires - t );
     G_admin_duration( secs, duration, sizeof( duration ) );
 
-    G_DecolorString( g_admin_bans[ i ]->name, n1 );
+    G_DecolorString( g_admin_bans[ i ]->name, n1, sizeof( n1 ) );
     Com_sprintf( name_fmt, sizeof( name_fmt ), "%%%is",
       ( max_name + strlen( g_admin_bans[ i ]->name ) - strlen( n1 ) ) );
     Com_sprintf( n1, sizeof( n1 ), name_fmt, g_admin_bans[ i ]->name );
 
-    G_DecolorString( g_admin_bans[ i ]->banner, n2 );
+    G_DecolorString( g_admin_bans[ i ]->banner, n2, sizeof( n2 ) );
     Com_sprintf( banner_fmt, sizeof( banner_fmt ), "%%%is",
       ( max_banner + strlen( g_admin_bans[ i ]->banner ) - strlen( n2 ) ) );
     Com_sprintf( n2, sizeof( n2 ), banner_fmt, g_admin_bans[ i ]->banner );
@@ -2799,7 +2797,7 @@ qboolean G_admin_namelog( gentity_t *ent, int skiparg )
   if( G_SayArgc() > 1 + skiparg )
   {
     G_SayArgv( 1 + skiparg, search, sizeof( search ) );
-    G_SanitiseName( search, s2 );
+    G_SanitiseString( search, s2, sizeof( s2 ) );
   }
   ADMBP_begin();
   for( i = 0; i < MAX_ADMIN_NAMELOGS && g_admin_namelog[ i ]; i++ )
@@ -2810,7 +2808,7 @@ qboolean G_admin_namelog( gentity_t *ent, int skiparg )
       for( j = 0; j < MAX_ADMIN_NAMELOG_NAMES &&
         g_admin_namelog[ i ]->name[ j ][ 0 ]; j++ )
       {
-        G_SanitiseName( g_admin_namelog[ i ]->name[ j ], n2 );
+        G_SanitiseString( g_admin_namelog[ i ]->name[ j ], n2, sizeof( n2 ) );
         if( strstr( n2, s2 ) )
         {
           found = qtrue;
@@ -2949,11 +2947,11 @@ void G_admin_print( gentity_t *ent, char *m )
     char m2[ MAX_STRING_CHARS ];
     if( !trap_Cvar_VariableIntegerValue( "com_ansiColor" ) )
     {
-      G_DecolorString( m, m2 );
-      G_Printf( m2 );
+      G_DecolorString( m, m2, sizeof( m2 ) );
+      trap_Print( m2 );
     }
     else
-      G_Printf( m );
+      trap_Print( m );
   }
 }
 

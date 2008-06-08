@@ -989,7 +989,6 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
-  team_t    team;
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1146,11 +1145,6 @@ void ClientUserinfoChanged( int clientNum )
   strcpy( c1, Info_ValueForKey( userinfo, "color1" ) );
   strcpy( c2, Info_ValueForKey( userinfo, "color2" ) );
 
-  if( client->ps.pm_flags & PMF_FOLLOW )
-    team = TEAM_NONE;
-  else
-    team = client->ps.stats[ STAT_TEAM ];
-
   Q_strncpyz( client->pers.voice, Info_ValueForKey( userinfo, "voice" ),
     sizeof( client->pers.voice ) );
 
@@ -1160,7 +1154,7 @@ void ClientUserinfoChanged( int clientNum )
   Com_sprintf( userinfo, sizeof( userinfo ),
     "n\\%s\\t\\%i\\model\\%s\\c1\\%s\\c2\\%s\\"
     "hc\\%i\\ig\\%16s\\v\\%s",
-    client->pers.netname, team, model, c1, c2,
+    client->pers.netname, client->pers.teamSelection, model, c1, c2,
     client->pers.maxHealth, BG_ClientListString( &client->sess.ignoreList ),
     client->pers.voice );
 
