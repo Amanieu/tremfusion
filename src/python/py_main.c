@@ -216,5 +216,5 @@ void PY_ExecScript_f( void )
 void PY_Frame( void )
 {
   if(Python_Initialized)
-    PyRun_SimpleString("time.sleep(0.1)");
+    PyRun_SimpleString("time.sleep(0.0001)");
 }
