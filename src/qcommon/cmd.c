@@ -241,9 +241,10 @@ void Cmd_Exec_f( void ) {
 	char	*f;
 	int		len;
 	char	filename[MAX_QPATH];
+	int i;
 
-	if (Cmd_Argc () != 2) {
-		Com_Printf ("exec <filename> : execute a script file\n");
+	if (Cmd_Argc () < 2) {
+		Com_Printf ("exec <filename> (args) : execute a script file\n");
 		return;
 	}
 
@@ -256,6 +257,17 @@ void Cmd_Exec_f( void ) {
 	}
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
 	
+	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
+	Cvar_Set( "arg_all", Cmd_ArgsFrom(2) );
+	Cvar_Get( "arg_count", va( "%i", Cmd_Argc() - 2 ), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
+	Cvar_Set( "arg_count", va( "%i", Cmd_Argc() - 2 ) );
+
+	for (i = Cmd_Argc() - 2; i; i--)
+	{
+		Cvar_Get( va("arg_%i", i), Cmd_Argv( i + 1 ), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
+		Cvar_Set( va("arg_%i", i), Cmd_Argv( i + 1 ) );
+	}
+		
 	Cbuf_InsertText (f);
 
 	FS_FreeFile (f);
