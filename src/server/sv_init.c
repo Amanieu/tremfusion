@@ -689,7 +689,6 @@ void SV_Shutdown( char *finalmsg ) {
 		SV_FinalMessage( finalmsg );
 	}
 
-	SV_RemoveOperatorCommands();
 	SV_MasterShutdown();
 	SV_ShutdownGameProgs();
 

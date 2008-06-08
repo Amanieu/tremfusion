@@ -258,7 +258,6 @@ void QDECL SV_SendServerCommand( client_t *cl, const char *fmt, ...);
 
 
 void SV_AddOperatorCommands (void);
-void SV_RemoveOperatorCommands (void);
 
 
 void SV_MasterHeartbeat (void);
