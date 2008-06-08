@@ -1033,6 +1033,7 @@ extern cvar_t	*r_height;
 extern cvar_t	*r_pixelAspect;
 
 extern cvar_t	*r_fullscreen;
+extern cvar_t	*r_minimize;
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_displayRefresh;		// optional display refresh option
 extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities

@@ -659,6 +659,43 @@ void GLimp_EndFrame( void )
 		SDL_GL_SwapBuffers();
 	}
 
+	if( r_minimize && r_minimize->integer )
+	{
+		extern qboolean fullscreen_minimized;
+		extern void IN_DeactivateMouse( void );
+		SDL_Surface *s = SDL_GetVideoSurface( );
+		qboolean    fullscreen = qfalse;
+		qboolean    minimized = qfalse;
+
+		fullscreen = ( s && ( s->flags & SDL_FULLSCREEN ) );
+
+#ifdef MACOS_X
+		// this is a bit crap, but the mac SDL_WM_IconifyWindow does not work
+		// on fullscreen windows, nor does the SDL_WM_ToggleFullscreen work
+		if( !fullscreen )
+		{
+			if( SDL_WM_IconifyWindow( ) )
+				IN_DeactivateMouse();
+			Cvar_Set( "r_minimize", "0" ); 
+		}
+		else if( r_fullscreen->integer ) 
+		{
+			Cvar_Set( "r_fullscreen", "0" );
+			fullscreen_minimized = qtrue;
+		}
+#else
+		minimized = ( SDL_WM_IconifyWindow( ) != 0 );
+		if( fullscreen && minimized )
+			fullscreen_minimized = qtrue;
+
+		// this shouldn't be necessary, but seems to prevent X11 mouse problems
+		if( minimized )
+			IN_DeactivateMouse();
+
+		Cvar_Set( "r_minimize", "0" ); 
+#endif // MACOS_X
+	}
+
 	if( r_fullscreen->modified )
 	{
 		qboolean    fullscreen;
