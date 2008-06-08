@@ -41,6 +41,7 @@ qboolean	chat_admins;
 
 int			chat_playerNum;
 
+cmdPrompt_t prompt = {qfalse, "\0", "\0", "\0"};
 
 qboolean	key_overstrikeMode;
 
@@ -742,10 +743,17 @@ void Message_Key( int key ) {
 
 				Com_sprintf( buffer, sizeof( buffer ), "say_admins \"%s\"\n", chatField.buffer );
 
-			else
+			else if (prompt.active) {
+
+				Cvar_SetLatched( prompt.store, chatField.buffer );
+				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
+				Cbuf_ExecuteText( EXEC_NOW, buffer);
+
+			} else
 				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
 
-			CL_AddReliableCommand( buffer );
+			if ( !prompt.active )
+				CL_AddReliableCommand( buffer );
 		}
 		Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
 		Field_Clear( &chatField );

@@ -51,6 +51,15 @@ extern	qboolean	chat_team;
 extern	qboolean	chat_admins;
 extern	int			chat_playerNum;
 
+typedef struct {
+	qboolean	active;
+	char		question[1024];
+	char		callback[1024];
+	char		store[1024];
+} cmdPrompt_t;
+
+extern	cmdPrompt_t	prompt;
+
 void Key_WriteBindings( fileHandle_t f );
 void Key_SetBinding( int keynum, const char *binding );
 char *Key_GetBinding( int keynum );
