@@ -165,8 +165,12 @@ qboolean	NET_IsLocalAddress (netadr_t adr);
 const char	*NET_AdrToString (netadr_t a);
 qboolean	NET_StringToAdr ( const char *s, netadr_t *a);
 qboolean	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message);
-void		NET_Sleep(int msec);
 
+#ifdef __EPOLL__
+int	        NET_Sleep_ctor(void);
+#endif
+
+void		NET_Sleep(int msec);
 
 #define	MAX_MSGLEN				16384		// max length of a message, which may
 											// be fragmented into multiple packets

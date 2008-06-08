@@ -192,7 +192,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-    -pipe -DUSE_ICON $(shell sdl-config --cflags)
+    -pipe -DUSE_ICON $(shell sdl-config --cflags) -D__EPOLL__
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
