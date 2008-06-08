@@ -380,6 +380,8 @@ extern	cvar_t	*cl_lanForcePackets;
 extern	cvar_t	*cl_autoRecordDemo;
 extern	cvar_t	*cl_altTab;
 
+extern  cvar_t  *cl_dlURLOverride;
+
 //=================================================
 
 //

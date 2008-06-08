@@ -83,6 +83,8 @@ cvar_t	*cl_guidServerUniq;
 
 cvar_t	*cl_altTab;
 
+cvar_t  *cl_dlURLOverride;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -1555,13 +1557,21 @@ void CL_NextDownload(void) {
 			s = localName + strlen(localName); // point at the nul byte
 #ifdef USE_CURL
 		if(!(cl_allowDownload->integer & DLF_NO_REDIRECT)) {
-			if(clc.sv_allowDownload & DLF_NO_REDIRECT) {
+			char *host = NULL;
+			if(*cl_dlURLOverride->string) {
+				Com_Printf("Overriding sv_dlURL "
+					"(%s) with cl_dlURLOverride "
+					"(%s)\n", clc.sv_dlURL, 
+					cl_dlURLOverride->string);
+				host = cl_dlURLOverride->string;
+			}
+			if(!host && clc.sv_allowDownload & DLF_NO_REDIRECT) {
 				Com_Printf("WARNING: server does not "
 					"allow download redirection "
 					"(sv_allowDownload is %d)\n",
 					clc.sv_allowDownload);
 			}
-			else if(!*clc.sv_dlURL) {
+			else if(!host && !*clc.sv_dlURL) {
 				Com_Printf("WARNING: server allows "
 					"download redirection, but does not "
 					"have sv_dlURL set\n");
@@ -1571,8 +1581,9 @@ void CL_NextDownload(void) {
 					"cURL library\n");
 			}
 			else {
+				if(!host) host = clc.sv_dlURL;
 				CL_cURL_BeginDownload(localName, va("%s/%s",
-					clc.sv_dlURL, remoteName));
+					host, remoteName));
 				useCURL = qtrue;
 			}
 		}
@@ -2704,6 +2715,8 @@ void CL_Init( void ) {
 	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE);
 
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
+
+	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );
