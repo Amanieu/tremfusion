@@ -918,9 +918,11 @@ will point into this temporary buffer.
 */
 // NOTE TTimo define that to track tokenization issues
 //#define TKN_DBG
-static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes ) {
-	const char	*text;
+static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qboolean parseCvar ) {
+	char	*text;
 	char	*textOut;
+	const char *cvarName;
+	char buffer[ BIG_INFO_STRING ];
 
 #ifdef TKN_DBG
   // FIXME TTimo blunt hook to try to find the tokenization of userinfo
@@ -935,9 +937,62 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes ) {
 		return;
 	}
 	
-	Q_strncpyz( cmd.cmd, text_in, sizeof(cmd.cmd) );
+	// parse for cvar substitution
+	if ( parseCvar )
+	{
+		Q_strncpyz( buffer, text_in, sizeof( buffer ) );
+		text = buffer;
+		textOut = cmd.cmd;
+		while ( *text )
+		{
+			if ( text[0] != '\\' || text[1] != '$' )
+			{
+				if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
+					break;
+				*textOut++ = *text++;
+				continue;
+			}
+			text += 2;
+			cvarName = text;
+			while ( *text && *text != '\\' )
+				text++;
+			if ( *text == '\\' )
+			{
+				*text = 0;
+				if ( Cvar_Flags( cvarName ) != CVAR_NONEXISTENT )
+				{
+					Q_strncpyz( textOut, Cvar_VariableString( cvarName ), sizeof(cmd.cmd) - ( textOut - cmd.cmd ) );
+					while ( *textOut )
+						textOut++;
+					if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
+						break;
+				}
+				else
+				{
+					cvarName -= 2;
+					while ( *cvarName++ && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
+						*textOut++ = *cvarName;
+					if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
+						break;
+					*textOut++ = '\\';
+				}
+				text++;
+			}
+			else
+			{
+				cvarName -= 2;
+				while ( *cvarName && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
+					*textOut++ = *cvarName++;
+				if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
+					break;
+			}
+		}
+		*textOut = 0;
+	}
+	else
+		Q_strncpyz( cmd.cmd, text_in, sizeof(cmd.cmd) );
 
-	text = text_in;
+	text = cmd.cmd;
 	textOut = cmd.tokenized;
 
 	while ( 1 ) {
@@ -1027,7 +1082,7 @@ Cmd_TokenizeString
 ============
 */
 void Cmd_TokenizeString( const char *text_in ) {
-	Cmd_TokenizeString2( text_in, qfalse );
+	Cmd_TokenizeString2( text_in, qfalse, qfalse );
 }
 
 /*
@@ -1036,7 +1091,16 @@ Cmd_TokenizeStringIgnoreQuotes
 ============
 */
 void Cmd_TokenizeStringIgnoreQuotes( const char *text_in ) {
-	Cmd_TokenizeString2( text_in, qtrue );
+	Cmd_TokenizeString2( text_in, qtrue, qfalse );
+}
+
+/*
+============
+Cmd_TokenizeStringParseCvar
+============
+*/
+void Cmd_TokenizeStringParseCvar( const char *text_in ) {
+	Cmd_TokenizeString2( text_in, qfalse, qtrue );
 }
 
 /*
@@ -1119,7 +1183,7 @@ void	Cmd_ExecuteString( const char *text ) {
 	cmd_function_t	*cmdFunc, **prev;
 
 	// execute the command line
-	Cmd_TokenizeString( text );		
+	Cmd_TokenizeStringParseCvar( text );		
 	if ( !Cmd_Argc() ) {
 		return;		// no tokens
 	}
