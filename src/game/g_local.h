@@ -890,8 +890,6 @@ qboolean  SpotWouldTelefrag( gentity_t *spot );
 // g_svcmds.c
 //
 qboolean  ConsoleCommand( void );
-void      G_ProcessIPBans( void );
-qboolean  G_FilterPacket( char *from );
 
 //
 // g_weapon.c
@@ -1095,8 +1093,6 @@ extern  vmCvar_t  g_allowVote;
 extern  vmCvar_t  g_voteLimit;
 extern  vmCvar_t  g_teamAutoJoin;
 extern  vmCvar_t  g_teamForceBalance;
-extern  vmCvar_t  g_banIPs;
-extern  vmCvar_t  g_filterBan;
 extern  vmCvar_t  g_smoothClients;
 extern  vmCvar_t  pmove_fixed;
 extern  vmCvar_t  pmove_msec;

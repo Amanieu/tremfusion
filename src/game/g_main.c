@@ -76,8 +76,6 @@ vmCvar_t  g_allowVote;
 vmCvar_t  g_voteLimit;
 vmCvar_t  g_teamAutoJoin;
 vmCvar_t  g_teamForceBalance;
-vmCvar_t  g_banIPs;
-vmCvar_t  g_filterBan;
 vmCvar_t  g_smoothClients;
 vmCvar_t  pmove_fixed;
 vmCvar_t  pmove_msec;
@@ -177,9 +175,6 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_logFileSync, "g_logFileSync", "0", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_password, "g_password", "", CVAR_USERINFO, 0, qfalse  },
-
-  { &g_banIPs, "g_banIPs", "", CVAR_ARCHIVE, 0, qfalse  },
-  { &g_filterBan, "g_filterBan", "1", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_needpass, "g_needpass", "0", CVAR_SERVERINFO | CVAR_ROM, 0, qfalse },
 
@@ -537,8 +532,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   G_Printf( "------- Game Initialization -------\n" );
   G_Printf( "gamename: %s\n", GAME_VERSION );
   G_Printf( "gamedate: %s\n", __DATE__ );
-
-  G_ProcessIPBans( );
 
   BG_InitMemory( );
 
