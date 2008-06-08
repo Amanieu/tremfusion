@@ -566,6 +566,29 @@ void Cmd_Strcmp_f( void ) {
   Cbuf_InsertText( va("%s\n", v ) );
 }
 
+/*
+===============
+Cmd_Concat_f
+
+concatenates cvars together
+===============
+*/
+void Cmd_Concat_f( void ) {
+  char  *v1;
+  char  *v2;
+  int   i;
+  char  vc[MAX_CVAR_VALUE_STRING] = "";
+  if (Cmd_Argc () < 4) {
+    Com_Printf ("concat <variableToSet> <variable1> ... <variableN> : concatenates variable1 to variableN and sets the result to variableToSet\n");
+    return;
+  }
+
+  for (i = 3; i < Cmd_Argc(); i++)
+  	Q_strcat( vc, sizeof(vc), Cvar_ValidateString( Cmd_Argv(i) ) );
+
+  Cvar_Set2( Cmd_Argv( 1 ), vc , qfalse);
+}
+
 // 
 /*
 ===============
