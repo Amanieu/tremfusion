@@ -25,7 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _QCOMMON_H_
 
 #include "../qcommon/cm_public.h"
-
+#if PYTHON
+#include "../python/python_public.h"
+#endif
 //Ignore __attribute__ on non-gcc platforms
 #ifndef __GNUC__
 #ifndef __attribute__

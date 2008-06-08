@@ -120,6 +120,10 @@ ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
 endif
 
+ifndef PYTHON
+PYTHON = 1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -145,6 +149,7 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
+PYDIR=$(MOUNT_DIR)/python
 
 # extract version info
 VERSION=$(shell grep "\#define *PRODUCT_VERSION" $(CMDIR)/q_shared.h | \
@@ -274,6 +279,14 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
+  ifeq ($(PYTHON),1)
+   PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
+   NOTSHLIBCFLAGS += -DPYTHON=1
+   NOTSHLIBCFLAGS += -I/usr/include/python2.5
+   LDFLAGS += $(PYTHONLDFLAGS)
+   LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
+  endif
+  
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
@@ -1195,6 +1208,12 @@ ifeq ($(ARCH),x86)
     $(B)/client/snapvectora.o
 endif
 
+ifeq ($(PYTHON),1)
+	Q3OBJ += \
+	$(B)/client/py_init.o \
+	$(B)/client/py_main.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1291,6 +1310,12 @@ ifeq ($(ARCH),x86)
       $(B)/ded/ftola.o \
       $(B)/ded/snapvectora.o \
       $(B)/ded/matha.o
+endif
+
+ifeq ($(PYTHON),1)
+	Q3DOBJ += \
+	$(B)/ded/py_init.o \
+	$(B)/ded/py_main.o
 endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
@@ -1488,6 +1513,8 @@ $(B)/client/%.o: $(SYSDIR)/%.c
 $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
+$(B)/client/%.o: $(PYDIR)/%.c
+	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1508,6 +1535,9 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
 $(B)/ded/%.o: $(NDIR)/%.c
+	$(DO_DED_CC)
+	
+$(B)/ded/%.o: $(PYDIR)/%.c
 	$(DO_DED_CC)
 
 # Extra dependencies to ensure the SVN version is incorporated
