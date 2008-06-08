@@ -2698,6 +2698,7 @@ void Com_Frame( void ) {
 		msec = com_frameTime - lastTime;
 	} while ( msec < minMsec );
 	Cbuf_Execute ();
+	Cdelay_Frame ();
 
 	if (com_altivec->modified)
 	{

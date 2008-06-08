@@ -368,6 +368,10 @@ void Cbuf_Execute (void);
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function, or current args will be destroyed.
 
+void Cdelay_Frame (void);
+//Check if a delayed command have to be executed and decreases the remaining
+//delay time for all of them
+
 //===========================================================================
 
 /*
