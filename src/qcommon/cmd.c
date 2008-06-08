@@ -281,7 +281,214 @@ void Cmd_Vstr_f( void ) {
 	Cbuf_InsertText( va("%s\n", v ) );
 }
 
+/*
+===============
+Cmd_If_f
 
+Compares two values, if true executes the third argument, if false executes the forth
+===============
+*/
+void Cmd_If_f( void ) {
+  char	*v;
+  int 	v1;
+  int 	v2;
+  char	*vt;
+  char	*vf;
+  char  *op;
+
+  if ( (Cmd_Argc () == 6 ) || (Cmd_Argc () == 5) ) {
+    v1 = atoi( Cmd_Argv( 1 ) );
+    op = Cmd_Argv( 2 );
+    v2 = atoi( Cmd_Argv( 3 ) );
+    vt = Cmd_Argv( 4 );
+    if ( ( !strcmp( op, "="  ) && v1 == v2 ) ||
+         ( !strcmp( op, "!=" ) && v1 != v2 ) ||
+         ( !strcmp( op, "<"  ) && v1 <  v2 ) ||
+         ( !strcmp( op, "<=" ) && v1 <= v2 ) ||
+         ( !strcmp( op, ">"  ) && v1 >  v2 ) ||
+         ( !strcmp( op, ">=" ) && v1 >= v2 ) )
+    {
+      v = vt;
+    }
+    else if ( ( !strcmp( op, "="  ) && v1 != v2 ) ||
+              ( !strcmp( op, "!=" ) && v1 == v2 ) ||
+              ( !strcmp( op, "<"  ) && v1 >= v2 ) ||
+              ( !strcmp( op, "<=" ) && v1 >  v2 ) ||
+              ( !strcmp( op, ">"  ) && v1 <= v2 ) ||
+              ( !strcmp( op, ">=" ) && v1 <  v2 ) )
+    {
+      if ( Cmd_Argc () == 6 ) 
+      {
+        vf = Cmd_Argv( 5 );
+        v = vf;
+      }
+      else
+      {
+        return;
+      }
+    }
+    else
+    {
+      Com_Printf ("invalid operator in if command. valid operators are = != < > >= <=\n");
+      return;
+    }
+  }
+  else {
+    Com_Printf ("if <value1> <operator> <value2> <cmdthen> (<cmdelse>) : compares the first two values and executes <cmdthen> if true, <cmdelse> if false\n");
+    return;
+  }
+  Cbuf_InsertText( va("%s\n", v ) );
+}
+
+/*
+===============
+Cmd_Math_f
+
+Does math and saves the result to a cvar
+===============
+*/
+void Cmd_Math_f( void ) {
+  char	*v;
+  char 	*v1;
+  char 	*v2;
+  char  *op;
+  if (Cmd_Argc () == 3)
+  {
+    v = Cmd_Argv( 1 );
+    op = Cmd_Argv( 2 );
+    if ( !strcmp( op, "++" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v ) + 1 ) );
+    }
+    else if ( !strcmp( op, "--" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v ) - 1 ) );
+    }
+    else
+    {
+      Com_Printf ("math <variableToSet> = <value1> <operator> <value2>\nmath <variableToSet> <operator> <value1>\nmath <variableToSet> ++\nmath <variableToSet> --\nvalid operators are + - * / \n");
+      return;
+    }
+  }
+  else if (Cmd_Argc () == 4)
+  {
+    v = Cmd_Argv( 1 );
+    op = Cmd_Argv( 2 );
+    v1 = Cmd_Argv( 3 );
+    if ( !strcmp( op, "+" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v ) + atoi( v1 ) ) );
+    }
+    else if ( !strcmp( op, "-" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v ) - atoi( v1 ) ) );
+    }
+    else if ( !strcmp( op, "*" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v ) * atoi( v1 ) ) );
+    }
+    else if ( !strcmp( op, "/" ) )
+    {
+      if ( ! ( Cvar_VariableValue( v1 ) == 0 ) )
+      {
+        Cvar_SetValueSafe( v, ( atoi( v ) / atoi( v1 ) ) );
+      }
+    }
+    else
+    {
+      Com_Printf ("math <variableToSet> = <value1> <operator> <value2>\nmath <variableToSet> <operator> <value1>\nmath <variableToSet> ++\nmath <variableToSet> --\nvalid operators are + - * / \n");
+      return;
+    }
+  }
+  else if (Cmd_Argc () == 6)
+  {
+    v = Cmd_Argv( 1 );
+    v1 = Cmd_Argv( 3 );
+    op = Cmd_Argv( 4 );
+    v2 = Cmd_Argv( 5 );
+    if ( !strcmp( op, "+" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v1 ) + atoi( v2 ) ) );
+    }
+    else if ( !strcmp( op, "-" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v1 ) - atoi( v2 ) ) );
+    }
+    else if ( !strcmp( op, "*" ) )
+    {
+      Cvar_SetValueSafe( v, ( atoi( v1 ) * atoi( v2 ) ) );
+    }
+    else if ( !strcmp( op, "/" ) )
+    {
+      if ( ! ( atoi( v2 ) == 0 ) )
+      {
+        Cvar_SetValueSafe( v, ( atoi( v1 ) / atoi( v2 ) ) );
+      }
+    }
+    else
+    {
+      Com_Printf ("math <variableToSet> = <value1> <operator> <value2>\nmath <variableToSet> <operator> <value1>\nmath <variableToSet> ++\nmath <variableToSet> --\nvalid operators are + - * / \n");
+      return;
+    }
+  }
+  else {
+    Com_Printf ("math <variableToSet> = <value1> <operator> <value2>\nmath <variableToSet> <operator> <value1>\nmath <variableToSet> ++\nmath <variableToSet> --\nvalid operators are + - * / \n");
+    return;
+  }
+}
+
+/*
+===============
+Cmd_Strcmp_f
+
+Compares two strings, if true executes the third argument, if false executes the forth
+===============
+*/
+void Cmd_Strcmp_f( void ) {
+  char	*v;
+  char 	*v1;
+  char 	*v2;
+  char	*vt;
+  char	*vf;
+  char  *op;
+
+  if ( (Cmd_Argc () == 6 ) || (Cmd_Argc () == 5) ) {
+    v1 = Cmd_Argv( 1 );
+    op = Cmd_Argv( 2 );
+    v2 = Cmd_Argv( 3 );
+    vt = Cmd_Argv( 4 );
+    if ( ( !strcmp( op, "="  ) && !strcmp( v1, v2 ) ) ||
+         ( !strcmp( op, "!=" ) && strcmp( v1, v2 ) ) )
+    {
+      v = vt;
+    }
+    else if ( ( !strcmp( op, "="  ) && strcmp( v1, v2 ) ) ||
+              ( !strcmp( op, "!=" ) && !strcmp( v1, v2 ) ) )
+    {
+      if ( Cmd_Argc () == 6 ) 
+      {
+        vf = Cmd_Argv( 5 );
+        v = vf;
+      }
+      else
+      {
+        return;
+      }
+    }
+    else
+    {
+      Com_Printf ("invalid operator in strcmp command. valid operators are = != \n");
+      return;
+    }
+  }
+  else {
+    Com_Printf ("strcmp <string1> <operator> <string22> <cmdthen> (<cmdelse>) : compares the first two strings and executes <cmdthen> if true, <cmdelse> if false\n");
+    return;
+  }
+  Cbuf_InsertText( va("%s\n", v ) );
+}
+
+// 
 /*
 ===============
 Cmd_Echo_f
@@ -987,6 +1194,9 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("cmdlist",Cmd_List_f);
 	Cmd_AddCommand ("exec",Cmd_Exec_f);
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
+	Cmd_AddCommand ("if",Cmd_If_f);
+	Cmd_AddCommand ("math",Cmd_Math_f);
+	Cmd_AddCommand ("strcmp",Cmd_Strcmp_f);
 	Cmd_AddCommand ("echo",Cmd_Echo_f);
 	Cmd_AddCommand ("wait", Cmd_Wait_f);
 	Cmd_AddCommand ("alias", Cmd_Alias_f);

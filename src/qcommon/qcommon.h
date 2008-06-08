@@ -467,6 +467,7 @@ void Cvar_SetLatched( const char *var_name, const char *value);
 // don't set the cvar immediately
 
 void	Cvar_SetValue( const char *var_name, float value );
+void	Cvar_SetValueSafe( const char *var_name, float value );
 // expands value to a string and calls Cvar_Set
 
 float	Cvar_VariableValue( const char *var_name );
