@@ -120,8 +120,8 @@ ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
 endif
 
-ifndef PYTHON
-PYTHON = 1
+ifndef USE_PYTHON
+USE_PYTHON = 1
 endif
 
 #############################################################################
@@ -279,9 +279,9 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  ifeq ($(PYTHON),1)
+  ifeq ($(USE_PYTHON),1)
    PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
-   NOTSHLIBCFLAGS += -DPYTHON=1
+   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
    NOTSHLIBCFLAGS += -I/usr/include/python2.5
    LDFLAGS += $(PYTHONLDFLAGS)
    LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
@@ -1208,7 +1208,7 @@ ifeq ($(ARCH),x86)
     $(B)/client/snapvectora.o
 endif
 
-ifeq ($(PYTHON),1)
+ifeq ($(USE_PYTHON),1)
 	Q3OBJ += \
 	$(B)/client/py_init.o \
 	$(B)/client/py_main.o
@@ -1312,7 +1312,7 @@ ifeq ($(ARCH),x86)
       $(B)/ded/matha.o
 endif
 
-ifeq ($(PYTHON),1)
+ifeq ($(USE_PYTHON),1)
 	Q3DOBJ += \
 	$(B)/ded/py_init.o \
 	$(B)/ded/py_main.o

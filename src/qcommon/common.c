@@ -2377,7 +2377,7 @@ void Com_Init( char *commandLine ) {
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 
-#if PYTHON
+#if USE_PYTHON
 	PY_Init();
 #endif
 	
@@ -2484,7 +2484,7 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
-#if PYTHON
+#if USE_PYTHON
 	Cmd_AddCommand ("pyexec", PY_ExecScript_f);
 #endif
 	
@@ -2726,9 +2726,9 @@ void Com_Frame( void ) {
 	}
 
 	SV_Frame( msec );
-#if PYTHON
+#if USE_PYTHON
 	PY_Frame( );
-#endif // PYTHON
+#endif // USE_PYTHON
 	// if "dedicated" has been modified, start up
 	// or shut down the client system.
 	// Do this after the server may have started,
@@ -2826,7 +2826,7 @@ void Com_Shutdown (void) {
 		FS_FCloseFile( com_journalFile );
 		com_journalFile = 0;
 	}
-#if PYTHON
+#if USE_PYTHON
   PY_Shutdown();
 #endif
 }
@@ -3128,7 +3128,7 @@ static void Field_CompleteCommand( char *cmd,
 				if( p > cmd )
 					Field_CompleteCommand( p, qfalse, qtrue );
 			}
-#if PYTHON
+#if USE_PYTHON
       else if( !Q_stricmp( baseCmd, "pyexec" ) ) 
       {
         Field_CompleteFilename( "python", "py", qtrue );
