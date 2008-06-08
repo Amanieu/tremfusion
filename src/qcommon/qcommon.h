@@ -414,6 +414,10 @@ void	Cmd_ExecuteString( const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
 
+void 	Cmd_WriteAliases( fileHandle_t f );
+// First writes "clearaliases" and then
+// writes lines containing "alias name exec" for all aliases
+
 void Cmd_SaveCmdContext( void );
 void Cmd_RestoreCmdContext( void );
 

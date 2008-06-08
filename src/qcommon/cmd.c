@@ -302,6 +302,228 @@ void Cmd_Echo_f (void)
 /*
 =============================================================================
 
+					ALIASES
+
+=============================================================================
+*/
+
+typedef struct cmd_alias_s
+{
+	struct cmd_alias_s	*next;
+	char				*name;
+	char				*exec;
+} cmd_alias_t;
+
+static cmd_alias_t	*cmd_aliases = NULL;
+
+/*
+============
+Cmd_RunAlias_f
+============
+*/
+void Cmd_RunAlias_f(void)
+{
+	cmd_alias_t	*alias;
+	char 		*name = Cmd_Argv(0);
+	char 		*args = Cmd_ArgsFrom(1);
+
+	// Find existing alias
+	for (alias = cmd_aliases; alias; alias=alias->next)
+	{
+		if (!strcmp( name, alias->name ))
+			break;
+	}
+
+	if (!alias)
+		Com_Error(ERR_FATAL, "Alias: Alias %s doesn't exist", name);
+
+	Cbuf_InsertText(va("%s %s", alias->exec, args));
+}
+
+/*
+============
+Cmd_WriteAliases
+============
+*/
+void Cmd_WriteAliases(fileHandle_t f)
+{
+	char buffer[1024] = "clearaliases\n";
+	cmd_alias_t *alias = cmd_aliases;
+	FS_Write(buffer, strlen(buffer), f);
+	while (alias)
+	{
+		Com_sprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, alias->exec);
+		FS_Write(buffer, strlen(buffer), f);
+		alias = alias->next;
+	}
+}
+
+/*
+============
+Cmd_AliasList_f
+============
+*/
+void Cmd_AliasList_f (void)
+{
+	cmd_alias_t	*alias;
+	int			i;
+	char		*match;
+
+	if (Cmd_Argc() > 1)
+		match = Cmd_Argv( 1 );
+	else
+		match = NULL;
+
+	i = 0;
+	for (alias = cmd_aliases; alias; alias = alias->next)
+	{
+		if (match && !Com_Filter(match, alias->name, qfalse))
+			continue;
+		Com_Printf ("%s ==> %s\n", alias->name, alias->exec);
+		i++;
+	}
+	Com_Printf ("%i aliases\n", i);
+}
+
+/*
+============
+Cmd_ClearAliases_f
+============
+*/
+void Cmd_ClearAliases_f(void)
+{
+	cmd_alias_t *alias = cmd_aliases;
+	cmd_alias_t *next;
+	while (alias)
+	{
+		next = alias->next;
+		Cmd_RemoveCommand(alias->name);
+		Z_Free(alias->name);
+		Z_Free(alias->exec);
+		Z_Free(alias);
+		alias = next;
+	}
+	cmd_aliases = NULL;
+	
+	// update autogen.cfg
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
+}
+
+/*
+============
+Cmd_UnAlias_f
+============
+*/
+void Cmd_UnAlias_f(void)
+{
+	cmd_alias_t *alias, **back;
+	const char	*name;
+
+	// Get args
+	if (Cmd_Argc() < 2)
+	{
+		Com_Printf("unalias <name> : delete an alias\n");
+		return;
+	}
+	name = Cmd_Argv(1);
+
+	back = &cmd_aliases;
+	while(1)
+	{
+		alias = *back;
+		if (!alias)
+		{
+			Com_Printf("Alias %s does not exist\n", name);
+			return;
+		}
+		if (!strcmp(name, alias->name))
+		{
+			*back = alias->next;
+			Z_Free(alias->name);
+			Z_Free(alias->exec);
+			Z_Free(alias);
+			Cmd_RemoveCommand(name);
+	
+			// update autogen.cfg
+			cvar_modifiedFlags |= CVAR_ARCHIVE;
+			return;
+		}
+		back = &alias->next;
+	}
+}
+
+/*
+============
+Cmd_Alias_f
+============
+*/
+void Cmd_Alias_f(void)
+{
+	cmd_alias_t	*alias;
+	const char	*name;
+	char		exec[MAX_STRING_CHARS];
+	int			i;
+
+	// Get args
+	if (Cmd_Argc() < 2)
+	{
+		Com_Printf("alias <name> : show an alias\n");
+		Com_Printf("alias <name> <exec> : create an alias\n");
+		return;
+	}
+	name = Cmd_Argv(1);
+
+	// Find existing alias
+	for (alias = cmd_aliases; alias; alias = alias->next)
+	{
+		if (!strcmp(name, alias->name))
+			break;
+	}
+
+	// Modify/create an alias
+	if (Cmd_Argc() > 2)
+	{
+		// Get the exec string
+		exec[0] = 0;
+		for (i = 2; i < Cmd_Argc(); i++)
+			Q_strcat(exec, sizeof(exec), va("\"%s\"", Cmd_Argv(i)));
+
+		// Create/update an alias
+		if (!alias)
+		{
+			// CopyString is not used because it can't be unallocated
+			alias = S_Malloc(sizeof(cmd_alias_t));
+			alias->name = S_Malloc(strlen(name) + 1);
+			strcpy(alias->name, name);
+			alias->exec = S_Malloc(strlen(exec) + 1);
+			strcpy(alias->exec, exec);
+			alias->next = cmd_aliases;
+			cmd_aliases = alias;
+			Cmd_AddCommand(name, Cmd_RunAlias_f);
+		}
+		else
+		{
+			// Reallocate the exec string
+			Z_Free(alias->exec);
+			alias->exec = S_Malloc(strlen(exec) + 1);
+			strcpy(alias->exec, exec);
+		}
+	}
+	
+	// Show the alias
+	if (!alias)
+		Com_Printf("Alias %s does not exist\n", name);
+	else
+		Com_Printf("%s ==> %s\n", alias->name, alias->exec);
+	
+	// update autogen.cfg
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
+}
+
+
+/*
+=============================================================================
+
 					COMMAND EXECUTION
 
 =============================================================================
@@ -767,5 +989,9 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
 	Cmd_AddCommand ("echo",Cmd_Echo_f);
 	Cmd_AddCommand ("wait", Cmd_Wait_f);
+	Cmd_AddCommand ("alias", Cmd_Alias_f);
+	Cmd_AddCommand ("unalias", Cmd_UnAlias_f);
+	Cmd_AddCommand ("aliaslist", Cmd_AliasList_f);
+	Cmd_AddCommand ("clearaliases", Cmd_ClearAliases_f);
 }
 
