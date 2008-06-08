@@ -275,6 +275,72 @@ static void LAN_GetServerAddressString( int source, int n, char *buf, int buflen
 }
 
 /*
+==================
+G_SanitiseHostName
+
+Remove non-alphanumeric characters, black characters, and leading spaces from a host name
+==================
+*/
+static void G_SanitiseHostName( char *string )
+{
+	qboolean firstChar  = qfalse;
+	qboolean isBlack    = qfalse;
+	qboolean isGoodChar = qtrue;
+	qboolean skipSpaces = qtrue;
+	
+	char *reader = string;
+	char *writer = string;
+	
+	char lastChar = '\0';
+	
+	while( *reader )
+	{
+		// Ignore leading spaces
+		if( *reader == ' ' && ( skipSpaces == qtrue || lastChar == ' ' ) )
+			isGoodChar = qfalse;
+		
+		// Ignore black coloured characters
+		if ( lastChar == '^' && ColorIndex(*reader) == 0 )
+			isBlack = qtrue;
+		
+		if ( isBlack && *reader != '^' )
+			isGoodChar = qfalse;
+		else if ( isBlack && *reader == '^' )
+			isBlack = isGoodChar = qfalse;
+		else
+			isBlack = qfalse;
+		
+		// Ignore non-alphanumeric characters
+		if ( !isprint( *reader ) )
+			isGoodChar = qfalse;
+		else
+			skipSpaces = qfalse;
+
+		// Determine the first visible character
+		if ( !firstChar && lastChar != '^' && *reader != '^' )
+		{
+			// Strip the first visible character if it's a space
+			if ( *reader == ' ' )
+				isGoodChar = qfalse;
+			else
+				firstChar = qtrue;
+		}
+		
+		if ( isGoodChar == qtrue )
+		{
+			*writer = *reader;
+			writer++;
+		}
+		
+		isGoodChar = qtrue;
+		lastChar = *reader;
+		reader++;
+	}
+	
+	*writer = '\0';
+}
+
+/*
 ====================
 LAN_GetServerInfo
 ====================
@@ -305,8 +371,13 @@ static void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 			}
 			break;
 	}
+	
 	if (server && buf) {
 		buf[0] = '\0';
+		
+		if ( cl_cleanHostNames->integer )
+			G_SanitiseHostName( server->hostName );
+		
 		Info_SetValueForKey( info, "hostname", server->hostName);
 		Info_SetValueForKey( info, "mapname", server->mapName);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));

@@ -51,6 +51,8 @@ cvar_t	*cl_aviFrameRate;
 cvar_t	*cl_aviMotionJpeg;
 cvar_t	*cl_forceavidemo;
 
+cvar_t	*cl_cleanHostNames;
+
 cvar_t	*cl_freelook;
 cvar_t	*cl_sensitivity;
 cvar_t	*cl_platformSensitivity;
@@ -2636,6 +2638,8 @@ void CL_Init( void ) {
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
+
+	cl_cleanHostNames = Cvar_Get ("cl_cleanHostNames", "1", CVAR_ARCHIVE);
 
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_timedemoLog = Cvar_Get ("cl_timedemoLog", "", CVAR_ARCHIVE);
