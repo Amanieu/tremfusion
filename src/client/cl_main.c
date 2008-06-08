@@ -991,13 +991,13 @@ void CL_RequestMotd( void ) {
 	if ( !cl_motd->integer ) {
 		return;
 	}
-	Com_Printf( "Resolving %s\n", MASTER_SERVER_NAME );
+	Com_DPrintf( "Resolving %s\n", MASTER_SERVER_NAME );
 	if ( !NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
 		return;
 	}
 	cls.updateServer.port = BigShort( PORT_MASTER );
-	Com_Printf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
 		cls.updateServer.ip[0], cls.updateServer.ip[1],
 		cls.updateServer.ip[2], cls.updateServer.ip[3],
 		BigShort( cls.updateServer.port ) );
@@ -1163,7 +1163,7 @@ void CL_Connect_f( void ) {
                 clc.serverAddress.ip[2], clc.serverAddress.ip[3],
                 BigShort( clc.serverAddress.port ) );
  
-	Com_Printf( "%s resolved to %s\n", cls.servername, serverString );
+	Com_DPrintf( "%s resolved to %s\n", cls.servername, serverString );
 
 	if( cl_guidServerUniq->integer )
 		CL_UpdateGUID( serverString, strlen( serverString ) );

@@ -2328,27 +2328,27 @@ void FS_Path_f( void ) {
 	searchpath_t	*s;
 	int				i;
 
-	Com_Printf ("Current search path:\n");
+	Com_DPrintf ("Current search path:\n");
 	for (s = fs_searchpaths; s; s = s->next) {
 		if (s->pack) {
-			Com_Printf ("%s (%i files)\n", s->pack->pakFilename, s->pack->numfiles);
+			Com_DPrintf ("%s (%i files)\n", s->pack->pakFilename, s->pack->numfiles);
 			if ( fs_numServerPaks ) {
 				if ( !FS_PakIsPure(s->pack) ) {
-					Com_Printf( "    not on the pure list\n" );
+					Com_DPrintf( "    not on the pure list\n" );
 				} else {
-					Com_Printf( "    on the pure list\n" );
+					Com_DPrintf( "    on the pure list\n" );
 				}
 			}
 		} else {
-			Com_Printf ("%s/%s\n", s->dir->path, s->dir->gamedir );
+			Com_DPrintf ("%s/%s\n", s->dir->path, s->dir->gamedir );
 		}
 	}
 
 
-	Com_Printf( "\n" );
+	Com_DPrintf( "\n" );
 	for ( i = 1 ; i < MAX_FILE_HANDLES ; i++ ) {
 		if ( fsh[i].handleFiles.file.o ) {
-			Com_Printf( "handle %i: %s\n", i, fsh[i].name );
+			Com_DPrintf( "handle %i: %s\n", i, fsh[i].name );
 		}
 	}
 }
@@ -2774,7 +2774,7 @@ static void FS_Startup( const char *gameName )
 		missingFiles = fopen( "\\missing.txt", "ab" );
 	}
 #endif
-	Com_Printf( "%d files in pk3 files\n", fs_packFiles );
+	Com_DPrintf( "%d files in pk3 files\n", fs_packFiles );
 }
 
 /*

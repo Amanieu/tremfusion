@@ -477,7 +477,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 
 	gettimeofday(&tvstart, NULL);
 
-	Com_Printf("compiling %s\n", vm->name);
+	Com_DPrintf("compiling %s\n", vm->name);
 
 #ifdef DEBUG_VM
 	snprintf(fn_s, sizeof(fn_s), "%.63s.s", vm->name);
@@ -994,7 +994,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	entryPoint = getentrypoint(vm);
 
 //	__asm__ __volatile__ ("int3");
-	Com_Printf("computing jump table\n");
+	Com_DPrintf("computing jump table\n");
 
 	// call code with r8 set to zero to set up instruction pointers
 	__asm__ __volatile__ (
@@ -1027,11 +1027,11 @@ out:
 	{
 		struct timeval tvdone =  {0, 0};
 		struct timeval dur =  {0, 0};
-		Com_Printf( "VM file %s compiled to %i bytes of code (%p - %p)\n", vm->name, vm->codeLength, vm->codeBase, vm->codeBase+vm->codeLength );
+		Com_DPrintf( "VM file %s compiled to %i bytes of code (%p - %p)\n", vm->name, vm->codeLength, vm->codeBase, vm->codeBase+vm->codeLength );
 
 		gettimeofday(&tvdone, NULL);
 		timersub(&tvdone, &tvstart, &dur);
-		Com_Printf( "compilation took %lu.%06lu seconds\n", dur.tv_sec, dur.tv_usec );
+		Com_DPrintf( "compilation took %lu.%06lu seconds\n", dur.tv_sec, dur.tv_usec );
 	}
 }
 
