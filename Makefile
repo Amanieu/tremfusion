@@ -199,7 +199,7 @@ ifeq ($(PLATFORM),linux)
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_EPOLL),1)
-    BASE_CFLAGS += -D__EPOLL__
+    BASE_CFLAGS += -DUSE_EPOLL
   endif
 
   ifeq ($(USE_OPENAL),1)

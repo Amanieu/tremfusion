@@ -43,7 +43,7 @@ static qboolean	winsockInitialized = qfalse;
 #	define _BSD_SOCKLEN_T_
 #endif
 
-#ifdef __EPOLL__
+#ifdef USE_EPOLL
 #include <sys/epoll.h>
 static int efd;
 static struct epoll_event *ev;
@@ -865,7 +865,7 @@ void NET_OpenIP( void ) {
 			}
 			NET_GetLocalAddress();
 
-#ifdef __EPOLL__
+#ifdef USE_EPOLL
 			if (NET_Sleep_ctor())
 				Com_Printf("WARNING: Fuck up\n");
 #endif
@@ -973,7 +973,7 @@ void NET_Config( qboolean enableNetworking ) {
 		if ( ip_socket && ip_socket != INVALID_SOCKET ) {
 			closesocket( ip_socket );
 			ip_socket = 0;
-#ifdef __EPOLL__
+#ifdef USE_EPOLL
 			close(efd);
 #endif
 		}
@@ -1045,7 +1045,7 @@ Sleeps msec or until something happens on the network
 ====================
 */
 
-#ifdef __EPOLL__
+#ifdef USE_EPOLL
 
 #ifndef TR_EPOLL_QUEUE_LENGTH
 #define TR_EPOLL_QUEUE_LENGTH 1000
