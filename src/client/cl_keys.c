@@ -1063,11 +1063,11 @@ void Key_Bind_f (void)
 	}
 
 	keyName = Cmd_Argv(1);
-	if ( keyName[0]=='-') {
+	if ( keyName[0]=='-' && keyName[1]) {
 		mode = KEY_RELEASE;
 		detailed = qtrue;
 		keyName = CopyString( &keyName[1] );
-	} else if (keyName[0]=='+') {
+	} else if (keyName[0]=='+' && keyName[1]) {
 		mode = KEY_PUSH;
 		detailed = qtrue;
 		keyName = CopyString( &keyName[1] );
