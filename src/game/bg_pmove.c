@@ -3028,8 +3028,10 @@ static void PM_Weapon( void )
       PM_AddEvent( EV_NOAMMO );
       pm->ps->weaponTime += 500;
     }
-    else
-      pm->ps->weaponTime += 50;
+    // I commented this out because it was preventing changing weapons
+    // with no ammo, but I'm not sure why it was there in the first place
+    //else
+    //  pm->ps->weaponTime += 50;
 
     if( pm->ps->weaponstate == WEAPON_FIRING )
       pm->ps->weaponstate = WEAPON_READY;
