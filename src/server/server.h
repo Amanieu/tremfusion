@@ -185,7 +185,8 @@ typedef struct client_s {
 typedef struct {
 	netadr_t	adr;
 	int			challenge;
-	int			time;			// time the challenge response was sent to client
+	int			time;				// time the first challenge response was sent to client
+	int			pingTime;			// time the last challenge response was sent to client
 	qboolean	connected;
 } challenge_t;
 
@@ -208,6 +209,8 @@ typedef struct {
 	int			nextHeartbeatTime;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 	netadr_t	redirectAddress;			// for rcon return messages
+
+	netadr_t	authorizeAddress;			// for rcon return messages
 } serverStatic_t;
 
 //=============================================================================
@@ -238,6 +241,7 @@ extern	cvar_t	*sv_mapChecksum;
 extern	cvar_t	*sv_serverid;
 extern	cvar_t	*sv_minRate;
 extern	cvar_t	*sv_maxRate;
+extern	cvar_t	*sv_maxPing;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_dequeuePeriod;
 

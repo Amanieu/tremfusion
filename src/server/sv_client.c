@@ -68,14 +68,16 @@ void SV_GetChallenge( netadr_t from ) {
 	if (i == MAX_CHALLENGES) {
 		// this is the first time this client has asked for a challenge
 		challenge = &svs.challenges[oldest];
-
-		challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
 		challenge->adr = from;
 		challenge->time = svs.time;
 		challenge->connected = qfalse;
+		i = oldest;
 	}
 
 	// send the challengeResponse
+	challenge->pingTime = svs.time;
+	if (sv_maxPing->value)
+		challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
 	NET_OutOfBandPrint( NS_SERVER, from, "challengeResponse %i", challenge->challenge );
 }
 
@@ -148,6 +150,8 @@ void SV_DirectConnect( netadr_t from ) {
 
 	// see if the challenge is valid (LAN clients don't need to challenge)
 	if ( !NET_IsLocalAddress (from) ) {
+		int		ping;
+
 		for (i=0 ; i<MAX_CHALLENGES ; i++) {
 			if (NET_CompareAdr(from, svs.challenges[i].adr)) {
 				if ( challenge == svs.challenges[i].challenge ) {
@@ -159,7 +163,19 @@ void SV_DirectConnect( netadr_t from ) {
 			NET_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address\n" );
 			return;
 		}
+
+		ping = svs.time - svs.challenges[i].pingTime;
+		Com_Printf( "Client %i connecting with %i challenge ping\n", i, ping );
 		svs.challenges[i].connected = qtrue;
+
+		// never reject a LAN client based on ping
+		if ( !Sys_IsLANAddress( from ) ) {
+			if ( sv_maxPing->value && ping > sv_maxPing->value ) {
+				NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is for low pings only\n" );
+				Com_DPrintf ("Client %i rejected on a too high ping\n", i);
+				return;
+			}
+		}
 	}
 
 	newcl = &temp;
