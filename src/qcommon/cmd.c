@@ -722,7 +722,7 @@ void Cmd_WriteAliases(fileHandle_t f)
 	FS_Write(buffer, strlen(buffer), f);
 	while (alias)
 	{
-		Com_sprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, alias->exec);
+		Com_sprintf(buffer, sizeof(buffer), "alias %s %s\n", alias->name, alias->exec);
 		FS_Write(buffer, strlen(buffer), f);
 		alias = alias->next;
 	}
@@ -853,7 +853,7 @@ void Cmd_Alias_f(void)
 		// Get the exec string
 		exec[0] = 0;
 		for (i = 2; i < Cmd_Argc(); i++)
-			Q_strcat(exec, sizeof(exec), va("\"%s\"", Cmd_Argv(i)));
+			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
 
 		// Create/update an alias
 		if (!alias)
@@ -874,6 +874,7 @@ void Cmd_Alias_f(void)
 			Z_Free(alias->exec);
 			alias->exec = S_Malloc(strlen(exec) + 1);
 			strcpy(alias->exec, exec);
+			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}
 	
