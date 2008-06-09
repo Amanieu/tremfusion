@@ -927,7 +927,7 @@ int  G_TimeTilSuddenDeath( void );
 //
 // g_client.c
 //
-char *ClientConnect( int clientNum, qboolean firstTime );
+char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot );
 void ClientUserinfoChanged( int clientNum );
 void ClientDisconnect( int clientNum );
 void ClientBegin( int clientNum );
@@ -1154,6 +1154,15 @@ extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
 
+//Start Champ bot cvars
+extern vmCvar_t bot_developer;
+extern vmCvar_t bot_challenge;
+extern vmCvar_t bot_thinktime;
+extern vmCvar_t bot_minaliens;
+extern vmCvar_t bot_minhumans;
+extern vmCvar_t bot_nochat;
+//End Champ bot cvars
+
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );
 int       trap_Milliseconds( void );
@@ -1202,3 +1211,92 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+int       trap_DebugPolygonCreate(int color, int numPoints, vec3_t *points);
+void      trap_DebugPolygonDelete(int id);
+
+//g_bot.c
+//
+void G_AddBot( const char *name, const char *team);
+//void G_CmdBot( char *name, char *command );
+//void G_BotSpectatorThink( gentity_t *self );
+//void G_BotThink( gentity_t *self );
+qboolean G_BotConnect( int clientNum, qboolean restart );
+void G_RemoveQueuedBotBegin( int clientNum );
+void G_CheckBotSpawn( void );
+int	BotAIShutdownClient( int client, qboolean restart );
+
+//bot settings
+typedef struct bot_settings_s
+{
+  char characterfile[MAX_FILEPATH];
+  float skill;
+  char team[MAX_FILEPATH];
+} bot_settings_t;
+
+// ai
+int DebugLine(vec3_t start, vec3_t end, int color);
+void DebugLineDouble(vec3_t start, vec3_t end, int color);
+void DeleteDebugLines( void );
+
+int BotAISetup( int restart );
+int BotAILoadMap( int restart );
+int BotAIShutdown( int restart );
+
+int BotAISetupClient(int client, struct bot_settings_s *settings, qboolean restart);
+int BotAIStartFrame( int time );
+
+int		trap_BotLibLoadMap(const char *mapname);
+int		trap_BotLibSetup( void );
+int		trap_BotLibShutdown( void );
+int 	trap_BotLibStartFrame(float time);
+int		trap_BotLibVarSet(char *var_name, char *value);
+int		trap_BotLibVarGet(char *var_name, char *value, int size);
+int		trap_BotLibUpdateEntity(int ent, void /* struct bot_updateentity_s */ *bue);
+
+int		trap_AAS_Initialized( void );
+float 	trap_AAS_Time(void);
+int		trap_AAS_PointAreaNum(vec3_t point);
+int		trap_AAS_AreaReachability(int areanum);
+int		trap_AAS_TraceAreas(vec3_t start, vec3_t end, int *areas, vec3_t *points, int maxareas);
+int		trap_AAS_AreaInfo( int areanum, void /* struct aas_areainfo_s */ *info );
+int 	trap_AAS_AreaTravelTimeToGoalArea(int areanum, vec3_t origin, int goalareanum, int travelflags);
+void	trap_AAS_EntityInfo(int entnum, void /* struct aas_entityinfo_s */ *info);
+
+int		trap_BotGetServerCommand(int clientNum, char *message, int size);
+void	trap_BotUserCommand(int clientNum, usercmd_t *ucmd);
+
+void 	trap_BotMoveToGoal(void /* struct bot_moveresult_s */ *result, int movestate, void /* struct bot_goal_s */ *goal, int travelflags);
+void 	trap_BotInitMoveState(int handle, void /* struct bot_initmove_s */ *initmove);
+int		trap_BotAllocMoveState( void);
+void	trap_BotFreeMoveState(int handle);
+int		trap_BotMovementViewTarget(int movestate, void /* struct bot_goal_s */ *goal, int travelflags, float lookahead, vec3_t target);
+
+
+// Bot Elementary Actions
+void	trap_EA_Say(int client, char *str);
+void	trap_EA_SayTeam(int client, char *str);
+void	trap_EA_Command(int client, char *command);
+
+void	trap_EA_Action(int client, int action);
+void	trap_EA_Gesture(int client);
+void	trap_EA_Talk(int client);
+void	trap_EA_Attack(int client);
+void	trap_EA_Use(int client);
+void	trap_EA_Respawn(int client);
+void	trap_EA_Crouch(int client);
+void	trap_EA_MoveUp(int client);
+void	trap_EA_MoveDown(int client);
+void	trap_EA_MoveForward(int client);
+void	trap_EA_MoveBack(int client);
+void	trap_EA_MoveLeft(int client);
+void	trap_EA_MoveRight(int client);
+void	trap_EA_SelectWeapon(int client, int weapon);
+void	trap_EA_Jump(int client);
+void	trap_EA_DelayedJump(int client);
+void	trap_EA_Move(int client, vec3_t dir, float speed);
+void	trap_EA_View(int client, vec3_t viewangles);
+
+void	trap_EA_EndRegular(int client, float thinktime);
+void	trap_EA_GetInput(int client, float thinktime, void /* struct bot_input_s */ *input);
+void	trap_EA_ResetInput(int client);

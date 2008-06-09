@@ -577,6 +577,56 @@ static void Svcmd_AdmitDefeat_f( void )
 }
 
 /*
+===============
+Svcmd_AddBot_f
+===============
+*/
+void Svcmd_AddBot_f( void ){
+  char			name[MAX_TOKEN_CHARS];
+  char			team[MAX_TOKEN_CHARS];
+
+  if ( !trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+  	return;
+  }
+
+  // name
+  trap_Argv( 1, name, sizeof( name ) );
+  if ( !name[0] ) {
+    trap_Printf( "Usage: Addbot <botname> [team] \n" );
+    return;
+  }
+  
+  // team
+  trap_Argv( 2, team, sizeof( team ) );
+
+  G_AddBot( name, team );
+}
+
+/*
+===============
+Svcmd_BotlibSetVariable_f
+===============
+*/
+void Svcmd_BotlibSetVariable_f( void ){
+	char key[MAX_TOKEN_CHARS];
+	char value[MAX_TOKEN_CHARS];
+	
+	trap_Argv( 1, key, sizeof( key ) );
+	if ( !key[0] ) {
+    	G_Printf( "Usage: blibset <key> <value> \n" );
+    	return;
+  	}
+  	
+  	trap_Argv( 2, value, sizeof( value ) );
+	if ( !value[0] ) {
+    	G_Printf( "Usage: blibset <key> <value> \n" );
+    	return;
+  	}
+  	
+	trap_BotLibVarSet( key, va("%s", value ) );
+}
+
+/*
 =================
 ConsoleCommand
 
@@ -694,6 +744,18 @@ qboolean  ConsoleCommand( void )
     level.lastWin = TEAM_NONE;
     trap_SetConfigstring( CS_WINNER, "Evacuation" );
     LogExit( "Evacuation." );
+    return qtrue;
+  }
+  
+  if( !Q_stricmp( cmd, "addbot" ) )
+  {
+    Svcmd_AddBot_f( );
+    return qtrue;
+  }
+  
+  if( !Q_stricmp( cmd, "blibset" ) )
+  {
+    Svcmd_BotlibSetVariable_f( );
     return qtrue;
   }
   

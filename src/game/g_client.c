@@ -1184,7 +1184,7 @@ to the server machine, but qfalse on map changes and tournement
 restarts.
 ============
 */
-char *ClientConnect( int clientNum, qboolean firstTime )
+char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot )
 {
   char      *value;
   gclient_t *client;
@@ -1259,6 +1259,14 @@ char *ClientConnect( int clientNum, qboolean firstTime )
     G_InitSessionData( client, userinfo );
 
   G_ReadSessionData( client );
+  
+  if( isBot ) {
+	ent->r.svFlags |= SVF_BOT;
+	ent->inuse = qtrue;
+	if( !G_BotConnect( clientNum, !firstTime ) ) {
+		return "BotConnectfailed";
+	}
+  }
 
   // get and distribute relevent paramters
   ClientUserinfoChanged( clientNum );
@@ -1668,6 +1676,9 @@ void ClientDisconnect( int clientNum )
   gentity_t *tent;
   int       i;
 
+  // cleanup if we are kicking a bot that hasn't spawned yet
+  G_RemoveQueuedBotBegin( clientNum );
+  
   ent = g_entities + clientNum;
 
   if( !ent->client )
@@ -1709,4 +1720,8 @@ void ClientDisconnect( int clientNum )
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
 
   CalculateRanks( );
+  
+  if ( ent->r.svFlags & SVF_BOT ) {
+	BotAIShutdownClient( clientNum, qfalse );
+  }
 }

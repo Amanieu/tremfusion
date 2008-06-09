@@ -138,6 +138,15 @@ vmCvar_t  g_privateMessages;
 
 vmCvar_t  g_tag;
 
+//Start Champ bot cvars
+vmCvar_t  bot_developer;
+vmCvar_t  bot_challenge;
+vmCvar_t  bot_thinktime;
+vmCvar_t  bot_minaliens;
+vmCvar_t  bot_minhumans;
+vmCvar_t  bot_nochat;
+//End Champ bot cvars
+
 static cvarTable_t   gameCvarTable[ ] =
 {
   // don't override the cheat state set by the system
@@ -261,6 +270,15 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse },
 
+  //Start Champ bot cvars
+  { &bot_thinktime, "bot_thinktime", "100", CVAR_CHEAT, 0, qfalse  },
+  { &bot_minaliens, "bot_minaliens", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_minhumans, "bot_minhumans", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_developer, "bot_developer", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_challenge, "bot_challenge", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_nochat,    "bot_nochat",    "0", CVAR_SERVERINFO, 0, qfalse  },
+  //End Champ bot cvars
+  
   { &g_rankings, "g_rankings", "0", 0, 0, qfalse}
 };
 
@@ -298,7 +316,7 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
       return 0;
 
     case GAME_CLIENT_CONNECT:
-      return (intptr_t)ClientConnect( arg0, arg1 );
+      return (intptr_t)ClientConnect( arg0, arg1, arg2 );
 
     case GAME_CLIENT_THINK:
       ClientThink( arg0 );
@@ -326,6 +344,9 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
 
     case GAME_CONSOLE_COMMAND:
       return ConsoleCommand( );
+
+    case BOTAI_START_FRAME:
+	  return BotAIStartFrame( arg0 );
   }
 
   return -1;
@@ -647,6 +668,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   G_Printf( "-----------------------------------\n" );
 
+  if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+    BotAISetup( restart );
+    BotAILoadMap( restart );
+  }
+
   G_RemapTeamShaders( );
 
   // so the server counts the spawns without a client attached
@@ -700,6 +726,10 @@ void G_ShutdownGame( int restart )
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
   trap_SetConfigstring( CS_WINNER, "" );
+  
+  if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+    BotAIShutdown( restart );
+  }
 }
 
 
@@ -1340,6 +1370,7 @@ void CalculateRanks( void )
   int       i;
   char      P[ MAX_CLIENTS + 1 ] = {""};
   int       ff = 0;
+  int		numBots=0;
 
   level.numConnectedClients = 0;
   level.numPlayingClients = 0;
@@ -1365,7 +1396,8 @@ void CalculateRanks( void )
       if( level.clients[ i ].pers.teamSelection != TEAM_NONE )
       {
         level.numPlayingClients++;
-
+        if( g_entities[ i ].r.svFlags & SVF_BOT )
+            numBots++;
         if( level.clients[ i ].pers.teamSelection == TEAM_ALIENS )
         {
           level.numAlienClients++;
@@ -1383,6 +1415,7 @@ void CalculateRanks( void )
   }
   level.numNonSpectatorClients = level.numLiveAlienClients +
     level.numLiveHumanClients;
+  level.numVotingClients = level.numConnectedClients - numBots;	
   level.numteamVotingClients[ 0 ] = level.numHumanClients;
   level.numteamVotingClients[ 1 ] = level.numAlienClients;
   P[ i ] = '\0';
@@ -1808,7 +1841,10 @@ void CheckIntermissionExit( void )
 
     if( cl->ps.stats[ STAT_TEAM ] == TEAM_NONE )
       continue;
-
+    
+    if( g_entities[ cl->ps.clientNum ].r.svFlags & SVF_BOT )
+      continue;
+    
     if( cl->readyToExit )
     {
       ready++;
