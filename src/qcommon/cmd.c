@@ -881,7 +881,7 @@ void Cmd_Alias_f(void)
 	// Show the alias
 	if (!alias)
 		Com_Printf("Alias %s does not exist\n", name);
-	else
+	else if (Cmd_Argc() == 2)
 		Com_Printf("%s ==> %s\n", alias->name, alias->exec);
 	
 	// update autogen.cfg
