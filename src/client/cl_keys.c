@@ -1283,7 +1283,7 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 
 	// keys can still be used for bound actions
 	if ( down && ( key < 128 || key == K_MOUSE1 ) &&
-		( clc.demoplaying || cls.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 ) {
+		( !clc.demoplaying && cls.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 ) {
 
 		if (Cvar_VariableValue ("com_cameraMode") == 0) {
 			Cvar_Set ("nextdemo","");
