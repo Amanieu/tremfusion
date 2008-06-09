@@ -57,7 +57,7 @@ The "home path" is the path used for all write access. On win32 systems we have 
 "home path" points to ~/.q3a or similar
 
 The user can also install custom mods and content in "home path", so it should be searched
-along with "home path" and "cd path" for game content.
+along with "home path" for game content.
 
 
 The "base game" is the directory under the paths where data comes from by default, and
@@ -97,32 +97,26 @@ BASEGAME is the hardcoded base game ("base")
 
 e.g. the qpath "sound/newstuff/test.wav" would be searched for in the following places:
 
-home path + current game's zip files
 home path + current game's directory
-base path + current game's zip files
+home path + current game's zip files
 base path + current game's directory
-cd path + current game's zip files
-cd path + current game's directory
+base path + current game's zip files
 
-home path + base game's zip file
 home path + base game's directory
-base path + base game's zip file
+home path + base game's zip file
 base path + base game's directory
-cd path + base game's zip file
-cd path + base game's directory
+base path + base game's zip file
 
-home path + BASEGAME's zip file
 home path + BASEGAME's directory
-base path + BASEGAME's zip file
+home path + BASEGAME's zip file
 base path + BASEGAME's directory
-cd path + BASEGAME's zip file
-cd path + BASEGAME's directory
+base path + BASEGAME's zip file
 
 server download, to be written to home path + current game's directory
 
 
 The filesystem can be safely shutdown and reinitialized with different
-basedir / cddir / game combinations, but all other subsystems that rely on it
+basedir / game combinations, but all other subsystems that rely on it
 (sound, video) must also be forced to restart.
 
 Because the same files are loaded by both the clip model (CM_) and renderer (TR_)
@@ -172,29 +166,6 @@ or configs will never get loaded from disk!
 =============================================================================
 
 */
-
-// every time a new demo pk3 file is built, this checksum must be updated.
-// the easiest way to get it is to just run the game and see what it spits out
-#define	DEMO_PAK0_CHECKSUM	2985612116u
-static const unsigned pak_checksums[] = {
-	1566731103u,
-	298122907u,
-	412165236u,
-	2991495316u,
-	1197932710u,
-	4087071573u,
-	3709064859u,
-	908855077u,
-	977125798u
-};
-
-// if this is defined, the executable positively won't work with any paks other
-// than the demo pak, even if productid is present.  This is only used for our
-// last demo release to prevent the mac and linux users from using the demo
-// executable with the production windows pak before the mac/linux products
-// hit the shelves a little later
-// NOW defined in build files
-//#define PRE_RELEASE_TADEMO
 
 #define MAX_ZPATH			256
 #define	MAX_SEARCH_PATHS	4096
@@ -2057,7 +2028,7 @@ FS_GetModList
 
 Returns a list of mod directory names
 A mod directory is a peer to base with a pk3 in it
-The directories are searched in base path, cd path and home path
+The directories are searched in base path and home path
 ================
 */
 int	FS_GetModList( char *listbuf, int bufsize ) {
@@ -2106,7 +2077,7 @@ int	FS_GetModList( char *listbuf, int bufsize ) {
 			// now we need to find some .pk3 files to validate the mod
 			// NOTE TTimo: (actually I'm not sure why .. what if it's a mod under developement with no .pk3?)
 			// we didn't keep the information when we merged the directory names, as to what OS Path it was found under
-			//   so it could be in base path, cd path or home path
+			//   so it could be in base path or home path
 			//   we will try each three of them here (yes, it's a bit messy)
 			path = FS_BuildOSPath( fs_basepath->string, name, "" );
 			nPaks = 0;
@@ -2410,17 +2381,6 @@ void FS_AddGameDirectory( const char *path, const char *dir ) {
 	
 	Q_strncpyz( fs_gamedir, dir, sizeof( fs_gamedir ) );
 
-	//
-	// add the directory to the search path
-	//
-	search = Z_Malloc (sizeof(searchpath_t));
-	search->dir = Z_Malloc( sizeof( *search->dir ) );
-
-	Q_strncpyz( search->dir->path, path, sizeof( search->dir->path ) );
-	Q_strncpyz( search->dir->gamedir, dir, sizeof( search->dir->gamedir ) );
-	search->next = fs_searchpaths;
-	fs_searchpaths = search;
-
 	// find all pak files in this directory
 	pakfile = FS_BuildOSPath( path, dir, "" );
 	pakfile[ strlen(pakfile) - 1 ] = 0;	// strip the trailing slash
@@ -2442,38 +2402,29 @@ void FS_AddGameDirectory( const char *path, const char *dir ) {
 		fs_searchpaths = search;
 	}
 
+	//
+	// add the directory to the search path
+	//
+	search = Z_Malloc (sizeof(searchpath_t));
+	search->dir = Z_Malloc( sizeof( *search->dir ) );
+
+	Q_strncpyz( search->dir->path, path, sizeof( search->dir->path ) );
+	Q_strncpyz( search->dir->gamedir, dir, sizeof( search->dir->gamedir ) );
+	search->next = fs_searchpaths;
+	fs_searchpaths = search;
+
 	// done
 	Sys_FreeFileList( pakfiles );
 }
 
 /*
 ================
-FS_idPak
-================
-*/
-qboolean FS_idPak( char *pak, char *base ) {
-	int i;
-
-	for (i = 0; i < NUM_ID_PAKS; i++) {
-		if ( !FS_FilenameCompare(pak, va("%s/pak%d", base, i)) ) {
-			break;
-		}
-	}
-	if (i < NUM_ID_PAKS) {
-		return qtrue;
-	}
-	return qfalse;
-}
-
-/*
-================
-FS_idPak
+FS_CheckDirTraversal
 
 Check whether the string contains stuff like "../" to prevent directory traversal bugs
 and return qtrue if it does.
 ================
 */
-
 qboolean FS_CheckDirTraversal(const char *checkdir)
 {
 	if(strstr(checkdir, "../") || strstr(checkdir, "..\\"))
@@ -2524,11 +2475,6 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 		// Ok, see if we have this pak file
 		badchecksum = qfalse;
 		havepak = qfalse;
-
-		// never autodownload any of the tremulous paks
-		if ( FS_idPak(fs_serverReferencedPakNames[i], BASEGAME) ) {
-			continue;
-		}
 
 		// Make sure the server cannot make us write to non-quake3 directories.
 		if(FS_CheckDirTraversal(fs_serverReferencedPakNames[i]))
