@@ -216,8 +216,22 @@ void SV_DirectConnect( netadr_t from ) {
 
 	if ( !newcl ) {
 		if ( NET_IsLocalAddress( from ) ) {
-			Com_Error( ERR_FATAL, "server is full on local connect\n" );
-			return;
+			count = 0;
+			for ( i = startIndex; i < sv_maxclients->integer ; i++ ) {
+				cl = &svs.clients[i];
+				if (cl->netchan.remoteAddress.type == NA_BOT) {
+					count++;
+				}
+			}
+			// if they're all bots
+			if (count >= sv_maxclients->integer - startIndex) {
+				SV_DropClient(&svs.clients[sv_maxclients->integer - 1], "only bots on server");
+				newcl = &svs.clients[sv_maxclients->integer - 1];
+			}
+			else {
+				Com_Error( ERR_FATAL, "server is full on local connect\n" );
+				return;
+			}
 		}
 		else {
 			NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is full\n" );
@@ -251,7 +265,7 @@ gotnewcl:
 	Q_strncpyz( newcl->userinfo, userinfo, sizeof(newcl->userinfo) );
 
 	// get the game a chance to reject this connection or modify the userinfo
-	denied = VM_Call( gvm, GAME_CLIENT_CONNECT, clientNum, qtrue ); // firstTime = qtrue
+	denied = VM_Call( gvm, GAME_CLIENT_CONNECT, clientNum, qtrue, qfalse ); // firstTime = qtrue
 	if ( denied ) {
 		// we can't just use VM_ArgPtr, because that is only valid inside a VM_Call
 		char *str = VM_ExplicitArgPtr( gvm, denied );
@@ -309,16 +323,19 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 		return;		// already dropped
 	}
 
-	// see if we already have a challenge for this ip
-	challenge = &svs.challenges[0];
+	if (drop->netchan.remoteAddress.type != NA_BOT) {
+		
+		// see if we already have a challenge for this ip
+		challenge = &svs.challenges[0];
 
-	for (i = 0 ; i < MAX_CHALLENGES ; i++, challenge++) {
-		if ( NET_CompareAdr( drop->netchan.remoteAddress, challenge->adr ) ) {
-			challenge->connected = qfalse;
-			break;
+		for (i = 0 ; i < MAX_CHALLENGES ; i++, challenge++) {
+			if ( NET_CompareAdr( drop->netchan.remoteAddress, challenge->adr ) ) {
+				challenge->connected = qfalse;
+				break;
+			}
 		}
 	}
-
+	
 	// Kill any download
 	SV_CloseDownload( drop );
 
@@ -337,6 +354,10 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 
 	// add the disconnect command
 	SV_SendServerCommand( drop, "disconnect \"%s\"", reason);
+	
+	if ( drop->netchan.remoteAddress.type == NA_BOT ) {
+		SV_BotFreeClient( drop - svs.clients );
+	}
 
 	// nuke user info
 	SV_SetUserinfo( drop - svs.clients, "" );

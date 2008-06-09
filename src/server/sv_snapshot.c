@@ -630,6 +630,13 @@ void SV_SendClientSnapshot( client_t *client ) {
 
 	// build the snapshot
 	SV_BuildClientSnapshot( client );
+	
+	// bots need to have their snapshots build, but
+	// the query them directly without needing to be sent
+	if ( client->gentity && client->gentity->r.svFlags & SVF_BOT ) {
+		return;
+	}
+	
 
 	MSG_Init (&msg, msg_buf, sizeof(msg_buf));
 	msg.allowoverflow = qtrue;
@@ -669,7 +676,8 @@ void SV_SendClientMessages( void ) {
 
 	// send a message to each connected client
 	for (i=0, c = svs.clients ; i < sv_maxclients->integer ; i++, c++) {
-		if (!c->state) {
+		//if (!c->state) {
+		if( c->state == CS_FREE || c->state == CS_ZOMBIE){
 			continue;		// not connected
 		}
 
