@@ -1431,7 +1431,7 @@ void MSG_ReadDeltaPlayerstate (msg_t *msg, playerState_t *from, playerState_t *t
 			bits = MSG_ReadBits (msg, MAX_WEAPONS);
 			for (i=0 ; i<MAX_WEAPONS ; i++) {
 				if (bits & (1<<i) ) {
-					to->misc[i] = MSG_ReadLong(msg);
+					to->ammo[i] = MSG_ReadShort(msg);
 				}
 			}
 		}
