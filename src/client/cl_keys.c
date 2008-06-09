@@ -1047,12 +1047,11 @@ Key_Bind_f
 */
 void Key_Bind_f (void)
 {
-	int		i, c, b;
+	int			c, b;
 	qboolean	bound = qfalse;
 	qboolean	detailed = qfalse;
 	qboolean	mode = KEY_PUSH;
 	char		*keyName;
-	char		cmd[1024];
 
 	c = Cmd_Argc();
 
@@ -1098,16 +1097,7 @@ void Key_Bind_f (void)
 		return;
 	}
 
-	// copy the rest of the command line
-	cmd[0] = 0;		// start out with a null string
-	for (i=2 ; i< c ; i++)
-	{
-		strcat (cmd, Cmd_Argv(i));
-		if (i != (c-1))
-			strcat (cmd, " ");
-	}
-
-	Key_SetBindingByMode (b, cmd, mode);
+	Key_SetBindingByMode (b, Cmd_ArgsFrom(2), mode);
 }
 
 /*
