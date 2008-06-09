@@ -88,6 +88,10 @@ ifndef GENERATE_DEPENDENCIES
 GENERATE_DEPENDENCIES=1
 endif
 
+ifndef USE_EPOLL
+USE_EPOLL=1
+endif
+
 ifndef USE_OPENAL
 USE_OPENAL=1
 endif
@@ -192,7 +196,11 @@ ifeq ($(PLATFORM),linux)
   endif
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-    -pipe -DUSE_ICON $(shell sdl-config --cflags) -D__EPOLL__
+    -pipe -DUSE_ICON $(shell sdl-config --cflags)
+
+  ifeq ($(USE_EPOLL),1)
+    BASE_CFLAGS += -D__EPOLL__
+  endif
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
