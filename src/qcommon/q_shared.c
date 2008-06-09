@@ -345,68 +345,132 @@ static char *SkipWhitespace( char *data, qboolean *hasNewLines ) {
 
 int COM_Compress( char *data_p ) {
 	char *in, *out;
-	int c;
-	qboolean newline = qfalse, whitespace = qfalse;
+	qboolean space = qfalse, newline = qfalse;
 
 	in = out = data_p;
-	if (in) {
-		while ((c = *in) != 0) {
-			// skip double slash comments
-			if ( c == '/' && in[1] == '/' ) {
-				while (*in && *in != '\n') {
-					in++;
+
+	start: // instead of a loop because of deep links
+	switch (*in) {
+	case ' ': // record when we hit spaces or tabs
+	case '\t':
+		++in;
+		space = qtrue;
+		goto start;
+
+	case '\r': // record when we hit newlines
+		if (*(in+1) == '\n') {
+			++in;
+		}
+		// fallthrough: merge CRLF sequence
+	case '\n':
+		if (newline) { // preserve newlines, but gather spaces around them
+			*out++ = '\n';
+			space = qfalse;
+		}
+		else {
+			newline = qtrue;
+		}
+		++in;
+		goto start;
+
+	case '/': // could be the beginning of a comment
+		switch (*(in+1)) {
+		case '/': // skip double slash comments
+			in += 2;
+			for(;;) {
+				switch (*in) {
+				case '\n':
+					if (newline) {
+						*out++ = '\n';
+						space = qfalse;
+					}
+					else {
+						newline = qtrue;
+					}
+					++in;
+					goto start;
+				case '\0':
+					goto end;
+				default:
+					++in;
 				}
-			// skip /* */ comments
-			} else if ( c == '/' && in[1] == '*' ) {
-				while ( *in && ( *in != '*' || in[1] != '/' ) ) 
+			}
+			// (execution doesn't get here)
+
+		case '*': // skip /* */ comments
+			space = qtrue; // this should separate tokens
+			in += 2;
+			for(;;) {
+				switch (*in) {
+				case '\n':
+					if (newline) {
+						*out++ = '\n';
+						space = qfalse;
+					}
+					else {
+						newline = qtrue;
+					}
+					break;
+				case '*':
+					if (*(in+1) == '/') {
+						in += 2;
+						goto start;
+					}
+					break;
+				case '\0': // warning: non-terminated comment
+					goto end;
+				}
+				++in;
+			}
+			// (execution doesn't get here)
+
+		default: // but it ain't a comment
+			goto token;
+		}
+		// (execution doesn't get here)
+	// end of comment processing
+
+	case '\0':
+		goto end;
+
+	default: // an actual token
+	token:
+		// output the accumulated whitespace,
+		// collapse into a newline if appropriate
+		if (newline) {
+			newline = qfalse;
+			space = qfalse;
+			*out++ = '\n';
+		}
+		else if (space) {
+			space = qfalse;
+			*out++ = ' ';
+		}
+
+		// copy quoted strings unmolested
+		if (*in == '"') {
+			*out++ = '"';
+			++in;
+			for(;;) {
+				switch (*in) {
+				case '"':
 					in++;
-				if ( *in ) 
-					in += 2;
-                        // record when we hit a newline
-                        } else if ( c == '\n' || c == '\r' ) {
-                            newline = qtrue;
-                            in++;
-                        // record when we hit whitespace
-                        } else if ( c == ' ' || c == '\t') {
-                            whitespace = qtrue;
-                            in++;
-                        // an actual token
-			} else {
-                            // if we have a pending newline, emit it (and it counts as whitespace)
-                            if (newline) {
-                                *out++ = '\n';
-                                newline = qfalse;
-                                whitespace = qfalse;
-                            } if (whitespace) {
-                                *out++ = ' ';
-                                whitespace = qfalse;
-                            }
-                            
-                            // copy quoted strings unmolested
-                            if (c == '"') {
-                                    *out++ = c;
-                                    in++;
-                                    while (1) {
-                                        c = *in;
-                                        if (c && c != '"') {
-                                            *out++ = c;
-                                            in++;
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                    if (c == '"') {
-                                        *out++ = c;
-                                        in++;
-                                    }
-                            } else {
-                                *out = c;
-                                out++;
-                                in++;
-                            }
+					*out++ = '"';
+					goto start;
+				case '\0': // warning: non-terminated string
+					goto end;
+				default:
+					*out++ = *in++;
+				}
 			}
 		}
+
+		// nothing special
+		*out++ = *in++;
+		goto start;
 	}
+	end: // end of main switch
+
 	*out = 0;
 	return out - data_p;
 }

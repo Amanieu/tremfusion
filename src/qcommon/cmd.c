@@ -322,6 +322,8 @@ void Cmd_Exec_f( void ) {
 		return;
 	}
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
+
+	COM_Compress (f);
 	
 	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
 	Cvar_Set( "arg_all", Cmd_ArgsFrom(2) );
