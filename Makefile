@@ -96,6 +96,10 @@ ifndef USE_OPENAL_DLOPEN
 USE_OPENAL_DLOPEN=0
 endif
 
+ifndef USE_PYTHON
+USE_PYTHON=1
+endif
+
 ifndef USE_CURL
 USE_CURL=1
 endif
@@ -118,10 +122,6 @@ endif
 
 ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
-endif
-
-ifndef USE_PYTHON
-USE_PYTHON = 1
 endif
 
 #############################################################################
