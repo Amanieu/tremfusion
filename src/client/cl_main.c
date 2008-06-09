@@ -1822,7 +1822,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 	byte*			buffptr;
 	byte*			buffend;
 	
-	Com_Printf("CL_ServersResponsePacket\n");
+	Com_DPrintf("CL_ServersResponsePacket\n");
 
 	if (cls.numglobalservers == -1) {
 		// state to detect lack of servers or lack of response
@@ -1926,7 +1926,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 		total = count;
 	}
 
-	Com_Printf("%d servers parsed (total %d)\n", numservers, total);
+	Com_DPrintf("%d servers parsed (total %d)\n", numservers, total);
 }
 
 /*

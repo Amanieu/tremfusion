@@ -1332,7 +1332,7 @@ void CG_LoadMenus( const char *menuFile )
     }
   }
 
-  Com_Printf( "UI menu load time = %d milli seconds\n", trap_Milliseconds( ) - start );
+  //Com_Printf( "UI menu load time = %d milli seconds\n", trap_Milliseconds( ) - start );
 }
 
 

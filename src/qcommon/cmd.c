@@ -574,8 +574,6 @@ concatenates cvars together
 ===============
 */
 void Cmd_Concat_f( void ) {
-  char  *v1;
-  char  *v2;
   int   i;
   char  vc[MAX_CVAR_VALUE_STRING] = "";
   if (Cmd_Argc () < 4) {
@@ -584,9 +582,9 @@ void Cmd_Concat_f( void ) {
   }
 
   for (i = 3; i < Cmd_Argc(); i++)
-  	Q_strcat( vc, sizeof(vc), Cvar_ValidateString( Cmd_Argv(i) ) );
+  	Q_strcat( vc, sizeof(vc), Cvar_VariableString( Cmd_Argv(i) ) );
 
-  Cvar_Set2( Cmd_Argv( 1 ), vc , qfalse);
+  Cvar_Set( Cmd_Argv( 1 ), vc );
 }
 
 // 
