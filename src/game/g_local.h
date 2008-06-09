@@ -890,8 +890,6 @@ qboolean  SpotWouldTelefrag( gentity_t *spot );
 // g_svcmds.c
 //
 qboolean  ConsoleCommand( void );
-void      G_ProcessIPBans( void );
-qboolean  G_FilterPacket( char *from );
 
 //
 // g_weapon.c
@@ -1079,7 +1077,6 @@ extern  vmCvar_t  g_needpass;
 extern  vmCvar_t  g_gravity;
 extern  vmCvar_t  g_speed;
 extern  vmCvar_t  g_knockback;
-extern  vmCvar_t  g_quadfactor;
 extern  vmCvar_t  g_inactivity;
 extern  vmCvar_t  g_debugMove;
 extern  vmCvar_t  g_debugAlloc;
@@ -1090,17 +1087,13 @@ extern  vmCvar_t  g_synchronousClients;
 extern  vmCvar_t  g_motd;
 extern  vmCvar_t  g_warmup;
 extern  vmCvar_t  g_doWarmup;
-extern  vmCvar_t  g_blood;
 extern  vmCvar_t  g_allowVote;
 extern  vmCvar_t  g_voteLimit;
 extern  vmCvar_t  g_teamAutoJoin;
 extern  vmCvar_t  g_teamForceBalance;
-extern  vmCvar_t  g_banIPs;
-extern  vmCvar_t  g_filterBan;
 extern  vmCvar_t  g_smoothClients;
 extern  vmCvar_t  pmove_fixed;
 extern  vmCvar_t  pmove_msec;
-extern  vmCvar_t  g_rankings;
 extern  vmCvar_t  g_enableDust;
 extern  vmCvar_t  g_enableBreath;
 extern  vmCvar_t  g_singlePlayer;

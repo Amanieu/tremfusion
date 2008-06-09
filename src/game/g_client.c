@@ -1208,24 +1208,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
     return va( "%s", reason );
   }
 
-
-  // IP filtering
-  // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=500
-  // recommanding PB based IP / GUID banning, the builtin system is pretty limited
-  // check to see if they are on the banned IP list
-  value = Info_ValueForKey( userinfo, "ip" );
-  i = 0;
-  while( *value && i < sizeof( ip ) - 2 )
-  {
-    if( *value != '.' && ( *value < '0' || *value > '9' ) )
-      break;
-    ip[ i++ ] = *value;
-    value++;
-  }
-  ip[ i ] = '\0';
-  if( G_FilterPacket( value ) )
-    return "You are banned from this server.";
-
   // check for a password
   value = Info_ValueForKey( userinfo, "password" );
 

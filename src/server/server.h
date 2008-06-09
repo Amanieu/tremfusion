@@ -185,9 +185,8 @@ typedef struct client_s {
 typedef struct {
 	netadr_t	adr;
 	int			challenge;
-	int			time;				// time the last packet was sent to the autherize server
-	int			pingTime;			// time the challenge response was sent to client
-	int			firstTime;			// time the adr was first used, for authorize timeout checks
+	int			time;				// time the first challenge response was sent to client
+	int			pingTime;			// time the last challenge response was sent to client
 	qboolean	connected;
 } challenge_t;
 
@@ -242,9 +241,7 @@ extern	cvar_t	*sv_mapChecksum;
 extern	cvar_t	*sv_serverid;
 extern	cvar_t	*sv_minRate;
 extern	cvar_t	*sv_maxRate;
-extern	cvar_t	*sv_minPing;
 extern	cvar_t	*sv_maxPing;
-extern	cvar_t	*sv_pure;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_dequeuePeriod;
 
@@ -258,7 +255,6 @@ void QDECL SV_SendServerCommand( client_t *cl, const char *fmt, ...);
 
 
 void SV_AddOperatorCommands (void);
-void SV_RemoveOperatorCommands (void);
 
 
 void SV_MasterHeartbeat (void);
