@@ -282,7 +282,7 @@ ifeq ($(PLATFORM),linux)
   ifeq ($(USE_PYTHON),1)
    PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
    NOTSHLIBCFLAGS += -DUSE_PYTHON=1
-   NOTSHLIBCFLAGS += -I/usr/include/python2.5
+   NOTSHLIBCFLAGS += -Isrc/python/include
    LDFLAGS += $(PYTHONLDFLAGS)
    LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
   endif
@@ -433,7 +433,13 @@ endif
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-
+  
+  ifeq ($(USE_PYTHON),1)
+   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
+   NOTSHLIBCFLAGS += -Isrc/python/include
+   LDFLAGS += $(LIBSDIR)win32/python25.lib
+  endif
+  
   ifeq ($(ARCH),x86)
     # build 32bit
     BASE_CFLAGS += -m32
