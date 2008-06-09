@@ -2987,6 +2987,10 @@ static void UI_RunMenuScript( char **args )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "tell %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
       else if( uiInfo.chatTeam )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_team \"%s\"\n", buffer ) );
+      else if( uiInfo.chatAdmins )
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_admins \"%s\"\n", buffer ) );
+      else if( uiInfo.chatPrompt )
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
       else
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say \"%s\"\n", buffer ) );
     }

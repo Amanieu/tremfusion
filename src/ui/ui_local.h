@@ -281,6 +281,9 @@ typedef struct
   qboolean inGameLoad;
 
   qboolean  chatTeam;
+  qboolean  chatAdmins;
+  qboolean  chatPrompt;
+  char      chatPromptCallback[ MAX_STRING_CHARS ];
   int       chatTargetClientNum;
 }
 uiInfo_t;
