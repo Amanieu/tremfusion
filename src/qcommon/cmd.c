@@ -576,12 +576,12 @@ concatenates cvars together
 void Cmd_Concat_f( void ) {
   int   i;
   char  vc[MAX_CVAR_VALUE_STRING] = "";
-  if (Cmd_Argc () < 4) {
+  if (Cmd_Argc () < 3) {
     Com_Printf ("concat <variableToSet> <variable1> ... <variableN> : concatenates variable1 to variableN and sets the result to variableToSet\n");
     return;
   }
 
-  for (i = 3; i < Cmd_Argc(); i++)
+  for (i = 2; i < Cmd_Argc(); i++)
   	Q_strcat( vc, sizeof(vc), Cvar_VariableString( Cmd_Argv(i) ) );
 
   Cvar_Set( Cmd_Argv( 1 ), vc );
@@ -1421,6 +1421,7 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
 	Cmd_AddCommand ("if",Cmd_If_f);
 	Cmd_AddCommand ("math",Cmd_Math_f);
+	Cmd_AddCommand ("concat",Cmd_Concat_f);
 	Cmd_AddCommand ("strcmp",Cmd_Strcmp_f);
 	Cmd_AddCommand ("echo",Cmd_Echo_f);
 	Cmd_AddCommand ("wait", Cmd_Wait_f);
