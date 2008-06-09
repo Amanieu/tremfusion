@@ -802,10 +802,7 @@ void Cmd_UnAlias_f(void)
 	{
 		alias = *back;
 		if (!alias)
-		{
-			Com_Printf("Alias %s does not exist\n", name);
 			return;
-		}
 		if (!strcmp(name, alias->name))
 		{
 			*back = alias->next;
