@@ -47,6 +47,7 @@ cvar_t	*sv_mapChecksum;
 cvar_t	*sv_serverid;
 cvar_t	*sv_minRate;
 cvar_t	*sv_maxRate;
+cvar_t	*sv_maxPing;
 cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_dequeuePeriod;
 
@@ -410,8 +411,11 @@ void SVC_Info( netadr_t from ) {
 	Info_SetValueForKey( infostring, "clients", va("%i", count) );
 	Info_SetValueForKey( infostring, "sv_maxclients", 
 		va("%i", sv_maxclients->integer - sv_privateClients->integer ) );
-	Info_SetValueForKey( infostring, "pure", va("%i", 0 ) );
+	Info_SetValueForKey( infostring, "pure", "0" );
 
+	if( sv_maxPing->integer ) {
+		Info_SetValueForKey( infostring, "maxPing", va("%i", sv_maxPing->integer) );
+	}
 	gamedir = Cvar_VariableString( "fs_game" );
 	if( *gamedir ) {
 		Info_SetValueForKey( infostring, "game", gamedir );

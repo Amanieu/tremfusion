@@ -345,6 +345,8 @@ extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
 extern	cvar_t	*cl_freezeDemo;
 
+extern	cvar_t	*cl_cleanHostNames;
+
 extern	cvar_t	*cl_yawspeed;
 extern	cvar_t	*cl_pitchspeed;
 extern	cvar_t	*cl_run;
@@ -376,6 +378,9 @@ extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_lanForcePackets;
 extern	cvar_t	*cl_autoRecordDemo;
+extern	cvar_t	*cl_altTab;
+
+extern  cvar_t  *cl_dlURLOverride;
 
 //=================================================
 

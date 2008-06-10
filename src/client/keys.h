@@ -25,8 +25,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct {
 	qboolean	down;
 	int			repeats;		// if > 1, it is autorepeating
-	char		*binding;
+	char		*pushBinding;
+	char		*releaseBinding;
 } qkey_t;
+
+#define KEY_PUSH qtrue
+#define KEY_RELEASE qfalse
 
 extern	qboolean	key_overstrikeMode;
 extern	qkey_t		keys[MAX_KEYS];
@@ -44,7 +48,17 @@ extern	field_t	g_consoleField;
 extern	field_t	chatField;
 extern	int				anykeydown;
 extern	qboolean	chat_team;
+extern	qboolean	chat_admins;
 extern	int			chat_playerNum;
+
+typedef struct {
+	qboolean	active;
+	char		question[1024];
+	char		callback[1024];
+	char		store[1024];
+} cmdPrompt_t;
+
+extern	cmdPrompt_t	prompt;
 
 void Key_WriteBindings( fileHandle_t f );
 void Key_SetBinding( int keynum, const char *binding );

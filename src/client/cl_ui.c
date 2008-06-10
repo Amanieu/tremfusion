@@ -275,6 +275,72 @@ static void LAN_GetServerAddressString( int source, int n, char *buf, int buflen
 }
 
 /*
+==================
+G_SanitiseHostName
+
+Remove non-alphanumeric characters, black characters, and leading spaces from a host name
+==================
+*/
+static void G_SanitiseHostName( char *string )
+{
+	qboolean firstChar  = qfalse;
+	qboolean isBlack    = qfalse;
+	qboolean isGoodChar = qtrue;
+	qboolean skipSpaces = qtrue;
+	
+	char *reader = string;
+	char *writer = string;
+	
+	char lastChar = '\0';
+	
+	while( *reader )
+	{
+		// Ignore leading spaces
+		if( *reader == ' ' && ( skipSpaces == qtrue || lastChar == ' ' ) )
+			isGoodChar = qfalse;
+		
+		// Ignore black coloured characters
+		if ( lastChar == '^' && ColorIndex(*reader) == 0 )
+			isBlack = qtrue;
+		
+		if ( isBlack && *reader != '^' )
+			isGoodChar = qfalse;
+		else if ( isBlack && *reader == '^' )
+			isBlack = isGoodChar = qfalse;
+		else
+			isBlack = qfalse;
+		
+		// Ignore non-alphanumeric characters
+		if ( !isprint( *reader ) )
+			isGoodChar = qfalse;
+		else
+			skipSpaces = qfalse;
+
+		// Determine the first visible character
+		if ( !firstChar && lastChar != '^' && *reader != '^' )
+		{
+			// Strip the first visible character if it's a space
+			if ( *reader == ' ' )
+				isGoodChar = qfalse;
+			else
+				firstChar = qtrue;
+		}
+		
+		if ( isGoodChar == qtrue )
+		{
+			*writer = *reader;
+			writer++;
+		}
+		
+		isGoodChar = qtrue;
+		lastChar = *reader;
+		reader++;
+	}
+	
+	*writer = '\0';
+}
+
+/*
 ====================
 LAN_GetServerInfo
 ====================
@@ -305,8 +371,13 @@ static void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 			}
 			break;
 	}
+	
 	if (server && buf) {
 		buf[0] = '\0';
+		
+		if ( cl_cleanHostNames->integer )
+			G_SanitiseHostName( server->hostName );
+		
 		Info_SetValueForKey( info, "hostname", server->hostName);
 		Info_SetValueForKey( info, "mapname", server->mapName);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));
@@ -1048,7 +1119,14 @@ void CL_ShutdownUI( void ) {
 CL_InitUI
 ====================
 */
-#define UI_OLD_API_VERSION	4
+#define UI_OLD_API_VERSION	6
+
+void Con_MessageMode_f(void);
+void Con_MessageMode2_f(void);
+void Con_MessageMode3_f(void);
+void Con_MessageMode4_f(void);
+void Con_MessageMode5_f(void);
+void Con_Prompt_f(void);
 
 void CL_InitUI( void ) {
 	int		v;
@@ -1070,16 +1148,40 @@ void CL_InitUI( void ) {
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
 	if (v == UI_OLD_API_VERSION) {
+		// unmap messagemode commands
+		Cmd_ExecuteString( "unalias messagemode" );
+		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
+		Cmd_ExecuteString( "unalias messagemode2" );
+		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
+		Cmd_ExecuteString( "unalias messagemode5" );
+		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
+		Cmd_ExecuteString( "unalias prompt" );
+		Cmd_AddCommand( "prompt", Con_Prompt_f );
+		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
+		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
+		
 		// init for this gamestate
 		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE));
 	}
-	else if (v != UI_API_VERSION) {
-		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
-		cls.uiStarted = qfalse;
-	}
-	else {
+	else if (v == UI_API_VERSION) {
+		// map messagemode commands
+		Cmd_RemoveCommand( "messagemode" );
+		Cmd_ExecuteString( "alias messagemode ui_messagemode" );
+		Cmd_RemoveCommand( "messagemode2" );
+		Cmd_ExecuteString( "alias messagemode2 ui_messagemode2" );
+		Cmd_RemoveCommand( "messagemode5" );
+		Cmd_ExecuteString( "alias messagemode5 ui_messagemode5" );
+		Cmd_RemoveCommand( "prompt" );
+		Cmd_ExecuteString( "alias prompt ui_prompt" );
+		Cmd_RemoveCommand( "messagemode3" );
+		Cmd_RemoveCommand( "messagemode4" );
+		
 		// init for this gamestate
 		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE) );
+	}
+	else {
+		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
+		cls.uiStarted = qfalse;
 	}
 
 	// reset any CVAR_CHEAT cvars registered by ui

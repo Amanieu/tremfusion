@@ -362,12 +362,12 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 	*fqpath = 0;
 
 	fn = FS_BuildOSPath( base, gamedir, fname );
-	Com_Printf( "Sys_LoadDll(%s)... \n", fn );
+	Com_DPrintf( "Sys_LoadDll(%s)... \n", fn );
 
 	libHandle = Sys_LoadLibrary(fn);
 
 	if(!libHandle) {
-		Com_Printf( "Sys_LoadDll(%s) failed:\n\"%s\"\n", fn, Sys_LibraryError() );
+		Com_DPrintf( "Sys_LoadDll(%s) failed:\n\"%s\"\n", fn, Sys_LibraryError() );
 		return NULL;
 	}
 
@@ -433,7 +433,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 		return NULL;
 	}
 
-	Com_Printf ( "Sys_LoadDll(%s) found vmMain function at %p\n", name, *entryPoint );
+	Com_DPrintf ( "Sys_LoadDll(%s) found vmMain function at %p\n", name, *entryPoint );
 	dllEntry( systemcalls );
 
 	return libHandle;

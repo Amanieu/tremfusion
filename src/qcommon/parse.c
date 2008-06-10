@@ -1045,6 +1045,7 @@ static script_t *Parse_LoadScriptFile(const char *filename)
   FS_Read(script->buffer, length, fp);
   FS_FCloseFile(fp);
   //
+  script->length = COM_Compress(script->buffer);
 
   return script;
 }
