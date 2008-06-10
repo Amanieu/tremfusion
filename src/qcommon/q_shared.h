@@ -30,8 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define PRODUCT_NAME            "tremulous"
 #define PRODUCT_VERSION         "1.1.0"
 
-#ifdef SVN_VERSION
-# define Q3_VERSION PRODUCT_NAME " " SVN_VERSION
+#ifdef SCM_VERSION
+# define Q3_VERSION PRODUCT_NAME " " SCM_VERSION
 #else
 # define Q3_VERSION PRODUCT_NAME " " PRODUCT_VERSION
 #endif
