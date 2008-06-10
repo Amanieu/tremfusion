@@ -104,6 +104,7 @@ upgradeInfo_t   cg_upgrades[ 32 ];
 
 buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
+vmCvar_t  cg_version;
 vmCvar_t  cg_teslaTrailTime;
 vmCvar_t  cg_centertime;
 vmCvar_t  cg_runpitch;
@@ -228,6 +229,7 @@ typedef struct
 
 static cvarTable_t cvarTable[ ] =
 {
+  { &cg_version, "cg_version", Q3_VERSION, CVAR_ROM | CVAR_USERINFO },
   { &cg_autoswitch, "cg_autoswitch", "1", CVAR_ARCHIVE },
   { &cg_drawGun, "cg_drawGun", "1", CVAR_ARCHIVE },
   { &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE },
