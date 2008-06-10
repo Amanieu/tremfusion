@@ -519,9 +519,9 @@ qboolean HBotEquipOK(bot_state_t* bs){
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
 	
-	if(!G_BuildingExists(BA_H_ARMOURY)) return qtrue; //No arm so cant buy more ammo
+	if(!G_FindBuildable(BA_H_ARMOURY)) return qtrue; //No arm so cant buy more ammo
 	if(G_BuildableRange( bs->cur_ps.origin, 1000, BA_H_ARMOURY )){
-		totalcredit = BG_GetValueOfEquipment( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
+		totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
 		switch(g_humanStage.integer){
 			case 0:
 				if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN) return qfalse;
@@ -555,7 +555,7 @@ qboolean HBotEquipOK(bot_state_t* bs){
 }
 
 qboolean HBotHealthOK(bot_state_t* bs){
-	if(!G_BuildingExists(BA_H_MEDISTAT)) return qtrue; //No medi so cant heal anyway
+	if(!G_FindBuildable(BA_H_MEDISTAT)) return qtrue; //No medi so cant heal anyway
 	if(AI_BuildableWalkingRange( bs, 20, BA_H_MEDISTAT ) ){ //if were really close
 		if(bs->inventory[BI_HEALTH] < bs->cur_ps.stats[STAT_MAX_HEALTH]){ 
 			return qfalse;
@@ -594,7 +594,7 @@ void HBotCheckRespawn(bot_state_t* bs){
 	// respawned, but not spawned.. send class cmd
 	if( BotIntermission(bs) ){
 		// rifle || ckit || akit
-    	if( BG_WeaponIsAllowed( WP_HBUILD2 ) && BG_FindStagesForWeapon( WP_HBUILD2, g_humanStage.integer ) )
+    	if( BG_WeaponIsAllowed( WP_HBUILD ) && BG_UpgradeAllowedInStage( WP_HBUILD, g_humanStage.integer ) )
     		Com_sprintf(buf, sizeof(buf), "class ackit");
     	else
     		Com_sprintf(buf, sizeof(buf), "class ckit" );
@@ -611,7 +611,6 @@ void HBotCheckRespawn(bot_state_t* bs){
 // inventory becomes quite useless, thanks to the BG_Inventory functions..
 void HBotUpdateInventory(bot_state_t* bs){
 	weapon_t i;
-	int ammo, clips;
 	
 	//Bot_Print(BPMSG, "\nUpdating Inventory");
 	// why exclude WP_HBUILD ?
@@ -624,8 +623,8 @@ void HBotUpdateInventory(bot_state_t* bs){
 	}
 	// ammo and clips
 //	BG_UnpackAmmoArray( bs->inventory[BI_WEAPON], bs->cur_ps.ammo, bs->cur_ps.powerups, &ammo, &clips );		// get maximum with BG_FindAmmoForWeapon
-	bs->inventory[BI_AMMO] = ent->client->ps.ammo[0];
-	bs->inventory[BI_CLIPS] = ent->client->ps.ammo[1];
+	bs->inventory[BI_AMMO] = bs->ent->client->ps.ammo[0];
+	bs->inventory[BI_CLIPS] = bs->ent->client->ps.ammo[1];
 	//Bot_Print(BPMSG, "\nI have %d ammo and %d clips", ammo, clips);
 	
 	bs->inventory[BI_HEALTH] = bs->cur_ps.stats[STAT_HEALTH];
@@ -656,7 +655,7 @@ void HBotShop(bot_state_t* bs){
 	int       maxAmmo, maxClips;
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
-	totalcredit = BG_GetValueOfEquipment( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
+	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
 	switch(g_humanStage.integer){
 		case 0:
 			if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN){
@@ -695,7 +694,8 @@ void HBotShop(bot_state_t* bs){
 		trap_EA_Command(bs->client, "itemtoggle blaster" );
 	//trap_EA_Command(bs->client, "sell ckit" );
 	//trap_EA_Command(bs->client, "buy rifle" );
-	BG_FindAmmoForWeapon( bs->inventory[BI_WEAPON], &maxAmmo, &maxClips );
+	maxAmmo = BG_Weapon( bs->ent->client->ps.weapon )->maxAmmo;
+	maxClips = BG_Weapon( bs->ent->client->ps.weapon )->maxClips;
 	switch(bs->inventory[BI_WEAPON]){
 		case WP_MACHINEGUN:
 		case WP_PULSE_RIFLE:
@@ -1184,8 +1184,7 @@ BotHumanAI
 ==================
 */
 void BotHumanAI(bot_state_t *bs, float thinktime) {
-  int i;
-  char gender[144], name[144], buf[144];
+//  int i;
   if (bs->setupcount > 0) {
     bs->setupcount--;
     if (bs->setupcount > 0) return;

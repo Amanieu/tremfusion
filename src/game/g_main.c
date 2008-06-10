@@ -39,8 +39,10 @@ typedef struct
 gentity_t   g_entities[ MAX_GENTITIES ];
 gclient_t   g_clients[ MAX_CLIENTS ];
 
+vmCvar_t  g_fraglimit;
 vmCvar_t  g_timelimit;
 vmCvar_t  g_suddenDeathTime;
+vmCvar_t  g_capturelimit;
 vmCvar_t  g_friendlyFire;
 vmCvar_t  g_friendlyFireAliens;
 vmCvar_t  g_friendlyFireHumans;
@@ -54,6 +56,7 @@ vmCvar_t  g_speed;
 vmCvar_t  g_gravity;
 vmCvar_t  g_cheats;
 vmCvar_t  g_knockback;
+vmCvar_t  g_quadfactor;
 vmCvar_t  g_inactivity;
 vmCvar_t  g_debugMove;
 vmCvar_t  g_debugDamage;
@@ -66,13 +69,19 @@ vmCvar_t  g_doWarmup;
 vmCvar_t  g_restarted;
 vmCvar_t  g_logFile;
 vmCvar_t  g_logFileSync;
+vmCvar_t  g_blood;
+vmCvar_t  g_podiumDist;
+vmCvar_t  g_podiumDrop;
 vmCvar_t  g_allowVote;
 vmCvar_t  g_voteLimit;
 vmCvar_t  g_teamAutoJoin;
 vmCvar_t  g_teamForceBalance;
+vmCvar_t  g_banIPs;
+vmCvar_t  g_filterBan;
 vmCvar_t  g_smoothClients;
 vmCvar_t  pmove_fixed;
 vmCvar_t  pmove_msec;
+vmCvar_t  g_rankings;
 vmCvar_t  g_listEntity;
 vmCvar_t  g_minCommandPeriod;
 vmCvar_t  g_minNameChangePeriod;
@@ -178,6 +187,9 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_password, "g_password", "", CVAR_USERINFO, 0, qfalse  },
 
+  { &g_banIPs, "g_banIPs", "", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_filterBan, "g_filterBan", "1", CVAR_ARCHIVE, 0, qfalse  },
+
   { &g_needpass, "g_needpass", "0", CVAR_SERVERINFO | CVAR_ROM, 0, qfalse },
 
   { &g_dedicated, "dedicated", "0", 0, 0, qfalse  },
@@ -185,12 +197,17 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_speed, "g_speed", "320", 0, 0, qtrue  },
   { &g_gravity, "g_gravity", "800", 0, 0, qtrue  },
   { &g_knockback, "g_knockback", "1000", 0, 0, qtrue  },
+  { &g_quadfactor, "g_quadfactor", "3", 0, 0, qtrue  },
   { &g_weaponRespawn, "g_weaponrespawn", "5", 0, 0, qtrue  },
   { &g_weaponTeamRespawn, "g_weaponTeamRespawn", "30", 0, 0, qtrue },
   { &g_inactivity, "g_inactivity", "0", 0, 0, qtrue },
   { &g_debugMove, "g_debugMove", "0", 0, 0, qfalse },
   { &g_debugDamage, "g_debugDamage", "0", 0, 0, qfalse },
   { &g_motd, "g_motd", "", 0, 0, qfalse },
+  { &g_blood, "com_blood", "1", 0, 0, qfalse },
+
+  { &g_podiumDist, "g_podiumDist", "80", 0, 0, qfalse },
+  { &g_podiumDrop, "g_podiumDrop", "70", 0, 0, qfalse },
 
   { &g_allowVote, "g_allowVote", "1", CVAR_ARCHIVE, 0, qfalse },
   { &g_voteLimit, "g_voteLimit", "5", CVAR_ARCHIVE, 0, qfalse },
@@ -251,6 +268,8 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_privateMessages, "g_privateMessages", "1", CVAR_ARCHIVE, 0, qfalse  },
 
+  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse },
+
   //Start Champ bot cvars
   { &bot_thinktime, "bot_thinktime", "100", CVAR_CHEAT, 0, qfalse  },
   { &bot_minaliens, "bot_minaliens", "0", CVAR_SERVERINFO, 0, qfalse  },
@@ -259,8 +278,8 @@ static cvarTable_t   gameCvarTable[ ] =
   { &bot_challenge, "bot_challenge", "0", CVAR_SERVERINFO, 0, qfalse  },
   { &bot_nochat,    "bot_nochat",    "0", CVAR_SERVERINFO, 0, qfalse  },
   //End Champ bot cvars
-
-  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse }
+  
+  { &g_rankings, "g_rankings", "0", 0, 0, qfalse}
 };
 
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );

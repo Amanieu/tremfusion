@@ -1325,6 +1325,62 @@ void ClientBegin( int clientNum )
 
 /*
 ===========
+ClientBegin
+
+called when a client has finished connecting, and is ready
+to be placed into the level.  This will happen every level load,
+and on transition between teams, but doesn't happen on respawns
+============
+*/
+void BotBegin( int clientNum )
+{
+  gentity_t *ent;
+  gclient_t *client;
+  int       flags;
+
+  ent = g_entities + clientNum;
+
+  client = level.clients + clientNum;
+
+  if( ent->r.linked )
+    trap_UnlinkEntity( ent );
+
+  G_InitGentity( ent );
+  ent->touch = 0;
+  ent->pain = 0;
+  ent->client = client;
+
+  client->pers.connected = CON_CONNECTED;
+  client->pers.enterTime = level.time;
+
+  // save eflags around this, because changing teams will
+  // cause this to happen with a valid entity, and we
+  // want to make sure the teleport bit is set right
+  // so the viewpoint doesn't interpolate through the
+  // world to the new position
+  flags = client->ps.eFlags;
+  memset( &client->ps, 0, sizeof( client->ps ) );
+  memset( &client->pmext, 0, sizeof( client->pmext ) );
+  client->ps.eFlags = flags;
+
+  // locate ent at a spawn point
+
+  ClientSpawn( ent, NULL, NULL, NULL );
+
+  // name can change between ClientConnect() and ClientBegin()
+  G_admin_namelog_update( client, qfalse );
+
+  // request the clients PTR code
+  trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
+
+  G_LogPrintf( "ClientBegin: %i\n", clientNum );
+
+  // count current clients and rank for scoreboard
+  CalculateRanks( );
+}
+
+/*
+===========
 ClientSpawn
 
 Called every time a client is placed fresh in the world:

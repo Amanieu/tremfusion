@@ -497,8 +497,7 @@ qboolean BotGoalForClosestBuildable(bot_state_t* bs, bot_goal_t* goal, int bclas
 	gentity_t* ent;
 	gentity_t* closesttarget;
 	float dist, closestdist = 100000000;
-	vec3_t dir, origin;
-	vec3_t temp;
+	vec3_t origin;
 	
 	for( i = 1, ent = g_entities + i ; i < level.num_entities ; i++, ent++ ){
 		if( ent->s.eType != ET_BUILDABLE) continue;
@@ -555,7 +554,7 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 	aas_entityinfo_t entinfo, closestentinfo;
 	//int closestdist;
 	float dist, closestdist = 1000;
-	vec3_t dir, anglefalses;
+	vec3_t dir;
 	
 	//i = BotFindEnemy(bs, bs->enemy);
 	// check list for enemies
@@ -604,7 +603,7 @@ qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal){
 	aas_entityinfo_t entinfo, closestentinfo;
 	//int closestdist;
 	float dist, closestdist = 1000;
-	vec3_t dir, angles;
+	vec3_t dir;
 	
 	//i = BotFindEnemy(bs, bs->enemy);
 	// check list for enemies
@@ -647,7 +646,8 @@ qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal){
 	// create a goal
 	OrgToGoal(closesttarget->s.origin, goal);
 	//BG_FindBBoxForBuildable( ent->s.modelindex, goal->mins, goal->maxs );
-	BG_FindBBoxForClass(closesttarget->client->pers.classSelection, goal->mins, goal->maxs, NULL, NULL, NULL);
+	VectorCopy( BG_BuildableConfig( closesttarget->client->pers.classSelection )->mins, goal->mins  );
+  VectorCopy( BG_BuildableConfig( closesttarget->client->pers.classSelection )->maxs, goal->maxs  );
 	goal->entitynum = bs->enemy = closest;
 	// not reachable? check below and above
 	if ( !trap_AAS_AreaReachability(goal->areanum) ) {
@@ -680,7 +680,8 @@ qboolean BotGoalForNearestEnemy(bot_state_t* bs, bot_goal_t* goal) {
 	enemyent =  &g_entities[ enemy ];
 	
 	OrgToGoal(entinfo.origin, goal);
-	BG_FindBBoxForClass(enemyent->s.modelindex, goal->mins, goal->maxs, NULL, NULL, NULL);
+	VectorCopy( BG_BuildableConfig( enemyent->s.modelindex)->mins, goal->mins  );
+  VectorCopy( BG_BuildableConfig( enemyent->s.modelindex)->maxs, goal->maxs  );
 	goal->entitynum = enemy;
 	if(CheckReachability(goal)){
 		return qtrue;			

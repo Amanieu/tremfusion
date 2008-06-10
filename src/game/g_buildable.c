@@ -2542,7 +2542,7 @@ G_FindBuildable
 Finds a buildable of the specified type
 ================
 */
-static gentity_t *G_FindBuildable( buildable_t buildable )
+gentity_t *G_FindBuildable( buildable_t buildable )
 {
   int       i;
   gentity_t *ent;

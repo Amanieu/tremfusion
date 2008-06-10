@@ -244,32 +244,6 @@ static void Svcmd_AdmitDefeat_f( void )
 
 /*
 ===============
-Svcmd_AddBot_f
-===============
-*/
-void Svcmd_AddBot_f( void ){
-  char			name[MAX_TOKEN_CHARS];
-  char			team[MAX_TOKEN_CHARS];
-
-  if ( !trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
-  	return;
-  }
-
-  // name
-  trap_Argv( 1, name, sizeof( name ) );
-  if ( !name[0] ) {
-    trap_Printf( "Usage: Addbot <botname> [team] \n" );
-    return;
-  }
-  
-  // team
-  trap_Argv( 2, team, sizeof( team ) );
-
-  G_AddBot( name, team );
-}
-
-/*
-===============
 Svcmd_BotlibSetVariable_f
 ===============
 */
@@ -389,11 +363,6 @@ qboolean  ConsoleCommand( void )
     return qtrue;
   }
   
-  if( !Q_stricmp( cmd, "addbot" ) )
-  {
-    Svcmd_AddBot_f( );
-    return qtrue;
-  }
   
   if( !Q_stricmp( cmd, "blibset" ) )
   {

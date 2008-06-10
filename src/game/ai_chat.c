@@ -65,7 +65,7 @@ BotAI_BotInitialChat
 ==================
 */
 void QDECL BotAI_BotInitialChat( bot_state_t *bs, char *type, ... ) {
-	int		i, mcontext;
+	int		i;
 	va_list	ap;
 	char	*p;
 	char	*vars[MAX_MATCHVARIABLES];
@@ -82,7 +82,7 @@ void QDECL BotAI_BotInitialChat( bot_state_t *bs, char *type, ... ) {
 	}
 	va_end(ap);
 	if (bot_developer.integer)
-		Bot_Print(BPMSG, va("calling trap_BotInitialChat( %d, %s, %d,  %s, %s, %s, %s, %s, %s, %s \n", bs->cs, type, CONTEXT_NORMAL, vars[0], vars[1], vars[2], vars[3], vars[4], vars[5], vars[6], vars[7]) );
+		Bot_Print(BPMSG, "calling trap_BotInitialChat( %d, %s, %d,  %s, %s, %s, %s, %s, %s, %s, %s\n", bs->cs, type, CONTEXT_NORMAL, vars[0], vars[1], vars[2], vars[3], vars[4], vars[5], vars[6], vars[7]);
 	//mcontext = BotSynonymContext(bs);
 	trap_BotInitialChat( bs->cs, type, CONTEXT_NORMAL, vars[0], vars[1], vars[2], vars[3], vars[4], vars[5], vars[6], vars[7] );
 }
@@ -167,7 +167,7 @@ int BotNumActivePlayers(void) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//
 		num++;
 	}
@@ -194,7 +194,7 @@ int BotIsFirstInRankings(bot_state_t *bs) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//
 		BotAI_GetClientState(i, &ps);
 		if (score < ps.persistant[PERS_SCORE]) return qfalse;
@@ -222,7 +222,7 @@ int BotIsLastInRankings(bot_state_t *bs) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//
 		BotAI_GetClientState(i, &ps);
 		if (score > ps.persistant[PERS_SCORE]) return qfalse;
@@ -252,7 +252,7 @@ char *BotFirstClientInRankings(void) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//
 		BotAI_GetClientState(i, &ps);
 		if (ps.persistant[PERS_SCORE] > bestscore) {
@@ -286,7 +286,7 @@ char *BotLastClientInRankings(void) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//
 		BotAI_GetClientState(i, &ps);
 		if (ps.persistant[PERS_SCORE] < worstscore) {
@@ -322,7 +322,7 @@ char *BotRandomOpponentName(bot_state_t *bs) {
 		//if no config string or no name
 		if (!strlen(buf) || !strlen(Info_ValueForKey(buf, "n"))) continue;
 		//skip spectators
-		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_SPECTATOR) continue;
+		if (atoi(Info_ValueForKey(buf, "t")) == TEAM_NONE) continue;
 		//skip team mates
 		if (BotSameTeam(bs, i)) continue;
 		//

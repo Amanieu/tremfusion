@@ -308,6 +308,7 @@ void BotAddInfo(bot_state_t* bs, char* key, char* value );
 char *ClientName(int client, char *name, int size);
 char *ClientSkin(int client, char *skin, int size);
 qboolean AI_BuildableWalkingRange( bot_state_t* bs, int r, buildable_t buildable );
+qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal);
 
 //int CheckAreaForGoal(vec3_t origin);
 qboolean BotInFieldOfVision(vec3_t viewangles, float fov, vec3_t angles);
@@ -348,4 +349,24 @@ void HBotEnterChat(bot_state_t *bs);
 // ai_alien.c
 void BotAlienAI(bot_state_t* bs, float thinktime);
 
+//g_bot.c functions
+void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo );
+void G_BotDel( gentity_t *ent, int clientNum );
+
+void G_BotThink( gentity_t *self );
+void G_BotSpectatorThink( gentity_t *self );
+void G_BotClearCommands( gentity_t *self );
+qboolean botAimAtTarget( gentity_t *self, gentity_t *target );
+qboolean botTargetInRange( gentity_t *self, gentity_t *target );
+int botFindClosestEnemy( gentity_t *self, qboolean includeTeam );
+int botGetDistanceBetweenPlayer( gentity_t *self, gentity_t *player );
+void G_RemoveQueuedBotBegin( int clientNum );
+void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill);
+int G_RemoveRandomBot( int team );
+int G_CountHumanPlayers( int team );
+int G_CountBotPlayers( int team );
+void G_CheckMinimumPlayers( void );
+void G_CheckBotSpawn( void );
+qboolean G_BotConnect( int clientNum, qboolean restart );
+char *G_GetBotInfoByName( const char *name );
 

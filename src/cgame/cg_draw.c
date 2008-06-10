@@ -2952,7 +2952,7 @@ static void CG_DrawBotInfo( void ){
 	
 
 	/*Com_sprintf( buffer, MAX_STRING_CHARS, "BotInfo Test.");
-	w = CG_Text_Width( buffer, scale, 0 );
+	w = UI_Text_Width( buffer, scale, 0 );
 	CG_Text_Paint( 640 - w , 160, scale, color, buffer, 0, 0, ITEM_TEXTSTYLE_NORMAL );
 	*/
 	
@@ -2974,9 +2974,9 @@ static void CG_DrawBotInfo( void ){
 		if( !value[0] ) break;
 
 		Com_sprintf( buffer, MAX_STRING_CHARS, va("%s: %s", key, value) );
-		y += CG_Text_Height( buffer, scale, 0 ) + 5;
-		w = CG_Text_Width( buffer, scale, 0 );
-		CG_Text_Paint( 630 - w , y, scale, color, buffer, 0, 0, ITEM_TEXTSTYLE_NORMAL );
+		y += UI_Text_Height( buffer, scale, 0 ) + 5;
+		w = UI_Text_Width( buffer, scale, 0 );
+		UI_Text_Paint( 630 - w , y, scale, color, buffer, 0, 0, ITEM_TEXTSTYLE_NORMAL );
 	}
 	
 }

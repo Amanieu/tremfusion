@@ -34,7 +34,7 @@ float ABotFindWidth(int weapon){ //, float width, float range){
 	float width, range;
 	switch(weapon){		
 		case WP_ABUILD2:
-			range = configf[CONFIG_ABUILDER_CLAW_RANGE];
+			range = ABUILDER_CLAW_RANGE;
 			width = ABUILDER_CLAW_WIDTH;
 			break;
 		case WP_ALEVEL0:
@@ -73,7 +73,7 @@ float ABotFindRange(int weapon){ //, float width, float range){
 	float width, range;
 	switch(weapon){		
 		case WP_ABUILD2:
-			range = configf[CONFIG_ABUILDER_CLAW_RANGE];
+			range = ABUILDER_CLAW_RANGE;
 			width = ABUILDER_CLAW_WIDTH;
 			break;
 		case WP_ALEVEL0:
@@ -190,71 +190,71 @@ BotCheckAttack
 ==================
 */
 void ABotCheckAttack(bot_state_t *bs) {
-        float fov;
-        int attackentity;
-        bsp_trace_t bsptrace;
-        vec3_t forward, start, end, dir, angles;
-        bsp_trace_t trace;
-        aas_entityinfo_t entinfo;
-        vec3_t mins = {-8, -8, -8}, maxs = {8, 8, 8};
+  float fov;
+  int attackentity;
+  bsp_trace_t bsptrace;
+  vec3_t forward, start, end, dir, angles;
+  bsp_trace_t trace;
+  aas_entityinfo_t entinfo;
+  vec3_t mins = {-8, -8, -8}, maxs = {8, 8, 8};
 
-        attackentity = bs->enemy;
-        //
-        trap_AAS_EntityInfo(attackentity, &entinfo);
-        
-        // if not attacking a player
-        if (attackentity >= MAX_CLIENTS) {
+  attackentity = bs->enemy;
+  //
+  trap_AAS_EntityInfo(attackentity, &entinfo);
+  
+  // if not attacking a player
+  if (attackentity >= MAX_CLIENTS) {
 
-        }
+  }
 
-        VectorSubtract(bs->aimtarget, bs->eye, dir);
+  VectorSubtract(bs->aimtarget, bs->eye, dir);
 
-        if (VectorLengthSquared(dir) < Square(100))
-                fov = 120;
-        else
-                fov = 50;
-        //
-        vectoangles(dir, angles);
-        if (!BotInFieldOfVision(bs->viewangles, fov, angles))
-                return;
-        BotAI_Trace(&bsptrace, bs->eye, NULL, NULL, bs->aimtarget, bs->client, CONTENTS_SOLID|CONTENTS_PLAYERCLIP);
-        if (bsptrace.fraction < 1 && bsptrace.ent != attackentity)
-                return;
+  if (VectorLengthSquared(dir) < Square(100))
+          fov = 120;
+  else
+          fov = 50;
+  //
+  vectoangles(dir, angles);
+  if (!BotInFieldOfVision(bs->viewangles, fov, angles))
+          return;
+  BotAI_Trace(&bsptrace, bs->eye, NULL, NULL, bs->aimtarget, bs->client, CONTENTS_SOLID|CONTENTS_PLAYERCLIP);
+  if (bsptrace.fraction < 1 && bsptrace.ent != attackentity)
+          return;
 
-        //get the start point shooting from
-        VectorCopy(bs->origin, start);
-        start[2] += bs->cur_ps.viewheight;
+  //get the start point shooting from
+  VectorCopy(bs->origin, start);
+  start[2] += bs->cur_ps.viewheight;
 
-        AngleVectors(bs->viewangles, forward, NULL, NULL);
-        //end point aiming at
-        VectorMA(start, 1000, forward, end);
-        //a little back to make sure not inside a very close enemy
-        VectorMA(start, -12, forward, start);
-        BotAI_Trace(&trace, start, mins, maxs, end, bs->entitynum, MASK_SHOT);
-        //if the entity is a client
-        if (trace.ent > 0 && trace.ent <= MAX_CLIENTS) {
-                if (trace.ent != attackentity) {
-                        //if a teammate is hit
-                        if (BotSameTeam(bs, trace.ent))
-                                return;
-                }
-        }
-        
-        // TODO avoid radial damage
-        
-        /*
-        //if fire has to be release to activate weapon
-        if (wi.flags & WFL_FIRERELEASED) {
-                if (bs->flags & BFL_ATTACKED) {
-                        trap_EA_Attack(bs->client);
-                }
-        }
-        else {
-        */
-                trap_EA_Attack(bs->client);
-        /*}
-        bs->flags ^= BFL_ATTACKED;
-        */
+  AngleVectors(bs->viewangles, forward, NULL, NULL);
+  //end point aiming at
+  VectorMA(start, 1000, forward, end);
+  //a little back to make sure not inside a very close enemy
+  VectorMA(start, -12, forward, start);
+  BotAI_Trace(&trace, start, mins, maxs, end, bs->entitynum, MASK_SHOT);
+  //if the entity is a client
+  if (trace.ent > 0 && trace.ent <= MAX_CLIENTS) {
+          if (trace.ent != attackentity) {
+                  //if a teammate is hit
+                  if (BotSameTeam(bs, trace.ent))
+                          return;
+          }
+  }
+  
+  // TODO avoid radial damage
+  
+  /*
+  //if fire has to be release to activate weapon
+  if (wi.flags & WFL_FIRERELEASED) {
+          if (bs->flags & BFL_ATTACKED) {
+                  trap_EA_Attack(bs->client);
+          }
+  }
+  else {
+  */
+          trap_EA_Attack(bs->client);
+  /*}
+  bs->flags ^= BFL_ATTACKED;
+  */
 }
 
 qboolean HumansNearby(bot_state_t* bs){
@@ -272,8 +272,8 @@ qboolean HumansNearby(bot_state_t* bs){
   {
     other = &g_entities[ entityList[ i ] ];
 
-    if( ( other->client && other->client->ps.stats[ STAT_PTEAM ] == TEAM_HUMANS ) ||
-        ( other->s.eType == ET_BUILDABLE && other->biteam == TEAM_HUMANS ) )
+    if( ( other->client && other->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS ) ||
+        ( other->s.eType == ET_BUILDABLE && BG_Buildable( other->s.modelindex )->team ==  TEAM_HUMANS ) )
     {
       return qtrue;
     }
@@ -282,11 +282,10 @@ qboolean HumansNearby(bot_state_t* bs){
 }
  
 qboolean ABotClassOK(bot_state_t* bs){
-	int totalcredit;
 	int numEvos;
-	pClass_t  currentClass = bs->ent->client->ps.stats[ STAT_PCLASS ];
+	int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
 	if(!HumansNearby(bs)){	
-		numEvos = bs->inventory[BI_CREDITS] + BG_FindCostOfClass(currentClass);
+		numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->value;
 		switch(g_alienStage.integer){
 			case 0:
 			case 1:
@@ -319,7 +318,7 @@ void ABotCheckRespawn(bot_state_t* bs){
 // inventory becomes quite useless, thanks to the BG_Inventory functions..
 void ABotUpdateInventory(bot_state_t* bs){
   
-  bs->inventory[BI_HEALTH] = bs->cur_ps.stats[STAT_HEALTH];
+  bs->inventory[BI_HEALTH] = bs->cur_ps.stats[ STAT_HEALTH ];
   bs->inventory[BI_CREDITS] = bs->cur_ps.persistant[ PERS_CREDIT ];
   bs->inventory[BI_CLASS] = bs->ent->client->pers.classSelection;
   bs->inventory[BI_WEAPON] = bs->ent->client->ps.weapon;
@@ -331,8 +330,8 @@ void ABotUpdateInventory(bot_state_t* bs){
 // armoury AI: buy stuff depending on credits (stage, situation)
 void ABotEvolve(bot_state_t* bs){
 	int numEvos;
-	pClass_t  currentClass = bs->ent->client->ps.stats[ STAT_PCLASS ];
-	numEvos = bs->inventory[BI_CREDITS] + BG_FindCostOfClass(currentClass);
+	int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
+	numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->value;
 	switch(g_alienStage.integer){
 		case 0:
 		case 1:
@@ -422,8 +421,6 @@ qboolean ABotAttack(bot_state_t* bs){
 // go for arm and gear up
 qboolean ABotEvo(bot_state_t* bs){
 	//bot_goal_t goal;
-	bot_moveresult_t moveresult;
-	vec3_t target, dir;
 	
 	//state transitions
 	
