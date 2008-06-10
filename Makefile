@@ -100,6 +100,10 @@ ifndef USE_OPENAL_DLOPEN
 USE_OPENAL_DLOPEN=0
 endif
 
+ifndef USE_PYTHON
+USE_PYTHON=1
+endif
+
 ifndef USE_CURL
 USE_CURL=1
 endif
@@ -149,6 +153,7 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
+PYDIR=$(MOUNT_DIR)/python
 
 # extract version info
 VERSION=$(shell grep "\#define *PRODUCT_VERSION" $(CMDIR)/q_shared.h | \
@@ -294,6 +299,14 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
+  ifeq ($(USE_PYTHON),1)
+   PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
+   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
+   NOTSHLIBCFLAGS += -Isrc/python/include
+   LDFLAGS += $(PYTHONLDFLAGS)
+   LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
+  endif
+  
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
@@ -440,7 +453,13 @@ endif
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-
+  
+  ifeq ($(USE_PYTHON),1)
+   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
+   NOTSHLIBCFLAGS += -Isrc/python/include
+   LDFLAGS += $(LIBSDIR)win32/python25.lib
+  endif
+  
   ifeq ($(ARCH),x86)
     # build 32bit
     BASE_CFLAGS += -m32
@@ -1219,6 +1238,12 @@ ifeq ($(ARCH),x86)
     $(B)/client/snapvectora.o
 endif
 
+ifeq ($(USE_PYTHON),1)
+	Q3OBJ += \
+	$(B)/client/py_init.o \
+	$(B)/client/py_main.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1315,6 +1340,12 @@ ifeq ($(ARCH),x86)
       $(B)/ded/ftola.o \
       $(B)/ded/snapvectora.o \
       $(B)/ded/matha.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+	Q3DOBJ += \
+	$(B)/ded/py_init.o \
+	$(B)/ded/py_main.o
 endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
@@ -1512,6 +1543,8 @@ $(B)/client/%.o: $(SYSDIR)/%.c
 $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
+$(B)/client/%.o: $(PYDIR)/%.c
+	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1532,6 +1565,9 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
 $(B)/ded/%.o: $(NDIR)/%.c
+	$(DO_DED_CC)
+	
+$(B)/ded/%.o: $(PYDIR)/%.c
 	$(DO_DED_CC)
 
 # Extra dependencies to ensure the SVN version is incorporated
