@@ -158,12 +158,24 @@ USE_SVN=
 ifeq ($(wildcard .svn),.svn)
   SVN_REV=$(shell LANG=C svnversion .)
   ifneq ($(SVN_REV),)
-    SVN_VERSION=$(VERSION)_SVN$(SVN_REV)
+    SCM_VERSION=$(VERSION)_SVN$(SVN_REV)
     USE_SVN=1
   endif
 endif
+
+USE_HG=
+ifeq ($(wildcard .hg),.hg)
+  HG_REV=$(shell LANG=C hg id -n)
+  ifneq ($(HG_REV),)
+    SCM_VERSION=$(VERSION)_HG$(HG_REV)
+    USE_HG=1
+  endif
+endif
+
 ifneq ($(USE_SVN),1)
-    SVN_VERSION=$(VERSION)
+  ifneq ($(USE_HG),1)
+    SCM_VERSION=$(VERSION)
+  endif
 endif
 
 
@@ -762,7 +774,11 @@ else
 endif
 
 ifeq ($(USE_SVN),1)
-  BASE_CFLAGS += -DSVN_VERSION=\\\"$(SVN_VERSION)\\\"
+  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
+endif
+
+ifeq ($(USE_HG),1)
+  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
 endif
 
 ifeq ($(V),1)
@@ -1525,6 +1541,11 @@ ifeq ($(USE_SVN),1)
   $(B)/ded/common.o : .svn/entries
 endif
 
+ifeq ($(USE_HG),1)
+  $(B)/client/cl_console.o : .hg/dirstate
+  $(B)/client/common.o : .hg/dirstate
+  $(B)/ded/common.o : .hg/dirstate
+endif
 
 #############################################################################
 ## GAME MODULE RULES
@@ -1613,10 +1634,10 @@ distclean: clean toolsclean
 	@rm -rf $(BUILD_DIR)
 
 dist:
-	rm -rf tremulous-$(SVN_VERSION)
-	svn export . tremulous-$(SVN_VERSION)
-	tar --owner=root --group=root --force-local -cjf tremulous-$(SVN_VERSION).tar.bz2 tremulous-$(SVN_VERSION)
-	rm -rf tremulous-$(SVN_VERSION)
+	rm -rf tremulous-$(SCM_VERSION)
+	svn export . tremulous-$(SCM_VERSION)
+	tar --owner=root --group=root --force-local -cjf tremulous-$(SCM_VERSION).tar.bz2 tremulous-$(SCM_VERSION)
+	rm -rf tremulous-$(SCM_VERSION)
 
 #############################################################################
 # DEPENDENCIES
