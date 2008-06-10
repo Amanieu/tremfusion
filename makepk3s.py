@@ -24,7 +24,8 @@ def add_file(fspath, pk3path):
 def add_dir_tree(globstring, pk3path):
   for fspath in glob.glob(globstring):
     if os.path.isdir(fspath):
-      print "recursing: %-42s at %s" % (fspath+"/*", join(pk3path, basename(fspath)) )
+      if options.verbose:
+        print "recursing: %-42s at %s" % (fspath+"/*", join(pk3path, basename(fspath)) )
       add_dir_tree(fspath+"/*",  join(pk3path, basename(fspath)))
     else:
       add_file(fspath,  join(pk3path, basename(fspath)) )
