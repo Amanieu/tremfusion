@@ -2947,7 +2947,7 @@ static void CG_DrawBotInfo( void ){
 	const char  *info;
 	char	key[MAX_INFO_KEY];
 	char	value[MAX_INFO_VALUE];
-    int strXpos, y;
+    int y;
 	int clientnum;
 	
 

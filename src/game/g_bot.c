@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ai_main.h"
 #include "g_admin.h"
 
-static int    g_numBots;
+//static int    g_numBots->interger;
 static char   *g_botInfos[MAX_BOTS];
 
 vmCvar_t bot_minplayers;
@@ -117,7 +117,7 @@ void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill) {
   gclient_t *cl;
 
   num = 0;
-  for ( n = 0; n < g_numBots ; n++ ) {
+  for ( n = 0; n < g_numBots.integer ; n++ ) {
     value = Info_ValueForKey( g_botInfos[n], "name" );
     //
     for ( i=0 ; i< g_maxclients.integer ; i++ ) {
@@ -140,7 +140,7 @@ void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill) {
     }
   }
   num = random() * num;
-  for ( n = 0; n < g_numBots ; n++ ) {
+  for ( n = 0; n < g_numBots.integer ; n++ ) {
     value = Info_ValueForKey( g_botInfos[n], "name" );
     //
     for ( i=0 ; i< g_maxclients.integer ; i++ ) {
@@ -459,7 +459,7 @@ static void G_LoadBotsFromFile( char *filename ) {
   buf[len] = 0;
   trap_FS_FCloseFile( f );
 
-  g_numBots += G_ParseInfos( buf, MAX_BOTS - g_numBots, &g_botInfos[g_numBots] );
+  g_numBots.integer += G_ParseInfos( buf, MAX_BOTS - g_numBots.integer, &g_botInfos[g_numBots.integer] );
 }
 
 /*
@@ -480,7 +480,7 @@ static void G_LoadBots( void ) {
     return;
   }
 
-  g_numBots = 0;
+  g_numBots.integer = 0;
 
   trap_Cvar_Register( &botsFile, "g_botsFile", "", CVAR_INIT|CVAR_ROM );
   if( *botsFile.string ) {
@@ -499,7 +499,7 @@ static void G_LoadBots( void ) {
     strcat(filename, dirptr);
     G_LoadBotsFromFile(filename);
   }
-  G_Printf( "%i bots parsed\n", g_numBots );
+  G_Printf( "%i bots parsed\n", g_numBots.integer );
 }
 
 
@@ -510,7 +510,7 @@ G_GetBotInfoByNumber
 ===============
 */
 char *G_GetBotInfoByNumber( int num ) {
-  if( num < 0 || num >= g_numBots ) {
+  if( num < 0 || num >= g_numBots.integer ) {
     G_Printf( S_COLOR_RED "Invalid bot number: %i\n", num );
     return NULL;
   }
@@ -527,14 +527,11 @@ char *G_GetBotInfoByName( const char *name ) {
   int   n;
   char  *value;
 
-  G_Printf(" Searching %i bot infos for '%s'...\n", g_numBots, name);
-  for ( n = 0; n < g_numBots ; n++ ) {
+  G_Printf(" Searching %i bot infos for '%s'...\n", g_numBots.integer, name);
+  for ( n = 0; n < g_numBots.integer ; n++ ) {
     value = Info_ValueForKey( g_botInfos[n], "name" );
     if ( !Q_stricmp( value, name ) ) {
       return g_botInfos[n];
-    } else {
-      G_Printf("Bot is not %s...\n", value);
-      
     }
   }
 
@@ -660,7 +657,7 @@ qboolean G_ListChars(gentity_t *ent, int skiparg) {
   ADMBP_begin();
   if( G_SayArgc() < 2 + skiparg ){
     ADMBP( va("^3!listchars: ^7 List of bot characters\n") );
-    for ( i = 0; i < g_numBots ; i++ ) {
+    for ( i = 0; i < g_numBots.integer ; i++ ) {
       ADMBP( va( "%s \n", Info_ValueForKey( g_botInfos[i], "name" ) ) );
       //ADMBP( va( "%s \n", g_botInfos[i] ) );
     }

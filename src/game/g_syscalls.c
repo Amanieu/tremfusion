@@ -788,3 +788,30 @@ int trap_PC_ReadToken( int handle, pc_token_t *pc_token ) {
 int trap_PC_SourceFileAndLine( int handle, char *filename, int *line ) {
   return syscall( BOTLIB_PC_SOURCE_FILE_AND_LINE, handle, filename, line );
 }
+
+void trap_SendGameStat( const char *data )
+{
+  syscall( G_SEND_GAMESTAT, data );
+  return;
+}
+
+int trap_Parse_LoadSource( const char *filename )
+{
+  return syscall( G_PARSE_LOAD_SOURCE, filename );
+}
+
+int trap_Parse_FreeSource( int handle )
+{
+  return syscall( G_PARSE_FREE_SOURCE, handle );
+}
+
+int trap_Parse_ReadToken( int handle, pc_token_t *pc_token )
+{
+  return syscall( G_PARSE_READ_TOKEN, handle, pc_token );
+}
+
+int trap_Parse_SourceFileAndLine( int handle, char *filename, int *line )
+{
+  return syscall( G_PARSE_SOURCE_FILE_AND_LINE, handle, filename, line );
+}
+

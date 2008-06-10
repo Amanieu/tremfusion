@@ -25,8 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ai_main.h"
 #include "ai_chat.h"
 
+#ifndef MAX_PATH
 #define MAX_PATH		144
-
+#endif
 //bot states
 bot_state_t	*botstates[MAX_CLIENTS];
 //number of bots

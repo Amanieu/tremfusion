@@ -1170,6 +1170,7 @@ extern vmCvar_t bot_thinktime;
 extern vmCvar_t bot_minaliens;
 extern vmCvar_t bot_minhumans;
 extern vmCvar_t bot_nochat;
+extern vmCvar_t g_numBots;
 //End Champ bot cvars
 
 //bot settings
