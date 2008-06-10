@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # based this file from http://effbot.org/librarybook/zipfile.htm
 import zipfile
-import glob, os, sys
+import glob, os
 import commands
 from optparse import OptionParser
 from os.path import *
@@ -9,12 +9,12 @@ parser = OptionParser()
 parser.add_option("-d", "--data",
                   action="store_true", dest="makedata", default=False,
                   help="make the data pk3")
-parser.add_option("-q", "--quiet",
-                  action="store_false", dest="verbose", default=True,
-                  help="don't print status messages to stdout")
+parser.add_option("-v", "--verbose",
+                  action="store_true", dest="verbose", default=False,
+                  help="print status messages to stdout")
 
 (options, args) = parser.parse_args()
-scm_rev_num = int( commands.getoutput('hg identify -n') )
+scm_rev_num = int( commands.getoutput("hg identify -n | tr -d '+'") )
 
 def add_file(fspath, pk3path):
   if options.verbose:
