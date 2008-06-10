@@ -871,9 +871,6 @@ targets: makedirs
 	@echo "  COMPILE_PLATFORM: $(COMPILE_PLATFORM)"
 	@echo "  COMPILE_ARCH: $(COMPILE_ARCH)"
 	@echo "  CC: $(CC)"
-	@echo "  USE_HG: $(USE_HG)"
-	@echo "  SCM_VERSION: $(SCM_VERSION)"
-	
 	@echo ""
 	@echo "  CFLAGS:"
 	@for i in $(CFLAGS); \
