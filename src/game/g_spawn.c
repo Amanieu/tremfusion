@@ -331,6 +331,9 @@ qboolean G_CallSpawn( gentity_t *ent )
     if( level.layout[ 0 ] && Q_stricmp( level.layout, "*BUILTIN*" ) )
       return qtrue;
 
+    if( !G_CallBuildableHooks("on_spawn", ent) )
+      return qfalse;
+
     if( buildable == BA_A_SPAWN || buildable == BA_H_SPAWN )
     {
       ent->s.angles[ YAW ] += 180.0f;
