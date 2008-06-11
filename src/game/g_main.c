@@ -334,8 +334,6 @@ void QDECL G_Error( const char *fmt, ... )
   vsprintf( text, fmt, argptr );
   va_end( argptr );
 
-  G_ShutdownLua();
-
   trap_Error( text );
 }
 
@@ -523,8 +521,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   BG_InitMemory( );
 
-  G_InitLua();
-
   // set some level globals
   memset( &level, 0, sizeof( level ) );
   level.time = levelTime;
@@ -636,8 +632,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   G_CountSpawns( );
 
   G_ResetPTRConnections( );
-
-  G_CallGameHooks("on_init");
 }
 
 /*
@@ -669,8 +663,6 @@ void G_ShutdownGame( int restart )
 
   G_Printf( "==== ShutdownGame ====\n" );
 
-  G_CallGameHooks("on_shutdown");
-
   if( level.logFile )
   {
     G_LogPrintf( "ShutdownGame:\n" );
@@ -683,8 +675,6 @@ void G_ShutdownGame( int restart )
 
   G_admin_cleanup( );
   G_admin_namelog_cleanup( );
-
-  G_ShutdownLua();
 
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
@@ -1075,8 +1065,6 @@ void G_CalculateBuildPoints( void )
       localHTP = 0;
       localATP = 0;
 
-      G_CallGameHooks("on_sudden_death");
-
       //warn about sudden death
       if( level.suddenDeathWarning < TW_PASSED )
       {
@@ -1222,7 +1210,6 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S2 ) );
     level.alienStage2Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
-    G_CallGameHooks("on_stage_up");
   }
 
   if( g_alienCredits.integer >=
@@ -1233,7 +1220,6 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S3 ) );
     level.alienStage3Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
-    G_CallGameHooks("on_stage_up");
   }
 
   if( g_humanCredits.integer >=
@@ -1244,7 +1230,6 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S2 ) );
     level.humanStage2Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
-    G_CallGameHooks("on_stage_up");
   }
 
   if( g_humanCredits.integer >=
@@ -1255,7 +1240,6 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S3 ) );
     level.humanStage3Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
-    G_CallGameHooks("on_stage_up");
   }
 
   if( g_alienStage.modificationCount > lastAlienStageModCount )
@@ -1758,7 +1742,7 @@ void LogExit( const char *string )
     if( !Q_stricmp( ent->classname, "trigger_win" ) )
     {
       if( level.lastWin == ent->stageTeam )
-        G_Use(ent, ent, ent);
+        ent->use( ent, ent, ent );
     }
   }
 
@@ -1913,11 +1897,7 @@ void CheckExitRules( void )
       level.lastWin = TEAM_NONE;
       trap_SendServerCommand( -1, "print \"Timelimit hit\n\"" );
       trap_SetConfigstring( CS_WINNER, "Stalemate" );
-
       LogExit( "Timelimit hit." );
-
-      G_CallGameHooks("on_exit");
-
       return;
     }
     else if( level.time - level.startTime >= ( g_timelimit.integer - 5 ) * 60000 &&
@@ -1943,10 +1923,7 @@ void CheckExitRules( void )
     level.lastWin = TEAM_HUMANS;
     trap_SendServerCommand( -1, "print \"Humans win\n\"");
     trap_SetConfigstring( CS_WINNER, "Humans Win" );
-
     LogExit( "Humans win." );
-
-    G_CallGameHooks("on_exit");
   }
   else if( level.uncondAlienWin ||
            ( ( level.time > level.startTime + 1000 ) &&
@@ -1958,8 +1935,6 @@ void CheckExitRules( void )
     trap_SendServerCommand( -1, "print \"Aliens win\n\"");
     trap_SetConfigstring( CS_WINNER, "Aliens Win" );
     LogExit( "Aliens win." );
-
-    G_CallGameHooks("on_exit");
   }
 }
 
@@ -2239,20 +2214,6 @@ void G_RunThink( gentity_t *ent )
   if( !ent->think )
     G_Error( "NULL ent->think" );
 
-  if( ! G_CallEntityHooks("on_think", ent) )
-	  return;
-
-  if( ent->s.eType == ET_BUILDABLE )
-  {
-	  if( G_CallBuildableHooks("on_think", ent) == 0 )
-		  return;
-  }
-  else if( ent->s.eType == ET_PLAYER )
-  {
-	  if( G_CallPlayerHooks("on_think", ent) == 0 )
-		  return;
-  }
-
   ent->think( ent );
 }
 
@@ -2438,8 +2399,6 @@ void G_RunFrame( int levelTime )
 
     trap_Cvar_Set( "g_listEntity", "0" );
   }
-
-  G_CallGameHooks("on_think");
 
   level.frameMsec = trap_Milliseconds();
 }

@@ -286,7 +286,8 @@ void G_UseTargets( gentity_t *ent, gentity_t *activator )
       G_Printf( "WARNING: Entity used itself.\n" );
     else
     {
-      G_Use( t, ent, activator );
+      if( t->use )
+        t->use( t, ent, activator );
     }
 
     if( !ent->inuse )
@@ -408,8 +409,6 @@ void G_InitGentity( gentity_t *e )
   e->classname = "noclass";
   e->s.number = e - g_entities;
   e->r.ownerNum = ENTITYNUM_NONE;
-
-  G_CallEntityHooks("on_init", e);
 }
 
 /*

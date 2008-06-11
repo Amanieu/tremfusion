@@ -2781,9 +2781,6 @@ qboolean G_admin_nextmap( gentity_t *ent, int skiparg )
   trap_SetConfigstring( CS_WINNER, "Evacuation" );
   LogExit( va( "nextmap was run by %s",
     ( ent ) ? ent->client->pers.netname : "console" ) );
-
-  G_CallGameHooks("on_exit");
-
   return qtrue;
 }
 

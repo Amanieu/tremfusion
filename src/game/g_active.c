@@ -25,35 +25,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 ===============
-G_Use
-
-Called to make object use another object
-===============
-*/
-void G_Use( gentity_t *ent, gentity_t *other, gentity_t *activator )
-{
-  if( ! ent->use )
-    return;
-
-  if( ! G_CallEntityHooks("on_use", ent))
-    return;
-
-  if( ent->s.eType == ET_BUILDABLE )
-  {
-    if( ! G_CallBuildableHooks("on_use", ent))
-      return;
-  }
-  else if( ent->s.eType == ET_PLAYER )
-  {
-    if( ! G_CallPlayerHooks("on_use", ent))
-      return;
-  }
-    
-  ent->use( ent, other, activator ); //other and activator are the same in this context
-}
-
-/*
-===============
 G_DamageFeedback
 
 Called just before a snapshot is sent to the given player.
@@ -1463,12 +1434,7 @@ void ClientThink_real( gentity_t *ent )
     {
       //remove anti toxin
       BG_DeactivateUpgrade( UP_MEDKIT, client->ps.stats );
-
-      if( G_CallPlayerHooks("on_inventory_changed", ent) )
-      {
-
-        BG_RemoveUpgradeFromInventory( UP_MEDKIT, client->ps.stats );
-      }
+      BG_RemoveUpgradeFromInventory( UP_MEDKIT, client->ps.stats );
 
       client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
       client->poisonImmunityTime = level.time + MEDKIT_POISON_IMMUNITY_TIME;
@@ -1491,9 +1457,7 @@ void ClientThink_real( gentity_t *ent )
 
     //remove grenade
     BG_DeactivateUpgrade( UP_GRENADE, client->ps.stats );
-
-    if( G_CallPlayerHooks("on_inventory_changed", ent) )
-      BG_RemoveUpgradeFromInventory( UP_GRENADE, client->ps.stats );
+    BG_RemoveUpgradeFromInventory( UP_GRENADE, client->ps.stats );
 
     //M-M-M-M-MONSTER HACK
     ent->s.weapon = WP_GRENADE;
@@ -1705,8 +1669,8 @@ void ClientThink_real( gentity_t *ent )
 
       traceEnt = &g_entities[ trace.entityNum ];
 
-      if( traceEnt && traceEnt->buildableTeam == client->ps.stats[ STAT_TEAM ])
-        G_Use(traceEnt, ent, ent); //other and activator are the same in this context
+      if( traceEnt && traceEnt->buildableTeam == client->ps.stats[ STAT_TEAM ] && traceEnt->use )
+        traceEnt->use( traceEnt, ent, ent ); //other and activator are the same in this context
       else
       {
         //no entity in front of player - do a small area search
@@ -1719,9 +1683,9 @@ void ClientThink_real( gentity_t *ent )
         {
           traceEnt = &g_entities[ entityList[ i ] ];
 
-          if( traceEnt && traceEnt->buildableTeam == client->ps.stats[ STAT_TEAM ] )
+          if( traceEnt && traceEnt->buildableTeam == client->ps.stats[ STAT_TEAM ] && traceEnt->use )
           {
-            G_Use(traceEnt, ent, ent); //other and activator are the same in this context
+            traceEnt->use( traceEnt, ent, ent ); //other and activator are the same in this context
             break;
           }
         }

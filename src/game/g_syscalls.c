@@ -110,13 +110,6 @@ void trap_Cvar_Set( const char *var_name, const char *value )
   syscall( G_CVAR_SET, var_name, value );
 }
 
-float trap_Cvar_VariableValue( const char *var_name )
-{
-  int temp;
-  temp = syscall( G_CVAR_VARIABLE_VALUE, var_name );
-  return (*(float*)&temp);
-}
-
 int trap_Cvar_VariableIntegerValue( const char *var_name )
 {
   return syscall( G_CVAR_VARIABLE_INTEGER_VALUE, var_name );
