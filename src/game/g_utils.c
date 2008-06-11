@@ -162,7 +162,11 @@ void G_TeamCommand( team_t team, char *cmd )
     {
       if( level.clients[ i ].pers.teamSelection == team ||
         ( level.clients[ i ].pers.teamSelection == TEAM_NONE &&
-          G_admin_permission( &g_entities[ i ], ADMF_SPEC_ALLCHAT ) ) )
+          G_admin_permission( &g_entities[ i ], ADMF_SPEC_ALLCHAT ) ) ||
+        ( level.clients[ i ].pers.teamSelection == PTE_NONE &&
+          level.clients[ i ].sess.spectatorState == SPECTATOR_FOLLOW &&
+          level.clients[ i ].sess.spectatorClient >= 0 &&
+          level.clients[ level.clients[ i ].sess.spectatorClient ].pers.teamSelection == team ) )
         trap_SendServerCommand( i, cmd );
     }
   }
