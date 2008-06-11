@@ -12,6 +12,12 @@ parser.add_option("-d", "--data",
 parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=False,
                   help="print status messages to stdout")
+parser.add_option("--dir", "--directory",
+                  dest="directory", default=".",
+                  help="the directory to place the pk3's in")
+parser.add_option("-s", "--symlink",
+                  dest="symlink_dir", default=None,
+                  help="the directory to place symlinks to the pk3's in")
 
 (options, args) = parser.parse_args()
 scm_rev_num = int( commands.getoutput("hg identify -n | tr -d '+'") )
@@ -30,8 +36,26 @@ def add_dir_tree(globstring, pk3path):
     else:
       add_file(fspath,  join(pk3path, basename(fspath)) )
 
+dir_path = abspath( options.directory )
+
+if not exists( dir_path ):
+    parser.error("directory %s does not exist" % options.directory )
+    
+if not isdir( dir_path ):
+    parser.error("%s is not a directory" % options.directory )
+    
+if options.symlink_dir:
+  
+  symlink_dir = abspath( options.symlink_dir )
+  if not exists( symlink_dir ):
+    parser.error("directory %s does not exist" % options.symlink_dir )
+  if not isdir( symlink_dir ):
+    parser.error("%s is not a directory" % options.symlink_dir )
+else:
+  symlink_dir = None
+
 if options.makedata:
-    pk3filename = "themerge-data-r%03d.pk3" % scm_rev_num
+    pk3filename = join ( dir_path, "themerge-data-r%03d.pk3" % scm_rev_num )
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -42,9 +66,16 @@ if options.makedata:
     add_dir_tree("ui/*", "ui/")
 
     pk3.close()
+    if symlink_dir:
+      symlink_path = join ( symlink_dir, "themerge-data-r%03d.pk3" % scm_rev_num )
+      print "Linking %s to %s" % ( pk3filename , symlink_path )
+      if exists( symlink_path ):
+        print "Removing %s" % symlink_path
+        os.unlink(symlink_path)
+      os.symlink(pk3filename, symlink_path)
 
 
-pk3filename = "themerge-game-r%03d.pk3" % scm_rev_num
+pk3filename = join ( dir_path, "themerge-game-r%03d.pk3" % scm_rev_num )
 print "Creating pk3 file at: %s" % pk3filename
 pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -60,3 +91,11 @@ for fspath in glob.glob("build/release*/base/vm/*.qvm"):
   add_file(fspath, pk3path)
 
 pk3.close()
+if symlink_dir:
+  symlink_path = join ( dir_path, "themerge-game-r%03d.pk3" % scm_rev_num )
+  if exists( symlink_path ):
+    print "Removing %s" % symlink_path
+  print "Linking %s to %s" % ( pk3filename , symlink_path )
+    os.remove(symlink_path)
+  os.symlink(pk3filename, symlink_path)
+
