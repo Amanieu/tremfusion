@@ -3008,6 +3008,42 @@ void Cmd_Damage_f( gentity_t *ent )
             ( nonloc ? DAMAGE_NO_LOCDAMAGE : 0 ), MOD_TARGET_LASER );
 }
 
+static void Cmd_Pubkey_f( gentity_t *ent )
+{
+  char buffer[ RSA_STRING_LENGTH ];
+  g_admin_admin_t *admin = ent->client->pers.admin;
+  if ( !g_adminPubkeyID.integer || ent->client->pers.adminLevel < g_adminPubkeyID.integer || trap_Argc() != 2 )
+    return;
+  if ( admin->pubkey[0] )
+    return;
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  Q_strncpyz( admin->pubkey, buffer, sizeof( admin->pubkey ) );
+  admin->counter = -1;
+  G_admin_writeconfig( );
+}
+
+static void Cmd_Pubkey_Identify_f( gentity_t *ent )
+{
+  char buffer[ MAX_STRING_CHARS ];
+  char userinfo[ MAX_INFO_STRING ];
+  g_admin_admin_t *admin = ent->client->pers.admin;
+  if ( !g_adminPubkeyID.integer || ent->client->pers.admin->level < g_adminPubkeyID.integer || trap_Argc() != 2 )
+    return;
+  if ( ent->client->pers.pubkey_authenticated != 0 || !admin->pubkey[0] || admin->counter == -1 || !ent->client->pers.pubkey_msg[0] )
+    return;
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  if ( Q_strncmp( buffer, ent->client->pers.pubkey_msg, MAX_STRING_CHARS ) )
+    return;
+  ent->client->pers.pubkey_authenticated = 1;
+  ent->client->pers.pubkey_msg[0] = '\0';
+  ent->client->pers.adminLevel = admin->level;
+  trap_GetUserinfo( ent - g_entities, userinfo, sizeof( userinfo ) );
+  Q_strncpyz( ent->client->pers.guid, Info_ValueForKey( userinfo, "cl_guid" ), sizeof( ent->client->pers.guid ) );
+  Info_SetValueForKey( userinfo, "name", ent->client->pers.connect_name );
+  trap_SetUserinfo( ent - g_entities, userinfo );
+  ClientUserinfoChanged( ent - g_entities );
+}
+
 commands_t cmds[ ] = {
   // normal commands
   { "team", 0, Cmd_Team_f },
@@ -3044,6 +3080,9 @@ commands_t cmds[ ] = {
   // game commands
   { "ptrcverify", 0, Cmd_PTRCVerify_f },
   { "ptrcrestore", 0, Cmd_PTRCRestore_f },
+
+  { "pubkey", CMD_INTERMISSION, Cmd_Pubkey_f },
+  { "pubkey_identify", CMD_INTERMISSION, Cmd_Pubkey_Identify_f },
 
   { "follow", 0, Cmd_Follow_f },
   { "follownext", 0, Cmd_FollowCycle_f },

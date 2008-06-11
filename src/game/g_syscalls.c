@@ -257,6 +257,11 @@ void trap_SendGameStat( const char *data )
   return;
 }
 
+int trap_RSA_GenerateMessage( const char *public_key, char *cleartext, char *encrypted )
+{
+	return syscall( G_RSA_GENMSG, public_key, cleartext, encrypted );
+}
+
 int trap_Parse_AddGlobalDefine( char *define )
 {
   return syscall( G_PARSE_ADD_GLOBAL_DEFINE, define );

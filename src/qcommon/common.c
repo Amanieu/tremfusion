@@ -81,6 +81,8 @@ cvar_t	*com_cameraMode;
 cvar_t	*com_ansiColor;
 cvar_t	*com_unfocused;
 cvar_t	*com_minimized;
+cvar_t  *com_gmpLibName;
+cvar_t  *com_nettleLibName;
 
 // com_speeds times
 int		time_game;
@@ -2469,6 +2471,9 @@ void Com_Init( char *commandLine ) {
 	com_unfocused = Cvar_Get( "com_unfocused", "0", CVAR_ROM );
 	com_minimized = Cvar_Get( "com_minimized", "0", CVAR_ROM );
 
+	com_gmpLibName = Cvar_Get( "com_gmpLibName", DEFAULT_GMP_LIB, CVAR_ARCHIVE );
+	com_nettleLibName = Cvar_Get( "com_nettleLibName", DEFAULT_NETTLE_LIB, CVAR_ARCHIVE );
+
 	if ( com_developer && com_developer->integer ) {
 		Cmd_AddCommand ("error", Com_Error_f);
 		Cmd_AddCommand ("crash", Com_Crash_f );
@@ -2485,6 +2490,14 @@ void Com_Init( char *commandLine ) {
 	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
 	VM_Init();
 	SV_Init();
+	if (!CRYPTO_Init())
+	{
+		// Disable all crypto functions
+		Cvar_Get("g_adminPubkeyID", "0", CVAR_ROM);
+#ifndef DEDICATED
+		Cvar_Get("cl_pubkeyID", "0", CVAR_ROM);
+#endif
+	}
 
 	com_dedicated->modified = qfalse;
 #ifndef DEDICATED

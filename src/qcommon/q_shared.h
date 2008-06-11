@@ -1326,4 +1326,9 @@ typedef enum {
 #define MAX_EMOTICON_NAME_LEN 16
 #define MAX_EMOTICONS 64
 
+/* This should not be changed because this value is
+ * expected to be the same on the client and on the server */
+#define RSA_KEY_LENGTH 2048
+#define RSA_STRING_LENGTH (RSA_KEY_LENGTH / 4 + 1)
+
 #endif	// __Q_SHARED_H

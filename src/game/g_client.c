@@ -1194,6 +1194,7 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   char      ip[ 16 ] = {""};
   char      reason[ MAX_STRING_CHARS ] = {""};
   int       i;
+  g_admin_admin_t *admin;
 
   ent = &g_entities[ clientNum ];
 
@@ -1232,7 +1233,24 @@ char *ClientConnect( int clientNum, qboolean firstTime )
     Q_strncpyz( client->pers.guid, guid, sizeof( client->pers.guid ) );
   }
   Q_strncpyz( client->pers.ip, ip, sizeof( client->pers.ip ) );
-  client->pers.adminLevel = G_admin_level( ent );
+  admin = G_admin_admin( ent );
+  client->pers.admin = admin;
+  client->pers.adminLevel = admin->level;
+  client->pers.pubkey_authenticated = -1;
+  client->pers.cl_pubkeyID = atoi( Info_ValueForKey( userinfo, "cl_pubkeyID" ) );
+
+  if ( g_adminPubkeyID.integer && admin )
+  {
+    if ( admin->pubkey[0] && admin->counter != -1 && admin->level >= g_adminPubkeyID.integer )
+    {
+      // remove admin from client
+      client->pers.pubkey_authenticated = 0;
+      client->pers.adminLevel = 0;
+      Q_strncpyz( client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", sizeof( client->pers.guid ) );
+      // save name before we get renamed to UnamedPlayer
+      Q_strncpyz( client->pers.connect_name, Info_ValueForKey( userinfo, "name" ), sizeof( client->pers.connect_name ) );
+    }
+  }
 
   client->pers.connected = CON_CONNECTING;
 
@@ -1271,6 +1289,7 @@ void ClientBegin( int clientNum )
   gentity_t *ent;
   gclient_t *client;
   int       flags;
+  g_admin_admin_t *admin;
 
   ent = g_entities + clientNum;
 
@@ -1308,6 +1327,22 @@ void ClientBegin( int clientNum )
 
   // request the clients PTR code
   trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
+
+  // ask for identification
+  admin = client->pers.admin;
+  if ( g_adminPubkeyID.integer && admin && client->pers.cl_pubkeyID )
+  {
+    if ( admin->level >= g_adminPubkeyID.integer && !admin->pubkey[0] )
+      trap_SendServerCommand( ent - g_entities, "pubkey_request" );
+    else if ( client->pers.pubkey_authenticated == 0 )
+    {
+      trap_SendServerCommand( ent - g_entities, va( "pubkey_decrypt %s", admin->msg2 ) );
+      admin->counter++;
+      // copy the decrypted message because generating a new message will overwrite it
+      Q_strncpyz( client->pers.pubkey_msg, admin->msg, sizeof( client->pers.pubkey_msg ) );
+      G_admin_writeconfig( );
+    }
+  }
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 

@@ -375,7 +375,7 @@ static void admin_writeconfig_int( int v, fileHandle_t f )
   trap_FS_Write( "\n", 1, f );
 }
 
-static void admin_writeconfig( void )
+void G_admin_writeconfig( void )
 {
   fileHandle_t f;
   int len, i, j;
@@ -392,7 +392,7 @@ static void admin_writeconfig( void )
   len = trap_FS_FOpenFile( g_admin.string, &f, FS_WRITE );
   if( len < 0 )
   {
-    G_Printf( "admin_writeconfig: could not open g_admin file \"%s\"\n",
+    G_Printf( "G_admin_writeconfig: could not open g_admin file \"%s\"\n",
               g_admin.string );
     return;
   }
@@ -422,6 +422,14 @@ static void admin_writeconfig( void )
     admin_writeconfig_int( g_admin_admins[ i ]->level, f );
     trap_FS_Write( "flags   = ", 10, f );
     admin_writeconfig_string( g_admin_admins[ i ]->flags, f );
+    trap_FS_Write( "pubkey  = ", 10, f );
+    admin_writeconfig_string( g_admin_admins[ i ]->pubkey, f );
+    trap_FS_Write( "msg     = ", 10, f );
+    admin_writeconfig_string( g_admin_admins[ i ]->msg, f );
+    trap_FS_Write( "msg2    = ", 10, f );
+    admin_writeconfig_string( g_admin_admins[ i ]->msg2, f );
+    trap_FS_Write( "counter = ", 10, f );
+    admin_writeconfig_int( g_admin_admins[ i ]->counter, f );
     trap_FS_Write( "\n", 1, f );
   }
   for( i = 0; i < MAX_ADMIN_BANS && g_admin_bans[ i ]; i++ )
@@ -570,15 +578,15 @@ static void admin_default_levels( void )
   Q_strncpyz( g_admin_levels[ 5 ]->flags, "*", sizeof( l->flags ) );
 }
 
-//  return a level for a player entity.
-int G_admin_level( gentity_t *ent )
+// return the admin struct for a player entity.
+g_admin_admin_t *G_admin_admin( gentity_t *ent )
 {
   int i;
   qboolean found = qfalse;
 
   if( !ent )
   {
-    return MAX_ADMIN_LEVELS;
+    return NULL;
   }
 
   for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
@@ -593,10 +601,10 @@ int G_admin_level( gentity_t *ent )
 
   if( found )
   {
-    return g_admin_admins[ i ]->level;
+    return g_admin_admins[i];
   }
 
-  return 0;
+  return NULL;
 }
 
 static qboolean admin_command_permission( gentity_t *ent, char *command )
@@ -1055,6 +1063,56 @@ void G_admin_namelog_update( gclient_t *client, qboolean disconnect )
   g_admin_namelog[ i ] = namelog;
 }
 
+void G_admin_pubkey( void )
+{
+  int i;
+  g_admin_admin_t *highest = NULL;
+
+  // Uncomment this if your server lags (shouldn't happen unless you are on a *very* old computer)
+  // Will only regenrate messages when there are no active client (When they are all loading the map)
+#if 0
+  for( i = 0; i < level.maxclients; i++ )
+  {
+    if( g_entities[ i ].client && g_entities[ i ].client->pers.connected == CON_CONNECTED )
+      return;
+  }
+#endif
+
+  // Only do 1 encryption per frame to avoid lag
+  for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
+  {
+    if ( g_admin_admins[ i ]->counter == -1 && g_admin_admins[ i ]->pubkey[ 0 ] )
+    {
+      highest = g_admin_admins[ i ];
+      break;
+    }
+    else if ( g_admin_admins[ i ]->counter == 0 || !g_admin_admins[ i ]->pubkey[ 0 ] )
+      continue;
+    else if ( !highest )
+    {
+      highest = g_admin_admins[ i ];
+      continue;
+    }
+    else if ( highest->counter < g_admin_admins[ i ]->counter )
+      highest = g_admin_admins[ i ];
+  }
+  if ( highest )
+  {
+    if ( trap_RSA_GenerateMessage( highest->pubkey, highest->msg, highest->msg2 ) )
+      highest->counter = 0;
+    else
+    {
+      // If the key generation failed it can only be because of a bad pubkey
+      // so we clear the pubkey and ask the client for a new one when he reconnects
+      highest->pubkey[ 0 ] = '\0';
+      highest->msg[ 0 ] = '\0';
+      highest->msg2[ 0 ] = '\0';
+      highest->counter = -1;
+    }
+    G_admin_writeconfig( );
+  }
+}
+
 qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
 {
   g_admin_level_t *l = NULL;
@@ -1154,6 +1212,22 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       else if( !Q_stricmp( t, "flags" ) )
       {
         admin_readconfig_string( &cnf, a->flags, sizeof( a->flags ) );
+      }
+      else if( !Q_stricmp( t, "pubkey" ) )
+      {
+        admin_readconfig_string( &cnf, a->pubkey, sizeof( a->pubkey ) );
+      }
+      else if( !Q_stricmp( t, "msg" ) )
+      {
+        admin_readconfig_string( &cnf, a->msg, sizeof( a->msg ) );
+      }
+      else if( !Q_stricmp( t, "msg2" ) )
+      {
+        admin_readconfig_string( &cnf, a->msg2, sizeof( a->msg2 ) );
+      }
+      else if( !Q_stricmp( t, "counter" ) )
+      {
+        admin_readconfig_int( &cnf, &a->counter );
       }
       else
       {
@@ -1265,6 +1339,10 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       *a->guid = '\0';
       a->level = 0;
       *a->flags = '\0';
+      *a->pubkey = '\0';
+      *a->msg = '\0';
+      *a->msg2 = '\0';
+      a->counter = -1;
       admin_open = qtrue;
     }
     else if( !Q_stricmp( t, "[ban]" ) )
@@ -1321,7 +1399,10 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
   // reset adminLevel
   for( i = 0; i < level.maxclients; i++ )
     if( level.clients[ i ].pers.connected != CON_DISCONNECTED )
-      level.clients[ i ].pers.adminLevel = G_admin_level( &g_entities[ i ] );
+    {
+      level.clients[ i ].pers.admin = G_admin_admin( &g_entities[ i ] );
+      level.clients[ i ].pers.adminLevel = ( level.clients[ i ].pers.pubkey_authenticated && level.clients[ i ].pers.admin ? level.clients[ i ].pers.admin->level : 0 );
+    }
   return qtrue;
 }
 
@@ -1480,9 +1561,10 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
   {
     if( !Q_stricmp( g_admin_admins[ i ]->guid, guid ) )
     {
-      g_admin_admins[ i ]->level = l;
-      Q_strncpyz( g_admin_admins[ i ]->name, adminname,
-                  sizeof( g_admin_admins[ i ]->name ) );
+      a = g_admin_admins[ i ];
+      a->level = l;
+      Q_strncpyz( a->name, adminname,
+                  sizeof( a->name ) );
       updated = qtrue;
     }
   }
@@ -1498,6 +1580,10 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
     Q_strncpyz( a->name, adminname, sizeof( a->name ) );
     Q_strncpyz( a->guid, guid, sizeof( a->guid ) );
     *a->flags = '\0';
+    *a->pubkey = '\0';
+    *a->msg = '\0';
+    *a->msg2 = '\0';
+    a->counter = -1;
     g_admin_admins[ i ] = a;
   }
 
@@ -1505,13 +1591,18 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
     "print \"^3!setlevel: ^7%s^7 was given level %d admin rights by %s\n\"",
     adminname, l, ( ent ) ? ent->client->pers.netname : "console" ) );
   if( vic )
+  {
+    vic->client->pers.admin = ( l ? a : NULL );
     vic->client->pers.adminLevel = l;
+    if ( l && l >= g_adminPubkeyID.integer && !a->pubkey[0] && vic->client->pers.cl_pubkeyID )
+      trap_SendServerCommand( vic - g_entities, "pubkey_request" );
+  }
 
   if( !g_admin.string[ 0 ] )
     ADMP( "^3!setlevel: ^7WARNING g_admin not set, not saving admin record "
       "to a file\n" );
   else
-    admin_writeconfig();
+    G_admin_writeconfig();
   return qtrue;
 }
 
@@ -1606,7 +1697,7 @@ qboolean G_admin_kick( gentity_t *ent, int skiparg )
       vic->client->pers.ip, g_adminTempBan.integer,
       "automatic temp ban created by kick" );
     if( g_admin.string[ 0 ] )
-      admin_writeconfig();
+      G_admin_writeconfig();
   }
 
   trap_SendServerCommand( pids[ 0 ],
@@ -1802,7 +1893,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
   if( !g_admin.string[ 0 ] )
     ADMP( "^3!ban: ^7WARNING g_admin not set, not saving ban to a file\n" );
   else
-    admin_writeconfig();
+    G_admin_writeconfig();
 
   if( g_admin_namelog[ logmatch ]->slot == -1 )
   {
@@ -1859,7 +1950,7 @@ qboolean G_admin_unban( gentity_t *ent, int skiparg )
           g_admin_bans[ bnum - 1 ]->name,
           ( ent ) ? ent->client->pers.netname : "console" ) );
   if( g_admin.string[ 0 ] )
-    admin_writeconfig();
+    G_admin_writeconfig();
   return qtrue;
 }
 

@@ -382,6 +382,11 @@ extern	cvar_t	*cl_altTab;
 
 extern  cvar_t  *cl_dlURLOverride;
 
+extern  cvar_t  *cl_pubkeyID;
+
+extern  struct rsa_public_key public_key;
+extern  struct rsa_private_key private_key;
+
 //=================================================
 
 //

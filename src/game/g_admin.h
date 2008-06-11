@@ -101,6 +101,10 @@ typedef struct g_admin_admin
   char name[ MAX_NAME_LENGTH ];
   int level;
   char flags[ MAX_ADMIN_FLAGS ];
+  char pubkey[ RSA_STRING_LENGTH ];
+  char msg[ RSA_STRING_LENGTH ];
+  char msg2[ RSA_STRING_LENGTH ];
+  int counter;
 }
 g_admin_admin_t;
 
@@ -138,10 +142,12 @@ g_admin_namelog_t;
 qboolean G_admin_ban_check( char *userinfo, char *reason, int rlen );
 qboolean G_admin_cmd_check( gentity_t *ent, qboolean say );
 qboolean G_admin_readconfig( gentity_t *ent, int skiparg );
+void G_admin_writeconfig( void );
 qboolean G_admin_permission( gentity_t *ent, char flag );
 qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len );
 void G_admin_namelog_update( gclient_t *ent, qboolean disconnect );
-int G_admin_level( gentity_t *ent );
+g_admin_admin_t *G_admin_admin( gentity_t *ent );
+void G_admin_pubkey( void );
 
 // ! command functions
 qboolean G_admin_time( gentity_t *ent, int skiparg );

@@ -358,6 +358,28 @@ rescan:
 		return qtrue;
 	}
 
+	if ( cl_pubkeyID->integer && !strcmp( cmd, "pubkey_request" ) ) {
+		char buffer[ MAX_STRING_CHARS ] = "pubkey ";
+		qmpz_get_str( buffer + 7, 16, public_key.n );
+		CL_AddReliableCommand( buffer );
+		return qfalse;
+	}
+
+	if ( cl_pubkeyID->integer && !strcmp( cmd, "pubkey_decrypt" ) && argc > 1 ) {
+		char buffer[ MAX_STRING_CHARS ] = "pubkey_identify ";
+		unsigned int msg_len = MAX_STRING_CHARS - 16;
+		mpz_t message;
+		qmpz_init_set_str( message, Cmd_Argv( 1 ), 16 );
+		if ( qrsa_decrypt( &private_key, &msg_len, (unsigned char *) buffer + 16, message ) )
+		{
+			qnettle_mpz_set_str_256_u( message, msg_len, (unsigned char *) buffer + 16 );
+			qmpz_get_str( buffer + 16, 16, message );
+			CL_AddReliableCommand( buffer );
+		}
+		qmpz_clear( message );
+		return qfalse;
+	}
+
 	// we may want to put a "connect to other server" command here
 
 	// cgame can now act on the command

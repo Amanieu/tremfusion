@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/cm_public.h"
 
+#include "../qcommon/crypto.h"
+
 //Ignore __attribute__ on non-gcc platforms
 #ifndef __GNUC__
 #ifndef __attribute__
@@ -791,6 +793,8 @@ extern	cvar_t	*com_ansiColor;
 extern	cvar_t	*com_unfocused;
 extern	cvar_t	*com_minimized;
 extern	cvar_t	*com_altivec;
+extern	cvar_t  *com_gmpLibName;
+extern	cvar_t  *com_nettleLibName;
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
@@ -817,6 +821,7 @@ typedef enum {
 	TAG_GENERAL,
 	TAG_BOTLIB,
 	TAG_RENDERER,
+	TAG_CRYPTO,
 	TAG_SMALL,
 	TAG_STATIC
 } memtag_t;

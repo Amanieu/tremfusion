@@ -434,6 +434,28 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case G_SEND_GAMESTAT:
 		SV_MasterGameStat( VMA(1) );
 		return 0;
+	case G_RSA_GENMSG:
+		{
+			struct rsa_public_key public_key;
+			mpz_t message;
+			unsigned char buffer[ RSA_KEY_LENGTH / 8 - 11 ];
+			int retval;
+			Com_RandomBytes( buffer, RSA_KEY_LENGTH / 8 - 11 );
+			qnettle_mpz_init_set_str_256_u( message, RSA_KEY_LENGTH / 8 - 11, buffer );
+			qmpz_get_str( VMA(2), 16, message );
+			qrsa_public_key_init( &public_key );
+			qmpz_set_ui( public_key.e, RSA_PUBLIC_EXPONENT );
+			retval = qmpz_set_str( public_key.n, VMA(1), 16 ) + 1;
+			if ( retval )
+			{
+				qrsa_public_key_prepare( &public_key );
+				retval = qrsa_encrypt( &public_key, NULL, qnettle_random, RSA_KEY_LENGTH / 8 - 11, buffer, message );
+			}
+			qrsa_public_key_clear( &public_key );
+			qmpz_get_str( VMA(3), 16, message );
+			qmpz_clear( message );
+			return retval;
+		}
 
 	//====================================
 
