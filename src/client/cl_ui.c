@@ -1123,8 +1123,6 @@ CL_InitUI
 
 void Con_MessageMode_f(void);
 void Con_MessageMode2_f(void);
-void Con_MessageMode3_f(void);
-void Con_MessageMode4_f(void);
 void Con_MessageMode5_f(void);
 void Con_Prompt_f(void);
 
@@ -1151,14 +1149,10 @@ void CL_InitUI( void ) {
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
 		Cmd_RemoveCommand( "messagemode5" );
 		Cmd_RemoveCommand( "prompt" );
 		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
 		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
-		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
-		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
 		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
 		Cmd_AddCommand( "prompt", Con_Prompt_f );
 		
@@ -1169,14 +1163,10 @@ void CL_InitUI( void ) {
 		// ui messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
 		Cmd_RemoveCommand( "messagemode5" );
 		Cmd_RemoveCommand( "prompt" );
 		Cmd_AddCommand( "messagemode", NULL );
 		Cmd_AddCommand( "messagemode2", NULL );
-		Cmd_AddCommand( "messagemode3", NULL );
-		Cmd_AddCommand( "messagemode4", NULL );
 		Cmd_AddCommand( "messagemode5", NULL );
 		Cmd_AddCommand( "prompt", NULL );
 		
