@@ -1193,7 +1193,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   char      guid[ 33 ];
   char      ip[ 16 ] = {""};
   char      reason[ MAX_STRING_CHARS ] = {""};
-  int       i;
 
   ent = &g_entities[ clientNum ];
 
