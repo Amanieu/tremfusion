@@ -145,7 +145,6 @@ vmCvar_t  bot_thinktime;
 vmCvar_t  bot_minaliens;
 vmCvar_t  bot_minhumans;
 vmCvar_t  bot_nochat;
-vmCvar_t g_numBots;
 //End Champ bot cvars
 
 static cvarTable_t   gameCvarTable[ ] =
@@ -278,7 +277,6 @@ static cvarTable_t   gameCvarTable[ ] =
   { &bot_developer, "bot_developer", "0", CVAR_SERVERINFO, 0, qfalse  },
   { &bot_challenge, "bot_challenge", "0", CVAR_SERVERINFO, 0, qfalse  },
   { &bot_nochat,    "bot_nochat",    "0", CVAR_SERVERINFO, 0, qfalse  },
-  { &g_numBots,    "g_numBots",    "4", CVAR_SERVERINFO, 0, qfalse  },
   
   //End Champ bot cvars
   
@@ -670,6 +668,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   G_Printf( "-----------------------------------\n" );
 
   if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+    G_InitBots( restart );
     BotAISetup( restart );
     BotAILoadMap( restart );
   }

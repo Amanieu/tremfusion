@@ -370,3 +370,4 @@ void G_CheckBotSpawn( void );
 qboolean G_BotConnect( int clientNum, qboolean restart );
 char *G_GetBotInfoByName( const char *name );
 void G_BotRemoveAll( gentity_t *ent );
+qboolean G_ListChars(gentity_t *ent, int skiparg);

@@ -183,6 +183,11 @@ g_admin_cmd_t g_admin_cmds[ ] =
       ", so be careful with it.",
       "<add/del> <name> [team] (charactor) (skill)"
     },
+    
+    {"listchars", G_ListChars, "v",
+       "display bot characters available to you or info on a specific character",
+       "(charactor)",
+     },
   };
 
 static int adminNumCmds = sizeof( g_admin_cmds ) / sizeof( g_admin_cmds[ 0 ] );

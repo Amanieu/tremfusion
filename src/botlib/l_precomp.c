@@ -2493,9 +2493,9 @@ int PC_Directive_evalfloat(source_t *source)
 // Returns:					-
 // Changes Globals:		-
 //============================================================================
-extern directive_t directives[20];
-/*
-directive_t directives[20] =
+//extern directive_t directives[20];
+
+directive_t botlibdirectives[20] =
 {
 	{"if", PC_Directive_if},
 	{"ifdef", PC_Directive_ifdef},
@@ -2513,7 +2513,7 @@ directive_t directives[20] =
 	{"evalfloat", PC_Directive_evalfloat},
 	{NULL, NULL}
 };
-*/
+
 int PC_ReadDirective(source_t *source)
 {
 	token_t token;
@@ -2536,11 +2536,11 @@ int PC_ReadDirective(source_t *source)
 	if (token.type == TT_NAME)
 	{
 		//find the precompiler directive
-		for (i = 0; directives[i].name; i++)
+		for (i = 0; botlibdirectives[i].name; i++)
 		{
-			if (!strcmp(directives[i].name, token.string))
+			if (!strcmp(botlibdirectives[i].name, token.string))
 			{
-				return directives[i].func(source);
+				return botlibdirectives[i].func(source);
 			} //end if
 		} //end for
 	} //end if
@@ -2608,13 +2608,13 @@ int PC_DollarDirective_evalfloat(source_t *source)
 // Returns:					-
 // Changes Globals:		-
 //============================================================================
-extern directive_t dollardirectives[20];
-/*directive_t dollardirectives[20] =
+//extern directive_t botlibdollardirectives[20];
+directive_t botlibdollardirectives[20] =
 {
 	{"evalint", PC_DollarDirective_evalint},
 	{"evalfloat", PC_DollarDirective_evalfloat},
 	{NULL, NULL}
-};*/
+};
 
 int PC_ReadDollarDirective(source_t *source)
 {
@@ -2638,11 +2638,11 @@ int PC_ReadDollarDirective(source_t *source)
 	if (token.type == TT_NAME)
 	{
 		//find the precompiler directive
-		for (i = 0; dollardirectives[i].name; i++)
+		for (i = 0; botlibdollardirectives[i].name; i++)
 		{
-			if (!strcmp(dollardirectives[i].name, token.string))
+			if (!strcmp(botlibdollardirectives[i].name, token.string))
 			{
-				return dollardirectives[i].func(source);
+				return botlibdollardirectives[i].func(source);
 			} //end if
 		} //end for
 	} //end if
@@ -2692,9 +2692,9 @@ int QuakeCMacro(source_t *source)
 		return qtrue;
 	} //end if
 	//find the precompiler directive
-	for (i = 0; dollardirectives[i].name; i++)
+	for (i = 0; botlibdollardirectives[i].name; i++)
 	{
-		if (!strcmp(dollardirectives[i].name, token.string))
+		if (!strcmp(botlibdollardirectives[i].name, token.string))
 		{
 			PC_UnreadSourceToken(source, &token);
 			return qfalse;
