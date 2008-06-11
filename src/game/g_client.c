@@ -1286,6 +1286,7 @@ void ClientBegin( int clientNum )
 
   client->pers.connected = CON_CONNECTED;
   client->pers.enterTime = level.time;
+  client->pers.classSelection = PCL_NONE;
 
   // save eflags around this, because changing teams will
   // cause this to happen with a valid entity, and we
