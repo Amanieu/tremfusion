@@ -6,13 +6,13 @@
 
 #define LOG_BUF_SIZE 2048
 
-char _logbuf[LOG_BUF_SIZE][1024];
-int _logline = 0;
+char logbuf[LOG_BUF_SIZE][1024];
+int logline = 0;
 
-char *_logwinbuf[LOG_BUF_SIZE];
-int _logwinline = 0;
+char *logwinbuf[LOG_BUF_SIZE];
+int logwinline = 0;
 
-int _reallogline = 0;
+int reallogline = 0;
 
 typedef struct
 {
@@ -34,12 +34,12 @@ _window win3;
 _window win4;
 _window win5;
 
-void _CON_newwin ( _window *win )
+static void NewWin ( _window *win )
 {
 	win->win = newwin(win->lines, win->cols, win->y, win->x);
 }
 
-void _CON_setwins ( void )
+static void SetWins ( void )
 {
 	int root_y, root_x;
 
@@ -76,17 +76,17 @@ void _CON_setwins ( void )
 	win5.y = (root_y - 1);
 }
 
-void _CON_initwins ( void )
+static void InitWins ( void )
 {
-	_CON_newwin(&win0);
-	_CON_newwin(&win1);
-	_CON_newwin(&win2);
-	_CON_newwin(&win3);
-	_CON_newwin(&win4);
-	_CON_newwin(&win5);
+	NewWin(&win0);
+	NewWin(&win1);
+	NewWin(&win2);
+	NewWin(&win3);
+	NewWin(&win4);
+	NewWin(&win5);
 }
 
-void _CON_refreshwins ( void )
+static void RefreshWins ( void )
 {
 	wrefresh(win0.win);
 	wrefresh(win1.win);
@@ -96,7 +96,7 @@ void _CON_refreshwins ( void )
 	wrefresh(win5.win);
 }
 
-void _CON_drawwins ( void )
+static void DrawWins ( void )
 {
 	char title[] = "[Tremulous Dedicated Server]";
 	// window 0
@@ -118,56 +118,56 @@ void _CON_drawwins ( void )
 
 	// window 5
 
-	_CON_refreshwins();
+	RefreshWins();
 }
 
-void _CON_logprint ( char *msg )
+static void LogPrint ( char *msg )
 {
 	int i;
 
-	if (_logwinline >= win4.lines)
+	if (logwinline >= win4.lines)
 	{
-		_logwinline--;
+		logwinline--;
 
-		for(i = 0; i < _logwinline; i++)
+		for(i = 0; i < logwinline; i++)
 		{
-			_logwinbuf[i] = _logwinbuf[(i + 1)];
+			logwinbuf[i] = logwinbuf[(i + 1)];
 		}
-		_logwinbuf[i] = msg;
+		logwinbuf[i] = msg;
 
 		wclear(win4.win);
-		for(i = _logwinline; i >= 0; i--)
+		for(i = logwinline; i >= 0; i--)
 		{
-			mvwprintw(win4.win, i, 0, "%s", _logwinbuf[i]);
+			mvwprintw(win4.win, i, 0, "%s", logwinbuf[i]);
 		}
 	}
 	else
 	{
-		_logwinbuf[_logwinline] = msg;
-		mvwprintw(win4.win, _logwinline, 0, "%s", _logwinbuf[_logwinline]);
+		logwinbuf[logwinline] = msg;
+		mvwprintw(win4.win, logwinline, 0, "%s", logwinbuf[logwinline]);
 	}
 
 	wrefresh(win4.win);
-	_logwinline++;
+	logwinline++;
 }
 
 void CON_Print ( const char *msg )
 {
-	if ( _logline > LOG_BUF_SIZE )
+	if ( logline > LOG_BUF_SIZE )
 	{
-		_logline = 0;
-		snprintf(_logbuf[_logline], 1024, "NOTICE: log buffer filled, starting over");
-		_CON_logprint(_logbuf[_logline]);
-		_logline++;
+		logline = 0;
+		snprintf(logbuf[logline], 1024, "NOTICE: log buffer filled, starting over");
+		LogPrint(logbuf[logline]);
+		logline++;
 	}
 
 	/* FIXME: add the whole colorization thing, people seem to like that */
 
-	snprintf(_logbuf[_logline], 1024, "%i: %s", _reallogline, msg );
-	_CON_logprint(_logbuf[_logline]);
+	snprintf(logbuf[logline], 1024, "%i: %s", reallogline, msg );
+	LogPrint(logbuf[logline]);
 
-	_logline++;
-	_reallogline++;
+	logline++;
+	reallogline++;
 }
 
 void CON_Init ( void )
@@ -179,10 +179,10 @@ void CON_Init ( void )
 		exit(1);
 	}
 
-	_CON_setwins();
-	_CON_initwins();
+	SetWins();
+	InitWins();
 
-	_CON_drawwins();
+	DrawWins();
 }
 
 void CON_Shutdown ( void )
