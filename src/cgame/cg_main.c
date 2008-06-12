@@ -373,6 +373,9 @@ void CG_RegisterCvars( void )
   // see if we are also running the server on this machine
   trap_Cvar_VariableStringBuffer( "sv_running", var, sizeof( var ) );
   cgs.localServer = atoi( var );
+  
+  // override any existing version cvar
+  trap_Cvar_Set( "cg_version", Q3_VERSION );
 }
 
 
