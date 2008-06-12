@@ -2299,27 +2299,27 @@ void FS_Path_f( void ) {
 	searchpath_t	*s;
 	int				i;
 
-	Com_DPrintf ("Current search path:\n");
+	Com_Printf ("Current search path:\n");
 	for (s = fs_searchpaths; s; s = s->next) {
 		if (s->pack) {
-			Com_DPrintf ("%s (%i files)\n", s->pack->pakFilename, s->pack->numfiles);
+			Com_Printf ("%s (%i files)\n", s->pack->pakFilename, s->pack->numfiles);
 			if ( fs_numServerPaks ) {
 				if ( !FS_PakIsPure(s->pack) ) {
-					Com_DPrintf( "    not on the pure list\n" );
+					Com_Printf( "    not on the pure list\n" );
 				} else {
-					Com_DPrintf( "    on the pure list\n" );
+					Com_Printf( "    on the pure list\n" );
 				}
 			}
 		} else {
-			Com_DPrintf ("%s/%s\n", s->dir->path, s->dir->gamedir );
+			Com_Printf ("%s/%s\n", s->dir->path, s->dir->gamedir );
 		}
 	}
 
 
-	Com_DPrintf( "\n" );
+	Com_Printf( "\n" );
 	for ( i = 1 ; i < MAX_FILE_HANDLES ; i++ ) {
 		if ( fsh[i].handleFiles.file.o ) {
-			Com_DPrintf( "handle %i: %s\n", i, fsh[i].name );
+			Com_Printf( "handle %i: %s\n", i, fsh[i].name );
 		}
 	}
 }
@@ -2709,7 +2709,7 @@ static void FS_Startup( const char *gameName )
 	FS_ReorderPurePaks();
 
 	// print the current search paths
-	FS_Path_f();
+	//FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
 
