@@ -229,7 +229,7 @@ typedef struct
 
 static cvarTable_t cvarTable[ ] =
 {
-  { &cg_version, "cg_version", Q3_VERSION, CVAR_ROM | CVAR_USERINFO },
+  { &cg_version, "cg_version", PRODUCT_NAME, CVAR_ROM | CVAR_USERINFO },
   { &cg_autoswitch, "cg_autoswitch", "1", CVAR_ARCHIVE },
   { &cg_drawGun, "cg_drawGun", "1", CVAR_ARCHIVE },
   { &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE },
@@ -375,7 +375,7 @@ void CG_RegisterCvars( void )
   cgs.localServer = atoi( var );
   
   // override any existing version cvar
-  trap_Cvar_Set( "cg_version", Q3_VERSION );
+  trap_Cvar_Set( "cg_version", PRODUCT_NAME );
 }
 
 

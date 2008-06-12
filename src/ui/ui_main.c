@@ -106,7 +106,7 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_browserShowFull, "ui_browserShowFull", "1", CVAR_ARCHIVE },
   { &ui_browserShowEmpty, "ui_browserShowEmpty", "1", CVAR_ARCHIVE },
 
-  { &ui_version, "ui_version", Q3_VERSION, CVAR_ROM },
+  { &ui_version, "ui_version", PRODUCT_NAME, CVAR_ROM },
   { &ui_dedicated, "ui_dedicated", "0", CVAR_ARCHIVE },
   { &ui_netSource, "ui_netSource", "0", CVAR_ARCHIVE },
   { &ui_selectedMap, "ui_selectedMap", "0", CVAR_ARCHIVE },
@@ -4405,7 +4405,7 @@ void UI_RegisterCvars( void )
     trap_Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
   
   // override any existing version cvar
-  trap_Cvar_Set( "ui_version", Q3_VERSION );
+  trap_Cvar_Set( "ui_version", PRODUCT_NAME );
 }
 
 /*

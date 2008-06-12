@@ -113,6 +113,15 @@ void SV_DirectConnect( netadr_t from ) {
 		return;
 	}
 
+	if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
+		NET_OutOfBandPrint( NS_SERVER, from, "print\nYour client is missing files.\n\n"
+		"To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
+		"For a client with fast http-download visit themerge.tremforges.net\n\n"
+		"Open your console and enter: /cl_allowDownload 1\n" );
+		Com_DPrintf ("    rejected because of lack of autodownload\n");
+		return;
+	}
+
 	challenge = atoi( Info_ValueForKey( userinfo, "challenge" ) );
 	qport = atoi( Info_ValueForKey( userinfo, "qport" ) );
 

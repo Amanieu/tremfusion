@@ -1155,7 +1155,7 @@ void CL_InitUI( void ) {
 	}
 	
 	// See who gets control of messagemodes
-	if ( Q_stricmpn( Cvar_VariableString( "ui_version" ), PRODUCT_NAME " ", strlen( PRODUCT_NAME ) + 1 ) )
+	if ( Q_stricmp( Cvar_VariableString( "ui_version" ), PRODUCT_NAME ) )
 	{
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
