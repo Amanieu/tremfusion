@@ -92,10 +92,10 @@ for fspath in glob.glob("../build/release*/base/vm/*.qvm"):
 
 pk3.close()
 if symlink_dir:
-  symlink_path = join ( dir_path, "themerge-game-r%03d.pk3" % scm_rev_num )
+  symlink_path = join ( symlink_dir, "themerge-game-r%03d.pk3" % scm_rev_num )
   if exists( symlink_path ):
     print "Removing %s" % symlink_path
+    os.unlink(symlink_path)
   print "Linking %s to %s" % ( pk3filename , symlink_path )
-  os.remove(symlink_path)
   os.symlink(pk3filename, symlink_path)
 
