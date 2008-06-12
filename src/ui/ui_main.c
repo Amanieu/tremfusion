@@ -78,7 +78,6 @@ cvarTable_t;
 vmCvar_t  ui_browserShowFull;
 vmCvar_t  ui_browserShowEmpty;
 
-vmCvar_t  ui_version;
 vmCvar_t  ui_dedicated;
 vmCvar_t  ui_netSource;
 vmCvar_t  ui_selectedMap;
@@ -106,7 +105,6 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_browserShowFull, "ui_browserShowFull", "1", CVAR_ARCHIVE },
   { &ui_browserShowEmpty, "ui_browserShowEmpty", "1", CVAR_ARCHIVE },
 
-  { &ui_version, "ui_version", PRODUCT_NAME, CVAR_ROM },
   { &ui_dedicated, "ui_dedicated", "0", CVAR_ARCHIVE },
   { &ui_netSource, "ui_netSource", "0", CVAR_ARCHIVE },
   { &ui_selectedMap, "ui_selectedMap", "0", CVAR_ARCHIVE },
@@ -4403,9 +4401,9 @@ void UI_RegisterCvars( void )
 
   for( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ )
     trap_Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
-  
-  // override any existing version cvar
-  trap_Cvar_Set( "ui_version", PRODUCT_NAME );
+
+  // use ui messagemode
+  trap_Cvar_Set( "ui_useMessagemode", "1" );
 }
 
 /*

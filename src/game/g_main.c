@@ -135,7 +135,6 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_cheats, "sv_cheats", "", 0, 0, qfalse },
 
   // noset vars
-  { NULL, "g_version", PRODUCT_NAME , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
   { NULL, "gamename", GAME_VERSION , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
   { NULL, "gamedate", __DATE__ , CVAR_ROM, 0, qfalse  },
   { &g_restarted, "g_restarted", "0", CVAR_ROM, 0, qfalse  },
@@ -438,9 +437,6 @@ void G_RegisterCvars( void )
 
   // check some things
   level.warmupModificationCount = g_warmup.modificationCount;
-  
-  // override any existing version cvar
-  trap_Cvar_Set( "g_version", PRODUCT_NAME );
 }
 
 /*

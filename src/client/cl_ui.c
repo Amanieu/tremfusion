@@ -1142,6 +1142,9 @@ void CL_InitUI( void ) {
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 	}
+	
+	// Don't use ui messagemode unless it askes us to
+	Cvar_Set( "ui_useMessagemode", "0" );
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
@@ -1155,7 +1158,7 @@ void CL_InitUI( void ) {
 	}
 	
 	// See who gets control of messagemodes
-	if ( Q_stricmp( Cvar_VariableString( "ui_version" ), PRODUCT_NAME ) )
+	if ( Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
 	{
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
