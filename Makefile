@@ -183,6 +183,8 @@ endif
 # SETUP AND BUILD -- LINUX
 #############################################################################
 
+## FIXME: add "use con_curses.c" option, and link to ncurses (--griffon)
+
 ## Defaults
 LIB=lib
 
