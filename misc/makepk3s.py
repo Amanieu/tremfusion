@@ -62,7 +62,7 @@ if options.makedata:
     add_dir_tree("../fonts/*", "fonts/")
     add_dir_tree("../gfx/*", "gfx/")
     add_dir_tree("../models/*", "models/")
-    add_dir_tree("../sonud/*", "sound/")
+    add_dir_tree("../sound/*", "sound/")
     add_dir_tree("../ui/*", "ui/")
 
     pk3.close()
