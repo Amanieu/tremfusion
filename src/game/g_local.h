@@ -1049,6 +1049,12 @@ connectionRecord_t  *G_FindConnectionForCode( int code );
 void                G_DeletePTRConnection( connectionRecord_t *connection );
 
 
+//
+// g_python.c
+//
+void G_InitPython( void );
+void G_ShutdownPython( void );
+
 //some maxs
 #define MAX_FILEPATH      144
 

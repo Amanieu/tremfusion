@@ -301,8 +301,8 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_PYTHON),1)
    PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
-   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
-   NOTSHLIBCFLAGS += -Isrc/python/include
+   CFLAGS += -DUSE_PYTHON=1
+   CFLAGS += -I/usr/include/python2.5
    LDFLAGS += $(PYTHONLDFLAGS)
    LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
   endif
@@ -457,7 +457,7 @@ endif
   ifeq ($(USE_PYTHON),1)
    NOTSHLIBCFLAGS += -DUSE_PYTHON=1
    NOTSHLIBCFLAGS += -Isrc/python/include
-   LDFLAGS += $(LIBSDIR)win32/python25.lib
+   LDFLAGS += $(LIBSDIR)/win32/python25.lib
   endif
   
   ifeq ($(ARCH),x86)
@@ -1461,6 +1461,8 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
+  $(B)/base/game/g_python.o \
+  $(B)/base/game/py_entity.o \
   \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o

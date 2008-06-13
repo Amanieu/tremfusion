@@ -521,6 +521,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   BG_InitMemory( );
 
+#ifdef USE_PYTHON
+  G_InitPython();
+#endif
+  
   // set some level globals
   memset( &level, 0, sizeof( level ) );
   level.time = levelTime;
@@ -679,6 +683,10 @@ void G_ShutdownGame( int restart )
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
   trap_SetConfigstring( CS_WINNER, "" );
+  
+#ifdef USE_PYTHON
+  G_ShutdownPython();
+#endif
 }
 
 
