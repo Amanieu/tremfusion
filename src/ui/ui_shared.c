@@ -4548,7 +4548,7 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
   static char   out[ 8192 ];
   char          *paint = out;
-  char          c[ 3 ];
+  char          startcolour[ 3 ], endcolour[ 3 ];
   const char    *p = text;
   const char    *eol;
   const char    *q = NULL, *qMinus1 = NULL;
@@ -4564,7 +4564,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
   while( *p )
   {
-    Com_Memset( c, 0, sizeof( c ) );
+    Com_Memset( startcolour, 0, sizeof( startcolour ) );
+    Com_Memset( endcolour, 0, sizeof( endcolour ) );
 
     // Skip leading whitespace
 
@@ -4572,8 +4573,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     {
       if( Q_IsColorString( p ) )
       {
-        c[ 0 ] = p[ 0 ];
-        c[ 1 ] = p[ 1 ];
+        startcolour[ 0 ] = p[ 0 ];
+        startcolour[ 1 ] = p[ 1 ];
         p += 2;
       }
       else if( *p != '\n' && isspace( *p ) )
@@ -4593,8 +4594,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
     while( Q_IsColorString( q ) )
     {
-      c[ 0 ] = q[ 0 ];
-      c[ 1 ] = q[ 1 ];
+      startcolour[ 0 ] = q[ 0 ];
+      startcolour[ 1 ] = q[ 1 ];
       q += 2;
     }
 
@@ -4602,8 +4603,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
     while( Q_IsColorString( q ) )
     {
-      c[ 0 ] = q[ 0 ];
-      c[ 1 ] = q[ 1 ];
+      startcolour[ 0 ] = q[ 0 ];
+      startcolour[ 1 ] = q[ 1 ];
       q += 2;
     }
 
@@ -4623,8 +4624,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
         // Skip color escapes
         while( Q_IsColorString( q ) )
         {
-          c[ 0 ] = q[ 0 ];
-          c[ 1 ] = q[ 1 ];
+          endcolour[ 0 ] = q[ 0 ];
+          endcolour[ 1 ] = q[ 1 ];
           q += 2;
         }
         while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4643,8 +4644,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
       // Some color escapes might still be present
       while( Q_IsColorString( q ) )
       {
-        c[ 0 ] = q[ 0 ];
-        c[ 1 ] = q[ 1 ];
+        endcolour[ 0 ] = q[ 0 ];
+        endcolour[ 1 ] = q[ 1 ];
         q += 2;
       }
       while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4672,6 +4673,9 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( eol == p )
       eol = q;
 
+    // Add colour code (might be empty)
+    Q_strcat( out, sizeof( out ), startcolour );
+
     paint = out + strlen( out );
 
     // Copy text
@@ -4683,7 +4687,7 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( out[ strlen( out ) - 1 ] != '\n' )
     {
       Q_strcat( out, sizeof( out ), "\n " );
-      Q_strcat( out, sizeof( out ), c );
+      Q_strcat( out, sizeof( out ), endcolour );
     }
 
     paint = out + strlen( out );
