@@ -1270,7 +1270,18 @@ void ClientBegin( int clientNum )
 {
   gentity_t *ent;
   gclient_t *client;
+  char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+
+  trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
+
+  if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
+    trap_SendServerCommand( clientNum, "disconnect \"Your client is missing files.\n\n"
+      "To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
+      "For a client with fast http-download visit themerge.tremforges.net\n\n"
+      "Open your console and enter: /cl_allowDownload 1\n\"" );
+    return;
+  }
 
   ent = g_entities + clientNum;
 
