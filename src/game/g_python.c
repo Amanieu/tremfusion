@@ -32,7 +32,6 @@ static PyMethodDef game_methods[] = {
 void G_InitPython( void )
 {
 //  PyRun_SimpleString()
-  char *configname;
   PyObject *gamemodule;
   PyImport_AddModule("game");
   gamemodule = Py_InitModule("game", game_methods);
@@ -40,6 +39,10 @@ void G_InitPython( void )
     return;
   Py_INCREF(&EntityType);
   PyModule_AddObject(gamemodule, "Entity", (PyObject *)&EntityType);
+  if (PyType_Ready(&EntityStateType) < 0)
+    return;
+  Py_INCREF(&EntityStateType);
+  PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
 }
 
 void G_ShutdownPython( void )

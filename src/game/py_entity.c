@@ -29,14 +29,168 @@ typedef struct {
   PyObject_HEAD
   int num; /* client number */
   gentity_t *e;
+} EntityState;
+
+// Garbage collection
+static int EntityState_traverse(EntityState *self, visitproc visit, void *arg) {
+  return 0;
+}
+// Deletion
+static int EntityState_clear(EntityState *self) {
+  return 0;
+}
+// Deallocation
+static void EntityState_dealloc(EntityState* self) {
+  EntityState_clear(self);
+  self->ob_type->tp_free((PyObject*)self);
+}
+// 
+static PyObject *EntityState_new(PyTypeObject *type , PyObject *args, PyObject *kwds)
+{
+  EntityState *self;
+
+  self = (EntityState *)type->tp_alloc(type, 0);
+  if (self != NULL) {
+    self->num = -1;
+    self->e = NULL;
+  }
+
+  return (PyObject *)self;
+}
+
+static int EntityState_init(EntityState *self, PyObject *args, PyObject *kwds)
+{
+  if (!PyArg_ParseTuple(args, "i", &self->num) )
+      return -1;
+  if (self->num < 0  || self->num > MAX_GENTITIES)
+  {
+    PyErr_SetString(PyExc_IndexError, "EntityState number out of range.");
+    return -1;
+  }
+  self->e = &g_entities[ self->num ];
+
+  return 0;
+}
+
+typedef enum {
+  ESNUM,
+  ETYPE,
+  NUM_ENTITYSTATE_GETSET_TYPES
+} EntityState_getset_types;
+
+static PyObject *EntityState_get(EntityState *self, void *closure)
+{
+  EntityState_getset_types gettype = (EntityState_getset_types)closure;
+  switch (gettype) {
+    case ESNUM:
+      return PyInt_FromLong( self->num );
+    case ETYPE:
+      return Py_BuildValue( "i", self->e->s.eType );
+    default:
+      PyErr_SetString(PyExc_TypeError, "EntityState_get fallthrough");
+      return NULL;
+  }
+}
+
+static int EntityState_set(EntityState *self, PyObject *value, void *closure)
+{
+  int settype = (int)closure;
+  if (value == NULL) {
+    PyErr_SetString(PyExc_TypeError, "Invalid value");
+    return -1;
+  }
+  switch (settype) {
+    case ESNUM:
+      PyErr_SetString(PyExc_TypeError, "Cannot change EntityState number");
+      return -1;
+    case ETYPE:
+      self->e->s.eType = PyInt_AsLong( value );
+      if ( self->e->s.eType == -1 && PyErr_Occurred() ) {
+        PyErr_SetString(PyExc_ValueError, "Invalid value, value must be an integer");
+        return -1;
+      }
+      return 1;
+    default:
+      PyErr_SetString(PyExc_TypeError, "EntityState_set fallthrough");
+      return -1;
+  }
+}
+
+static PyMemberDef EntityState_members[] = {
+//  {"num", T_INT, offsetof(EntityState, num), 0, "EntityState number"},
+  {NULL}  /* Sentinel */
+};
+
+static PyGetSetDef EntityState_getseters[] = {
+    {"num", (getter)EntityState_get, (setter)EntityState_set, "EntityState number", (void*)ESNUM },
+    {"eType",(getter)EntityState_get, (setter)EntityState_set, "Entities current type", (void*)ETYPE },
+    {NULL}  /* Sentinel */
+};
+
+static PyMethodDef EntityState_methods[] = {
+    {NULL}  /* Sentinel */
+};
+
+PyTypeObject EntityStateType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "game.EntityState",             /*tp_name*/
+    sizeof(EntityState),            /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)EntityState_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "Class representing a entityState_t",           /* tp_doc */
+    (traverseproc)EntityState_traverse, /* tp_traverse */
+//    0,                         /* tp_traverse */
+    (inquiry)EntityState_clear,     /* tp_clear */
+//    0,                         /* tp_clear */
+    0,                         /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    EntityState_methods,            /* tp_methods */
+    EntityState_members,            /* tp_members */
+    EntityState_getseters,          /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)EntityState_init,     /* tp_init */
+    0,                         /* tp_alloc */
+    EntityState_new,                /* tp_new */
+};
+
+typedef struct {
+  PyObject_HEAD
+  int num; /* client number */
+  gentity_t *e;
+  PyObject *s; // entityState_t
 } Entity;
 
 // Garbage collection
 static int Entity_traverse(Entity *self, visitproc visit, void *arg) {
+  Py_VISIT(self->s);
   return 0;
 }
 // Deletion
 static int Entity_clear(Entity *self) {
+  Py_CLEAR(self->s);
   return 0;
 }
 // Deallocation
@@ -53,15 +207,19 @@ static PyObject *Entity_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
   if (self != NULL) {
     self->num = -1;
     self->e = NULL;
+    self->s = EntityState_new( &EntityStateType, NULL, NULL);
+    if (self->s == NULL)
+    {
+      Py_DECREF(self);
+      return NULL;
+    }
   }
-
+  
   return (PyObject *)self;
 }
 
 static int Entity_init(Entity *self, PyObject *args, PyObject *kwds)
 {
-  PyObject *tmp;
-
   if (!PyArg_ParseTuple(args, "i", &self->num) )
       return -1;
   if (self->num < 0  || self->num > MAX_GENTITIES)
@@ -70,7 +228,7 @@ static int Entity_init(Entity *self, PyObject *args, PyObject *kwds)
     return -1;
   }
   self->e = &g_entities[ self->num ];
-
+  EntityState_init( (EntityState *)self->s, Py_BuildValue("(i)", self->num), NULL );
   return 0;
 }
 
@@ -79,24 +237,44 @@ typedef enum {
   CLASSNAME,
   SPAWNFLAGS,
   PARENT,
+  PARENTNODE,
+  OVERMINDNODE,
+  BUILDER,
+  TARGETED,
+  POS1,
+  POS2,
   NUM_ENTITY_GETSET_TYPES
 } Entity_getset_types;
 
 static PyObject *Entity_get(Entity *self, void *closure)
 {
   Entity_getset_types gettype = (Entity_getset_types)closure;
-  
-  
-  char *buf;
   switch (gettype){
-  case INUSE:
-    return Py_BuildValue( "i", (self->e->inuse) ? 1 : 0 );
-  case CLASSNAME:
-    return Py_BuildValue( "s", self->e->classname);
-  case PARENT:
-    if ( !self->e->parent ) return Py_BuildValue("");
-    return EntityForGentity( self->e->parent );
+    case INUSE:
+      if(self->e->inuse) Py_RETURN_TRUE; 
+      else Py_RETURN_FALSE;
+    case CLASSNAME:
+      return Py_BuildValue( "s", self->e->classname);
+    case PARENT:
+      if ( !self->e->parent ) return Py_BuildValue("");
+      return EntityForGentity( self->e->parent );
+    case PARENTNODE:
+      if ( !self->e->parentNode ) return Py_BuildValue("");
+      return EntityForGentity( self->e->parentNode );
+    case BUILDER:
+      if ( !self->e->builder ) return Py_BuildValue("");
+      return EntityForGentity( self->e->builder );
+    case OVERMINDNODE:
+      if ( !self->e->overmindNode ) return Py_BuildValue("");
+      return EntityForGentity( self->e->overmindNode );
+    case TARGETED:
+     if ( !self->e->targeted ) return Py_BuildValue("");
+     return EntityForGentity( self->e->targeted );
+    default:
+      PyErr_SetString(PyExc_TypeError, "Entity_get fallthrough");
+      return NULL;
   }
+  
 }
 
 static int Entity_set(Entity *self, PyObject *value, void *closure)
@@ -105,18 +283,24 @@ static int Entity_set(Entity *self, PyObject *value, void *closure)
 //  if (value == NULL) {
     PyErr_SetString(PyExc_TypeError, "Cannot set any Entity attributes yet");
     return -1;
+    
 //  }
 }
 
 static PyMemberDef Entity_members[] = {
-  {"num", T_INT, offsetof(Entity, num), 0, "Entity number"},
+  {"num", T_INT,       offsetof(Entity, num),   0, "Entity number"},
+  {"s",   T_OBJECT_EX, offsetof(Entity, s), 0, "Entities State" },
   {NULL}  /* Sentinel */
 };
 
 static PyGetSetDef Entity_getseters[] = {
-    {"inuse",(getter)Entity_get, (setter)Entity_set, "True is entitiy slot num is currently being used", (void*)INUSE },
-    {"classname",(getter)Entity_get, (setter)Entity_set, "Entity's classname", (void*)CLASSNAME },
-    {"parent",(getter)Entity_get, (setter)Entity_set, "Entity's parent entity", (void*)PARENT },
+    {"inuse",        (getter)Entity_get, (setter)Entity_set, "True is entitiy slot num is currently being used", (void*)INUSE },
+    {"classname",    (getter)Entity_get, (setter)Entity_set, "Entity's classname",                               (void*)CLASSNAME },
+    {"parent",       (getter)Entity_get, (setter)Entity_set, "Entity's parent entity",                           (void*)PARENT },
+    {"parentNode",   (getter)Entity_get, (setter)Entity_set, "Entity's parentNode entity",                       (void*)PARENTNODE },
+    {"builder",      (getter)Entity_get, (setter)Entity_set, "Occupant of this hovel",                           (void*)BUILDER },
+    {"overmindNode", (getter)Entity_get, (setter)Entity_set, "Controlling overmind",                             (void*)OVERMINDNODE },
+    {"targeted",     (getter)Entity_get, (setter)Entity_set, "Entity of turret currently targeting this entity", (void*)TARGETED },
 //    {"muted",(getter)Entity_get, (setter)Entity_set, "Whether or not player is muted", (void*)MUTED },
     {NULL}  /* Sentinel */
 };
@@ -177,7 +361,7 @@ PyObject *EntityForGentity( gentity_t *gentity )
   if (temp == NULL) return Py_BuildValue("");
   ArgsTuple = PyTuple_New(1);
   PyTuple_SetItem(ArgsTuple, 0, Py_BuildValue("i", gentity->s.number ) );
-  Entity_init( temp, ArgsTuple, NULL);
+  Entity_init( (Entity *)temp, ArgsTuple, NULL);
   return temp;
 }
 
