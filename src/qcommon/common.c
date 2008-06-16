@@ -2479,7 +2479,7 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
-	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
+	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
 
 	Sys_Init();
 	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
