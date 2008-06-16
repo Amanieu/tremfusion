@@ -112,6 +112,10 @@ ifndef USE_CURL_DLOPEN
   endif
 endif
 
+ifndef USE_LUA
+  USE_LUA=1
+endif
+
 ifndef USE_CODEC_VORBIS
 USE_CODEC_VORBIS=0
 endif
@@ -140,6 +144,7 @@ CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6
+LUADIR=$(MOUNT_DIR)/lua
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
 Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
@@ -230,6 +235,10 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
+   endif
+ 
+   ifeq ($(USE_LUA),1)
+     BASE_CFLAGS += -DUSE_LUA
   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
@@ -779,6 +788,10 @@ endif
 
 ifeq ($(USE_HG),1)
   BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
+endif
+
+ifeq ($(USE_LUA),1)
+  SHLIBCFLAGS += -DUSE_LUA=1 -I$(LUADIR)
 endif
 
 ifeq ($(V),1)
@@ -1383,7 +1396,7 @@ CGOBJ_ = \
   $(B)/base/ui/ui_shared.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
 
 CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
 CGVMOBJ = $(CGOBJ_:%.o=%.asm)
@@ -1391,6 +1404,7 @@ CGVMOBJ = $(CGOBJ_:%.o=%.asm)
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ) $(GAME_LDFLAGS)
 
 $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1432,10 +1446,53 @@ GOBJ_ = \
   $(B)/base/game/g_admin.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
+  \
+  $(B)/base/game/g_lua.o \
+  $(B)/base/game/lua_entity.o \
+  $(B)/base/game/lua_buildable.o \
+  $(B)/base/game/lua_player.o \
+  $(B)/base/game/lua_game.o \
+  $(B)/base/game/lua_qmath.o \
+  $(B)/base/game/lua_vector.o \
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
+
+ifeq ($(USE_LUA),1)
+  GOBJ +=  $(B)/base/qcommon/lapi.o \
+		   $(B)/base/qcommon/lauxlib.o \
+		   $(B)/base/qcommon/lbaselib.o \
+		   $(B)/base/qcommon/lcode.o \
+		   $(B)/base/qcommon/ldblib.o \
+		   $(B)/base/qcommon/ldebug.o \
+		   $(B)/base/qcommon/ldo.o \
+		   $(B)/base/qcommon/ldump.o \
+		   $(B)/base/qcommon/lfunc.o \
+		   $(B)/base/qcommon/lgc.o \
+		   $(B)/base/qcommon/linit.o \
+		   $(B)/base/qcommon/liolib.o \
+		   $(B)/base/qcommon/llex.o \
+		   $(B)/base/qcommon/lmathlib.o \
+		   $(B)/base/qcommon/lmem.o \
+		   $(B)/base/qcommon/loadlib.o \
+		   $(B)/base/qcommon/lobject.o \
+		   $(B)/base/qcommon/lopcodes.o \
+		   $(B)/base/qcommon/loslib.o \
+		   $(B)/base/qcommon/lparser.o \
+		   $(B)/base/qcommon/lstate.o \
+		   $(B)/base/qcommon/lstring.o \
+		   $(B)/base/qcommon/lstrlib.o \
+		   $(B)/base/qcommon/ltable.o \
+		   $(B)/base/qcommon/ltablib.o \
+		   $(B)/base/qcommon/ltm.o \
+		   $(B)/base/qcommon/lua.o \
+		   $(B)/base/qcommon/lundump.o \
+		   $(B)/base/qcommon/lvm.o \
+		   $(B)/base/qcommon/lzio.o \
+		   $(B)/base/qcommon/print.o \
+
+endif
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
@@ -1583,6 +1640,8 @@ $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
+$(B)/base/qcommon/%.o: $(LUADIR)/%.c
+	$(DO_SHLIB_CC)
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c
 	$(DO_SHLIB_CC)

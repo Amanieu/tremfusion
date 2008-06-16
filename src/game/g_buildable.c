@@ -1899,7 +1899,10 @@ void HMedistat_Think( gentity_t *self )
             }
           }
           else if( !BG_InventoryContainsUpgrade( UP_MEDKIT, player->client->ps.stats ) )
-            BG_AddUpgradeToInventory( UP_MEDKIT, player->client->ps.stats );
+          {
+            if( G_CallPlayerHooks("on_inventory_changed", player) )
+              BG_AddUpgradeToInventory( UP_MEDKIT, player->client->ps.stats );
+          }
         }
       }
     }
@@ -3098,6 +3101,9 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
   gentity_t *built;
   vec3_t    normal;
 
+  if( builder && ! G_CallPlayerHooks("on_build", builder) )
+    return NULL;
+
   // Free existing buildables
   G_FreeMarkedBuildables( builder );
 
@@ -3306,6 +3312,8 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
 
   trap_LinkEntity( built );
 
+  G_CallBuildableHooks("on_init", built);
+
   return built;
 }
 
@@ -3318,79 +3326,85 @@ qboolean G_BuildIfValid( gentity_t *ent, buildable_t buildable )
 {
   float         dist;
   vec3_t        origin;
+  int           build = qfalse;
 
   dist = BG_Class( ent->client->ps.stats[ STAT_CLASS ] )->buildDist;
 
   switch( G_CanBuild( ent, buildable, dist, origin ) )
   {
     case IBE_NONE:
-      G_Build( ent, buildable, origin, ent->s.apos.trBase );
-      return qtrue;
+      build = qtrue;
+      break;
 
     case IBE_NOALIENBP:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_NOBP );
-      return qfalse;
+      break;
 
     case IBE_NOOVERMIND:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_NOOVMND );
-      return qfalse;
+      break;
 
     case IBE_NOCREEP:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_NOCREEP );
-      return qfalse;
+      break;
 
     case IBE_ONEOVERMIND:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_ONEOVERMIND );
-      return qfalse;
+      break;
 
     case IBE_ONEHOVEL:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_ONEHOVEL );
-      return qfalse;
+      break;
 
     case IBE_HOVELEXIT:
       G_TriggerMenu( ent->client->ps.clientNum, MN_A_HOVEL_EXIT );
-      return qfalse;
+      break;
 
     case IBE_NORMAL:
       G_TriggerMenu( ent->client->ps.clientNum, MN_B_NORMAL );
-      return qfalse;
+      break;
 
     case IBE_PERMISSION:
       G_TriggerMenu( ent->client->ps.clientNum, MN_B_NORMAL );
-      return qfalse;
+      break;
 
     case IBE_ONEREACTOR:
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_ONEREACTOR );
-      return qfalse;
+      break;
 
     case IBE_NOPOWERHERE:
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOPOWERHERE );
-      return qfalse;
+      break;
 
     case IBE_NOROOM:
       G_TriggerMenu( ent->client->ps.clientNum, MN_B_NOROOM );
-      return qfalse;
+      break;
 
     case IBE_NOHUMANBP:
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOBP);
-      return qfalse;
+      break;
 
     case IBE_NODCC:
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_NODCC );
-      return qfalse;
+      break;
 
     case IBE_RPTPOWERHERE:
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_RPTPOWERHERE );
-      return qfalse;
+      break;
 
     case IBE_LASTSPAWN:
       G_TriggerMenu( ent->client->ps.clientNum, MN_B_LASTSPAWN );
-      return qfalse;
+      break;
 
     default:
       break;
   }
 
+  if(build && G_CallBuildableHooks("on_build", ent))
+  {
+      G_Build( ent, buildable, origin, ent->s.apos.trBase );
+      return qtrue;
+  }
   return qfalse;
 }
 
@@ -3666,6 +3680,9 @@ static void G_LayoutBuildItem( buildable_t buildable, vec3_t origin,
   VectorCopy( angles, builder->s.angles );
   VectorCopy( origin2, builder->s.origin2 );
   VectorCopy( angles2, builder->s.angles2 );
+
+  G_CallBuildableHooks("on_init", builder);
+
   G_SpawnBuildable( builder, buildable );
 }
 
