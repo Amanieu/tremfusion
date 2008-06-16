@@ -160,7 +160,7 @@ qboolean UI_ConsoleCommand( int realTime )
     return qtrue;
   }
 
-  if( Q_stricmp( cmd, "ui_messagemode" ) == 0 )
+  if( Q_stricmp( cmd, "messagemode" ) == 0 )
   {
     char buffer[ MAX_SAY_TEXT ] = "";
     int i;
@@ -180,7 +180,7 @@ qboolean UI_ConsoleCommand( int realTime )
     return qtrue;
   }
 
-  if( Q_stricmp( cmd, "ui_messagemode2" ) == 0 )
+  if( Q_stricmp( cmd, "messagemode2" ) == 0 )
   {
     char buffer[ MAX_SAY_TEXT ] = "";
     int i;
@@ -200,7 +200,7 @@ qboolean UI_ConsoleCommand( int realTime )
     return qtrue;
   }
 
-  if( Q_stricmp( cmd, "ui_messagemode5" ) == 0 )
+  if( Q_stricmp( cmd, "messagemode5" ) == 0 )
   {
     char buffer[ MAX_SAY_TEXT ] = "";
     int i;
@@ -220,7 +220,7 @@ qboolean UI_ConsoleCommand( int realTime )
     return qtrue;
   }
 
-  if( Q_stricmp( cmd, "ui_prompt" ) == 0 )
+  if( Q_stricmp( cmd, "prompt" ) == 0 )
   {
     char buffer[ MAX_SAY_TEXT ] = "";
     int i;
