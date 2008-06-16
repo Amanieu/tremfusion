@@ -1001,7 +1001,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		// is the element a pak file?
 		if ( search->pack && search->pack->hashTable[hash] ) {
 			// disregard if it doesn't match one of the allowed pure pak files
-			if ( !FS_PakIsPure(search->pack) ) {
+			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
 				continue;
 			}
 
@@ -1084,7 +1084,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			//   this test can make the search fail although the file is in the directory
 			// I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
 			// turned out I used FS_FileExists instead
-			if ( fs_numServerPaks ) {
+			if ( fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") ) {
 
 				if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
@@ -1392,7 +1392,7 @@ int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
 		// is the element a pak file?
 		if ( search->pack && search->pack->hashTable[hash] ) {
 			// disregard if it doesn't match one of the allowed pure pak files
-			if ( !FS_PakIsPure(search->pack) ) {
+			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
 				continue;
 			}
 
@@ -1807,7 +1807,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 			//ZOID:  If we are pure, don't search for files on paks that
 			// aren't on the pure list
-			if ( !FS_PakIsPure(search->pack) ) {
+			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
 				continue;
 			}
 
@@ -1861,7 +1861,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 			char	*name;
 
 			// don't scan directories for files if we are pure or restricted
-			if ( fs_numServerPaks ) {
+			if ( fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") ) {
 		        continue;
 		    } else {
 				netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
@@ -2614,7 +2614,7 @@ static void FS_ReorderPurePaks( void )
 		**p_previous; // when doing the scan
 
 	// only relevant when connected to pure server
-	if ( !fs_numServerPaks )
+	if ( !fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") )
 		return;
 
 	fs_reordered = qfalse;

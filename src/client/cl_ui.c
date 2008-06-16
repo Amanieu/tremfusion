@@ -1158,7 +1158,7 @@ void CL_InitUI( void ) {
 	}
 	
 	// See who gets control of messagemodes
-	if ( Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
+	if ( !Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
 	{
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );

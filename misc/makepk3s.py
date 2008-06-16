@@ -12,6 +12,9 @@ parser.add_option("-d", "--data",
 parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=False,
                   help="print status messages to stdout")
+parser.add_option("-b", "--debug",
+                  action="store_true", dest="usedebug", default=False,
+                  help="use the debug build qvms")
 parser.add_option("--dir", "--directory",
                   dest="directory", default=".",
                   help="the directory to place the pk3's in")
@@ -62,7 +65,7 @@ if options.makedata:
     add_dir_tree("../fonts/*", "fonts/")
     add_dir_tree("../gfx/*", "gfx/")
     add_dir_tree("../models/*", "models/")
-    add_dir_tree("../sonud/*", "sound/")
+    add_dir_tree("../sound/*", "sound/")
     add_dir_tree("../ui/*", "ui/")
 
     pk3.close()
@@ -83,7 +86,12 @@ add_dir_tree("../armour/*", "armour/")
 add_dir_tree("../configs/*", "configs/")
 add_dir_tree("../scripts/*", "scripts/")
 
-for fspath in glob.glob("../build/release*/base/vm/*.qvm"):
+if options.usedebug:
+  qvmglobstring = "../build/debug-*/base/vm/*.qvm"
+else:
+  qvmglobstring = "../build/release-*/base/vm/*.qvm"
+
+for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue
   pk3path = "vm/" + os.path.basename(fspath)
   if pk3path == "vm/game.qvm": # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
