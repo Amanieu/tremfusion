@@ -1119,7 +1119,7 @@ void CL_ShutdownUI( void ) {
 CL_InitUI
 ====================
 */
-#define UI_OLD_API_VERSION	6
+#define UI_OLD_API_VERSION	4
 
 void Con_MessageMode_f(void);
 void Con_MessageMode2_f(void);
@@ -1142,10 +1142,24 @@ void CL_InitUI( void ) {
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 	}
+	
+	// Don't use ui messagemode unless it askes us to
+	Cvar_Set( "ui_useMessagemode", "0" );
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
-	if (v == UI_OLD_API_VERSION) {
+	if (v == UI_OLD_API_VERSION || v == UI_API_VERSION) {
+		// init for this gamestate
+		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE));
+	}
+	else {
+		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
+		cls.uiStarted = qfalse;
+	}
+	
+	// See who gets control of messagemodes
+	if ( !Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
+	{
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
@@ -1155,11 +1169,8 @@ void CL_InitUI( void ) {
 		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
 		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
 		Cmd_AddCommand( "prompt", Con_Prompt_f );
-		
-		// init for this gamestate
-		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE));
 	}
-	else if (v == UI_API_VERSION) {
+	else {
 		// ui messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
@@ -1169,13 +1180,6 @@ void CL_InitUI( void ) {
 		Cmd_AddCommand( "messagemode2", NULL );
 		Cmd_AddCommand( "messagemode5", NULL );
 		Cmd_AddCommand( "prompt", NULL );
-		
-		// init for this gamestate
-		VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE) );
-	}
-	else {
-		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
-		cls.uiStarted = qfalse;
 	}
 
 	// reset any CVAR_CHEAT cvars registered by ui
