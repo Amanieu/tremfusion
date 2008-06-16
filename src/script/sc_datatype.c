@@ -27,36 +27,30 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // String
 
-static scDataTypeString_t *strRealloc( scDataTypeString_t *string, int maxLen )
+static void strRealloc( scDataTypeString_t **string, int maxLen )
 {
   // FIXME: can't use realloc
   // FIXME: must unlarge the string with a bigger buffer
-  string->buflen = maxLen;
-  string = ( scDataTypeString_t* ) realloc( string, ( sizeof( scDataTypeString_t ) - 1 ) + maxLen );
-
-  return string;
+  (*string)->buflen = maxLen;
+  *string = ( scDataTypeString_t* ) realloc( *string, ( sizeof( scDataTypeString_t ) - 1 ) + maxLen );
 }
 
-scDataTypeString_t *SC_NewString( )
+void SC_StringNew( scDataTypeString_t **string )
 {
   // FIXME: can't use malloc
   // FIXME: need an ideal buffer size
-  scDataTypeString_t *string = ( scDataTypeString_t* ) malloc( ( sizeof( scDataTypeString_t ) - 1 ) + 64 );
-  string->length = 0;
-  string->buflen = 0;
-  string->data = '\0';
-
-  return string;
+  *string = ( scDataTypeString_t* ) malloc( ( sizeof( scDataTypeString_t ) - 1 ) + 64 );
+  (*string)->length = 0;
+  (*string)->buflen = 0;
+  (*string)->data = '\0';
 }
 
-scDataTypeString_t *SC_NewStringFromChar( const char* str )
+void SC_StringNewFromChar( scDataTypeString_t **string, const char* str )
 {
   int len = strlen( str );
-  scDataTypeString_t *string = SC_NewString( );
+  SC_StringNew( string );
 
-  Q_strncpyz( & string->data, str, len );
-
-  return string;
+  Q_strncpyz( & (*string)->data, str, len );
 }
 
 void SC_StringFree( scDataTypeString_t *string )
@@ -64,22 +58,20 @@ void SC_StringFree( scDataTypeString_t *string )
   free( string );
 }
 
-scDataTypeString_t *SC_Strcat( scDataTypeString_t *string, const scDataTypeString_t *src )
+void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src )
 {
   int len = strlen( & src->data );
-  if( string->buflen < string->length + len )
-    string = strRealloc( string, string->length + len );
+  if( (*string)->buflen < (*string)->length + len )
+    strRealloc( string, (*string)->length + len );
 
-  Q_strncpyz( & string->data + string->length, & src->data, len );
-  string->length += len;
-
-  return string;
+  Q_strncpyz( & (*string)->data + (*string)->length, & src->data, len + 1 );
+  (*string)->length += len;
 }
 
-scDataTypeString_t *SC_Strcpy( scDataTypeString_t *string, const scDataTypeString_t *src )
+void SC_Strcpy( scDataTypeString_t **string, const scDataTypeString_t *src )
 {
-  string->length = 0;
-  return SC_Strcat( string, src );
+  (*string)->length = 0;
+  SC_Strcat( string, src );
 }
 
 // Value
@@ -113,36 +105,32 @@ void SC_ValueFree( scDataTypeValue_t *value )
 }
 
 // Array
-static scDataTypeArray_t* arrayRealloc( scDataTypeArray_t *array, int buflen )
+static void arrayRealloc( scDataTypeArray_t **array, int buflen )
 {
   int oldsize = ( sizeof( scDataTypeArray_t ) -
                   sizeof( scDataTypeValue_t ) ) +
-                sizeof( scDataTypeValue_t ) * array->buflen;
-  int newsize = oldsize + sizeof( scDataTypeValue_t ) * ( buflen - array->buflen );
+                sizeof( scDataTypeValue_t ) * (*array)->buflen;
+  int newsize = oldsize + sizeof( scDataTypeValue_t ) * ( buflen - (*array)->buflen );
 
   // FIXME: can't use realloc
   // FIXME: must unlarge the array with a bigger buffer
-  array->buflen = buflen;
-  array = ( scDataTypeArray_t* ) realloc( array, newsize );
-  memset( (char*) array + oldsize, 0x00, newsize - oldsize );
-
-  return array;
+  (*array)->buflen = buflen;
+  *array = ( scDataTypeArray_t* ) realloc( (*array), newsize );
+  memset( (char*) (*array) + oldsize, 0x00, newsize - oldsize );
 }
 
-scDataTypeArray_t *SC_NewArray( )
+void SC_ArrayNew( scDataTypeArray_t **array )
 {
   int buflen = 8;
   int size = ( sizeof( scDataTypeArray_t ) -
                sizeof( scDataTypeValue_t ) ) +
              sizeof( scDataTypeValue_t ) * buflen;
 
-  scDataTypeArray_t *array = malloc( size );
-  memset( (char*) array, 0x00, size );
+  *array = malloc( size );
+  memset( (char*) *array, 0x00, size );
 
-  array->buflen = buflen;
-  array->size = 0;
-
-  return array;
+  (*array)->buflen = buflen;
+  (*array)->size = 0;
 }
 
 qboolean SC_ArrayGet( const scDataTypeArray_t *array, int index, scDataTypeValue_t *value )
@@ -157,83 +145,74 @@ qboolean SC_ArrayGet( const scDataTypeArray_t *array, int index, scDataTypeValue
   return qtrue;
 }
 
-scDataTypeArray_t *SC_ArraySet( scDataTypeArray_t *array, int index, scDataTypeValue_t *value )
+void SC_ArraySet( scDataTypeArray_t **array, int index, scDataTypeValue_t *value )
 {
-  if( index >= array->buflen )
-    array = arrayRealloc( array, index + 1 );
+  if( index >= (*array)->buflen )
+    arrayRealloc( array, index + 1 );
 
-  if( index >= array->size )
-    array->size = index + 1;
+  if( index >= (*array)->size )
+    (*array)->size = index + 1;
 
-  memcpy( & array->data + index, value, sizeof( scDataTypeValue_t ) );
-
-  return array;
+  memcpy( & (*array)->data + index, value, sizeof( scDataTypeValue_t ) );
 }
 
-scDataTypeArray_t *SC_ArrayDelete( scDataTypeArray_t *array, int index )
+qboolean SC_ArrayDelete( scDataTypeArray_t **array, int index )
 {
-  if( index >= array->size )
-    return array;
+  if( index >= (*array)->size )
+    return qfalse;
 
-  ( & array->data )[ index ].type = TYPE_UNDEF;
+  ( & (*array)->data )[ index ].type = TYPE_UNDEF;
 
   // TODO: run GC
 
-  if( index == array->size - 1 )
+  if( index == (*array)->size - 1 )
   {
-    while( ( & array->data )[ array->size - 1 ].type == TYPE_UNDEF  && array->size >  0 )
-      array->size--;
+    while( ( & (*array)->data )[ (*array)->size - 1 ].type == TYPE_UNDEF  && (*array)->size >  0 )
+      (*array)->size--;
   }
 
-  return array;
+  return qtrue;
 }
 
-scDataTypeArray_t *SC_ArrayClear( scDataTypeArray_t *array )
+void SC_ArrayClear( scDataTypeArray_t **array )
 {
-  array->size = 0;
+  (*array)->size = 0;
 
   // TODO: run GC
-
-  return array;
 }
 
 void SC_ArrayFree( scDataTypeArray_t *array )
 {
-  // TODO: run GC
-
-  free(array );
+  SC_ArrayClear( &array );
+  free( array );
 }
 
 // Hash
 
 // TODO: Make a better HashTable implementation
 
-static scDataTypeHash_t* hashRealloc( scDataTypeHash_t *hash, int buflen )
+static void hashRealloc( scDataTypeHash_t **hash, int buflen )
 {
   // FIXME: can't use realloc
   // FIXME: must unlarge the hash with a bigger buffer
-  hash->buflen = buflen;
-  hash = ( scDataTypeHash_t* ) realloc( hash,
+  (*hash)->buflen = buflen;
+  *hash = ( scDataTypeHash_t* ) realloc( *hash,
       ( sizeof( scDataTypeHash_t ) -
         sizeof( scDataTypeHashEntry_t ) ) +
       sizeof( scDataTypeHashEntry_t ) * buflen );
-
-  return hash;
 }
 
-scDataTypeHash_t *SC_NewHash( )
+void SC_HashNew( scDataTypeHash_t **hash )
 {
   int buflen = 8;
 
-  scDataTypeHash_t *hash = malloc(
+  *hash = malloc(
       ( sizeof( scDataTypeHash_t ) -
         sizeof( scDataTypeHashEntry_t ) ) +
       sizeof( scDataTypeHashEntry_t ) * buflen );
 
-  hash->buflen = buflen;
-  hash->size = 0;
-
-  return hash;
+  (*hash)->buflen = buflen;
+  (*hash)->size = 0;
 }
 
 qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value )
@@ -254,14 +233,14 @@ qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key
   return qfalse;
 }
 
-scDataTypeHash_t *SC_HashSet( scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value )
+void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataTypeValue_t *value )
 {
   int i, freeIdx = -1;
   scDataTypeString_t *iKey;
 
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < (*hash)->size; i++ )
   {
-    iKey = ( & hash->data )[ i ].key;
+    iKey = ( & (*hash)->data )[ i ].key;
     if( ! iKey )
     {
       if( freeIdx == -1 )
@@ -269,33 +248,32 @@ scDataTypeHash_t *SC_HashSet( scDataTypeHash_t *hash, const scDataTypeString_t *
     }
     if( strcmp( & iKey->data, & key->data ) == 0 )
     {
-      memcpy( & ( & hash->data )[ i ].value, value, sizeof( scDataTypeValue_t ) );
-      return hash;
+      memcpy( & ( & (*hash)->data )[ i ].value, value, sizeof( scDataTypeValue_t ) );
+      return;
     }
   }
 
   if( freeIdx == -1 )
   {
-    freeIdx = hash->size;
+    freeIdx = (*hash)->size;
 
-    if( hash->size == hash->buflen )
-      hash = hashRealloc( hash, hash->size + 2 );
+    if( (*hash)->size == (*hash)->buflen )
+      hashRealloc( hash, (*hash)->size + 2 );
 
-    hash->size++;
+    (*hash)->size++;
   }
   
-  ( & hash->data )[ freeIdx ].key = SC_NewString( );
-  SC_Strcpy( ( & hash->data )[ freeIdx ].key, key );
-  memcpy( & ( & hash->data )[ freeIdx ].value, value, sizeof( scDataTypeValue_t ) );
-
-  return hash;
+  SC_StringNew( & ( & (*hash)->data )[ freeIdx ].key );
+  SC_Strcpy( & ( & (*hash)->data )[ freeIdx ].key, key );
+  memcpy( & ( & (*hash)->data )[ freeIdx ].value, value, sizeof( scDataTypeValue_t ) );
 }
 
-scDataTypeArray_t *SC_HashGetKeys( scDataTypeHash_t *hash )
+void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array )
 {
   int iHash, iArray;
   scDataTypeValue_t value;
-  scDataTypeArray_t *array = SC_NewArray( );
+  
+  SC_ArrayNew( array );
 
   iArray = 0;
   value.type = TYPE_STRING;
@@ -303,63 +281,57 @@ scDataTypeArray_t *SC_HashGetKeys( scDataTypeHash_t *hash )
   {
     if( ( & hash->data)[ iHash ].key != NULL )
     {
-      value.data.string = SC_NewString( );
-      SC_Strcpy( value.data.string, ( & hash->data)[ iHash ].key );
+      SC_StringNew( & value.data.string );
+      SC_Strcpy( & value.data.string, ( & hash->data)[ iHash ].key );
       SC_ArraySet( array, iArray, & value );
       iArray++;
     }
   }
-
-  return array;
 }
 
-scDataTypeHash_t *SC_HashDelete( scDataTypeHash_t *hash, const scDataTypeString_t *key )
+void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key )
 {
   scDataTypeString_t *iKey;
   int i;
 
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < (*hash)->size; i++ )
   {
-    iKey = ( & hash->data)[ i ].key;
+    iKey = ( & (*hash)->data)[ i ].key;
     if( iKey && strcmp ( & iKey->data, & key->data ) == 0 )
     {
-      SC_StringFree( ( & hash->data )[ i ].key );
-      ( & hash->data )[ i ].key = NULL;
+      SC_StringFree( ( & (*hash)->data )[ i ].key );
+      ( & (*hash)->data )[ i ].key = NULL;
 
       // TODO: run GC
 
-      if( i == hash->size - 1 )
+      if( i == (*hash)->size - 1 )
       {
         do
         {
-          hash->size--;
-        } while( ( & hash->data )[ hash->size - 1 ].key == NULL );
+          (*hash)->size--;
+        } while( ( & (*hash)->data )[ (*hash)->size - 1 ].key == NULL );
       }
     }
   }
-
-  return hash;
 }
 
-scDataTypeHash_t *SC_HashClear( scDataTypeHash_t *hash )
+void SC_HashClear( scDataTypeHash_t **hash )
 {
   int i;
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < (*hash)->size; i++ )
   {
-    SC_StringFree( ( & hash->data )[ i ].key );
-    ( & hash->data )[ i ].key = NULL;
+    SC_StringFree( ( & (*hash)->data )[ i ].key );
+    ( & (*hash)->data )[ i ].key = NULL;
 
     // TODO: run GC
   }
 
-  hash->size = 0;
-
-  return hash;
+  (*hash)->size = 0;
 }
 
 void SC_HashFree( scDataTypeHash_t *hash )
 {
-  hash = SC_HashClear( hash );
+  SC_HashClear( & hash );
   free( hash );
 }
 

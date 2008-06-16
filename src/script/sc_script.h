@@ -137,26 +137,27 @@ struct scnode_s
   //scnode_t              *parent;
 };
 
-scDataTypeString_t *SC_NewString( );
-scDataTypeString_t *SC_NewStringFromChar( const char* str );
-scDataTypeString_t *SC_Strcat( scDataTypeString_t *string, const scDataTypeString_t *src );
-scDataTypeString_t *SC_Strcpy( scDataTypeString_t *string, const scDataTypeString_t *src );
+void SC_StringNew( scDataTypeString_t **string );
+void SC_StringNewFromChar( scDataTypeString_t **string, const char* str );
+void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src );
+void SC_Strcpy( scDataTypeString_t **string, const scDataTypeString_t *src );
 void SC_StringFree( scDataTypeString_t *string );
 
 qboolean SC_ValueIsScalar( const scDataTypeValue_t *value );
 void SC_ValueFree( scDataTypeValue_t *value );
 
-scDataTypeArray_t *SC_NewArray( );
+void SC_ArrayNew( scDataTypeArray_t **array );
 qboolean SC_ArrayGet( const scDataTypeArray_t *array, int index, scDataTypeValue_t *value );
-scDataTypeArray_t *SC_ArraySet( scDataTypeArray_t *array, int index, scDataTypeValue_t *value );
-scDataTypeArray_t *SC_ArrayDelete( scDataTypeArray_t *array, int index );
-scDataTypeArray_t *SC_ArrayClear( scDataTypeArray_t *array );
+void SC_ArraySet( scDataTypeArray_t **array, int index, scDataTypeValue_t *value );
+qboolean SC_ArrayDelete( scDataTypeArray_t **array, int index );
+void SC_ArrayClear( scDataTypeArray_t **array );
 void SC_ArrayFree( scDataTypeArray_t *array );
 
-scDataTypeHash_t *SC_NewHash( );
+void SC_HashNew( scDataTypeHash_t **hash );
 qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value );
-scDataTypeHash_t *SC_HashSet( scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value );
-scDataTypeArray_t *SC_HashGetKeys( scDataTypeHash_t *hash );
-scDataTypeHash_t *SC_HashDelete( scDataTypeHash_t *hash, const scDataTypeString_t *key );
-scDataTypeHash_t *SC_HashClear( scDataTypeHash_t *hash );
+void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataTypeValue_t *value );
+void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array );
+void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key );
+void SC_HashClear( scDataTypeHash_t **hash );
 void SC_HashFree( scDataTypeHash_t *hash );
+
