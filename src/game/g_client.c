@@ -1193,7 +1193,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   char      guid[ 33 ];
   char      ip[ 16 ] = {""};
   char      reason[ MAX_STRING_CHARS ] = {""};
-  int       i;
 
   ent = &g_entities[ clientNum ];
 
@@ -1297,6 +1296,7 @@ void ClientBegin( int clientNum )
 
   client->pers.connected = CON_CONNECTED;
   client->pers.enterTime = level.time;
+  client->pers.classSelection = PCL_NONE;
 
   // save eflags around this, because changing teams will
   // cause this to happen with a valid entity, and we

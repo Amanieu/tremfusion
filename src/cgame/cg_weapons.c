@@ -770,32 +770,6 @@ VIEW WEAPON
 
 /*
 ===============
-CG_SetWeaponLerpFrameAnimation
-
-may include ANIM_TOGGLEBIT
-===============
-*/
-static void CG_SetWeaponLerpFrameAnimation( weapon_t weapon, lerpFrame_t *lf, int newAnimation )
-{
-  animation_t *anim;
-
-  lf->animationNumber = newAnimation;
-  newAnimation &= ~ANIM_TOGGLEBIT;
-
-  if( newAnimation < 0 || newAnimation >= MAX_WEAPON_ANIMATIONS )
-    CG_Error( "Bad animation number: %i", newAnimation );
-
-  anim = &cg_weapons[ weapon ].animations[ newAnimation ];
-
-  lf->animation = anim;
-  lf->animationTime = lf->frameTime + anim->initialLerp;
-
-  if( cg_debugAnim.integer )
-    CG_Printf( "Anim: %i\n", newAnimation );
-}
-
-/*
-===============
 CG_WeaponAnimation
 ===============
 */
