@@ -24,18 +24,35 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 qboolean Python_Initialized;
 
+#define server_printer_doc "printer( string ) -> None\n\
+  \n\
+  Prints using Com_Printf so colour codings and other stuff works correctly"
+
+#define server_command_doc "command( command ) -> string\n\
+  \n\
+  Calls command and returns the commands output"
+
 // Module definitions
 PyMethodDef server_methods[] = {
- {"printer",    FixedPrint,          METH_VARARGS, "Logs stdout"},
+ {"printer",    FixedPrint,          METH_VARARGS, server_printer_doc },
 // {"addcommand", py_ServerCommandAdd, METH_VARARGS,  "set command callback for C"},
- {"command",    PY_ExecuteText,    METH_VARARGS,  "call command"},
+ {"command",    PY_ExecuteText,    METH_VARARGS,  server_command_doc },
 // {"addbinding", PY_BindingAdd,    METH_VARARGS,  "set binding callback for C"},
  {NULL, NULL, 0, NULL}
 };
 
+#define cvar_get_doc "get(cvarname) -> string\n\
+  \n\
+  Returns the value of the cvar cvarname or None if cvar doesn't exist."
+
+#define cvar_set_doc "set(cvarname, value) -> string\n\
+  \n\
+  sets a cvar to str(value)\n\
+  Returns the string the cvar gets set too"
+
 PyMethodDef cvar_methods[] = {
-    {"get",     PY_CvarGet,     METH_VARARGS,  "get cvar string"},
-    {"set",     PY_CvarSet,     METH_VARARGS,  "set cvar string"},
+    {"get",     PY_CvarGet,     METH_VARARGS,  cvar_get_doc},
+    {"set",     PY_CvarSet,     METH_VARARGS, cvar_set_doc },
 //    {"list",    PY_CvarList,     METH_VARARGS,  "list all cvars with optional name filter"},
     {NULL, NULL, 0, NULL}      /* sentinel */
 };
@@ -52,7 +69,7 @@ PyObject *PY_CvarGet(PyObject *self, PyObject *args)
   if (var)
     return Py_BuildValue("s", var->string);
   else
-    return Py_BuildValue("s", "");
+    return Py_BuildValue("");
 }
 
 cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ); // Get rid of compiler warning
@@ -205,10 +222,10 @@ void PY_ExecScript_f( void )
     return;
   }
   numargv = Cmd_Argc()-2;
-  PyRun_SimpleString("server.argv = []");
-  PyRun_SimpleString( va("server.argv.append(\"%s\")", Cmd_Argv(1) ) );
+  PyRun_SimpleString("sys.argv = []");
+  PyRun_SimpleString( va("sys.argv.append(\"%s\")", Cmd_Argv(1) ) );
   for (i = 0; i < numargv; i++){
-    PyRun_SimpleString( va("server.argv.append(\"%s\")", Cmd_Argv(2+i) ) );
+    PyRun_SimpleString( va("sys.argv.append(\"%s\")", Cmd_Argv(2+i) ) );
   }
   PY_ExecScript( Cmd_Argv(1) );
 }

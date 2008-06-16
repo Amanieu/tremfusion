@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 PyTypeObject EntityType;
 PyTypeObject EntityStateType;
+extern PyObject *vec3d;
 
 #endif /* Q3_VM */
 #endif /* USE_PYTHON */

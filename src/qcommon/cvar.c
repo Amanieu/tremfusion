@@ -960,4 +960,7 @@ void Cvar_Init (void) {
 	Cmd_AddCommand ("reset", Cvar_Reset_f);
 	Cmd_AddCommand ("cvarlist", Cvar_List_f);
 	Cmd_AddCommand ("cvar_restart", Cvar_Restart_f);
+#ifdef USE_PYTHON
+	PY_CvarInit();
+#endif USE_PYTHON
 }

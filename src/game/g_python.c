@@ -29,6 +29,9 @@ static PyMethodDef game_methods[] = {
  {NULL, NULL, 0, NULL}
 };
 
+PyObject *vec3d_module;
+PyObject *vec3d;
+
 void G_InitPython( void )
 {
 //  PyRun_SimpleString()
@@ -43,11 +46,25 @@ void G_InitPython( void )
     return;
   Py_INCREF(&EntityStateType);
   PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
+  PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
+  vec3d_module= PyImport_ImportModule("vec3d");
+  if (!vec3d_module){
+    Com_Printf("^1Cannot find vec3d.py\n");
+    vec3d = NULL;
+  } else {
+    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
+  }
+//  PyObject *testobject = PyObject_CallObject( vec3d, Py_BuildValue("(iii)", 0, 1, 2));
+//  PyObject_Print( testobject, stdout, 0);
+  
 }
 
 void G_ShutdownPython( void )
 {
-  
+  if (vec3d_module)
+    Py_DECREF( vec3d_module);
+  if (vec3d)
+    Py_DECREF( vec3d );
 }
 
 #endif /* USE_PYTHON */
