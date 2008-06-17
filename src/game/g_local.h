@@ -283,6 +283,7 @@ typedef struct
 typedef struct connectionRecord_s
 {
   int       clientNum;
+  int       oldClient;
   team_t    clientTeam;
   int       clientCredit;
 
@@ -1043,10 +1044,8 @@ void      G_InitMapRotations( void );
 //
 void                G_UpdatePTRConnection( gclient_t *client );
 connectionRecord_t  *G_GenerateNewConnection( gclient_t *client );
-qboolean            G_VerifyPTRC( int code );
 void                G_ResetPTRConnections( void );
 connectionRecord_t  *G_FindConnectionForCode( int code );
-void                G_DeletePTRConnection( connectionRecord_t *connection );
 
 
 //some maxs
