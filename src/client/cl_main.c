@@ -1247,7 +1247,6 @@ CL_SendPureChecksums
 void CL_SendPureChecksums( void ) {
 	const char *pChecksums;
 	char cMsg[MAX_INFO_VALUE];
-	int i;
 
 	// if we are pure we need to send back a command with our referenced pk3 checksums
 	pChecksums = FS_ReferencedPakPureChecksums();
