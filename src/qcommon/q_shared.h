@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME            "themerge"
+#define PRODUCT_NAME            "tremfusion"
 #define PRODUCT_VERSION         "0.0.0"
 
 #ifdef SCM_VERSION
@@ -36,8 +36,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 # define Q3_VERSION PRODUCT_NAME " " PRODUCT_VERSION
 #endif
 
-#define CLIENT_WINDOW_TITLE       "TheMerge " PRODUCT_VERSION
-#define CLIENT_WINDOW_MIN_TITLE   "TheMerge"
+#define CLIENT_WINDOW_TITLE       "TremFusion " PRODUCT_VERSION
+#define CLIENT_WINDOW_MIN_TITLE   "TremFusion"
 
 #define MAX_TEAMNAME 32
 

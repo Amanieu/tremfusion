@@ -58,7 +58,7 @@ else:
   symlink_dir = None
 
 if options.makedata:
-    pk3filename = join ( dir_path, "themerge-data-r%03d.pk3" % scm_rev_num )
+    pk3filename = join ( dir_path, "tremfusion-data-r%04d.pk3" % scm_rev_num )
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -70,7 +70,7 @@ if options.makedata:
 
     pk3.close()
     if symlink_dir:
-      symlink_path = join ( symlink_dir, "themerge-data-r%03d.pk3" % scm_rev_num )
+      symlink_path = join ( symlink_dir, "tremfusion-data-r%04d.pk3" % scm_rev_num )
       print "Linking %s to %s" % ( pk3filename , symlink_path )
       if exists( symlink_path ):
         print "Removing %s" % symlink_path
@@ -78,7 +78,7 @@ if options.makedata:
       os.symlink(pk3filename, symlink_path)
 
 
-pk3filename = join ( dir_path, "themerge-game-r%03d.pk3" % scm_rev_num )
+pk3filename = join ( dir_path, "tremfusion-game-r%04d.pk3" % scm_rev_num )
 print "Creating pk3 file at: %s" % pk3filename
 pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -100,7 +100,7 @@ for fspath in glob.glob(qvmglobstring):
 
 pk3.close()
 if symlink_dir:
-  symlink_path = join ( symlink_dir, "themerge-game-r%03d.pk3" % scm_rev_num )
+  symlink_path = join ( symlink_dir, "tremfusion-game-r%04d.pk3" % scm_rev_num )
   if exists( symlink_path ):
     print "Removing %s" % symlink_path
     os.unlink(symlink_path)
