@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_local.h -- local definitions for game module
 
+#ifndef _GAME_G_LOCAL_H_
+#define _GAME_G_LOCAL_H_
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
@@ -30,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
+#include "../script/sc_script.h"
 #include "g_admin.h"
 
 //==================================================================
@@ -1196,71 +1200,6 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
-
-//
-// g_lua.c
-//
-
-#ifdef USE_LUA
-#include "lua.h"
-
-extern lua_State *g_luaState;
-#endif
-
-void            G_InitLua(void);
-void            G_ShutdownLua(void);
-void            G_LoadLuaScript(gentity_t * ent, const char *filename);
-void            G_RunLuaFunction(const char *func, const char *sig, ...);
-void            G_DumpLuaStack(void);
-int             G_CallHooks(const char *event);
-
-#ifdef USE_LUA
-int             G_AddHook(lua_State *L, const char *event);
-void            G_CreateHooksTable(lua_State *L, const char *event);
-
-//
-// lua_entity.c
-//
-typedef struct
-{
-    gentity_t      *e;
-} lua_Entity;
-
-int             luaopen_entity(lua_State * L);
-void            lua_pushentity(lua_State * L, gentity_t * ent);
-lua_Entity     *lua_getentity(lua_State * L, int argNum);
-
-int             G_CallEntityHooks(const char *event, gentity_t *ent);
-
-//
-// lua_game.c
-//
-int             luaopen_game(lua_State * L);
-int             G_CallGameHooks(const char *event);
-
-//
-// lua_qmath.c
-//
-int             luaopen_qmath(lua_State * L);
-
-//
-// lua_vector.c
-//
-int             luaopen_vector(lua_State * L);
-void            lua_pushvector(lua_State * L, vec3_t v);
-vec_t          *lua_getvector(lua_State * L, int argNum);
-
-//
-// lua_buildable.c
-//
-int             luaopen_buildable(lua_State * L);
-int             G_CallBuildableHooks(const char *event, gentity_t *ent);
-
-//
-// lua_player.c
-//
-int             luaopen_player(lua_State * L);
-int             G_CallPlayerHooks(const char *event, gentity_t *ent);
 
 #endif
 

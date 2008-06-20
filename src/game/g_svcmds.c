@@ -244,17 +244,6 @@ static void Svcmd_AdmitDefeat_f( void )
 
 /*  
 =================
-Svcmd_LuaRestart_f
-=================
-*/  
-static void Svcmd_LuaRestart_f(void)
-{
-  G_ShutdownLua();
-  G_InitLua();
-}
-
-/*  
-=================
 Svcmd_Script_f
 =================
 */  
@@ -262,7 +251,7 @@ static void Svcmd_Script_f(void)
 {
   char filename[128];
   trap_Argv( 1, filename, 128 );
-  G_LoadLuaScript(NULL, filename);
+  SC_RunScript( LANGAGE_LUA, filename );
 }
 
 /*
@@ -360,7 +349,7 @@ qboolean  ConsoleCommand( void )
     trap_SetConfigstring( CS_WINNER, "Evacuation" );
     LogExit( "Evacuation." );
     
-    G_CallGameHooks("on_exit");
+    SC_CallHooks( "game.on_exit", NULL );
 
     return qtrue;
   }
@@ -369,11 +358,6 @@ qboolean  ConsoleCommand( void )
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;
 
-  if( !Q_stricmp(cmd, "restartLuaGameVM") )
-  {
-    Svcmd_LuaRestart_f();
-    return qtrue;
-  }
   if( !Q_stricmp(cmd, "script") )
   {
     Svcmd_Script_f();

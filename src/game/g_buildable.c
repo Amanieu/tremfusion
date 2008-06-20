@@ -1900,7 +1900,7 @@ void HMedistat_Think( gentity_t *self )
           }
           else if( !BG_InventoryContainsUpgrade( UP_MEDKIT, player->client->ps.stats ) )
           {
-            if( G_CallPlayerHooks("on_inventory_changed", player) )
+            if( SC_CallHooks("player.on_inventory_changed", player) )
               BG_AddUpgradeToInventory( UP_MEDKIT, player->client->ps.stats );
           }
         }
@@ -3101,7 +3101,7 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
   gentity_t *built;
   vec3_t    normal;
 
-  if( builder && ! G_CallPlayerHooks("on_build", builder) )
+  if( builder && ! SC_CallHooks("player.on_build", builder) )
     return NULL;
 
   // Free existing buildables
@@ -3312,7 +3312,7 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
 
   trap_LinkEntity( built );
 
-  G_CallBuildableHooks("on_init", built);
+  SC_CallHooks("buildable.on_init", built);
 
   return built;
 }
@@ -3400,7 +3400,7 @@ qboolean G_BuildIfValid( gentity_t *ent, buildable_t buildable )
       break;
   }
 
-  if(build && G_CallBuildableHooks("on_build", ent))
+  if(build && SC_CallHooks("buildable.on_build", ent))
   {
       G_Build( ent, buildable, origin, ent->s.apos.trBase );
       return qtrue;
@@ -3681,7 +3681,7 @@ static void G_LayoutBuildItem( buildable_t buildable, vec3_t origin,
   VectorCopy( origin2, builder->s.origin2 );
   VectorCopy( angles2, builder->s.angles2 );
 
-  G_CallBuildableHooks("on_init", builder);
+  SC_CallHooks("buildable.on_init", builder);
 
   G_SpawnBuildable( builder, buildable );
 }

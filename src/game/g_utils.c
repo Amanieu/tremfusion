@@ -409,7 +409,7 @@ void G_InitGentity( gentity_t *e )
   e->s.number = e - g_entities;
   e->r.ownerNum = ENTITYNUM_NONE;
 
-  G_CallEntityHooks("on_init", e);
+  SC_CallHooks("entity.on_init", e);
 }
 
 /*

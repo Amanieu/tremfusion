@@ -20,14 +20,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
-#include "../game/bg_public.h"
+#ifndef _SCRIPT_SC_SCRIPT_H_
+#define _SCRIPT_SC_SCRIPT_H_
 
 #define MAX_TAG_LENGTH          16
 #define MAX_FUNCTION_ARGUMENTS  16
 #define MAX_NAMESPACE_DEPTH     8
 #define MAX_NAMESPACE_LENGTH    16
+#define MAX_PATH_LENGTH         64
+
+#include "../game/g_local.h"
 
 // Langages
 
@@ -107,7 +109,7 @@ struct scDataTypeHash_s
 
 struct scDataTypeNamespace_s
 {
-  scDataTypeString_t    name[MAX_NAMESPACE_DEPTH];
+  scDataTypeString_t    name[ MAX_NAMESPACE_DEPTH ];
 };
 
 struct scNamespace_s
@@ -116,13 +118,15 @@ struct scNamespace_s
   scDataTypeHash_t      *content;
 };
 
-struct scFunction_s
+struct scDataTypeFunction_s
 {
   scLangage_t           langage;
-  scNamespace_t         *namespace;
-  scDataTypeString_t    name;
-  scDataType_t          argument[MAX_FUNCTION_ARGUMENTS];
-  void                  *ref;
+  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  union
+  {
+    char                path[ MAX_PATH_LENGTH + 1 ];
+    void                *ref;
+  } data;
 };
 
 // Events data structure
@@ -132,7 +136,7 @@ typedef struct schook_s schook_t;
 
 struct scnode_s
 {
-  char                  name[MAX_TAG_LENGTH+1];
+  char                  name[ MAX_TAG_LENGTH + 1 ];
   int                   leaf;
 
   scnode_t              *before;
@@ -173,3 +177,14 @@ void SC_NamespaceInit( void );
 qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceDelete( const char *path );
+
+// sc_main.c
+
+void SC_Init( void );
+void SC_Shutdown( void );
+void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
+int SC_RunScript( scLangage_t langage, const char *filename );
+int SC_CallHooks( const char *path, gentity_t *entity );
+
+#endif
+

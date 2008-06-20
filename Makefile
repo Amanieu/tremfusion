@@ -1452,14 +1452,7 @@ GOBJ_ = \
   $(B)/base/qcommon/q_shared.o \
   \
   $(B)/base/script/sc_datatype.o \
-  \
-  $(B)/base/game/g_lua.o \
-  $(B)/base/game/lua_entity.o \
-  $(B)/base/game/lua_buildable.o \
-  $(B)/base/game/lua_player.o \
-  $(B)/base/game/lua_game.o \
-  $(B)/base/game/lua_qmath.o \
-  $(B)/base/game/lua_vector.o \
+  $(B)/base/script/sc_main.o \
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
@@ -1496,6 +1489,7 @@ ifeq ($(USE_LUA),1)
 		   $(B)/base/lua/lvm.o \
 		   $(B)/base/lua/lzio.o \
 		   $(B)/base/lua/print.o \
+		   $(B)/base/script/sc_lua.o \
 
 endif
 
