@@ -460,3 +460,10 @@ void SC_NamespaceInit( void )
   SC_HashNew( (scDataTypeHash_t**) & namespace_root );
 }
 
+// Function
+
+void SC_FunctionNew( scDataTypeFunction_t **func )
+{
+  *func = ( scDataTypeFunction_t* ) BG_Alloc( sizeof( *func ) );
+}
+

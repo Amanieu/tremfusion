@@ -49,7 +49,7 @@ typedef enum
   TYPE_INTEGER,
   TYPE_FLOAT,
   TYPE_STRING,
-  TYPE_SCALAR,
+  TYPE_FUNCTION,
   TYPE_ARRAY,
   TYPE_HASH,
   TYPE_NAMESPACE,
@@ -80,6 +80,7 @@ struct scDataTypeValue_s
     scDataTypeInteger_t   integer;
     scDataTypeFloat_t     floating;
     scDataTypeString_t    *string;
+    scDataTypeFunction_t  *function;
     scDataTypeArray_t     *array;
     scDataTypeHash_t      *hash;
     scNamespace_t         *namespace;
@@ -125,7 +126,7 @@ struct scDataTypeFunction_s
   union
   {
     char                path[ MAX_PATH_LENGTH + 1 ];
-    void                *ref;
+    void                (*ref)( void );
   } data;
 };
 
@@ -178,6 +179,8 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceDelete( const char *path );
 
+void SC_FunctionNew( scDataTypeFunction_t **func );
+
 // sc_main.c
 
 void SC_Init( void );
@@ -185,6 +188,18 @@ void SC_Shutdown( void );
 void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
+
+
+// sc_c.c
+
+typedef struct
+{
+  char                  name[ MAX_PATH_LENGTH + 1];
+  void                  (*ref)( void );
+  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+} scLib_t;
+
+void SC_AddLibrary( const char *namespace, scLib_t lib[] );
 
 #endif
 

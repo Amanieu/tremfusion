@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+#include "sc_local.h"
 #include "g_local.h"
 
 level_locals_t  level;
@@ -334,7 +335,7 @@ void QDECL G_Error( const char *fmt, ... )
   vsprintf( text, fmt, argptr );
   va_end( argptr );
 
-  SC_Init( );
+  SC_Shutdown( );
 
   trap_Error( text );
 }
@@ -523,7 +524,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   BG_InitMemory( );
 
-  SC_Init( );
+  G_InitScript( );
 
   // set some level globals
   memset( &level, 0, sizeof( level ) );
@@ -2442,5 +2443,18 @@ void G_RunFrame( int levelTime )
   SC_CallHooks( "game.on_think", NULL );
 
   level.frameMsec = trap_Milliseconds();
+}
+
+/*
+================
+G_InitScript
+
+Initialize scripting system and load libraries
+================
+*/
+void G_InitScript( void )
+{
+  SC_game_init( );
+  SC_Init( );
 }
 

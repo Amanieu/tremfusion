@@ -1447,12 +1447,14 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
+  $(B)/base/game/sc_game.o \
   \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o \
   \
   $(B)/base/script/sc_datatype.o \
   $(B)/base/script/sc_main.o \
+  $(B)/base/script/sc_c.o \
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
