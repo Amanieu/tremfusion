@@ -20,14 +20,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "qcommon/q_shared.h"
-
-// TODO: remove me !
-#define Q_strncpyz( DEST, SRC, LEN ) strncpy( DEST, SRC, LEN )
+#include "../qcommon/q_shared.h"
+#include "../qcommon/qcommon.h"
+#include "../game/bg_public.h"
 
 #define MAX_TAG_LENGTH          16
 #define MAX_FUNCTION_ARGUMENTS  16
 #define MAX_NAMESPACE_DEPTH     8
+#define MAX_NAMESPACE_LENGTH    16
 
 // Langages
 
@@ -49,7 +49,8 @@ typedef enum
   TYPE_STRING,
   TYPE_SCALAR,
   TYPE_ARRAY,
-  TYPE_HASH
+  TYPE_HASH,
+  TYPE_NAMESPACE,
 } scDataType_t;
 
 typedef long  scDataTypeInteger_t;
@@ -67,7 +68,7 @@ typedef struct scDataTypeArray_s scDataTypeArray_t;
 typedef struct scDataTypeHash_s scDataTypeHash_t;
 typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
 typedef struct scDataTypeFunction_s scDataTypeFunction_t;
-typedef struct scDataTypeNamespace_s scDataTypeNamespace_t;
+typedef struct scNamespace_s scNamespace_t;
 
 struct scDataTypeValue_s
 {
@@ -79,6 +80,7 @@ struct scDataTypeValue_s
     scDataTypeString_t    *string;
     scDataTypeArray_t     *array;
     scDataTypeHash_t      *hash;
+    scNamespace_t         *namespace;
   } data;
 };
 
@@ -108,10 +110,16 @@ struct scDataTypeNamespace_s
   scDataTypeString_t    name[MAX_NAMESPACE_DEPTH];
 };
 
+struct scNamespace_s
+{
+  scNamespace_t         *parent;
+  scDataTypeHash_t      *content;
+};
+
 struct scFunction_s
 {
   scLangage_t           langage;
-  scDataTypeNamespace_t namespace;
+  scNamespace_t         *namespace;
   scDataTypeString_t    name;
   scDataType_t          argument[MAX_FUNCTION_ARGUMENTS];
   void                  *ref;
@@ -154,10 +162,14 @@ void SC_ArrayClear( scDataTypeArray_t **array );
 void SC_ArrayFree( scDataTypeArray_t *array );
 
 void SC_HashNew( scDataTypeHash_t **hash );
-qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value );
-void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataTypeValue_t *value );
+qboolean SC_HashGet( const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
+qboolean SC_HashSet( scDataTypeHash_t **hash, const char *key, scDataTypeValue_t *value );
 void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array );
-void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key );
+qboolean SC_HashDelete( scDataTypeHash_t **hash, const char *key );
 void SC_HashClear( scDataTypeHash_t **hash );
 void SC_HashFree( scDataTypeHash_t *hash );
 
+void SC_NamespaceInit( void );
+qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value );
+qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value );
+qboolean SC_NamespaceDelete( const char *path );

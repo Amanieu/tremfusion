@@ -141,6 +141,7 @@ NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6
 LUADIR=$(MOUNT_DIR)/lua
+SCRIPTDIR=$(MOUNT_DIR)/script
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
 Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
@@ -900,6 +901,8 @@ makedirs:
 	@if [ ! -d $(B)/base/game ];then $(MKDIR) $(B)/base/game;fi
 	@if [ ! -d $(B)/base/ui ];then $(MKDIR) $(B)/base/ui;fi
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
+	@if [ ! -d $(B)/base/lua ];then $(MKDIR) $(B)/base/lua;fi
+	@if [ ! -d $(B)/base/script ];then $(MKDIR) $(B)/base/script;fi
 	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
 	@if [ ! -d $(B)/tools ];then $(MKDIR) $(B)/tools;fi
 	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
@@ -1424,6 +1427,8 @@ GOBJ_ = \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o \
   \
+  $(B)/base/script/sc_datatype.o \
+  \
   $(B)/base/game/g_lua.o \
   $(B)/base/game/lua_entity.o \
   $(B)/base/game/lua_buildable.o \
@@ -1436,37 +1441,37 @@ GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
 
 ifeq ($(USE_LUA),1)
-  GOBJ +=  $(B)/base/qcommon/lapi.o \
-		   $(B)/base/qcommon/lauxlib.o \
-		   $(B)/base/qcommon/lbaselib.o \
-		   $(B)/base/qcommon/lcode.o \
-		   $(B)/base/qcommon/ldblib.o \
-		   $(B)/base/qcommon/ldebug.o \
-		   $(B)/base/qcommon/ldo.o \
-		   $(B)/base/qcommon/ldump.o \
-		   $(B)/base/qcommon/lfunc.o \
-		   $(B)/base/qcommon/lgc.o \
-		   $(B)/base/qcommon/linit.o \
-		   $(B)/base/qcommon/liolib.o \
-		   $(B)/base/qcommon/llex.o \
-		   $(B)/base/qcommon/lmathlib.o \
-		   $(B)/base/qcommon/lmem.o \
-		   $(B)/base/qcommon/loadlib.o \
-		   $(B)/base/qcommon/lobject.o \
-		   $(B)/base/qcommon/lopcodes.o \
-		   $(B)/base/qcommon/loslib.o \
-		   $(B)/base/qcommon/lparser.o \
-		   $(B)/base/qcommon/lstate.o \
-		   $(B)/base/qcommon/lstring.o \
-		   $(B)/base/qcommon/lstrlib.o \
-		   $(B)/base/qcommon/ltable.o \
-		   $(B)/base/qcommon/ltablib.o \
-		   $(B)/base/qcommon/ltm.o \
-		   $(B)/base/qcommon/lua.o \
-		   $(B)/base/qcommon/lundump.o \
-		   $(B)/base/qcommon/lvm.o \
-		   $(B)/base/qcommon/lzio.o \
-		   $(B)/base/qcommon/print.o \
+  GOBJ +=  $(B)/base/lua/lapi.o \
+		   $(B)/base/lua/lauxlib.o \
+		   $(B)/base/lua/lbaselib.o \
+		   $(B)/base/lua/lcode.o \
+		   $(B)/base/lua/ldblib.o \
+		   $(B)/base/lua/ldebug.o \
+		   $(B)/base/lua/ldo.o \
+		   $(B)/base/lua/ldump.o \
+		   $(B)/base/lua/lfunc.o \
+		   $(B)/base/lua/lgc.o \
+		   $(B)/base/lua/linit.o \
+		   $(B)/base/lua/liolib.o \
+		   $(B)/base/lua/llex.o \
+		   $(B)/base/lua/lmathlib.o \
+		   $(B)/base/lua/lmem.o \
+		   $(B)/base/lua/loadlib.o \
+		   $(B)/base/lua/lobject.o \
+		   $(B)/base/lua/lopcodes.o \
+		   $(B)/base/lua/loslib.o \
+		   $(B)/base/lua/lparser.o \
+		   $(B)/base/lua/lstate.o \
+		   $(B)/base/lua/lstring.o \
+		   $(B)/base/lua/lstrlib.o \
+		   $(B)/base/lua/ltable.o \
+		   $(B)/base/lua/ltablib.o \
+		   $(B)/base/lua/ltm.o \
+		   $(B)/base/lua/lua.o \
+		   $(B)/base/lua/lundump.o \
+		   $(B)/base/lua/lvm.o \
+		   $(B)/base/lua/lzio.o \
+		   $(B)/base/lua/print.o \
 
 endif
 
@@ -1611,8 +1616,17 @@ $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
-$(B)/base/qcommon/%.o: $(LUADIR)/%.c
+$(B)/base/script/%.o: $(SCRIPTDIR)/%.c
 	$(DO_SHLIB_CC)
+
+$(B)/base/script/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
+
+$(B)/base/lua/%.o: $(LUADIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/lua/%.asm: $(LUADIC)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c
 	$(DO_SHLIB_CC)

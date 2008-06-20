@@ -25,21 +25,25 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_script.h"
 
+static scNamespace_t *namespace_root;
+
 // String
 
 static void strRealloc( scDataTypeString_t **string, int maxLen )
 {
-  // FIXME: can't use realloc
+  scDataTypeString_t *old = *string;
+  // TODO: implement a real realloc
   // FIXME: must unlarge the string with a bigger buffer
+  *string = ( scDataTypeString_t* ) BG_Alloc( sizeof( scDataTypeString_t ) - 1 + maxLen );
+  memcpy( *string, old, sizeof( scDataTypeString_t ) - 1 + old->length );
   (*string)->buflen = maxLen;
-  *string = ( scDataTypeString_t* ) realloc( *string, ( sizeof( scDataTypeString_t ) - 1 ) + maxLen );
+  BG_Free( old );
 }
 
 void SC_StringNew( scDataTypeString_t **string )
 {
-  // FIXME: can't use malloc
   // FIXME: need an ideal buffer size
-  *string = ( scDataTypeString_t* ) malloc( ( sizeof( scDataTypeString_t ) - 1 ) + 64 );
+  *string = ( scDataTypeString_t* ) BG_Alloc( ( sizeof( scDataTypeString_t ) - 1 ) + 64 );
   (*string)->length = 0;
   (*string)->buflen = 0;
   (*string)->data = '\0';
@@ -50,12 +54,12 @@ void SC_StringNewFromChar( scDataTypeString_t **string, const char* str )
   int len = strlen( str );
   SC_StringNew( string );
 
-  Q_strncpyz( & (*string)->data, str, len );
+  Q_strncpyz( & (*string)->data, str, len + 1 );
 }
 
 void SC_StringFree( scDataTypeString_t *string )
 {
-  free( string );
+  BG_Free( string );
 }
 
 void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src )
@@ -107,16 +111,15 @@ void SC_ValueFree( scDataTypeValue_t *value )
 // Array
 static void arrayRealloc( scDataTypeArray_t **array, int buflen )
 {
-  int oldsize = ( sizeof( scDataTypeArray_t ) -
-                  sizeof( scDataTypeValue_t ) ) +
-                sizeof( scDataTypeValue_t ) * (*array)->buflen;
-  int newsize = oldsize + sizeof( scDataTypeValue_t ) * ( buflen - (*array)->buflen );
+  scDataTypeArray_t *old = *array;
 
   // FIXME: can't use realloc
   // FIXME: must unlarge the array with a bigger buffer
+  // FIXME: create new tag
+  *array = ( scDataTypeArray_t* ) BG_Alloc( sizeof( scDataTypeArray_t ) + ( - 1 + buflen ) * sizeof( scDataTypeValue_t ) );
+  memcpy( *array, old, sizeof( scDataTypeArray_t ) + ( - 1 + old->size ) * sizeof( scDataTypeValue_t ) );
   (*array)->buflen = buflen;
-  *array = ( scDataTypeArray_t* ) realloc( (*array), newsize );
-  memset( (char*) (*array) + oldsize, 0x00, newsize - oldsize );
+  BG_Free( old );
 }
 
 void SC_ArrayNew( scDataTypeArray_t **array )
@@ -126,8 +129,8 @@ void SC_ArrayNew( scDataTypeArray_t **array )
                sizeof( scDataTypeValue_t ) ) +
              sizeof( scDataTypeValue_t ) * buflen;
 
-  *array = malloc( size );
-  memset( (char*) *array, 0x00, size );
+  // FIXME: create new tag
+  *array = (scDataTypeArray_t*) BG_Alloc( size );
 
   (*array)->buflen = buflen;
   (*array)->size = 0;
@@ -150,6 +153,7 @@ void SC_ArraySet( scDataTypeArray_t **array, int index, scDataTypeValue_t *value
   if( index >= (*array)->buflen )
     arrayRealloc( array, index + 1 );
 
+  // TODO: memset new data
   if( index >= (*array)->size )
     (*array)->size = index + 1;
 
@@ -184,7 +188,7 @@ void SC_ArrayClear( scDataTypeArray_t **array )
 void SC_ArrayFree( scDataTypeArray_t *array )
 {
   SC_ArrayClear( &array );
-  free( array );
+  BG_Free( array );
 }
 
 // Hash
@@ -193,20 +197,21 @@ void SC_ArrayFree( scDataTypeArray_t *array )
 
 static void hashRealloc( scDataTypeHash_t **hash, int buflen )
 {
+  scDataTypeHash_t *old = *hash;
+
   // FIXME: can't use realloc
   // FIXME: must unlarge the hash with a bigger buffer
+  *hash = ( scDataTypeHash_t* ) BG_Alloc( sizeof( scDataTypeHash_t ) + ( - 1 + buflen ) * sizeof( scDataTypeHashEntry_t ) );
+  memcpy( *hash, old, sizeof( scDataTypeHash_t ) + ( - 1 + old->size ) * sizeof( scDataTypeHashEntry_t ) );
   (*hash)->buflen = buflen;
-  *hash = ( scDataTypeHash_t* ) realloc( *hash,
-      ( sizeof( scDataTypeHash_t ) -
-        sizeof( scDataTypeHashEntry_t ) ) +
-      sizeof( scDataTypeHashEntry_t ) * buflen );
+  BG_Free( old );
 }
 
 void SC_HashNew( scDataTypeHash_t **hash )
 {
   int buflen = 8;
 
-  *hash = malloc(
+  *hash = (scDataTypeHash_t*) BG_Alloc(
       ( sizeof( scDataTypeHash_t ) -
         sizeof( scDataTypeHashEntry_t ) ) +
       sizeof( scDataTypeHashEntry_t ) * buflen );
@@ -215,14 +220,14 @@ void SC_HashNew( scDataTypeHash_t **hash )
   (*hash)->size = 0;
 }
 
-qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key, scDataTypeValue_t *value )
+qboolean SC_HashGet( const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value )
 {
   int i;
   scDataTypeString_t *iKey;
   for( i = 0; i < hash->size; i++ )
   {
     iKey = ( & hash->data )[ i ].key;
-    if( iKey && strcmp( & iKey->data, & key->data ) == 0 )
+    if( iKey && strcmp( & iKey->data, key ) == 0 )
     {
       memcpy( value, & ( & hash->data)[ i ].value, sizeof( scDataTypeValue_t ) );
       return qtrue;
@@ -233,7 +238,7 @@ qboolean SC_HashGet( const scDataTypeHash_t *hash, const scDataTypeString_t *key
   return qfalse;
 }
 
-void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataTypeValue_t *value )
+qboolean SC_HashSet( scDataTypeHash_t **hash, const char *key, scDataTypeValue_t *value )
 {
   int i, freeIdx = -1;
   scDataTypeString_t *iKey;
@@ -246,10 +251,10 @@ void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataT
       if( freeIdx == -1 )
         freeIdx = i;
     }
-    if( strcmp( & iKey->data, & key->data ) == 0 )
+    if( strcmp( & iKey->data, key ) == 0 )
     {
       memcpy( & ( & (*hash)->data )[ i ].value, value, sizeof( scDataTypeValue_t ) );
-      return;
+      return qtrue;
     }
   }
 
@@ -263,9 +268,10 @@ void SC_HashSet( scDataTypeHash_t **hash, const scDataTypeString_t *key, scDataT
     (*hash)->size++;
   }
   
-  SC_StringNew( & ( & (*hash)->data )[ freeIdx ].key );
-  SC_Strcpy( & ( & (*hash)->data )[ freeIdx ].key, key );
+  SC_StringNewFromChar( & ( & (*hash)->data )[ freeIdx ].key, key );
   memcpy( & ( & (*hash)->data )[ freeIdx ].value, value, sizeof( scDataTypeValue_t ) );
+
+  return qtrue;
 }
 
 void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array )
@@ -289,7 +295,7 @@ void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array )
   }
 }
 
-void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key )
+qboolean SC_HashDelete( scDataTypeHash_t **hash, const char *key )
 {
   scDataTypeString_t *iKey;
   int i;
@@ -297,7 +303,7 @@ void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key )
   for( i = 0; i < (*hash)->size; i++ )
   {
     iKey = ( & (*hash)->data)[ i ].key;
-    if( iKey && strcmp ( & iKey->data, & key->data ) == 0 )
+    if( iKey && strcmp ( & iKey->data, key ) == 0 )
     {
       SC_StringFree( ( & (*hash)->data )[ i ].key );
       ( & (*hash)->data )[ i ].key = NULL;
@@ -311,8 +317,12 @@ void SC_HashDelete( scDataTypeHash_t **hash, const scDataTypeString_t *key )
           (*hash)->size--;
         } while( ( & (*hash)->data )[ (*hash)->size - 1 ].key == NULL );
       }
+
+      return qtrue;
     }
   }
+
+  return qfalse;
 }
 
 void SC_HashClear( scDataTypeHash_t **hash )
@@ -332,6 +342,118 @@ void SC_HashClear( scDataTypeHash_t **hash )
 void SC_HashFree( scDataTypeHash_t *hash )
 {
   SC_HashClear( & hash );
-  free( hash );
+  BG_Free( hash );
+}
+
+// namespace
+qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
+{
+  char *idx;
+  const char *base = path;
+  char tmp[ MAX_NAMESPACE_LENGTH ];
+  scNamespace_t *namespace = namespace_root;
+
+  if( strcmp( path, "" ) == 0 )
+  {
+    value->type = TYPE_NAMESPACE;
+    value->data.namespace = namespace_root;
+    return qtrue;
+  }
+  
+  idx = Q_strrchr( base, '.' );
+  while( idx != NULL )
+  {
+    Q_strncpyz( tmp, base, idx - base + 1 );
+	tmp[idx-base] = '\0';
+
+    if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, value ) )
+	{
+      if( value->type != TYPE_NAMESPACE )
+        return qfalse;
+    }
+    else
+    {
+      value->type = TYPE_UNDEF;
+      return qfalse;
+    }
+
+    namespace = value->data.namespace;
+    base = idx + 1;
+    idx = Q_strrchr( base, '.' );
+  }
+
+  return SC_HashGet( (scDataTypeHash_t*) namespace, base, value );
+}
+
+qboolean SC_NamespaceDelete( const char *path )
+{
+  const char *idx;
+  const char *base = path;
+  char tmp[ MAX_NAMESPACE_LENGTH ];
+  scNamespace_t *namespace = namespace_root;
+  scDataTypeValue_t value;
+
+  if( strcmp( path, "" ) == 0 )
+    return qfalse;
+  
+  while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
+  {
+    Q_strncpyz( tmp, base, idx - base + 1 );
+	tmp[idx-base] = '\0';
+
+    if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, & value ) )
+	{
+      if( value.type != TYPE_NAMESPACE )
+        return qfalse;
+    }
+    else
+      return qfalse;
+
+    namespace = value.data.namespace;
+    base = idx + 1;
+  }
+
+  return SC_HashDelete( (scDataTypeHash_t**) & namespace, base );
+  // TODO : reaffect namespace variable
+}
+
+qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )
+{
+  const char *idx;
+  const char *base = path;
+  char tmp[ MAX_NAMESPACE_LENGTH ];
+  scNamespace_t *namespace = namespace_root;
+  scDataTypeValue_t tmpval;
+  
+  if( strcmp( path, "" ) == 0 )
+    return qfalse;
+  
+  while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
+  {
+    Q_strncpyz( tmp, base, idx - base + 1 );
+	tmp[idx-base] = '\0';
+    if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, &tmpval ) )
+	{
+      if( tmpval.type != TYPE_NAMESPACE )
+        return qfalse;
+    }
+    else
+    {
+      tmpval.type = TYPE_NAMESPACE;
+      SC_HashNew( (scDataTypeHash_t**) & tmpval.data.namespace );
+      SC_HashSet( (scDataTypeHash_t**) & namespace, tmp, & tmpval );
+    }
+
+    namespace = tmpval.data.namespace;
+    base = idx + 1;
+  }
+
+  return SC_HashSet( (scDataTypeHash_t**) & namespace, base, value );
+  // TODO : reaffect namespace variable
+}
+
+void SC_NamespaceInit( void )
+{
+  SC_HashNew( (scDataTypeHash_t**) & namespace_root );
 }
 
