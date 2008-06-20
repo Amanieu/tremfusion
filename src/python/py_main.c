@@ -91,7 +91,7 @@ PyObject *PY_CvarSet(PyObject *self, PyObject *args)
   if (var)
     return Py_BuildValue("s", var->string);
   else
-    return Py_BuildValue("s", "");
+    return Py_BuildValue("");
 }
 
 // big ugly buffer

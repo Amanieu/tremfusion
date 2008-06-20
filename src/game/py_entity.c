@@ -24,7 +24,159 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "g_python.h"
 
 PyObject *EntityForGentity( gentity_t *gentity );
-PyObject *Vec3dforVec3_t( vec3_t vect );
+PyObject *Vec3dforVec3_t( vec3_t *vect );
+
+typedef struct {
+  PyObject_HEAD
+  int num; /* client number */
+  vec3_t *vector;
+} Vec3d;
+
+// Garbage collection
+static int Vec3d_traverse(Vec3d *self, visitproc visit, void *arg) {
+  return 0;
+}
+// Deletion
+static int Vec3d_clear(Vec3d *self) {
+  return 0;
+}
+// Deallocation
+static void Vec3d_dealloc(Vec3d* self) {
+  Vec3d_clear(self);
+  self->ob_type->tp_free((PyObject*)self);
+}
+// 
+static PyObject *Vec3d_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+  Vec3d *self;
+
+  self = (Vec3d *)type->tp_alloc(type, 0);
+  if (self != NULL) {
+    self->vector = NULL;
+  }
+  
+  return (PyObject *)self;
+}
+
+static int Vec3d_init(Vec3d *self, vec3_t *vector)
+{
+  self->vector = vector;
+  return 0;
+}
+
+typedef enum {
+  X,
+  Y,
+  Z,
+} Vec3d_getset_types;
+
+static PyObject *Vec3d_get(Vec3d *self, void *closure)
+{
+  Vec3d_getset_types gettype = (Vec3d_getset_types)closure;
+  vec3_t temp;
+  VectorCopy(*self->vector, temp);
+  switch (gettype){
+    case X:
+      return Py_BuildValue("f", temp[0]);
+    case Y:
+      return Py_BuildValue("f", temp[1]);
+    case Z:
+      return Py_BuildValue("f", temp[2]);
+    default:
+      PyErr_SetString(PyExc_TypeError, "Vec3d_get fallthrough");
+      return NULL;
+  }
+  
+}
+
+static int Vec3d_set(Vec3d *self, PyObject *value, void *closure)
+{
+  int settype = (int)closure;
+  if (value == NULL) {
+    PyErr_SetString(PyExc_TypeError, "Invalid value");
+    return -1;
+  }
+  vec3_t temp;
+  float value_float;
+  value_float = PyFloat_AsDouble( value );
+  VectorCopy(*self->vector, temp);
+  switch (settype) {
+    case X:
+      temp[0] = value_float;
+      break;
+    case Y:
+      temp[1] = value_float;
+      break;
+    case Z:
+      temp[2] = value_float;
+      break;
+    default:
+      PyErr_SetString(PyExc_TypeError, "EntityState_set fallthrough");
+      return -1;
+  }
+  VectorCopy(temp, *self->vector);
+  return 0;
+}
+
+static PyMemberDef Vec3d_members[] = {
+  {NULL}  /* Sentinel */
+};
+
+static PyGetSetDef Vec3d_getseters[] = {
+    {"x",        (getter)Vec3d_get, (setter)Vec3d_set, "True if Entitiy's slot num is currently being used", (void*)X },
+    {"y",        (getter)Vec3d_get, (setter)Vec3d_set, "True if Entitiy's slot num is currently being used", (void*)Y },
+    {"z",        (getter)Vec3d_get, (setter)Vec3d_set, "True if Entitiy's slot num is currently being used", (void*)Z },
+    {NULL}  /* Sentinel */
+};
+
+static PyMethodDef Vec3d_methods[] = {
+    {NULL}  /* Sentinel */
+};
+
+PyTypeObject Vec3dType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "game.Vec3d",             /*tp_name*/
+    sizeof(Vec3d),            /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)Vec3d_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "game.Vec3d()\n\nClass representing a vec3_t",           /* tp_doc */
+    (traverseproc)Vec3d_traverse, /* tp_traverse */
+//    0,                         /* tp_traverse */
+    (inquiry)Vec3d_clear,     /* tp_clear */
+//    0,                         /* tp_clear */
+    0,                         /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    Vec3d_methods,            /* tp_methods */
+    Vec3d_members,            /* tp_members */
+    Vec3d_getseters,          /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    0,     /* tp_init */
+    0,                         /* tp_alloc */
+    Vec3d_new,                /* tp_new */
+};
 
 typedef struct {
   PyObject_HEAD
@@ -89,7 +241,7 @@ static PyObject *EntityState_get(EntityState *self, void *closure)
     case ETYPE:
       return Py_BuildValue( "i", self->e->s.eType );
     case ORIGIN:
-      return Vec3dforVec3_t( self->e->s.origin );
+      return Vec3dforVec3_t( &self->e->s.origin );
       
     default:
       PyErr_SetString(PyExc_TypeError, "EntityState_get fallthrough");
@@ -129,7 +281,7 @@ static PyMemberDef EntityState_members[] = {
 static PyGetSetDef EntityState_getseters[] = {
     {"num", (getter)EntityState_get, (setter)EntityState_set, "EntityState number", (void*)ESNUM },
     {"eType",(getter)EntityState_get, (setter)EntityState_set, "Entity's current type", (void*)ETYPE },
-    {"origin",(getter)EntityState_get, (setter)EntityState_set, "Entity's current origin", (void*)ORIGIN },
+//    {"origin",(getter)EntityState_get, (setter)EntityState_set, "Entity's current origin", (void*)ORIGIN },
     {NULL}  /* Sentinel */
 };
 
@@ -158,13 +310,13 @@ PyTypeObject EntityStateType = {
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
-//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
     "Class representing a entityState_t",           /* tp_doc */
-//    (traverseproc)EntityState_traverse, /* tp_traverse */
-    0,                         /* tp_traverse */
-//    (inquiry)EntityState_clear,     /* tp_clear */
-    0,                         /* tp_clear */
+    (traverseproc)EntityState_traverse, /* tp_traverse */
+//    0,                         /* tp_traverse */
+    (inquiry)EntityState_clear,     /* tp_clear */
+//    0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
@@ -249,6 +401,8 @@ typedef enum {
   TARGETED,
   POS1,
   POS2,
+  HEALTH,
+  LASTHEALTH,
   NUM_ENTITY_GETSET_TYPES
 } Entity_getset_types;
 
@@ -276,6 +430,10 @@ static PyObject *Entity_get(Entity *self, void *closure)
     case TARGETED:
      if ( !self->e->targeted ) return Py_BuildValue("");
      return EntityForGentity( self->e->targeted );
+    case HEALTH:
+      return Py_BuildValue( "i", self->e->health );
+    case LASTHEALTH:
+      return Py_BuildValue( "i", self->e->lastHealth );
     default:
       PyErr_SetString(PyExc_TypeError, "Entity_get fallthrough");
       return NULL;
@@ -285,12 +443,23 @@ static PyObject *Entity_get(Entity *self, void *closure)
 
 static int Entity_set(Entity *self, PyObject *value, void *closure)
 {
-//  int settype = (int)closure;
-//  if (value == NULL) {
-    PyErr_SetString(PyExc_TypeError, "Cannot set any Entity attributes yet");
+  int settype = (int)closure;
+  if (value == NULL) {
+    PyErr_SetString(PyExc_TypeError, "Invalid value");
     return -1;
-    
-//  }
+  }
+  switch (settype) {
+    case HEALTH:
+      self->e->health = PyInt_AsLong( value );
+      break;
+    case LASTHEALTH:
+      self->e->lastHealth = PyInt_AsLong( value );
+      break;
+    default:
+      PyErr_SetString(PyExc_SystemError, "Entity_set fallthrough");
+      return -1;
+  }
+  return 0;
 }
 
 static PyMemberDef Entity_members[] = {
@@ -307,6 +476,8 @@ static PyGetSetDef Entity_getseters[] = {
     {"builder",      (getter)Entity_get, (setter)Entity_set, "Entity of the occupant of hovel if self is a Hovel",(void*)BUILDER },
     {"overmindNode", (getter)Entity_get, (setter)Entity_set, "Controlling overmind",                             (void*)OVERMINDNODE },
     {"targeted",     (getter)Entity_get, (setter)Entity_set, "Entity of turret currently targeting this entity", (void*)TARGETED },
+    {"health",       (getter)Entity_get, (setter)Entity_set, "Current health amount",                            (void*)HEALTH },
+    {"lastHealth",   (getter)Entity_get, (setter)Entity_set, "Health the entity had last frame",                 (void*)LASTHEALTH },
     {NULL}  /* Sentinel */
 };
 
@@ -335,13 +506,13 @@ PyTypeObject EntityType = {
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
-//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+//    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
     "game.Entity( entity number)\n\nClass representing a gentity_t",           /* tp_doc */
- //   (traverseproc)Entity_traverse, /* tp_traverse */
-    0,                         /* tp_traverse */
-//    (inquiry)Entity_clear,     /* tp_clear */
-    0,                         /* tp_clear */
+    (traverseproc)Entity_traverse, /* tp_traverse */
+//    0,                         /* tp_traverse */
+    (inquiry)Entity_clear,     /* tp_clear */
+//    0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
@@ -371,19 +542,22 @@ PyObject *EntityForGentity( gentity_t *gentity )
   return temp;
 }
 
-PyObject *Vec3dforVec3_t( vec3_t vect )
+PyObject *Vec3dforVec3_t( vec3_t *vect )
 {
-  vec3_t vector;
+//  vec3_t vector;
   PyObject *ArgsTuple, *temp;
-  if ( vec3d == NULL) return Py_BuildValue(""); // Failed to load vec3d.py
-  VectorCopy(vect, vector);
-  
-  ArgsTuple = PyTuple_New(3);
-  PyTuple_SetItem(ArgsTuple, 0, Py_BuildValue("f", vector[0] ) );
-  PyTuple_SetItem(ArgsTuple, 1, Py_BuildValue("f", vector[1] ) );
-  PyTuple_SetItem(ArgsTuple, 2, Py_BuildValue("f", vector[2] ) );
-  temp = PyObject_CallObject( vec3d, ArgsTuple);
-  Py_DECREF(ArgsTuple);
+  temp = Vec3d_new( &Vec3dType, NULL, NULL );
+  Vec3d_init( temp, vect );
+  if ( temp == NULL ) return Py_BuildValue("");
+//  if ( vec3d == NULL) return Py_BuildValue(""); // Failed to load vec3d.py
+//  VectorCopy(vect, vector);
+//  
+//  ArgsTuple = PyTuple_New(3);
+//  PyTuple_SetItem(ArgsTuple, 0, Py_BuildValue("f", vector[0] ) );
+//  PyTuple_SetItem(ArgsTuple, 1, Py_BuildValue("f", vector[1] ) );
+//  PyTuple_SetItem(ArgsTuple, 2, Py_BuildValue("f", vector[2] ) );
+//  temp = PyObject_CallObject( vec3d, ArgsTuple);
+//  Py_DECREF(ArgsTuple);
   return temp;
 }
 

@@ -46,6 +46,10 @@ void G_InitPython( void )
     return;
   Py_INCREF(&EntityStateType);
   PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
+  if (PyType_Ready(&Vec3dType) < 0)
+    return;
+  Py_INCREF(&Vec3dType);
+  PyModule_AddObject(gamemodule, "Vec3d", (PyObject *)&Vec3dType);
   PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
   vec3d_module= PyImport_ImportModule("vec3d");
   if (!vec3d_module){
