@@ -985,7 +985,7 @@ void RB_ShowImages( void ) {
 	qglFinish();
 
 	end = ri.Milliseconds();
-	ri.Printf( PRINT_ALL, "%i msec to draw all images\n", end - start );
+	ri.Printf( PRINT_DEVELOPER, "%i msec to draw all images\n", end - start );
 
 }
 

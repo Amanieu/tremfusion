@@ -1702,7 +1702,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 		//printf("%4d\t%s\n",opStackDepth,opnames[op]);
         }
 
-	Com_Printf( "VM file %s pass %d compiled to %i bytes of code\n", vm->name, (pass+1), compiledOfs*4 );
+	Com_DPrintf( "VM file %s pass %d compiled to %i bytes of code\n", vm->name, (pass+1), compiledOfs*4 );
 
     	if ( pass == 0 ) {
 	    // copy to an exact size buffer on the hunk
@@ -1726,12 +1726,6 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
            // clear the instruction cache for generated code
            msync(vm->codeBase, vm->codeLength, MS_INVALIDATE);
        }
-    }
-    if(0)
-    {
-	char buf[256];
-	printf("wait..\n");
-	gets(buf);
     }
     Z_Free( jused );
 }

@@ -51,6 +51,8 @@ cvar_t	*cl_aviFrameRate;
 cvar_t	*cl_aviMotionJpeg;
 cvar_t	*cl_forceavidemo;
 
+cvar_t	*cl_cleanHostNames;
+
 cvar_t	*cl_freelook;
 cvar_t	*cl_sensitivity;
 cvar_t	*cl_platformSensitivity;
@@ -78,6 +80,10 @@ cvar_t	*cl_trn;
 cvar_t	*cl_lanForcePackets;
 
 cvar_t	*cl_guidServerUniq;
+
+cvar_t	*cl_altTab;
+
+cvar_t  *cl_dlURLOverride;
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -985,13 +991,13 @@ void CL_RequestMotd( void ) {
 	if ( !cl_motd->integer ) {
 		return;
 	}
-	Com_Printf( "Resolving %s\n", MASTER_SERVER_NAME );
+	Com_DPrintf( "Resolving %s\n", MASTER_SERVER_NAME );
 	if ( !NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
 		return;
 	}
 	cls.updateServer.port = BigShort( PORT_MASTER );
-	Com_Printf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
 		cls.updateServer.ip[0], cls.updateServer.ip[1],
 		cls.updateServer.ip[2], cls.updateServer.ip[3],
 		BigShort( cls.updateServer.port ) );
@@ -1157,7 +1163,7 @@ void CL_Connect_f( void ) {
                 clc.serverAddress.ip[2], clc.serverAddress.ip[3],
                 BigShort( clc.serverAddress.port ) );
  
-	Com_Printf( "%s resolved to %s\n", cls.servername, serverString );
+	Com_DPrintf( "%s resolved to %s\n", cls.servername, serverString );
 
 	if( cl_guidServerUniq->integer )
 		CL_UpdateGUID( serverString, strlen( serverString ) );
@@ -1246,14 +1252,9 @@ void CL_SendPureChecksums( void ) {
 	// if we are pure we need to send back a command with our referenced pk3 checksums
 	pChecksums = FS_ReferencedPakPureChecksums();
 
-	// "cp"
-	// "Yf"
-	Com_sprintf(cMsg, sizeof(cMsg), "Yf ");
+	Com_sprintf(cMsg, sizeof(cMsg), "cp ");
 	Q_strcat(cMsg, sizeof(cMsg), va("%d ", cl.serverId) );
 	Q_strcat(cMsg, sizeof(cMsg), pChecksums);
-	for (i = 0; i < 2; i++) {
-		cMsg[i] += 10;
-	}
 	CL_AddReliableCommand( cMsg );
 }
 
@@ -1551,13 +1552,21 @@ void CL_NextDownload(void) {
 			s = localName + strlen(localName); // point at the nul byte
 #ifdef USE_CURL
 		if(!(cl_allowDownload->integer & DLF_NO_REDIRECT)) {
-			if(clc.sv_allowDownload & DLF_NO_REDIRECT) {
+			char *host = NULL;
+			if(*cl_dlURLOverride->string) {
+				Com_Printf("Overriding sv_dlURL "
+					"(%s) with cl_dlURLOverride "
+					"(%s)\n", clc.sv_dlURL, 
+					cl_dlURLOverride->string);
+				host = cl_dlURLOverride->string;
+			}
+			if(!host && clc.sv_allowDownload & DLF_NO_REDIRECT) {
 				Com_Printf("WARNING: server does not "
 					"allow download redirection "
 					"(sv_allowDownload is %d)\n",
 					clc.sv_allowDownload);
 			}
-			else if(!*clc.sv_dlURL) {
+			else if(!host && !*clc.sv_dlURL) {
 				Com_Printf("WARNING: server allows "
 					"download redirection, but does not "
 					"have sv_dlURL set\n");
@@ -1567,8 +1576,9 @@ void CL_NextDownload(void) {
 					"cURL library\n");
 			}
 			else {
+				if(!host) host = clc.sv_dlURL;
 				CL_cURL_BeginDownload(localName, va("%s/%s",
-					clc.sv_dlURL, remoteName));
+					host, remoteName));
 				useCURL = qtrue;
 			}
 		}
@@ -1807,7 +1817,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 	byte*			buffptr;
 	byte*			buffend;
 	
-	Com_Printf("CL_ServersResponsePacket\n");
+	Com_DPrintf("CL_ServersResponsePacket\n");
 
 	if (cls.numglobalservers == -1) {
 		// state to detect lack of servers or lack of response
@@ -1911,7 +1921,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 		total = count;
 	}
 
-	Com_Printf("%d servers parsed (total %d)\n", numservers, total);
+	Com_DPrintf("%d servers parsed (total %d)\n", numservers, total);
 }
 
 /*
@@ -2635,6 +2645,8 @@ void CL_Init( void ) {
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
 
+	cl_cleanHostNames = Cvar_Get ("cl_cleanHostNames", "1", CVAR_ARCHIVE);
+
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_timedemoLog = Cvar_Get ("cl_timedemoLog", "", CVAR_ARCHIVE);
 	cl_autoRecordDemo = Cvar_Get ("cl_autoRecordDemo", "0", CVAR_ARCHIVE);
@@ -2696,6 +2708,10 @@ void CL_Init( void ) {
 	cl_lanForcePackets = Cvar_Get ("cl_lanForcePackets", "1", CVAR_ARCHIVE);
 
 	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE);
+
+	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
+
+	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

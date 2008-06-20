@@ -69,7 +69,7 @@ VM_Init
 */
 void VM_Init( void ) {
 	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
-	Cvar_Get( "vm_game", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 0
 	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
 
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
@@ -375,7 +375,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	}
 
 	if( LittleLong( header->vmMagic ) == VM_MAGIC_VER2 ) {
-		Com_Printf( "...which has vmMagic VM_MAGIC_VER2\n" );
+		Com_DPrintf( "...which has vmMagic VM_MAGIC_VER2\n" );
 
 		// byte swap the header
 		for ( i = 0 ; i < sizeof( vmHeader_t ) / 4 ; i++ ) {
@@ -438,7 +438,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	if( header->vmMagic == VM_MAGIC_VER2 ) {
 		vm->numJumpTableTargets = header->jtrgLength >> 2;
-		Com_Printf( "Loading %d jump table targets\n", vm->numJumpTableTargets );
+		Com_DPrintf( "Loading %d jump table targets\n", vm->numJumpTableTargets );
 
 		if( alloc ) {
 			vm->jumpTableTargets = Hunk_Alloc( header->jtrgLength, h_high );
@@ -546,7 +546,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 
 	if ( interpret == VMI_NATIVE ) {
 		// try to load as a system dll
-		Com_Printf( "Loading dll file %s.\n", vm->name );
+		Com_DPrintf( "Loading dll file %s.\n", vm->name );
 		vm->dllHandle = Sys_LoadDll( module, vm->fqpath , &vm->entryPoint, VM_DllSyscall );
 		if ( vm->dllHandle ) {
 			return vm;
@@ -572,7 +572,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 
 #ifdef NO_VM_COMPILED
 	if(interpret >= VMI_COMPILED) {
-		Com_Printf("Architecture doesn't have a bytecode compiler, using interpreter\n");
+		Com_DPrintf("Architecture doesn't have a bytecode compiler, using interpreter\n");
 		interpret = VMI_BYTECODE;
 	}
 #else
@@ -597,7 +597,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	vm->programStack = vm->dataMask + 1;
 	vm->stackBottom = vm->programStack - STACK_SIZE;
 
-	Com_Printf("%s loaded in %d bytes on the hunk\n", module, remaining - Hunk_MemoryRemaining());
+	Com_DPrintf("%s loaded in %d bytes on the hunk\n", module, remaining - Hunk_MemoryRemaining());
 
 	return vm;
 }

@@ -55,6 +55,8 @@ static qboolean mouseAvailable = qfalse;
 static qboolean mouseActive = qfalse;
 static qboolean keyRepeatEnabled = qfalse;
 
+qboolean fullscreen_minimized = qfalse;
+
 static cvar_t *in_mouse;
 #ifdef MACOS_X_ACCELERATION_HACK
 static cvar_t *in_disablemacosxmouseaccel;
@@ -320,7 +322,7 @@ static void IN_ActivateMouse( void )
 IN_DeactivateMouse
 ===============
 */
-static void IN_DeactivateMouse( void )
+void IN_DeactivateMouse( void )
 {
 	if (!mouseAvailable || !SDL_WasInit( SDL_INIT_VIDEO ) )
 		return;
@@ -671,6 +673,20 @@ static void IN_ProcessEvents( void )
 	{
 		switch (e.type)
 		{
+			case SDL_ACTIVEEVENT:
+				if( ( e.active.state & SDL_APPACTIVE ) && e.active.gain )
+				{
+					if( fullscreen_minimized )
+					{ 
+#ifdef MACOS_X
+						Cvar_Set( "r_fullscreen", "1" );
+#endif
+						fullscreen_minimized = qfalse;
+					}
+					IN_ActivateMouse();
+				}
+				break;
+
 			case SDL_KEYDOWN:
 				IN_PrintKey(&e);
 				p = IN_TranslateSDLToQ3Key(&e.key.keysym, &key);
@@ -733,8 +749,8 @@ void IN_Frame (void)
 {
 	IN_JoyMove( );
 
-	// Release the mouse if the console if down and we're windowed
-	if( ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) && !r_fullscreen->integer )
+	// Release the mouse if the console if down and we're windowed or if minimized
+	if( ( ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) && !r_fullscreen->integer ) || com_minimized->integer )
 		IN_DeactivateMouse( );
 	else
 		IN_ActivateMouse( );

@@ -1181,7 +1181,7 @@ void CG_LoadTrailSystems( void )
     fileLen = strlen( filePtr );
     strcpy( fileName, "scripts/" );
     strcat( fileName, filePtr );
-    CG_Printf( "...loading '%s'\n", fileName );
+    //CG_Printf( "...loading '%s'\n", fileName );
     CG_ParseTrailFile( fileName );
   }
 }

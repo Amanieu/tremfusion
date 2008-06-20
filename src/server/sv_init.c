@@ -534,8 +534,10 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 		SV_TouchCGame();
 	}
 
-	Cvar_Set( "sv_paks", "" );
-	Cvar_Set( "sv_pakNames", "" );
+	// the server sends these to the clients so they will only
+	// load pk3s also loaded at the server
+	Cvar_Set( "sv_paks", FS_LoadedPakChecksums() );
+	Cvar_Set( "sv_pakNames", FS_LoadedPakNames() );
 
 	// the server sends these to the clients so they can figure
 	// out which pk3s should be auto-downloaded
@@ -586,6 +588,7 @@ void SV_Init (void) {
 
 	sv_minRate = Cvar_Get ("sv_minRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
 	sv_maxRate = Cvar_Get ("sv_maxRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
+	sv_maxPing = Cvar_Get ("sv_maxPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
 
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM );

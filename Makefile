@@ -88,6 +88,10 @@ ifndef GENERATE_DEPENDENCIES
 GENERATE_DEPENDENCIES=1
 endif
 
+ifndef USE_EPOLL
+USE_EPOLL=1
+endif
+
 ifndef USE_OPENAL
 USE_OPENAL=1
 endif
@@ -160,12 +164,24 @@ USE_SVN=
 ifeq ($(wildcard .svn),.svn)
   SVN_REV=$(shell LANG=C svnversion .)
   ifneq ($(SVN_REV),)
-    SVN_VERSION=$(VERSION)_SVN$(SVN_REV)
+    SCM_VERSION=$(VERSION)_SVN$(SVN_REV)
     USE_SVN=1
   endif
 endif
+
+USE_HG=
+ifeq ($(wildcard .hg),.hg)
+  HG_REV=$(shell LANG=C hg id -n)
+  ifneq ($(HG_REV),)
+    SCM_VERSION=$(VERSION)_HG$(HG_REV)
+    USE_HG=1
+  endif
+endif
+
 ifneq ($(USE_SVN),1)
-    SVN_VERSION=$(VERSION)
+  ifneq ($(USE_HG),1)
+    SCM_VERSION=$(VERSION)
+  endif
 endif
 
 
@@ -200,6 +216,10 @@ ifeq ($(PLATFORM),linux)
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
 
+  ifeq ($(USE_EPOLL),1)
+    BASE_CFLAGS += -DUSE_EPOLL
+  endif
+
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
     ifeq ($(USE_OPENAL_DLOPEN),1)
@@ -222,17 +242,17 @@ ifeq ($(PLATFORM),linux)
      BASE_CFLAGS += -DUSE_LUA
   endif
 
-  OPTIMIZE = -O3 -ffast-math -funroll-loops -fomit-frame-pointer
+  OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
-    OPTIMIZE = -O3 -fomit-frame-pointer -ffast-math -funroll-loops \
+    OPTIMIZE = -O3 -fomit-frame-pointer -funroll-loops \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -fstrength-reduce
     # experimental x86_64 jit compiler! you need GNU as
     HAVE_VM_COMPILED = true
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer -ffast-math \
+    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -351,7 +371,7 @@ ifeq ($(PLATFORM),darwin)
   CLIENT_LDFLAGS += -framework Cocoa -framework IOKit -framework OpenGL \
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
 
-  OPTIMIZE += -ffast-math -falign-loops=16
+  OPTIMIZE += -falign-loops=16
 
   ifneq ($(HAVE_VM_COMPILED),true)
     BASE_CFLAGS += -DNO_VM_COMPILED
@@ -406,7 +426,7 @@ endif
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
   endif
 
-  OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer -ffast-math \
+  OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
 
@@ -478,12 +498,12 @@ ifeq ($(PLATFORM),freebsd)
 
   ifeq ($(ARCH),axp)
     BASE_CFLAGS += -DNO_VM_COMPILED
-    RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -ffast-math -funroll-loops \
+    RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -funroll-loops \
       -fomit-frame-pointer -fexpensive-optimizations
   else
   ifeq ($(ARCH),x86)
     RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -mtune=pentiumpro \
-      -march=pentium -fomit-frame-pointer -pipe -ffast-math \
+      -march=pentium -fomit-frame-pointer -pipe \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -funroll-loops -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -545,7 +565,7 @@ ifeq ($(PLATFORM),openbsd)
 
   BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 \
-    -march=pentium -fomit-frame-pointer -pipe -ffast-math \
+    -march=pentium -fomit-frame-pointer -pipe \
     -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
     -funroll-loops -fstrength-reduce
   HAVE_VM_COMPILED=false
@@ -659,16 +679,16 @@ ifeq ($(PLATFORM),sunos)
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
 
-  OPTIMIZE = -O3 -ffast-math -funroll-loops
+  OPTIMIZE = -O3 -funroll-loops
 
   ifeq ($(ARCH),sparc)
-    OPTIMIZE = -O3 -ffast-math -falign-loops=2 \
+    OPTIMIZE = -O3 -falign-loops=2 \
       -falign-jumps=2 -falign-functions=2 -fstrength-reduce \
       -mtune=ultrasparc -mv8plus -mno-faster-structs \
       -funroll-loops
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer -ffast-math \
+    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -764,7 +784,11 @@ else
 endif
 
 ifeq ($(USE_SVN),1)
-  BASE_CFLAGS += -DSVN_VERSION=\\\"$(SVN_VERSION)\\\"
+  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
+endif
+
+ifeq ($(USE_HG),1)
+  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
 endif
 
 ifeq ($(USE_LUA),1)
@@ -1579,6 +1603,11 @@ ifeq ($(USE_SVN),1)
   $(B)/ded/common.o : .svn/entries
 endif
 
+ifeq ($(USE_HG),1)
+  $(B)/client/cl_console.o : .hg/dirstate
+  $(B)/client/common.o : .hg/dirstate
+  $(B)/ded/common.o : .hg/dirstate
+endif
 
 #############################################################################
 ## GAME MODULE RULES
@@ -1678,10 +1707,10 @@ distclean: clean toolsclean
 	@rm -rf $(BUILD_DIR)
 
 dist:
-	rm -rf tremulous-$(SVN_VERSION)
-	svn export . tremulous-$(SVN_VERSION)
-	tar --owner=root --group=root --force-local -cjf tremulous-$(SVN_VERSION).tar.bz2 tremulous-$(SVN_VERSION)
-	rm -rf tremulous-$(SVN_VERSION)
+	rm -rf tremulous-$(SCM_VERSION)
+	svn export . tremulous-$(SCM_VERSION)
+	tar --owner=root --group=root --force-local -cjf tremulous-$(SCM_VERSION).tar.bz2 tremulous-$(SCM_VERSION)
+	rm -rf tremulous-$(SCM_VERSION)
 
 #############################################################################
 # DEPENDENCIES

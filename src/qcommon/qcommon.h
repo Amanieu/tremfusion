@@ -165,8 +165,12 @@ qboolean	NET_IsLocalAddress (netadr_t adr);
 const char	*NET_AdrToString (netadr_t a);
 qboolean	NET_StringToAdr ( const char *s, netadr_t *a);
 qboolean	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message);
-void		NET_Sleep(int msec);
 
+#ifdef USE_EPOLL
+int	        NET_Sleep_ctor(void);
+#endif
+
+void		NET_Sleep(int msec);
 
 #define	MAX_MSGLEN				16384		// max length of a message, which may
 											// be fragmented into multiple packets
@@ -364,6 +368,10 @@ void Cbuf_Execute (void);
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function, or current args will be destroyed.
 
+void Cdelay_Frame (void);
+//Check if a delayed command have to be executed and decreases the remaining
+//delay time for all of them
+
 //===========================================================================
 
 /*
@@ -403,12 +411,17 @@ char	*Cmd_Cmd (void);
 
 void	Cmd_TokenizeString( const char *text );
 void	Cmd_TokenizeStringIgnoreQuotes( const char *text_in );
+void	Cmd_TokenizeStringParseCvar( const char *text_in );
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
 
 void	Cmd_ExecuteString( const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
+
+void 	Cmd_WriteAliases( fileHandle_t f );
+// First writes "clearaliases" and then
+// writes lines containing "alias name exec" for all aliases
 
 void Cmd_SaveCmdContext( void );
 void Cmd_RestoreCmdContext( void );
@@ -459,6 +472,7 @@ void Cvar_SetLatched( const char *var_name, const char *value);
 // don't set the cvar immediately
 
 void	Cvar_SetValue( const char *var_name, float value );
+void	Cvar_SetValueSafe( const char *var_name, float value );
 // expands value to a string and calls Cvar_Set
 
 float	Cvar_VariableValue( const char *var_name );
