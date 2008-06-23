@@ -22,13 +22,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-static void game_Print( const char *string )
+static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
-  G_Printf( string );
+  G_Printf( &args[0].data.string->data );
+  ret->type = TYPE_UNDEF;
 }
 
 scLib_t lib[] = {
-  { "Print", (void(*)( void )) game_Print, { TYPE_STRING, TYPE_UNDEF } },
+  { "Print", game_Print, { TYPE_STRING, TYPE_UNDEF } },
   { "" }
 };
 

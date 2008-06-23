@@ -41,6 +41,7 @@ load multiple global precreated lua scripts
 ============
 */
 
+// TODO: move it to common scripting layer
 static void initLua_global(void)
 {
   int             numdirs;
@@ -78,6 +79,7 @@ load multiple lua scripts from the maps directory
 ============
 */
 
+// TODO: move it to common scripting layer
 static void initLua_local(char mapname[MAX_STRING_CHARS])
 {
   int             numdirs;
@@ -108,19 +110,108 @@ static void initLua_local(char mapname[MAX_STRING_CHARS])
   Com_Printf("%i local files parsed\n", numFiles);
 }
 
-void pusharray( lua_State *L, scDataTypeArray_t *array )
+static void push_value( lua_State *L, scDataTypeValue_t *value );
+
+static void push_array( lua_State *L, scDataTypeArray_t *array )
 {
-  // TODO: push array here
+  int i;
+
+  lua_newtable( L );
+  for( i = 0; i < array->size; i++ )
+  {
+    push_value( L, & (&array->data)[i] );
+    lua_rawseti( L, -1, i );
+  }
 }
 
-void pushhash( lua_State *L, scDataTypeHash_t *hash )
+static void push_hash( lua_State *L, scDataTypeHash_t *hash )
 {
-  // TODO: push hash here
+  int i;
+
+  lua_newtable( L );
+  for( i = 0; i < hash->size; i++ )
+  {
+    push_value( L, & (&hash->data)[i].value );
+    lua_setfield( L, -2, & (&hash->data)[i].key->data );
+  }
 }
 
-void popValue( lua_State *L, scDataTypeValue_t *value )
+static void push_function( lua_State *L, scDataTypeFunction_t *function )
+{
+
+}
+
+static void push_value( lua_State *L, scDataTypeValue_t *value )
+{
+  switch( value->type )
+  {
+    case TYPE_UNDEF:
+      lua_pushnil( L );
+      break;
+    case TYPE_INTEGER:
+      lua_pushinteger( L, value->data.integer );
+      break;
+    case TYPE_FLOAT:
+      lua_pushnumber( L, value->data.floating );
+      break;
+    case TYPE_STRING:
+      lua_pushstring( L, & value->data.string->data );
+      break;
+    case TYPE_ARRAY:
+      push_array( L, value->data.array );
+      break;
+    case TYPE_HASH:
+      push_hash( L, value->data.hash );
+      break;
+    case TYPE_NAMESPACE:
+      push_hash( L, (scDataTypeHash_t*) value->data.namespace );
+      break;
+    case TYPE_FUNCTION:
+      push_function( L, value->data.function );
+      break;
+  }
+}
+
+static void pop_value( lua_State *L, scDataTypeValue_t *value )
 {
   // TODO: pop a value here
+}
+
+static void push_path( lua_State *L, const char *path )
+{
+  // TODO: push a path here
+}
+
+static int bridge( lua_State *L )
+{
+  // TODO: error cases
+  int top = lua_gettop(L);
+  int i;
+  scDataTypeValue_t path, func, ret;
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  
+  for(i = 0; i < top; i++)
+  {
+    pop_value( L, & args[i] );
+  }
+  args[i].type = TYPE_UNDEF;
+
+  pop_value(L, &path);
+
+  SC_NamespaceGet(& path.data.string->data, &func);
+  if(func.type != TYPE_FUNCTION)
+  {
+    // TODO: error case here
+  }
+
+  SC_RunFunction(func.data.function, args, &ret);
+  if(ret.type != TYPE_UNDEF)
+  {
+    push_value(L, &ret);
+    return 1;
+  }
+
+  return 0;
 }
 
 /*
@@ -128,6 +219,17 @@ void popValue( lua_State *L, scDataTypeValue_t *value )
 SC_Lua_Init
 ============
 */
+static int stack_dump( lua_State *L )
+{
+  SC_Lua_DumpStack();
+  return 0;
+}
+
+static const struct luaL_reg stacklib [] = {
+  {"dump", stack_dump},
+  {NULL, NULL}
+};
+
 void SC_Lua_Init( void )
 {
   char            buf[MAX_STRING_CHARS];
@@ -135,6 +237,8 @@ void SC_Lua_Init( void )
   G_Printf("------- Game Lua Initialization -------\n");
 
   g_luaState = lua_open();
+
+  luaL_openlib(g_luaState, "stack", stacklib, 0);
 
   // Lua standard lib
   luaopen_base(g_luaState);
@@ -211,10 +315,16 @@ qboolean SC_Lua_RunScript( const char *filename )
   trap_FS_FCloseFile(f);
 
   if(luaL_loadbuffer(g_luaState, buf, strlen(buf), filename))
+  {
+    G_Printf("SC_Lua_RunScript: cannot load lua file: %s\n", lua_tostring(g_luaState, -1));
     return qfalse;
+  }
 
   if(lua_pcall(g_luaState, 0, 0, 0))
+  {
+    G_Printf("SC_Lua_RunScript: cannot pcall: %s\n", lua_tostring(g_luaState, -1));
     return qfalse;
+  }
 
   return qtrue;
 }
@@ -235,29 +345,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 
   while( *dt != TYPE_UNDEF )
   {
-    switch( *dt )
-    {
-      case TYPE_INTEGER:
-        lua_pushinteger( L, args->data.integer );
-        break;
-      case TYPE_FLOAT:
-        lua_pushnumber( L, args->data.floating );
-        break;
-      case TYPE_STRING:
-        lua_pushstring( L, & args->data.string->data );
-        break;
-      case TYPE_ARRAY:
-        pusharray( L, args->data.array );
-        break;
-      case TYPE_HASH:
-        pushhash( L, args->data.hash );
-        break;
-      case TYPE_NAMESPACE:
-        pushhash( L, (scDataTypeHash_t*) args->data.namespace );
-        break;
-      default:
-        break;
-    }
+    push_value( L, args );
 
     dt++;
     value++;
@@ -268,7 +356,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
   if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
     G_Printf("G_RunLuaFunction: error running function `%s': %s\n", func, lua_tostring(L, -1));
 
-  popValue( L, ret );
+  pop_value( L, ret );
 }
 
 /*
@@ -282,6 +370,7 @@ void SC_Lua_DumpStack( void )
   lua_State      *L = g_luaState;
   int             top = lua_gettop(L);
 
+  G_Printf( va( "size: %d\n", top ) );
   for(i = 1; i <= top; i++)
   {
     // repeat for each level
@@ -310,9 +399,19 @@ void SC_Lua_DumpStack( void )
         break;
 
     }
-    G_Printf("  ");			// put a separator
+    G_Printf(" ");			// put a separator
   }
   G_Printf("\n");				// end the listing
+}
+
+void SC_Lua_Import( const char *path, scDataTypeValue_t *value )
+{
+  lua_State *L = g_luaState;
+
+  push_value( L, value );
+  push_path( L, path );
+  
+  lua_settable( L, -2 );
 }
 
 #endif

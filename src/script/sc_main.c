@@ -30,6 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void SC_Init( void )
 {
+  SC_NamespaceInit( );
+
 #ifdef USE_LUA
   SC_Lua_Init( );
 #endif
@@ -47,7 +49,7 @@ void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, 
   switch( func->langage )
   {
     case LANGAGE_C:
-      // TODO: implement C function call
+      func->data.ref(args, ret);
       break;
 #ifdef USE_LUA
     case LANGAGE_LUA:
@@ -79,6 +81,6 @@ int SC_RunScript( scLangage_t langage, const char *filename )
 int SC_CallHooks( const char *path, gentity_t *entity )
 {
   // TODO: implement function
-  return 0;
+  return 1;
 }
 

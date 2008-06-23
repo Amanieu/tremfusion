@@ -119,6 +119,8 @@ struct scNamespace_s
   scDataTypeHash_t      *content;
 };
 
+typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
+
 struct scDataTypeFunction_s
 {
   scLangage_t           langage;
@@ -126,7 +128,7 @@ struct scDataTypeFunction_s
   union
   {
     char                path[ MAX_PATH_LENGTH + 1 ];
-    void                (*ref)( void );
+    scCRef_t            ref;
   } data;
 };
 
@@ -195,7 +197,7 @@ int SC_CallHooks( const char *path, gentity_t *entity );
 typedef struct
 {
   char                  name[ MAX_PATH_LENGTH + 1];
-  void                  (*ref)( void );
+  scCRef_t              ref;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
 } scLib_t;
 
