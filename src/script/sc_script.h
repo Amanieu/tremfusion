@@ -45,6 +45,7 @@ typedef enum
 
 typedef enum
 {
+  TYPE_ANY=-1,
   TYPE_UNDEF,
   TYPE_INTEGER,
   TYPE_FLOAT,
@@ -125,6 +126,7 @@ struct scDataTypeFunction_s
 {
   scLangage_t           langage;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scDataType_t          return_type;
   union
   {
     char                path[ MAX_PATH_LENGTH + 1 ];
@@ -199,6 +201,7 @@ typedef struct
   char                  name[ MAX_PATH_LENGTH + 1];
   scCRef_t              ref;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scDataType_t          return_type;
 } scLib_t;
 
 void SC_AddLibrary( const char *namespace, scLib_t lib[] );

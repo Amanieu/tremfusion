@@ -79,6 +79,10 @@ load multiple lua scripts from the maps directory
 ============
 */
 
+static void push_value(lua_State *L, scDataTypeValue_t *value);
+static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
+static void pop_string(lua_State *L, scDataTypeString_t **string);
+
 // TODO: move it to common scripting layer
 static void initLua_local(char mapname[MAX_STRING_CHARS])
 {
@@ -110,7 +114,170 @@ static void initLua_local(char mapname[MAX_STRING_CHARS])
   Com_Printf("%i local files parsed\n", numFiles);
 }
 
-static void push_value( lua_State *L, scDataTypeValue_t *value );
+static int bridge( lua_State *L )
+{
+  // TODO: error cases
+  int top = lua_gettop(L);
+  int i;
+  scDataTypeValue_t func, ret;
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeString_t *path;
+  
+  pop_string(L, &path);
+  SC_NamespaceGet(&path->data, &func);
+
+  if(func.type != TYPE_FUNCTION)
+  {
+    // TODO: error case here
+  }
+
+  for(i = top-1; i >= 0; i--)
+  {
+    pop_value(L, & args[i], func.data.function->argument[i]);
+  }
+  args[top].type = TYPE_UNDEF;
+
+  SC_RunFunction(func.data.function, args, &ret);
+  if(ret.type != TYPE_UNDEF)
+  {
+    push_value(L, &ret);
+    return 1;
+  }
+
+  return 0;
+}
+
+static void pop_string(lua_State *L, scDataTypeString_t **string)
+{
+  const char *lstr = lua_tostring(L, -1);
+  SC_StringNewFromChar(string, lstr);
+  lua_pop(L, 1);
+}
+
+static void pop_array(lua_State *L, scDataTypeArray_t **array)
+{
+  scDataTypeValue_t val;
+
+  SC_ArrayNew(array);
+
+  lua_pushnil(L);
+  while(lua_next(L, -1) != 0)
+  {
+    pop_value(L, &val, TYPE_ANY);
+    SC_ArraySet(array, lua_tonumber(L, -2), &val);
+    lua_pop(L, 1);
+  }
+}
+
+static int pop_hash(lua_State *L, scDataTypeHash_t **hash)
+{
+  scDataTypeValue_t val;
+  scDataTypeString_t *key;
+  const char *lstr;
+  int isArray = 1;
+
+  SC_HashNew(hash);
+
+  lua_pushnil(L);
+  while(lua_next(L, -1) != 0)
+  {
+    if(! lua_isnumber(L, -2) || lua_tointeger(L, -2) != lua_tonumber(L, -2))
+      isArray = 0;
+
+    lstr = lua_tostring(L, -1);
+    SC_StringNewFromChar(&key, lstr);
+    pop_value(L, &val, TYPE_ANY);
+    SC_HashSet(hash, &key->data, &val);
+
+    lua_pop(L, 1);
+  }
+
+  return isArray;
+}
+
+static void pop_function(lua_State *L, scDataTypeFunction_t *function)
+{
+  // TODO: pop a function from metatable
+  function->langage = LANGAGE_LUA;
+}
+
+static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type )
+{
+  int ltype = lua_type(L, -1);
+  switch(ltype)
+  {
+    case LUA_TNIL:
+      value->type = TYPE_UNDEF;
+      lua_pop(L, 1);
+      break;
+
+    case LUA_TNUMBER:
+      if(type == TYPE_FLOAT)
+      {
+        value->type = TYPE_FLOAT;
+        value->data.floating = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+      }
+      else
+      {
+        value->type = TYPE_INTEGER;
+        value->data.integer = lua_tointeger(L, -1);
+        lua_pop(L, 1);
+      }
+      break;
+
+    // TODO: add boolean datatype
+    /*case LUA_TBOOLEAN:
+      value->type = TYPE_BOOLEAN;
+      value->data.boolean = lua_toboolean(L, -1);
+      lua_pop(L, 1);
+      break;*/
+
+    case LUA_TSTRING:
+      value->type = TYPE_STRING;
+      pop_string(L, &value->data.string);
+      break;
+
+    case LUA_TTABLE:
+      if(type == TYPE_ANY)
+      {
+        int isArray = pop_hash(L, &value->data.hash);
+        // TODO: implement SC_HashToArray function
+        /*if(isArray)
+        {
+          scDataTypeHash_t *hash = value->data.hash;
+          value->type = TYPE_ARRAY;
+          SC_HashToArray(hash, &value->data.array);
+        }
+        else*/
+          value->type = TYPE_HASH;
+      }
+      if(type == TYPE_ARRAY)
+      {
+        value->type = TYPE_ARRAY;
+        pop_array(L, &value->data.array);
+      }
+      else if(type == TYPE_HASH)
+      {
+        value->type = TYPE_HASH;
+        pop_hash(L, &value->data.hash);
+      }
+      else
+      {
+        //TODO: Error
+      }
+      break;
+
+    case LUA_TFUNCTION:
+      value->type = TYPE_FUNCTION;
+      pop_function(L, value->data.function);
+      break;
+
+    default:
+      // TODO: Error
+      break;
+  }
+}
 
 static void push_array( lua_State *L, scDataTypeArray_t *array )
 {
@@ -138,7 +305,8 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function )
 {
-
+  // TODO: create metatable
+  lua_pushcfunction(L, bridge);
 }
 
 static void push_value( lua_State *L, scDataTypeValue_t *value )
@@ -169,49 +337,15 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
     case TYPE_FUNCTION:
       push_function( L, value->data.function );
       break;
+    default:
+      // TODO: Error here
+      break;
   }
-}
-
-static void pop_value( lua_State *L, scDataTypeValue_t *value )
-{
-  // TODO: pop a value here
 }
 
 static void push_path( lua_State *L, const char *path )
 {
   // TODO: push a path here
-}
-
-static int bridge( lua_State *L )
-{
-  // TODO: error cases
-  int top = lua_gettop(L);
-  int i;
-  scDataTypeValue_t path, func, ret;
-  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
-  
-  for(i = 0; i < top; i++)
-  {
-    pop_value( L, & args[i] );
-  }
-  args[i].type = TYPE_UNDEF;
-
-  pop_value(L, &path);
-
-  SC_NamespaceGet(& path.data.string->data, &func);
-  if(func.type != TYPE_FUNCTION)
-  {
-    // TODO: error case here
-  }
-
-  SC_RunFunction(func.data.function, args, &ret);
-  if(ret.type != TYPE_UNDEF)
-  {
-    push_value(L, &ret);
-    return 1;
-  }
-
-  return 0;
 }
 
 /*
@@ -356,7 +490,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
   if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
     G_Printf("G_RunLuaFunction: error running function `%s': %s\n", func, lua_tostring(L, -1));
 
-  pop_value( L, ret );
+  pop_value(L, ret, func->return_type);
 }
 
 /*
