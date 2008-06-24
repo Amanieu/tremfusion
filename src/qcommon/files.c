@@ -223,6 +223,7 @@ static	int			fs_loadCount;			// total files read
 static	int			fs_loadStack;			// total files in memory
 static	int			fs_packFiles;			// total number of files in packs
 
+static qboolean fs_unpureReferenced = qfalse;
 static int fs_checksumFeed;
 
 typedef union qfile_gus {
@@ -1110,6 +1111,14 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			fsh[*file].handleFiles.file.o = fopen (netpath, "rb");
 			if ( !fsh[*file].handleFiles.file.o ) {
 				continue;
+			}
+
+			if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
+				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
+				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
+				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
+				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
+				fs_unpureReferenced = qtrue;
 			}
 
 			Q_strncpyz( fsh[*file].name, filename, sizeof( fsh[*file].name ) );
@@ -2588,6 +2597,9 @@ void FS_Shutdown( qboolean closemfp ) {
 	// any FS_ calls will now be an error until reinitialized
 	fs_searchpaths = NULL;
 
+	// clear all references
+	fs_unpureReferenced = qfalse;
+
 	Cmd_RemoveCommand( "path" );
 	Cmd_RemoveCommand( "dir" );
 	Cmd_RemoveCommand( "fdir" );
@@ -2947,11 +2959,7 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 	for (nFlags = FS_CGAME_REF; nFlags; nFlags = nFlags >> 1) {
 		if (nFlags & FS_GENERAL_REF) {
 			// add a delimter between must haves and general refs
-			//Q_strcat(info, sizeof(info), "@ ");
-			info[strlen(info)+1] = '\0';
-			info[strlen(info)+2] = '\0';
-			info[strlen(info)] = '@';
-			info[strlen(info)] = ' ';
+			Q_strcat(info, sizeof(info), "@ ");
 		}
 		for ( search = fs_searchpaths ; search ; search = search->next ) {
 			// is the element a pak file and has it been referenced based on flag?
@@ -2965,6 +2973,12 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 			}
 		}
 	}
+
+	if (fs_unpureReferenced) {
+		// only added if a non-pure file is referenced
+		Q_strcat( info, sizeof( info ), "0 " );
+	}
+
 	// last checksum is the encoded number of referenced pk3s
 	checksum ^= numPaks;
 	Q_strcat( info, sizeof( info ), va("%i ", checksum ) );
