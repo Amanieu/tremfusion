@@ -215,13 +215,14 @@ static  cvar_t          *fs_apppath;
 static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
+static	cvar_t		*fs_extrapaks;
+static	cvar_t		*fs_allowunpure;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
 static	int			fs_loadCount;			// total files read
 static	int			fs_loadStack;			// total files in memory
 static	int			fs_packFiles;			// total number of files in packs
 
-static int fs_fakeChkSum;
 static int fs_checksumFeed;
 
 typedef union qfile_gus {
@@ -254,7 +255,10 @@ static qboolean fs_reordered;
 // never load anything from pk3 files that are not present at the server when pure
 static int		fs_numServerPaks;
 static int		fs_serverPaks[MAX_SEARCH_PATHS];				// checksums
-static char		*fs_serverPakNames[MAX_SEARCH_PATHS];			// pk3 names
+
+// extra paks are on top of the search paths, overriding the current directory and bypassing pure
+static int		fs_numExtraPaks;
+static char		*fs_extraPaks[MAX_SEARCH_PATHS];				// pk3 names
 
 // only used for autodownload, to make sure the client has at least
 // all the pk3 files that are referenced at the server side
@@ -297,7 +301,12 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 				return qtrue;		// on the aproved list
 			}
 		}
-		return qfalse;	// not on the pure server pak list
+		for ( i = 0 ; i < fs_numExtraPaks ; i++ ) {
+			if ( pack->pakBasename == fs_extraPaks[i] ) {
+				return qtrue;		// on the aproved list
+			}
+		}
+		return qfalse;	// not on the pure server pak list or extra pak list
 	}
 	return qtrue;
 }
@@ -1001,7 +1010,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		// is the element a pak file?
 		if ( search->pack && search->pack->hashTable[hash] ) {
 			// disregard if it doesn't match one of the allowed pure pak files
-			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
+			if ( !FS_PakIsPure(search->pack) ) {
 				continue;
 			}
 
@@ -1084,7 +1093,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			//   this test can make the search fail although the file is in the directory
 			// I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
 			// turned out I used FS_FileExists instead
-			if ( fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") ) {
+			if ( fs_numServerPaks && !fs_allowunpure->integer ) {
 
 				if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
@@ -1101,14 +1110,6 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			fsh[*file].handleFiles.file.o = fopen (netpath, "rb");
 			if ( !fsh[*file].handleFiles.file.o ) {
 				continue;
-			}
-
-			if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
-				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
-				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
-				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
-				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
-				fs_fakeChkSum = random();
 			}
 
 			Q_strncpyz( fsh[*file].name, filename, sizeof( fsh[*file].name ) );
@@ -1392,7 +1393,7 @@ int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
 		// is the element a pak file?
 		if ( search->pack && search->pack->hashTable[hash] ) {
 			// disregard if it doesn't match one of the allowed pure pak files
-			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
+			if ( !FS_PakIsPure(search->pack) ) {
 				continue;
 			}
 
@@ -1807,7 +1808,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 			//ZOID:  If we are pure, don't search for files on paks that
 			// aren't on the pure list
-			if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
+			if ( !FS_PakIsPure(search->pack) ) {
 				continue;
 			}
 
@@ -1861,7 +1862,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 			char	*name;
 
 			// don't scan directories for files if we are pure or restricted
-			if ( fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") ) {
+			if ( fs_numServerPaks && !fs_allowunpure->integer ) {
 		        continue;
 		    } else {
 				netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
@@ -2614,7 +2615,7 @@ static void FS_ReorderPurePaks( void )
 		**p_previous; // when doing the scan
 
 	// only relevant when connected to pure server
-	if ( !fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") )
+	if ( !fs_numServerPaks )
 		return;
 
 	fs_reordered = qfalse;
@@ -2626,6 +2627,68 @@ static void FS_ReorderPurePaks( void )
 			// the part of the list before p_insert_index has been sorted already
 			if (s->pack && fs_serverPaks[i] == s->pack->checksum) {
 				fs_reordered = qtrue;
+				// move this element to the insert list
+				*p_previous = s->next;
+				s->next = *p_insert_index;
+				*p_insert_index = s;
+				// increment insert list
+				p_insert_index = &s->next;
+				break; // iterate to next server pack
+			}
+			p_previous = &s->next;
+		}
+	}
+}
+
+/*
+=====================
+FS_SetExtraPaks
+=====================
+*/
+static void FS_SetExtraPaks( const char *pakNames ) {
+	int		i, c;
+
+	Cmd_TokenizeString( pakNames );
+
+	c = Cmd_Argc();
+	if ( c > MAX_SEARCH_PATHS ) {
+		c = MAX_SEARCH_PATHS;
+	}
+
+	fs_numExtraPaks = c;
+
+	for ( i = 0 ; i < c ; i++ ) {
+		if (fs_extraPaks[i]) {
+			Z_Free(fs_extraPaks[i]);
+		}
+		fs_extraPaks[i] = CopyString( Cmd_Argv( i ) );
+	}
+}
+
+/*
+================
+FS_ReorderExtraPaks
+NOTE TTimo: the reordering that happens here is not reflected in the cvars (\cvarlist *pak*)
+  this can lead to misleading situations, see https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=540
+================
+*/
+static void FS_ReorderExtraPaks( void )
+{
+	searchpath_t *s;
+	int i;
+	searchpath_t **p_insert_index, // for linked list reordering
+		**p_previous; // when doing the scan
+
+	// only relevant when we have a list of extra paks
+	if ( !fs_numExtraPaks )
+		return;
+
+	p_insert_index = &fs_searchpaths; // we insert in order at the beginning of the list
+	for ( i = 0 ; i < fs_numExtraPaks ; i++ ) {
+		p_previous = p_insert_index; // track the pointer-to-current-item
+		for (s = *p_insert_index; s; s = s->next) {
+			// the part of the list before p_insert_index has been sorted already
+			if (s->pack && fs_extraPaks[i] == s->pack->pakBasename) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
@@ -2659,6 +2722,8 @@ static void FS_Startup( const char *gameName )
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE );
+	fs_allowunpure = Cvar_Get ("fs_allowunpure", "0", CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {
@@ -2708,12 +2773,15 @@ static void FS_Startup( const char *gameName )
 	// reorder the pure pk3 files according to server order
 	FS_ReorderPurePaks();
 
+	FS_SetExtraPaks( fs_extrapaks->string );
+	FS_ReorderExtraPaks();
+
 	// print the current search paths
 	//FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
 
-	Com_Printf( "----------------------\n" );
+	Com_DPrintf( "----------------------\n" );
 
 #ifdef FS_MISSING
 	if (missingFiles == NULL) {
@@ -2896,10 +2964,6 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 				numPaks++;
 			}
 		}
-		if (fs_fakeChkSum != 0) {
-			// only added if a non-pure file is referenced
-			Q_strcat( info, sizeof( info ), va("%i ", fs_fakeChkSum ) );
-		}
 	}
 	// last checksum is the encoded number of referenced pk3s
 	checksum ^= numPaks;
@@ -2972,7 +3036,7 @@ exception of .cfg and .dat files.
 =====================
 */
 void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames ) {
-	int		i, c, d;
+	int		i, c;
 
 	Cmd_TokenizeString( pakSums );
 
@@ -2999,25 +3063,6 @@ void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames ) {
 			Com_DPrintf( "FS search reorder is required\n" );
 			FS_Restart(fs_checksumFeed);
 			return;
-		}
-	}
-
-	for ( i = 0 ; i < c ; i++ ) {
-		if (fs_serverPakNames[i]) {
-			Z_Free(fs_serverPakNames[i]);
-		}
-		fs_serverPakNames[i] = NULL;
-	}
-	if ( pakNames && *pakNames ) {
-		Cmd_TokenizeString( pakNames );
-
-		d = Cmd_Argc();
-		if ( d > MAX_SEARCH_PATHS ) {
-			d = MAX_SEARCH_PATHS;
-		}
-
-		for ( i = 0 ; i < d ; i++ ) {
-			fs_serverPakNames[i] = CopyString( Cmd_Argv( i ) );
 		}
 	}
 }
