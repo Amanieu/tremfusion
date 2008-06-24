@@ -271,10 +271,6 @@ static char		*fs_serverReferencedPakNames[MAX_SEARCH_PATHS];		// pk3 names
 char lastValidBase[MAX_OSPATH];
 char lastValidGame[MAX_OSPATH];
 
-#ifdef FS_MISSING
-FILE*		missingFiles = NULL;
-#endif
-
 /*
 ==============
 FS_Initialized
@@ -1132,11 +1128,6 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		}		
 	}
 	
-#ifdef FS_MISSING
-	if (missingFiles) {
-		fprintf(missingFiles, "%s\n", filename);
-	}
-#endif
 	*file = 0;
 	return -1;
 }
@@ -2604,12 +2595,6 @@ void FS_Shutdown( qboolean closemfp ) {
 	Cmd_RemoveCommand( "dir" );
 	Cmd_RemoveCommand( "fdir" );
 	Cmd_RemoveCommand( "touchFile" );
-
-#ifdef FS_MISSING
-	if (closemfp) {
-		fclose(missingFiles);
-	}
-#endif
 }
 
 /*
@@ -2626,11 +2611,11 @@ static void FS_ReorderPurePaks( void )
 	searchpath_t **p_insert_index, // for linked list reordering
 		**p_previous; // when doing the scan
 
+	fs_reordered = qfalse;
+
 	// only relevant when connected to pure server
 	if ( !fs_numServerPaks )
 		return;
-
-	fs_reordered = qfalse;
 
 	p_insert_index = &fs_searchpaths; // we insert in order at the beginning of the list
 	for ( i = 0 ; i < fs_numServerPaks ; i++ ) {
@@ -2789,17 +2774,12 @@ static void FS_Startup( const char *gameName )
 	FS_ReorderExtraPaks();
 
 	// print the current search paths
-	//FS_Path_f();
+	if ( Cvar_VariableIntegerValue( "developer" ) )
+		FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
 
 	Com_DPrintf( "----------------------\n" );
-
-#ifdef FS_MISSING
-	if (missingFiles == NULL) {
-		missingFiles = fopen( "\\missing.txt", "ab" );
-	}
-#endif
 	Com_DPrintf( "%d files in pk3 files\n", fs_packFiles );
 }
 
