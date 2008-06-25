@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_local.h -- local definitions for game module
 
+#ifndef _GAME_G_LOCAL_H_
+#define _GAME_G_LOCAL_H_
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
@@ -30,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
+#include "../script/sc_script.h"
 #include "g_admin.h"
 
 //==================================================================
@@ -921,6 +925,7 @@ void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
 int  G_TimeTilSuddenDeath( void );
+void G_InitScript( void );
 
 //
 // g_client.c
@@ -942,6 +947,7 @@ void G_UnlaggedOff( void );
 void ClientThink( int clientNum );
 void ClientEndFrame( gentity_t *ent );
 void G_RunClient( gentity_t *ent );
+void G_Use( gentity_t *ent, gentity_t *other, gentity_t *activator );
 
 //
 // g_team.c
@@ -1048,12 +1054,12 @@ void                G_ResetPTRConnections( void );
 connectionRecord_t  *G_FindConnectionForCode( int code );
 void                G_DeletePTRConnection( connectionRecord_t *connection );
 
-
 //
-// g_python.c
+// py_game.c
 //
 void G_InitPython( void );
 void G_ShutdownPython( void );
+
 
 //some maxs
 #define MAX_FILEPATH      144
@@ -1201,3 +1207,6 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+#endif
+

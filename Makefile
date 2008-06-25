@@ -100,10 +100,6 @@ ifndef USE_OPENAL_DLOPEN
 USE_OPENAL_DLOPEN=0
 endif
 
-ifndef USE_PYTHON
-USE_PYTHON=1
-endif
-
 ifndef USE_CURL
 USE_CURL=1
 endif
@@ -114,6 +110,14 @@ ifndef USE_CURL_DLOPEN
   else
     USE_CURL_DLOPEN=1
   endif
+endif
+
+ifndef USE_PYTHON
+  USE_PYTHON=1
+endif
+
+ifndef USE_LUA
+  USE_LUA=1
 endif
 
 ifndef USE_CODEC_VORBIS
@@ -144,6 +148,9 @@ CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6
+PYDIR=$(MOUNT_DIR)/python
+LUADIR=$(MOUNT_DIR)/lua
+SCRIPTDIR=$(MOUNT_DIR)/script
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
 Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
@@ -153,7 +160,6 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
-PYDIR=$(MOUNT_DIR)/python
 
 # extract version info
 VERSION=$(shell grep "\#define *PRODUCT_VERSION" $(CMDIR)/q_shared.h | \
@@ -235,7 +241,15 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
+   endif
+   
+  ifeq ($(USE_PYTHON),1)
+    BASE_CFLAGS += -DUSE_PYTHON
   endif
+
+   ifeq ($(USE_LUA),1)
+     BASE_CFLAGS += -DUSE_LUA
+   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
@@ -284,6 +298,14 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
+  ifeq ($(USE_PYTHON),1)
+    PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
+    CFLAGS += -I/usr/include/python2.5
+    LDFLAGS += $(PYTHONLDFLAGS)
+    LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
+  endif
+  
+
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
@@ -299,14 +321,6 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  ifeq ($(USE_PYTHON),1)
-   PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
-   CFLAGS += -DUSE_PYTHON=1
-   CFLAGS += -I/usr/include/python2.5
-   LDFLAGS += $(PYTHONLDFLAGS)
-   LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
-  endif
-  
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
@@ -453,13 +467,7 @@ endif
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-  
-  ifeq ($(USE_PYTHON),1)
-   NOTSHLIBCFLAGS += -DUSE_PYTHON=1
-   NOTSHLIBCFLAGS += -Isrc/python/include
-   LDFLAGS += $(LIBSDIR)/win32/python25.lib
-  endif
-  
+
   ifeq ($(ARCH),x86)
     # build 32bit
     BASE_CFLAGS += -m32
@@ -800,6 +808,10 @@ ifeq ($(USE_HG),1)
   BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
 endif
 
+ifeq ($(USE_LUA),1)
+  SHLIBCFLAGS += -DUSE_LUA=1 -I$(LUADIR)
+endif
+
 ifeq ($(V),1)
 echo_cmd=@:
 Q=
@@ -930,6 +942,8 @@ makedirs:
 	@if [ ! -d $(B)/base/game ];then $(MKDIR) $(B)/base/game;fi
 	@if [ ! -d $(B)/base/ui ];then $(MKDIR) $(B)/base/ui;fi
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
+	@if [ ! -d $(B)/base/lua ];then $(MKDIR) $(B)/base/lua;fi
+	@if [ ! -d $(B)/base/script ];then $(MKDIR) $(B)/base/script;fi
 	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
 	@if [ ! -d $(B)/tools ];then $(MKDIR) $(B)/tools;fi
 	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
@@ -1238,12 +1252,6 @@ ifeq ($(ARCH),x86)
     $(B)/client/snapvectora.o
 endif
 
-ifeq ($(USE_PYTHON),1)
-	Q3OBJ += \
-	$(B)/client/py_init.o \
-	$(B)/client/py_main.o
-endif
-
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1342,12 +1350,6 @@ ifeq ($(ARCH),x86)
       $(B)/ded/matha.o
 endif
 
-ifeq ($(USE_PYTHON),1)
-	Q3DOBJ += \
-	$(B)/ded/py_init.o \
-	$(B)/ded/py_main.o
-endif
-
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3DOBJ += $(B)/ded/vm_x86.o
@@ -1369,6 +1371,12 @@ else
   Q3DOBJ += \
     $(B)/ded/sys_unix.o \
     $(B)/ded/con_tty.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+  Q3DOBJ += \
+  $(B)/ded/py_init.o \
+  $(B)/ded/py_main.o
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
@@ -1414,7 +1422,7 @@ CGOBJ_ = \
   $(B)/base/ui/ui_shared.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
 
 CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
 CGVMOBJ = $(CGOBJ_:%.o=%.asm)
@@ -1422,6 +1430,7 @@ CGVMOBJ = $(CGOBJ_:%.o=%.asm)
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ) $(GAME_LDFLAGS)
 
 $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1461,14 +1470,59 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
-  $(B)/base/game/g_python.o \
-  $(B)/base/game/py_entity.o \
+  $(B)/base/game/sc_game.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
+  \
+  $(B)/base/script/sc_datatype.o \
+  $(B)/base/script/sc_main.o \
+  $(B)/base/script/sc_c.o
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
+
+ifeq ($(USE_LUA),1)
+  GOBJ +=  \
+		   $(B)/base/lua/lapi.o \
+		   $(B)/base/lua/lauxlib.o \
+		   $(B)/base/lua/lbaselib.o \
+		   $(B)/base/lua/lcode.o \
+		   $(B)/base/lua/ldblib.o \
+		   $(B)/base/lua/ldebug.o \
+		   $(B)/base/lua/ldo.o \
+		   $(B)/base/lua/ldump.o \
+		   $(B)/base/lua/lfunc.o \
+		   $(B)/base/lua/lgc.o \
+		   $(B)/base/lua/linit.o \
+		   $(B)/base/lua/liolib.o \
+		   $(B)/base/lua/llex.o \
+		   $(B)/base/lua/lmathlib.o \
+		   $(B)/base/lua/lmem.o \
+		   $(B)/base/lua/loadlib.o \
+		   $(B)/base/lua/lobject.o \
+		   $(B)/base/lua/lopcodes.o \
+		   $(B)/base/lua/loslib.o \
+		   $(B)/base/lua/lparser.o \
+		   $(B)/base/lua/lstate.o \
+		   $(B)/base/lua/lstring.o \
+		   $(B)/base/lua/lstrlib.o \
+		   $(B)/base/lua/ltable.o \
+		   $(B)/base/lua/ltablib.o \
+		   $(B)/base/lua/ltm.o \
+		   $(B)/base/lua/lua.o \
+		   $(B)/base/lua/lundump.o \
+		   $(B)/base/lua/lvm.o \
+		   $(B)/base/lua/lzio.o \
+		   $(B)/base/lua/print.o \
+		   $(B)/base/script/sc_lua.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+  GOBJ += \
+		   $(B)/base/game/py_game.o \
+		   $(B)/base/game/py_entity.o
+endif
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
@@ -1545,8 +1599,6 @@ $(B)/client/%.o: $(SYSDIR)/%.c
 $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
-$(B)/client/%.o: $(PYDIR)/%.c
-	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1621,6 +1673,17 @@ $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
+$(B)/base/script/%.o: $(SCRIPTDIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/script/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
+
+$(B)/base/lua/%.o: $(LUADIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/lua/%.asm: $(LUADIC)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c
 	$(DO_SHLIB_CC)

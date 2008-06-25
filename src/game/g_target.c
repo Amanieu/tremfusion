@@ -244,8 +244,8 @@ void target_relay_use( gentity_t *self, gentity_t *other, gentity_t *activator )
     gentity_t *ent;
 
     ent = G_PickTarget( self->target );
-    if( ent && ent->use )
-      ent->use( ent, self, activator );
+    if( ent )
+      G_Use( ent, self, activator );
 
     return;
   }

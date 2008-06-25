@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // bg_public.h -- definitions shared by both the server game and client game modules
 
+#ifndef _GAME_BG_PUBLIC_H_
+#define _GAME_BG_PUBLIC_H_
+
 //tremulous balance header
 #include "tremulous.h"
 
@@ -1295,3 +1298,6 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
                                  int enthusiasm, int *trackNum );
 
 int BG_LoadEmoticons( char names[ ][ MAX_EMOTICON_NAME_LEN ], int widths[ ] );
+
+#endif 
+

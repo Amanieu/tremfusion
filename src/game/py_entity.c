@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #ifdef USE_PYTHON
 #include "g_local.h"
-#include "g_python.h"
+#include "py_local.h"
 
 PyObject *EntityForGentity( gentity_t *gentity );
 PyObject *Vec3dforVec3_t( vec3_t *vect );

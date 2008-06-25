@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // this file holds commands that can be executed by the server console, but not remote clients
 
 #include "g_local.h"
-#include "g_python.h"
+
 /*
 ===================
 Svcmd_EntityList_f
@@ -242,6 +242,18 @@ static void Svcmd_AdmitDefeat_f( void )
   } 
 }
 
+/*  
+=================
+Svcmd_Script_f
+=================
+*/  
+static void Svcmd_Script_f(void)
+{
+  char filename[128];
+  trap_Argv( 1, filename, 128 );
+  SC_RunScript( LANGAGE_LUA, filename );
+}
+
 /*
 =================
 ConsoleCommand
@@ -336,12 +348,21 @@ qboolean  ConsoleCommand( void )
     level.lastWin = TEAM_NONE;
     trap_SetConfigstring( CS_WINNER, "Evacuation" );
     LogExit( "Evacuation." );
+    
+    SC_CallHooks( "game.on_exit", NULL );
+
     return qtrue;
   }
   
   // see if this is a a admin command
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;
+
+  if( !Q_stricmp(cmd, "script") )
+  {
+    Svcmd_Script_f();
+    return qtrue;
+  }
 
   if( g_dedicated.integer )
   {

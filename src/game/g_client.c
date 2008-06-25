@@ -1254,6 +1254,10 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   // count current clients and rank for scoreboard
   CalculateRanks( );
   G_admin_namelog_update( client, qfalse );
+
+  if( ! SC_CallHooks( "game.on_player_connect", NULL ) )
+    return "Game refused by server";
+
   return NULL;
 }
 
@@ -1270,7 +1274,18 @@ void ClientBegin( int clientNum )
 {
   gentity_t *ent;
   gclient_t *client;
+  char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+
+  trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
+
+  if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
+    trap_SendServerCommand( clientNum, "disconnect \"Your client is missing files.\n\n"
+      "To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
+      "For a client with fast http-download visit themerge.tremforges.net\n\n"
+      "Open your console and enter: /cl_allowDownload 1\n\"" );
+    return;
+  }
 
   ent = g_entities + clientNum;
 
@@ -1280,6 +1295,9 @@ void ClientBegin( int clientNum )
     trap_UnlinkEntity( ent );
 
   G_InitGentity( ent );
+
+  SC_CallHooks("player.on_init", ent);
+
   ent->touch = 0;
   ent->pain = 0;
   ent->client = client;
@@ -1313,6 +1331,8 @@ void ClientBegin( int clientNum )
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
+
+  SC_CallHooks( "game.on_player_begin", NULL );
 }
 
 /*
@@ -1343,6 +1363,9 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   int                 maxAmmo, maxClips;
   weapon_t            weapon;
 
+
+  if( ! SC_CallHooks("player.on_spawn", ent) )
+    return;
 
   index = ent - g_entities;
   client = ent->client;
@@ -1691,4 +1714,6 @@ void ClientDisconnect( int clientNum )
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
 
   CalculateRanks( );
+
+  SC_CallHooks( "game.on_player_disconnect", NULL );
 }

@@ -2376,7 +2376,7 @@ void Com_Init( char *commandLine ) {
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 
-#if USE_PYTHON
+#if defined USE_PYTHON && defined DEDICATED
 	PY_Init();
 #endif
 	
@@ -2482,12 +2482,12 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
-#if USE_PYTHON
+#if defined USE_PYTHON && defined DEDICATED
 	Cmd_AddCommand ("pyexec", PY_ExecScript_f);
 #endif
 	
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
-	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
+	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
 
 	Sys_Init();
 	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
@@ -2726,9 +2726,7 @@ void Com_Frame( void ) {
 	}
 
 	SV_Frame( msec );
-#if USE_PYTHON
-	PY_Frame( );
-#endif // USE_PYTHON
+
 	// if "dedicated" has been modified, start up
 	// or shut down the client system.
 	// Do this after the server may have started,
@@ -2771,7 +2769,9 @@ void Com_Frame( void ) {
 		timeAfter = Sys_Milliseconds ();
 	}
 #endif
-
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Frame();
+#endif
 	//
 	// report timing information
 	//
@@ -2826,9 +2826,10 @@ void Com_Shutdown (void) {
 		FS_FCloseFile( com_journalFile );
 		com_journalFile = 0;
 	}
-#if USE_PYTHON
-  PY_Shutdown();
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Shutdown();
 #endif
+
 }
 
 //------------------------------------------------------------------------
@@ -3128,12 +3129,6 @@ static void Field_CompleteCommand( char *cmd,
 				if( p > cmd )
 					Field_CompleteCommand( p, qfalse, qtrue );
 			}
-#if USE_PYTHON
-      else if( !Q_stricmp( baseCmd, "pyexec" ) ) 
-      {
-        Field_CompleteFilename( "python", "py", qtrue );
-      }
-#endif // PYTHON
 #ifndef DEDICATED
 			else if( !Q_stricmp( baseCmd, "demo" ) && completionArgument == 2 )
 			{

@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+#include "sc_local.h"
 #include "g_local.h"
 
 level_locals_t  level;
@@ -334,6 +335,8 @@ void QDECL G_Error( const char *fmt, ... )
   vsprintf( text, fmt, argptr );
   va_end( argptr );
 
+  SC_Shutdown( );
+
   trap_Error( text );
 }
 
@@ -521,10 +524,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   BG_InitMemory( );
 
-#ifdef USE_PYTHON
-  G_InitPython();
-#endif
-  
+  G_InitScript( );
+
   // set some level globals
   memset( &level, 0, sizeof( level ) );
   level.time = levelTime;
@@ -636,6 +637,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   G_CountSpawns( );
 
   G_ResetPTRConnections( );
+
+  SC_CallHooks( "game.on_init", NULL );
 }
 
 /*
@@ -667,6 +670,8 @@ void G_ShutdownGame( int restart )
 
   G_Printf( "==== ShutdownGame ====\n" );
 
+  SC_CallHooks( "game.on_shutdown", NULL );
+
   if( level.logFile )
   {
     G_LogPrintf( "ShutdownGame:\n" );
@@ -680,13 +685,11 @@ void G_ShutdownGame( int restart )
   G_admin_cleanup( );
   G_admin_namelog_cleanup( );
 
+  SC_Shutdown( );
+
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
   trap_SetConfigstring( CS_WINNER, "" );
-  
-#ifdef USE_PYTHON
-  G_ShutdownPython();
-#endif
 }
 
 
@@ -1073,6 +1076,8 @@ void G_CalculateBuildPoints( void )
       localHTP = 0;
       localATP = 0;
 
+      SC_CallHooks( "game.on_sudden_death", NULL );
+
       //warn about sudden death
       if( level.suddenDeathWarning < TW_PASSED )
       {
@@ -1218,6 +1223,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S2 ) );
     level.alienStage2Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
+    SC_CallHooks( "game.on_stage_up", NULL );
   }
 
   if( g_alienCredits.integer >=
@@ -1228,6 +1234,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S3 ) );
     level.alienStage3Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
+    SC_CallHooks( "game.on_stage_up", NULL );
   }
 
   if( g_humanCredits.integer >=
@@ -1238,6 +1245,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S2 ) );
     level.humanStage2Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
+    SC_CallHooks( "game.on_stage_up", NULL );
   }
 
   if( g_humanCredits.integer >=
@@ -1248,6 +1256,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S3 ) );
     level.humanStage3Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
+    SC_CallHooks( "game.on_stage_up", NULL );
   }
 
   if( g_alienStage.modificationCount > lastAlienStageModCount )
@@ -1750,7 +1759,7 @@ void LogExit( const char *string )
     if( !Q_stricmp( ent->classname, "trigger_win" ) )
     {
       if( level.lastWin == ent->stageTeam )
-        ent->use( ent, ent, ent );
+        G_Use(ent, ent, ent);
     }
   }
 
@@ -1905,7 +1914,11 @@ void CheckExitRules( void )
       level.lastWin = TEAM_NONE;
       trap_SendServerCommand( -1, "print \"Timelimit hit\n\"" );
       trap_SetConfigstring( CS_WINNER, "Stalemate" );
+
       LogExit( "Timelimit hit." );
+
+      SC_CallHooks( "game.on_exit", NULL );
+
       return;
     }
     else if( level.time - level.startTime >= ( g_timelimit.integer - 5 ) * 60000 &&
@@ -1931,7 +1944,10 @@ void CheckExitRules( void )
     level.lastWin = TEAM_HUMANS;
     trap_SendServerCommand( -1, "print \"Humans win\n\"");
     trap_SetConfigstring( CS_WINNER, "Humans Win" );
+
     LogExit( "Humans win." );
+
+    SC_CallHooks( "game.on_exit", NULL );
   }
   else if( level.uncondAlienWin ||
            ( ( level.time > level.startTime + 1000 ) &&
@@ -1943,6 +1959,8 @@ void CheckExitRules( void )
     trap_SendServerCommand( -1, "print \"Aliens win\n\"");
     trap_SetConfigstring( CS_WINNER, "Aliens Win" );
     LogExit( "Aliens win." );
+
+    SC_CallHooks( "game.on_exit", NULL );
   }
 }
 
@@ -2222,6 +2240,20 @@ void G_RunThink( gentity_t *ent )
   if( !ent->think )
     G_Error( "NULL ent->think" );
 
+  if( ! SC_CallHooks("entity.on_think", ent) )
+	  return;
+
+  if( ent->s.eType == ET_BUILDABLE )
+  {
+	  if( SC_CallHooks("buildable.on_think", ent) == 0 )
+		  return;
+  }
+  else if( ent->s.eType == ET_PLAYER )
+  {
+	  if( SC_CallHooks("player.on_think", ent) == 0 )
+		  return;
+  }
+
   ent->think( ent );
 }
 
@@ -2408,6 +2440,21 @@ void G_RunFrame( int levelTime )
     trap_Cvar_Set( "g_listEntity", "0" );
   }
 
+  SC_CallHooks( "game.on_think", NULL );
+
   level.frameMsec = trap_Milliseconds();
+}
+
+/*
+================
+G_InitScript
+
+Initialize scripting system and load libraries
+================
+*/
+void G_InitScript( void )
+{
+  SC_Init( );
+  SC_game_init( );
 }
 

@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_public.h -- game module information visible to server
 
+#ifndef _GAME_G_PUBLIC_H_
+#define _GAME_G_PUBLIC_H_
+
 #define GAME_API_VERSION  9
 
 // entity->svFlags
@@ -113,6 +116,7 @@ typedef enum {
   G_CVAR_REGISTER,  // ( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
   G_CVAR_UPDATE,  // ( vmCvar_t *vmCvar );
   G_CVAR_SET,   // ( const char *var_name, const char *value );
+  G_CVAR_VARIABLE_VALUE,  // ( const char *var_name );
   G_CVAR_VARIABLE_INTEGER_VALUE,  // ( const char *var_name );
 
   G_CVAR_VARIABLE_STRING_BUFFER,  // ( const char *var_name, char *buffer, int bufsize );
@@ -257,4 +261,6 @@ typedef enum {
   // The game can issue trap_argc() / trap_argv() commands to get the command
   // and parameters.  Return qfalse if the game doesn't recognize it as a command.
 } gameExport_t;
+
+#endif
 

@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // this file is only included when building a dll
 // g_syscalls.asm is included instead when building a qvm
 
+#ifdef syscall
+#undef syscall
+#endif /*syscall*/
+
 static intptr_t (QDECL *syscall)( intptr_t arg, ... ) = (intptr_t (QDECL *)( intptr_t, ...))-1;
 
 
@@ -108,6 +112,13 @@ void  trap_Cvar_Update( vmCvar_t *cvar )
 void trap_Cvar_Set( const char *var_name, const char *value )
 {
   syscall( G_CVAR_SET, var_name, value );
+}
+
+float trap_Cvar_VariableValue( const char *var_name )
+{
+  int temp;
+  temp = syscall( G_CVAR_VARIABLE_VALUE, var_name );
+  return (*(float*)&temp);
 }
 
 int trap_Cvar_VariableIntegerValue( const char *var_name )

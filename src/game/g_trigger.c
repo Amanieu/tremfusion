@@ -502,7 +502,7 @@ void G_Checktrigger_stages( team_t team, stage_t stage )
     if( !Q_stricmp( ent->classname, "trigger_stage" ) )
     {
       if( team == ent->stageTeam && stage == ent->stageStage )
-        ent->use( ent, ent, ent );
+        G_Use( ent, ent, ent );
     }
   }
 }
