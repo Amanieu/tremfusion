@@ -29,6 +29,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_NAMESPACE_LENGTH    16
 #define MAX_PATH_LENGTH         64
 
+#ifdef USE_PYTHON
+#define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
+#include <Python.h>
+#endif
+
 #include "../game/g_local.h"
 
 // Langages
@@ -122,6 +127,8 @@ struct scNamespace_s
 
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
 
+typedef void (*scPYFunc_t)(void*, void*);
+
 struct scDataTypeFunction_s
 {
   scLangage_t           langage;
@@ -131,6 +138,9 @@ struct scDataTypeFunction_s
   {
     char                path[ MAX_PATH_LENGTH + 1 ];
     scCRef_t            ref;
+#ifdef USE_PYTHON
+    scPYFunc_t            *pyfunc;
+#endif
   } data;
 };
 

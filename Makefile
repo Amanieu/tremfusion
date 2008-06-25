@@ -1484,44 +1484,45 @@ GVMOBJ = $(GOBJ_:%.o=%.asm)
 
 ifeq ($(USE_LUA),1)
   GOBJ +=  \
-		   $(B)/base/lua/lapi.o \
-		   $(B)/base/lua/lauxlib.o \
-		   $(B)/base/lua/lbaselib.o \
-		   $(B)/base/lua/lcode.o \
-		   $(B)/base/lua/ldblib.o \
-		   $(B)/base/lua/ldebug.o \
-		   $(B)/base/lua/ldo.o \
-		   $(B)/base/lua/ldump.o \
-		   $(B)/base/lua/lfunc.o \
-		   $(B)/base/lua/lgc.o \
-		   $(B)/base/lua/linit.o \
-		   $(B)/base/lua/liolib.o \
-		   $(B)/base/lua/llex.o \
-		   $(B)/base/lua/lmathlib.o \
-		   $(B)/base/lua/lmem.o \
-		   $(B)/base/lua/loadlib.o \
-		   $(B)/base/lua/lobject.o \
-		   $(B)/base/lua/lopcodes.o \
-		   $(B)/base/lua/loslib.o \
-		   $(B)/base/lua/lparser.o \
-		   $(B)/base/lua/lstate.o \
-		   $(B)/base/lua/lstring.o \
-		   $(B)/base/lua/lstrlib.o \
-		   $(B)/base/lua/ltable.o \
-		   $(B)/base/lua/ltablib.o \
-		   $(B)/base/lua/ltm.o \
-		   $(B)/base/lua/lua.o \
-		   $(B)/base/lua/lundump.o \
-		   $(B)/base/lua/lvm.o \
-		   $(B)/base/lua/lzio.o \
-		   $(B)/base/lua/print.o \
-		   $(B)/base/script/sc_lua.o
+    $(B)/base/lua/lapi.o \
+    $(B)/base/lua/lauxlib.o \
+    $(B)/base/lua/lbaselib.o \
+    $(B)/base/lua/lcode.o \
+    $(B)/base/lua/ldblib.o \
+    $(B)/base/lua/ldebug.o \
+    $(B)/base/lua/ldo.o \
+    $(B)/base/lua/ldump.o \
+    $(B)/base/lua/lfunc.o \
+    $(B)/base/lua/lgc.o \
+    $(B)/base/lua/linit.o \
+    $(B)/base/lua/liolib.o \
+    $(B)/base/lua/llex.o \
+    $(B)/base/lua/lmathlib.o \
+    $(B)/base/lua/lmem.o \
+    $(B)/base/lua/loadlib.o \
+    $(B)/base/lua/lobject.o \
+    $(B)/base/lua/lopcodes.o \
+    $(B)/base/lua/loslib.o \
+    $(B)/base/lua/lparser.o \
+    $(B)/base/lua/lstate.o \
+    $(B)/base/lua/lstring.o \
+    $(B)/base/lua/lstrlib.o \
+    $(B)/base/lua/ltable.o \
+    $(B)/base/lua/ltablib.o \
+    $(B)/base/lua/ltm.o \
+    $(B)/base/lua/lua.o \
+    $(B)/base/lua/lundump.o \
+    $(B)/base/lua/lvm.o \
+    $(B)/base/lua/lzio.o \
+    $(B)/base/lua/print.o \
+    $(B)/base/script/sc_lua.o
 endif
 
 ifeq ($(USE_PYTHON),1)
   GOBJ += \
-		   $(B)/base/game/py_game.o \
-		   $(B)/base/game/py_entity.o
+    $(B)/base/game/py_game.o \
+    $(B)/base/game/py_entity.o \
+    $(B)/base/script/sc_python.o
 endif
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
