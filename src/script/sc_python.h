@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 // sc_python.h
 
-#include "sc_script.h"
+#include "sc_public.h"
 
 
 //void                SC_Python_Init( void );

@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 #include <stdio.h>
 
-#include "sc_script.h"
+#include "sc_public.h"
 
 #define HELLO_WORLD "Hello, world !"
 

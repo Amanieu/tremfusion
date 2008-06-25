@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_PYTHON
 
-#include "sc_script.h"
+#include "sc_public.h"
 #include "../python/python_local.h"
 
 static scDataTypeValue_t *convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )

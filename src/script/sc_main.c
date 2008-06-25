@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../game/g_local.h"
 #include "../qcommon/q_shared.h"
 
-#include "sc_script.h"
+#include "sc_public.h"
 #include "sc_lua.h"
 
 void SC_Init( void )

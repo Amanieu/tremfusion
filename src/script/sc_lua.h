@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <lauxlib.h>
 #include <lualib.h>
 
-#include "sc_script.h"
+#include "sc_public.h"
 
 extern lua_State *g_luaState;
 

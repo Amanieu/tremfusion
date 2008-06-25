@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_LUA
 
-#include "sc_script.h"
+#include "sc_public.h"
 #include "sc_lua.h"
 
 #define MAX_LUAFILE 32768
@@ -241,7 +241,7 @@ static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type
     case LUA_TTABLE:
       if(type == TYPE_ANY)
       {
-        int isArray = pop_hash(L, &value->data.hash);
+        //int isArray = pop_hash(L, &value->data.hash);
         // TODO: implement SC_HashToArray function
         /*if(isArray)
         {
@@ -343,9 +343,36 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
   }
 }
 
-static void push_path( lua_State *L, const char *path )
+static void push_path_rec( lua_State *L, const char *path )
 {
-  // TODO: push a path here
+  char *idx;
+  char ns[MAX_NAMESPACE_LENGTH+1];
+
+  idx = index(path, '.');
+  if(idx == NULL)
+    Q_strncpyz(ns, path, path-idx);
+  else
+    Q_strncpyz(ns, path, strlen(ns));
+
+  lua_pushstring(L, ns);
+  lua_rawget(L, -2);
+  if(lua_isnil(L, -1))
+  {
+    lua_pop(L, 1);
+
+    lua_newtable(L);
+    lua_pushstring(L, ns);
+    lua_rawset(L, -2);
+  }
+
+  if(idx != NULL)
+    push_path_rec(L, ns);
+}
+
+static void push_path(lua_State *L, const char *path)
+{
+  lua_pushvalue(L, LUA_GLOBALSINDEX);
+  push_path_rec(L, path);
 }
 
 /*

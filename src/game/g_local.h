@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
-#include "../script/sc_script.h"
+#include "../script/sc_public.h"
 #include "g_admin.h"
 
 //==================================================================
