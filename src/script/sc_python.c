@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_script.h"
 #include "../python/python_local.h"
-
+/* Convert a python object into a script data value */
 static scDataTypeValue_t *convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
 {
 //  int ltype = lua_type(L, -1);
@@ -103,7 +103,7 @@ static scDataTypeValue_t *convert_to_sc_value ( PyObject *pyvalue, scDataTypeVal
 //  }
   value->type = TYPE_UNDEF;
 }
-
+/* Convert a script data value to a python object */
 static PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 {
   switch( value->type )
@@ -166,9 +166,10 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
     narg++;
   }
   // do the call
-  ReturnValue =PyObject_CallObject( (PyObject *)func->data.pyfunc, ArgsTuple); // do the call
+  ReturnValue = PyObject_CallObject( func->data.pyfunc, ArgsTuple); // do the call
   Py_DECREF(ArgsTuple);
   convert_to_sc_value(ReturnValue, ret, func->return_type);
+  Py_DECREF(ReturnValue);
 }
 
 #endif

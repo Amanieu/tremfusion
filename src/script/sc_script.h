@@ -127,7 +127,9 @@ struct scNamespace_s
 
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
 
-typedef void (*scPYFunc_t)(void*, void*);
+#ifdef USE_PYTHON
+typedef PyObject *scPYFunc_t;
+#endif
 
 struct scDataTypeFunction_s
 {
@@ -139,7 +141,7 @@ struct scDataTypeFunction_s
     char                path[ MAX_PATH_LENGTH + 1 ];
     scCRef_t            ref;
 #ifdef USE_PYTHON
-    scPYFunc_t            *pyfunc;
+    scPYFunc_t          pyfunc;
 #endif
   } data;
 };

@@ -65,10 +65,12 @@ void G_InitPython( void )
 
 void G_ShutdownPython( void )
 {
-  if (vec3d_module)
+  if (vec3d_module){ 
     Py_DECREF( vec3d_module);
-  if (vec3d)
+  }
+  if (vec3d){
     Py_DECREF( vec3d );
+  }
 }
 
 #endif /* USE_PYTHON */
