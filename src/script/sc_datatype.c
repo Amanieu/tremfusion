@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-static scNamespace_t *namespace_root;
+scNamespace_t *namespace_root;
 
 // String
 
@@ -465,5 +465,126 @@ void SC_NamespaceInit( void )
 void SC_FunctionNew( scDataTypeFunction_t **func )
 {
   *func = ( scDataTypeFunction_t* ) BG_Alloc( sizeof( *func ) );
+}
+
+// Display data tree
+
+static void print_string( scDataTypeString_t *string );
+static void print_value( scDataTypeValue_t *value, int tab );
+static void print_hash( scDataTypeHash_t *hash, int tab );
+static void print_array( scDataTypeArray_t *array, int tab );
+static void print_namespace( scNamespace_t *hash, int tab );
+
+static void print_tabs( int tab )
+{
+  while( tab-- )
+    Com_Printf("\t");
+}
+
+static void print_string( scDataTypeString_t *string )
+{
+  Com_Printf( & string->data );
+}
+
+static void print_value( scDataTypeValue_t *value, int tab )
+{
+  switch( value->type )
+  {
+    case TYPE_UNDEF:
+      print_tabs( tab );
+      Com_Printf("<UNDEF>");
+      break;
+
+    case TYPE_INTEGER:
+      print_tabs( tab );
+      Com_Printf(va("%ld\n", value->data.integer));
+      break;
+
+    case TYPE_FLOAT:
+      print_tabs( tab );
+      Com_Printf(va("%f\n", value->data.floating));
+      break;
+
+    case TYPE_STRING:
+      print_tabs( tab );
+      print_string( value->data.string );
+      Com_Printf("\n");
+      break;
+
+    case TYPE_ARRAY:
+      print_array( value->data.array, tab );
+      break;
+
+    case TYPE_HASH:
+      print_hash( value->data.hash, tab );
+      break;
+
+    case TYPE_NAMESPACE:
+      print_namespace( value->data.namespace, tab );
+      break;
+
+    default:
+      print_tabs( tab );
+      Com_Printf("unknow type\n");
+      break;
+  }
+}
+
+static void print_array( scDataTypeArray_t *array, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Array [\n");
+  for( i = 0; i < array->size; i++ )
+    print_value( & (& array->data)[ i ], tab + 1 );
+
+  print_tabs(tab);
+  Com_Printf("]\n");
+}
+
+static void print_hash( scDataTypeHash_t *hash, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Hash [\n");
+  for( i = 0; i < hash->size; i++)
+  {
+    print_tabs( tab );
+    print_string( (& hash->data)[i].key );
+    Com_Printf(" =>\n");
+    print_value( & (& hash->data)[i].value, tab + 1 );
+  }
+
+  print_tabs(tab);
+  Com_Printf("]\n");
+}
+
+static void print_namespace( scNamespace_t *hash, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Namespace [\n");
+  for( i = 0; i < ( ( scDataTypeHash_t* ) hash )->size; i++ )
+  {
+    print_tabs( tab );
+    print_string( ( & ( ( scDataTypeHash_t* ) hash )->data )[ i ].key );
+    Com_Printf(" =>\n");
+    print_value( & ( & ( ( scDataTypeHash_t* ) hash )->data )[ i ].value, tab + 1 );
+  }
+
+  print_tabs(tab);
+  Com_Printf("]\n");
+}
+
+void SC_PrintData( void )
+{
+  scDataTypeValue_t value;
+
+  SC_NamespaceGet( "", & value );
+
+  print_namespace( value.data.namespace, 0 );
 }
 

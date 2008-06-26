@@ -164,6 +164,8 @@ struct scnode_s
   //scnode_t              *parent;
 };
 
+extern scNamespace_t *namespace_root;
+
 void SC_StringNew( scDataTypeString_t **string );
 void SC_StringNewFromChar( scDataTypeString_t **string, const char* str );
 void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src );
@@ -194,6 +196,8 @@ qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceDelete( const char *path );
 
 void SC_FunctionNew( scDataTypeFunction_t **func );
+
+void SC_PrintData( void );
 
 // sc_main.c
 

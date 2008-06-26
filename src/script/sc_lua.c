@@ -490,6 +490,13 @@ qboolean SC_Lua_RunScript( const char *filename )
   return qtrue;
 }
 
+static void update_context(lua_State *L)
+{
+  // TODO: yek ! sloooooooow and crapyyyyy !!!
+  push_hash(L, (scDataTypeHash_t*) namespace_root);
+  lua_insert(L, LUA_GLOBALSINDEX);
+}
+
 /*
 =================
 SC_Lua_RunFunction
@@ -501,6 +508,8 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
   lua_State *L = g_luaState;
   scDataType_t *dt = (scDataType_t*) func->argument;
   scDataTypeValue_t *value = args;
+
+  update_context(L);
 
   lua_getglobal( L, func->data.path );		// get function
 
@@ -565,7 +574,7 @@ void SC_Lua_DumpStack( void )
   G_Printf("\n");				// end the listing
 }
 
-void SC_Lua_Import( const char *path, scDataTypeValue_t *value )
+void SC_Lua_ImportValue( const char *path, scDataTypeValue_t *value )
 {
   lua_State *L = g_luaState;
 
