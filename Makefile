@@ -72,8 +72,8 @@ else
 endif
 export CROSS_COMPILING
 
-ifndef COPYDIR
-COPYDIR="/usr/local/games/tremulous"
+ifndef COPYTHONDIR
+COPYTHONDIR="/usr/local/games/tremulous"
 endif
 
 ifndef MOUNT_DIR
@@ -148,7 +148,7 @@ CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6
-PYDIR=$(MOUNT_DIR)/python
+PYTHONDIR=$(MOUNT_DIR)/python
 LUADIR=$(MOUNT_DIR)/lua
 SCRIPTDIR=$(MOUNT_DIR)/script
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
@@ -678,7 +678,7 @@ ifeq ($(PLATFORM),sunos)
   CC=gcc
   INSTALL=ginstall
   MKDIR=gmkdir
-  COPYDIR="/usr/local/share/games/tremulous"
+  COPYTHONDIR="/usr/local/share/games/tremulous"
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86
@@ -942,6 +942,7 @@ makedirs:
 	@if [ ! -d $(B)/base/game ];then $(MKDIR) $(B)/base/game;fi
 	@if [ ! -d $(B)/base/ui ];then $(MKDIR) $(B)/base/ui;fi
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
+	@if [ ! -d $(B)/base/python ];then $(MKDIR) $(B)/base/python;fi
 	@if [ ! -d $(B)/base/lua ];then $(MKDIR) $(B)/base/lua;fi
 	@if [ ! -d $(B)/base/script ];then $(MKDIR) $(B)/base/script;fi
 	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
@@ -1520,8 +1521,7 @@ endif
 
 ifeq ($(USE_PYTHON),1)
   GOBJ += \
-    $(B)/base/game/py_game.o \
-    $(B)/base/game/py_entity.o \
+    $(B)/base/python/py_entity.o \
     $(B)/base/script/sc_python.o
 endif
 
@@ -1622,7 +1622,7 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 $(B)/ded/%.o: $(NDIR)/%.c
 	$(DO_DED_CC)
 	
-$(B)/ded/%.o: $(PYDIR)/%.c
+$(B)/ded/%.o: $(PYTHONDIR)/%.c
 	$(DO_DED_CC)
 
 # Extra dependencies to ensure the SVN version is incorporated
@@ -1678,6 +1678,12 @@ $(B)/base/script/%.o: $(SCRIPTDIR)/%.c
 	$(DO_SHLIB_CC)
 
 $(B)/base/script/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
+
+$(B)/base/python/%.o: $(PYTHONDIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/python/%.asm: $(PYTHONDIR)/%.c $(Q3LCC)
 	$(DO_Q3LCC)
 
 $(B)/base/lua/%.o: $(LUADIR)/%.c

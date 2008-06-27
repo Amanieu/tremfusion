@@ -36,12 +36,18 @@ void SC_Init( void )
 #ifdef USE_LUA
   SC_Lua_Init( );
 #endif
+#ifdef USE_PYTHON
+  SC_Python_Init( );
+#endif 
 }
 
 void SC_Shutdown( void )
 {
 #ifdef USE_LUA
   SC_Lua_Shutdown( );
+#endif
+#ifdef USE_PYTHON
+  SC_Python_Shutdown( );
 #endif
 }
 

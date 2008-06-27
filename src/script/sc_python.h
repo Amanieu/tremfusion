@@ -24,8 +24,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_PYTHON
 
-//void                SC_Python_Init( void );
-//void                SC_Python_Shutdown( void );
+PyTypeObject EntityType;
+PyTypeObject EntityStateType;
+PyTypeObject Vec3dType;
+extern PyObject *vec3d;
+
+void                SC_Python_Init( void );
+void                SC_Python_Shutdown( void );
 //qboolean            SC_Python_RunScript( const char *filename );
 void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 

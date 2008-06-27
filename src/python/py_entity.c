@@ -20,8 +20,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #ifdef USE_PYTHON
-#include "g_local.h"
-#include "py_local.h"
+#include "../game/g_local.h"
+#include "../script/sc_python.h"
 
 PyObject *EntityForGentity( gentity_t *gentity );
 PyObject *Vec3dforVec3_t( vec3_t *vect );
