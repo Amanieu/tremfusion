@@ -30,6 +30,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 scNamespace_t *namespace_root;
 
+static void print_string( scDataTypeString_t *string );
+static void print_value( scDataTypeValue_t *value, int tab );
+static void print_hash( scDataTypeHash_t *hash, int tab );
+static void print_array( scDataTypeArray_t *array, int tab );
+static void print_namespace( scNamespace_t *hash, int tab );
+
 // String
 
 static void strRealloc( scDataTypeString_t **string, int maxLen )
@@ -58,6 +64,11 @@ void SC_StringNewFromChar( scDataTypeString_t **string, const char* str )
   SC_StringNew( string );
 
   Q_strncpyz( & (*string)->data, str, len + 1 );
+}
+
+const char* SC_StringToChar(scDataTypeString_t *string)
+{
+  return &string->data;
 }
 
 void SC_StringFree( scDataTypeString_t *string )
@@ -469,12 +480,6 @@ void SC_FunctionNew( scDataTypeFunction_t **func )
 
 // Display data tree
 
-static void print_string( scDataTypeString_t *string );
-static void print_value( scDataTypeValue_t *value, int tab );
-static void print_hash( scDataTypeHash_t *hash, int tab );
-static void print_array( scDataTypeArray_t *array, int tab );
-static void print_namespace( scNamespace_t *hash, int tab );
-
 static void print_tabs( int tab )
 {
   while( tab-- )
@@ -522,6 +527,11 @@ static void print_value( scDataTypeValue_t *value, int tab )
     case TYPE_NAMESPACE:
       print_namespace( value->data.namespace, tab );
       break;
+
+    case TYPE_FUNCTION:
+      print_tabs(tab);
+      Com_Printf(va("function in %s\n", SC_LangageToString(value->data.function->langage)));
+	  break;
 
     default:
       print_tabs( tab );
@@ -585,6 +595,8 @@ void SC_PrintData( void )
 
   SC_NamespaceGet( "", & value );
 
-  print_namespace( value.data.namespace, 0 );
+  Com_Printf("----- Scripting data tree -----\n");
+  print_namespace((scDataTypeHash_t*)value.data.namespace, 0);
+  Com_Printf("-------------------------------\n");
 }
 

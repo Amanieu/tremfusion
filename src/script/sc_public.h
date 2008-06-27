@@ -76,7 +76,7 @@ typedef struct scDataTypeArray_s scDataTypeArray_t;
 typedef struct scDataTypeHash_s scDataTypeHash_t;
 typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
 typedef struct scDataTypeFunction_s scDataTypeFunction_t;
-typedef struct scNamespace_s scNamespace_t;
+typedef scDataTypeHash_t scNamespace_t;
 
 struct scDataTypeValue_s
 {
@@ -112,17 +112,6 @@ struct scDataTypeHash_s
     scDataTypeValue_t   value;
   } data;
   // following with datas...
-};
-
-struct scDataTypeNamespace_s
-{
-  scDataTypeString_t    name[ MAX_NAMESPACE_DEPTH ];
-};
-
-struct scNamespace_s
-{
-  scNamespace_t         *parent;
-  scDataTypeHash_t      *content;
 };
 
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
@@ -171,6 +160,7 @@ void SC_StringNewFromChar( scDataTypeString_t **string, const char* str );
 void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src );
 void SC_Strcpy( scDataTypeString_t **string, const scDataTypeString_t *src );
 void SC_StringFree( scDataTypeString_t *string );
+const char* SC_StringToChar(scDataTypeString_t *string);
 
 qboolean SC_ValueIsScalar( const scDataTypeValue_t *value );
 void SC_ValueFree( scDataTypeValue_t *value );
@@ -197,15 +187,18 @@ qboolean SC_NamespaceDelete( const char *path );
 
 void SC_FunctionNew( scDataTypeFunction_t **func );
 
+char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
 
 // sc_main.c
 
 void SC_Init( void );
+void SC_AutoLoad( void );
 void SC_Shutdown( void );
 void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
+scLangage_t SC_LangageFromFilename(const char* filename);
 
 
 // sc_c.c

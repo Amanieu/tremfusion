@@ -33,86 +33,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 lua_State *g_luaState = NULL;
 
-/*
-============
-initLua_global
-
-load multiple global precreated lua scripts
-============
-*/
-
-// TODO: move it to common scripting layer
-static void initLua_global(void)
-{
-  int             numdirs;
-  int             numFiles;
-  char            filename[128];
-  char            dirlist[1024];
-  char           *dirptr;
-  int             i;
-  int             dirlen;
-
-  numFiles = 0;
-
-  numdirs = trap_FS_GetFileList("scripts/global/", ".lua", dirlist, 1024);
-  dirptr = dirlist;
-  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
-  {
-    dirlen = strlen(dirptr);
-    strcpy(filename, "scripts/global/");
-    strcat(filename, dirptr);
-    numFiles++;
-
-    // load the file
-    SC_Lua_RunScript( filename );
-
-  }
-
-  Com_Printf("%i global files parsed\n", numFiles);
-}
-
-/*
-============
-initLua_local
-
-load multiple lua scripts from the maps directory
-============
-*/
-
 static void push_value(lua_State *L, scDataTypeValue_t *value);
 static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 static void pop_string(lua_State *L, scDataTypeString_t **string);
-
-// TODO: move it to common scripting layer
-static void initLua_local(char mapname[MAX_STRING_CHARS])
-{
-  int             numdirs;
-  int             numFiles;
-  char            filename[128];
-  char            dirlist[1024];
-  char           *dirptr;
-  int             i;
-  int             dirlen;
-
-  numFiles = 0;
-
-  numdirs = trap_FS_GetFileList(va("scripts/%s", mapname), ".lua", dirlist, 1024);
-  dirptr = dirlist;
-  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
-  {
-    dirlen = strlen(dirptr);
-    strcpy(filename, va("scripts/%s/", mapname));
-    strcat(filename, dirptr);
-    Com_Printf("***find file to parse***\n");
-    numFiles++;
-
-    // load the file
-    SC_Lua_RunScript( filename );
-
-  }
-
-  Com_Printf("%i local files parsed\n", numFiles);
-}
 
 static int bridge( lua_State *L )
 {
@@ -393,10 +316,6 @@ static const struct luaL_reg stacklib [] = {
 
 void SC_Lua_Init( void )
 {
-  char            buf[MAX_STRING_CHARS];
-
-  G_Printf("------- Game Lua Initialization -------\n");
-
   g_luaState = lua_open();
 
   luaL_openlib(g_luaState, "stack", stacklib, 0);
@@ -405,25 +324,6 @@ void SC_Lua_Init( void )
   luaopen_base(g_luaState);
   luaopen_string(g_luaState);
   luaopen_table(g_luaState);
-
-  // Quake lib
-  /*luaopen_entity(g_luaState);
-  luaopen_player(g_luaState);
-  luaopen_buildable(g_luaState);
-  luaopen_game(g_luaState);
-  luaopen_qmath(g_luaState);
-  luaopen_vector(g_luaState);*/
-
-  // load global scripts
-  G_Printf("global lua scripts:\n");
-  initLua_global();
-
-  // load map-specific lua scripts
-  G_Printf("map specific lua scripts:\n");
-  trap_Cvar_VariableStringBuffer("mapname", buf, sizeof(buf));
-  initLua_local( buf );
-
-  G_Printf("-----------------------------------\n");
 }
 
 /*
@@ -433,7 +333,7 @@ SC_Lua_Shutdown
 */
 void SC_Lua_Shutdown( void )
 {
-  G_Printf("------- Game Lua Finalization -------\n");
+  Com_Printf("------- Game Lua Finalization -------\n");
 
   if(g_luaState)
   {
@@ -441,9 +341,16 @@ void SC_Lua_Shutdown( void )
     g_luaState = NULL;
   }
 
-  G_Printf("-----------------------------------\n");
+  Com_Printf("-----------------------------------\n");
 }
 
+static void update_context(lua_State *L)
+{
+  // TODO: yek ! sloooooooow and crapyyyyy !!!
+  push_hash(L, (scDataTypeHash_t*) namespace_root);
+  lua_replace(L, LUA_GLOBALSINDEX);
+}
+ 
 /*
 =================
 SC_Lua_RunScript
@@ -455,18 +362,18 @@ qboolean SC_Lua_RunScript( const char *filename )
   fileHandle_t    f;
   char            buf[MAX_LUAFILE];
 
-  G_Printf("...loading '%s'\n", filename);
+  Com_Printf("...loading '%s'\n", filename);
 
   len = trap_FS_FOpenFile(filename, &f, FS_READ);
   if(!f)
   {
-    G_Printf(va(S_COLOR_RED "file not found: %s\n", filename));
+    Com_Printf(va(S_COLOR_RED "file not found: %s\n", filename));
     return qfalse;
   }
 
   if(len >= MAX_LUAFILE)
   {
-    G_Printf(va(S_COLOR_RED "file too large: %s is %i, max allowed is %i\n", filename, len, MAX_LUAFILE));
+    Com_Printf(va(S_COLOR_RED "file too large: %s is %i, max allowed is %i\n", filename, len, MAX_LUAFILE));
     trap_FS_FCloseFile(f);
     return qfalse;
   }
@@ -475,26 +382,21 @@ qboolean SC_Lua_RunScript( const char *filename )
   buf[len] = 0;
   trap_FS_FCloseFile(f);
 
+  update_context(g_luaState);
+
   if(luaL_loadbuffer(g_luaState, buf, strlen(buf), filename))
   {
-    G_Printf("SC_Lua_RunScript: cannot load lua file: %s\n", lua_tostring(g_luaState, -1));
+    Com_Printf("SC_Lua_RunScript: cannot load lua file: %s\n", lua_tostring(g_luaState, -1));
     return qfalse;
   }
 
   if(lua_pcall(g_luaState, 0, 0, 0))
   {
-    G_Printf("SC_Lua_RunScript: cannot pcall: %s\n", lua_tostring(g_luaState, -1));
+    Com_Printf("SC_Lua_RunScript: cannot pcall: %s\n", lua_tostring(g_luaState, -1));
     return qfalse;
   }
 
   return qtrue;
-}
-
-static void update_context(lua_State *L)
-{
-  // TODO: yek ! sloooooooow and crapyyyyy !!!
-  push_hash(L, (scDataTypeHash_t*) namespace_root);
-  lua_insert(L, LUA_GLOBALSINDEX);
 }
 
 /*
@@ -524,7 +426,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 
   // do the call
   if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
-    G_Printf("G_RunLuaFunction: error running function `%s': %s\n", func, lua_tostring(L, -1));
+    Com_Printf("G_RunLuaFunction: error running function `%s': %s\n", func->data.path, lua_tostring(L, -1));
 
   pop_value(L, ret, func->return_type);
 }
@@ -540,7 +442,7 @@ void SC_Lua_DumpStack( void )
   lua_State      *L = g_luaState;
   int             top = lua_gettop(L);
 
-  G_Printf( va( "size: %d\n", top ) );
+  Com_Printf( va( "size: %d\n", top ) );
   for(i = 1; i <= top; i++)
   {
     // repeat for each level
@@ -550,28 +452,28 @@ void SC_Lua_DumpStack( void )
     {
       case LUA_TSTRING:
         // strings
-        G_Printf("`%s'", lua_tostring(L, i));
+        Com_Printf("`%s'", lua_tostring(L, i));
         break;
 
       case LUA_TBOOLEAN:
         // booleans
-        G_Printf(lua_toboolean(L, i) ? "true" : "false");
+        Com_Printf(lua_toboolean(L, i) ? "true" : "false");
         break;
 
       case LUA_TNUMBER:
         // numbers
-        G_Printf("%g", lua_tonumber(L, i));
+        Com_Printf("%g", lua_tonumber(L, i));
         break;
 
       default:
         // other values
-        G_Printf("%s", lua_typename(L, t));
+        Com_Printf("%s", lua_typename(L, t));
         break;
 
     }
-    G_Printf(" ");			// put a separator
+    Com_Printf(" ");			// put a separator
   }
-  G_Printf("\n");				// end the listing
+  Com_Printf("\n");				// end the listing
 }
 
 void SC_Lua_ImportValue( const char *path, scDataTypeValue_t *value )

@@ -2454,7 +2454,8 @@ Initialize scripting system and load libraries
 */
 void G_InitScript( void )
 {
-  SC_Init( );
-  SC_game_init( );
+  SC_Init();
+  SC_game_init();
+  SC_AutoLoad();
 }
 

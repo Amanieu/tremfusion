@@ -37,6 +37,76 @@ void SC_Init( void )
 #endif
 }
 
+static void autoload_global(void)
+{
+  int             numdirs;
+  int             numFiles;
+  char            filename[128];
+  char            dirlist[1024];
+  char           *dirptr;
+  int             i;
+  int             dirlen;
+
+  numFiles = 0;
+
+  numdirs = trap_FS_GetFileList("scripts/global/", "", dirlist, 1024);
+  dirptr = dirlist;
+  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
+  {
+    dirlen = strlen(dirptr);
+    strcpy(filename, "scripts/global/");
+    strcat(filename, dirptr);
+    numFiles++;
+
+    // load the file
+    SC_RunScript(SC_LangageFromFilename(filename), filename);
+  }
+
+  Com_Printf("%i global files parsed\n", numFiles);
+}
+
+// TODO: move it to common scripting layer
+static void autoload_local(char mapname[MAX_STRING_CHARS])
+{
+  int             numdirs;
+  int             numFiles;
+  char            filename[128];
+  char            dirlist[1024];
+  char           *dirptr;
+  int             i;
+  int             dirlen;
+
+  numFiles = 0;
+
+  numdirs = trap_FS_GetFileList(va("scripts/%s", mapname), "", dirlist, 1024);
+  dirptr = dirlist;
+  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
+  {
+    dirlen = strlen(dirptr);
+    strcpy(filename, va("scripts/%s/", mapname));
+    strcat(filename, dirptr);
+    Com_Printf("***find file to parse***\n");
+    numFiles++;
+
+    // load the file
+    SC_RunScript( SC_LangageFromFilename(filename), filename );
+  }
+
+  Com_Printf("%i local files parsed\n", numFiles);
+}
+
+void SC_AutoLoad( void )
+{
+  char            buf[MAX_STRING_CHARS];
+
+  Com_Printf("load global scripts:\n");
+  autoload_global();
+
+  Com_Printf("load map specific scripts:\n");
+  trap_Cvar_VariableStringBuffer("mapname", buf, sizeof(buf));
+  autoload_local(buf);
+}
+
 void SC_Shutdown( void )
 {
 #ifdef USE_LUA
@@ -65,13 +135,14 @@ int SC_RunScript( scLangage_t langage, const char *filename )
   switch( langage )
   {
     case LANGAGE_C:
-      // invalid call, C can't have scripts
-      // TODO: display error
+      Com_Printf(va("Can't load %s: C can't be used as script\n", filename));
+      break;
 #ifdef USE_LUA
     case LANGAGE_LUA:
       return SC_Lua_RunScript( filename );
 #endif
     default:
+      Com_Printf(va("Can't load %s: unknow langage\n", filename));
 	  break;
   }
 
@@ -82,5 +153,41 @@ int SC_CallHooks( const char *path, gentity_t *entity )
 {
   // TODO: implement function
   return 1;
+}
+
+char* SC_LangageToString(scLangage_t langage)
+{
+  switch(langage)
+  {
+    case LANGAGE_C: return "C";
+    case LANGAGE_LUA: return "lua";
+    case LANGAGE_PYTHON: return "python";
+    case LANGAGE_INVALID: return "invalid";
+  }
+
+  return "unknow";
+}
+ 
+scLangage_t SC_LangageFromFilename(const char* filename)
+{
+  const char *ext = NULL;
+  const char *i = filename;
+  while(*i != '\0')
+  {
+    if(*i == '.')
+      ext = i;
+    i++;
+  }
+
+  if(ext == NULL)
+    return LANGAGE_INVALID;
+  
+  ext++;
+  if(strcmp(ext, "lua") == 0)
+    return LANGAGE_LUA;
+  else if(strcmp(ext, "py") == 0)
+    return LANGAGE_PYTHON;
+
+  return LANGAGE_INVALID;
 }
 

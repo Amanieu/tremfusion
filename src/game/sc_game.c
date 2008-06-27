@@ -37,6 +37,6 @@ void SC_game_init( void )
 #ifdef USE_PYTHON
   G_InitPython();
 #endif
-//  SC_AddLibrary( "game", lib );
+  SC_AddLibrary( "game", lib );
 }
 
