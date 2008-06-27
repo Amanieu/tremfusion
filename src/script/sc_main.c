@@ -155,19 +155,6 @@ int SC_CallHooks( const char *path, gentity_t *entity )
   return 1;
 }
 
-char* SC_LangageToString(scLangage_t langage)
-{
-  switch(langage)
-  {
-    case LANGAGE_C: return "C";
-    case LANGAGE_LUA: return "lua";
-    case LANGAGE_PYTHON: return "python";
-    case LANGAGE_INVALID: return "invalid";
-  }
-
-  return "unknow";
-}
- 
 scLangage_t SC_LangageFromFilename(const char* filename)
 {
   const char *ext = NULL;

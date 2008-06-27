@@ -600,3 +600,16 @@ void SC_PrintData( void )
   Com_Printf("-------------------------------\n");
 }
 
+char* SC_LangageToString(scLangage_t langage)
+{
+  switch(langage)
+  {
+    case LANGAGE_C: return "C";
+    case LANGAGE_LUA: return "lua";
+    case LANGAGE_PYTHON: return "python";
+    case LANGAGE_INVALID: return "invalid";
+  }
+
+  return "unknow";
+}
+ 
