@@ -2103,20 +2103,6 @@ void Cmd_Buy_f( gentity_t *ent )
       return;
     }
 
-    //can afford this?
-    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
-      return;
-    }
-
-    //have space to carry this?
-    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
-      return;
-    }
-
     if( BG_Weapon( weapon )->team != TEAM_HUMANS )
     {
       //shouldn't need a fancy dialog
@@ -2135,6 +2121,20 @@ void Cmd_Buy_f( gentity_t *ent )
     if( !BG_WeaponAllowedInStage( weapon, g_humanStage.integer ) || !BG_WeaponIsAllowed( weapon ) )
     {
       trap_SendServerCommand( ent-g_entities, "print \"You can't buy this item\n\"" );
+      return;
+    }
+
+    //can afford this?
+    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
+      return;
+    }
+
+    //have space to carry this?
+    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
       return;
     }
 
