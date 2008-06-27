@@ -72,8 +72,8 @@ else
 endif
 export CROSS_COMPILING
 
-ifndef COPYTHONDIR
-COPYTHONDIR="/usr/local/games/tremulous"
+ifndef COPYDIR
+COPYDIR="/usr/local/games/tremulous"
 endif
 
 ifndef MOUNT_DIR
@@ -678,7 +678,7 @@ ifeq ($(PLATFORM),sunos)
   CC=gcc
   INSTALL=ginstall
   MKDIR=gmkdir
-  COPYTHONDIR="/usr/local/share/games/tremulous"
+  COPYDIR="/usr/local/share/games/tremulous"
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86

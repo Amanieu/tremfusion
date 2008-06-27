@@ -28,6 +28,7 @@ PyTypeObject EntityType;
 PyTypeObject EntityStateType;
 PyTypeObject Vec3dType;
 extern PyObject *vec3d;
+PyObject *convert_from_sc_value( scDataTypeValue_t *value );
 
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );

@@ -35,9 +35,10 @@ PyObject *gamemodule;
 PyObject *vec3d_module;
 PyObject *vec3d;
 
+static void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 
 /* Convert a python object into a script data value */
-static void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
+void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
 {
 //  int ltype = lua_type(L, -1);
 //  switch(ltype)
@@ -115,29 +116,51 @@ static void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, s
 //  }
   value->type = TYPE_UNDEF;
 }
+
+static PyObject *convert_from_array( scDataTypeArray_t *array )
+{
+  int i;
+  PyObject *list;
+
+  list = PyList_New( array->size );
+  for( i = 0; i < array->size; i++ )
+  {
+    PyList_SetItem( list, i, convert_from_sc_value( & (&array->data)[i] ) );
+  }
+  return list;
+}
+
+static PyObject *convert_from_hash( scDataTypeHash_t *hash )
+{
+  int i;
+  PyObject *dict, *temp;
+
+  dict = PyDict_New();
+  for( i = 0; i < hash->size; i++ )
+  {
+    temp = convert_from_sc_value( &(&hash->data)[i].value );
+    PyDict_SetItemString( dict, &(&hash->data)[i].key->data, temp);
+  }
+  return dict;
+}
+
 /* Convert a script data value to a python object */
-static PyObject *convert_from_sc_value( scDataTypeValue_t *value )
+PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 {
   switch( value->type )
   {
     case TYPE_UNDEF:
       return Py_BuildValue(""); // Python None object
-      break;
     case TYPE_INTEGER:
       return Py_BuildValue("i", value->data.integer ); // Python int or long type
-      break;
     case TYPE_FLOAT:
       return Py_BuildValue("f", value->data.floating ); // Python float type
-      break;
     case TYPE_STRING:
       return Py_BuildValue("s", & value->data.string->data ); // Python str type
-      break;
-//    case TYPE_ARRAY:
-//      push_array( L, value->data.array );
-//      break;
-//    case TYPE_HASH:
-//      push_hash( L, value->data.hash );
-//      break;
+    case TYPE_ARRAY:
+      return convert_from_array( value->data.array );
+    case TYPE_HASH:
+      return convert_from_hash( value->data.hash );
 //    case TYPE_NAMESPACE:
 //      push_hash( L, (scDataTypeHash_t*) value->data.namespace );
 //      break;
@@ -145,11 +168,14 @@ static PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 //      push_function( L, value->data.function );
 //      break;
     default:
+#ifdef UNITTEST
+      printf("convert_from_sc_value type fallthrough %d \n", value->type);
+#endif
       return Py_BuildValue(""); // Python None object
       break;
   }
 }
-
+#ifndef UNITTEST
 void SC_Python_Init( void )
 {
   char            buf[MAX_STRING_CHARS];
@@ -245,5 +271,5 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
   convert_to_sc_value(ReturnValue, ret, func->return_type);
   Py_DECREF(ReturnValue);
 }
-
+#endif /*#ifndef UNITTEST*/
 #endif
