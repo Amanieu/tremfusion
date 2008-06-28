@@ -35,7 +35,7 @@ lua_State *g_luaState = NULL;
 
 static void push_value(lua_State *L, scDataTypeValue_t *value);
 static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
-static void pop_string(lua_State *L, scDataTypeString_t **string);
+static scDataTypeString_t* pop_string(lua_State *L);
 
 static int bridge( lua_State *L )
 {
@@ -45,9 +45,9 @@ static int bridge( lua_State *L )
   scDataTypeValue_t func, ret;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scDataTypeString_t *path;
-  
-  pop_string(L, &path);
-  SC_NamespaceGet(&path->data, &func);
+
+  path = pop_string(L);
+  SC_NamespaceGet(path->data, &func);
 
   if(func.type != TYPE_FUNCTION)
   {
@@ -70,18 +70,20 @@ static int bridge( lua_State *L )
   return 0;
 }
 
-static void pop_string(lua_State *L, scDataTypeString_t **string)
+static scDataTypeString_t* pop_string(lua_State *L)
 {
   const char *lstr = lua_tostring(L, -1);
-  SC_StringNewFromChar(string, lstr);
+  scDataTypeString_t *string = SC_StringNewFromChar(lstr);
   lua_pop(L, 1);
+
+  return string;
 }
 
-static void pop_array(lua_State *L, scDataTypeArray_t **array)
+static scDataTypeArray_t* pop_array(lua_State *L)
 {
   scDataTypeValue_t val;
 
-  SC_ArrayNew(array);
+  scDataTypeArray_t *array = SC_ArrayNew();
 
   lua_pushnil(L);
   while(lua_next(L, -1) != 0)
@@ -90,38 +92,37 @@ static void pop_array(lua_State *L, scDataTypeArray_t **array)
     SC_ArraySet(array, lua_tonumber(L, -2), &val);
     lua_pop(L, 1);
   }
+
+  return array;
 }
 
-static int pop_hash(lua_State *L, scDataTypeHash_t **hash)
+static scDataTypeHash_t* pop_hash(lua_State *L)
 {
   scDataTypeValue_t val;
   scDataTypeString_t *key;
   const char *lstr;
-  int isArray = 1;
-
-  SC_HashNew(hash);
+  scDataTypeHash_t *hash = SC_HashNew();
 
   lua_pushnil(L);
   while(lua_next(L, -1) != 0)
   {
-    if(! lua_isnumber(L, -2) || lua_tointeger(L, -2) != lua_tonumber(L, -2))
-      isArray = 0;
-
     lstr = lua_tostring(L, -1);
-    SC_StringNewFromChar(&key, lstr);
+    key = SC_StringNewFromChar(lstr);
     pop_value(L, &val, TYPE_ANY);
-    SC_HashSet(hash, &key->data, &val);
+    SC_HashSet(hash, SC_StringToChar(key), &val);
 
     lua_pop(L, 1);
   }
 
-  return isArray;
+  return hash;
 }
 
-static void pop_function(lua_State *L, scDataTypeFunction_t *function)
+static scDataTypeFunction_t* pop_function(lua_State *L)
 {
-  // TODO: pop a function from metatable
+  scDataTypeFunction_t *function = SC_FunctionNew();
   function->langage = LANGAGE_LUA;
+  // TODO: pop a function from metatable
+  return function;
 }
 
 static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type )
@@ -158,13 +159,13 @@ static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type
 
     case LUA_TSTRING:
       value->type = TYPE_STRING;
-      pop_string(L, &value->data.string);
+      value->data.string = pop_string(L);
       break;
 
     case LUA_TTABLE:
       if(type == TYPE_ANY)
       {
-        //int isArray = pop_hash(L, &value->data.hash);
+        value->data.hash = pop_hash(L);
         // TODO: implement SC_HashToArray function
         /*if(isArray)
         {
@@ -178,12 +179,12 @@ static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type
       if(type == TYPE_ARRAY)
       {
         value->type = TYPE_ARRAY;
-        pop_array(L, &value->data.array);
+        value->data.array = pop_array(L);
       }
       else if(type == TYPE_HASH)
       {
         value->type = TYPE_HASH;
-        pop_hash(L, &value->data.hash);
+        value->data.hash = pop_hash(L);
       }
       else
       {
@@ -193,7 +194,7 @@ static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type
 
     case LUA_TFUNCTION:
       value->type = TYPE_FUNCTION;
-      pop_function(L, value->data.function);
+      value->data.function = pop_function(L);
       break;
 
     default:
@@ -209,7 +210,7 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
   lua_newtable( L );
   for( i = 0; i < array->size; i++ )
   {
-    push_value( L, & (&array->data)[i] );
+    push_value( L, &array->data[i] );
     lua_rawseti( L, -1, i );
   }
 }
@@ -221,8 +222,8 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
   lua_newtable( L );
   for( i = 0; i < hash->size; i++ )
   {
-    push_value( L, & (&hash->data)[i].value );
-    lua_setfield( L, -2, & (&hash->data)[i].key->data );
+    push_value( L, &hash->data[i].value);
+    lua_setfield( L, -2, SC_StringToChar(&hash->data[i].key));
   }
 }
 
@@ -234,31 +235,31 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
 
 static void push_value( lua_State *L, scDataTypeValue_t *value )
 {
-  switch( value->type )
+  switch(value->type)
   {
     case TYPE_UNDEF:
-      lua_pushnil( L );
+      lua_pushnil(L);
       break;
     case TYPE_INTEGER:
-      lua_pushinteger( L, value->data.integer );
+      lua_pushinteger(L, value->data.integer);
       break;
     case TYPE_FLOAT:
-      lua_pushnumber( L, value->data.floating );
+      lua_pushnumber(L, value->data.floating);
       break;
     case TYPE_STRING:
-      lua_pushstring( L, & value->data.string->data );
+      lua_pushstring(L, SC_StringToChar(value->data.string));
       break;
     case TYPE_ARRAY:
-      push_array( L, value->data.array );
+      push_array(L, value->data.array);
       break;
     case TYPE_HASH:
-      push_hash( L, value->data.hash );
+      push_hash(L, value->data.hash);
       break;
     case TYPE_NAMESPACE:
-      push_hash( L, (scDataTypeHash_t*) value->data.namespace );
+      push_hash(L, (scDataTypeHash_t*) value->data.namespace);
       break;
     case TYPE_FUNCTION:
-      push_function( L, value->data.function );
+      push_function(L, value->data.function);
       break;
     default:
       // TODO: Error here
@@ -346,9 +347,14 @@ void SC_Lua_Shutdown( void )
 
 static void update_context(lua_State *L)
 {
-  // TODO: yek ! sloooooooow and crapyyyyy !!!
-  push_hash(L, (scDataTypeHash_t*) namespace_root);
-  lua_replace(L, LUA_GLOBALSINDEX);
+  // TODO: make better updating system
+  scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
+  int i;
+  for( i = 0; i < hash->size; i++ )
+  {
+    push_value( L, &hash->data[i].value);
+    lua_setglobal( L, SC_StringToChar(&hash->data[i].key));
+  }
 }
  
 /*

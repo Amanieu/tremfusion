@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "g_local.h"
 static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
-  G_Printf( &args[0].data.string->data );
+  G_Printf(SC_StringToChar(args[0].data.string));
   ret->type = TYPE_UNDEF;
 }
 

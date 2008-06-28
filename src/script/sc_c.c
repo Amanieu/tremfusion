@@ -35,13 +35,13 @@ void SC_AddLibrary( const char *namespace, scLib_t lib[] )
   var.type = TYPE_FUNCTION;
   while( strcmp( l->name, "" ) != 0 )
   {
-    SC_FunctionNew( & var.data.function );
+    var.data.function = SC_FunctionNew();
     var.data.function->langage = LANGAGE_C;
     memcpy( var.data.function->argument, l->argument, sizeof( var.data.function->argument ) );
     var.data.function->return_type = lib->return_type;
     var.data.function->data.ref = lib->ref;
 
-    Q_strncpyz( name + nslen + 1, l->name, sizeof( l->name ) );
+    Q_strncpyz( name + nslen + 1, l->name, strlen( l->name ) + 1);
 
     SC_NamespaceSet( name, & var );
     l++;

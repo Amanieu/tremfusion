@@ -67,7 +67,7 @@ typedef struct
 {
   int   length;
   int   buflen;
-  char  data;
+  char  *data;
   // following with datas...
 } scDataTypeString_t;
 
@@ -97,8 +97,7 @@ struct scDataTypeArray_s
 {
   int                   size;
   int                   buflen;
-  scDataTypeValue_t     data;
-  // following with datas...
+  scDataTypeValue_t     *data;
 };
 
 struct scDataTypeHash_s
@@ -108,10 +107,9 @@ struct scDataTypeHash_s
   // TODO: a hash table should be a tree
   struct scDataTypeHashEntry_s
   {
-    scDataTypeString_t  *key;
+    scDataTypeString_t  key;
     scDataTypeValue_t   value;
-  } data;
-  // following with datas...
+  } *data;
 };
 
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
@@ -155,29 +153,31 @@ struct scnode_s
 
 extern scNamespace_t *namespace_root;
 
-void SC_StringNew( scDataTypeString_t **string );
-void SC_StringNewFromChar( scDataTypeString_t **string, const char* str );
-void SC_Strcat( scDataTypeString_t **string, const scDataTypeString_t *src );
-void SC_Strcpy( scDataTypeString_t **string, const scDataTypeString_t *src );
-void SC_StringFree( scDataTypeString_t *string );
+scDataTypeString_t *SC_StringNew(void);
+scDataTypeString_t *SC_StringNewFromChar(const char* str);
+void SC_Strcat( scDataTypeString_t *string, const char *src );
+void SC_Strcpy( scDataTypeString_t *string, const char *src );
+void SC_StringFree(scDataTypeString_t *string);
+qboolean SC_StringIsEmpty(scDataTypeString_t *string);
 const char* SC_StringToChar(scDataTypeString_t *string);
+void SC_StringClear(scDataTypeString_t *string);
 
 qboolean SC_ValueIsScalar( const scDataTypeValue_t *value );
 void SC_ValueFree( scDataTypeValue_t *value );
 
-void SC_ArrayNew( scDataTypeArray_t **array );
-qboolean SC_ArrayGet( const scDataTypeArray_t *array, int index, scDataTypeValue_t *value );
-void SC_ArraySet( scDataTypeArray_t **array, int index, scDataTypeValue_t *value );
-qboolean SC_ArrayDelete( scDataTypeArray_t **array, int index );
-void SC_ArrayClear( scDataTypeArray_t **array );
+scDataTypeArray_t *SC_ArrayNew( void );
+qboolean SC_ArrayGet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value);
+void SC_ArraySet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value);
+qboolean SC_ArrayDelete( scDataTypeArray_t *array, int index );
+void SC_ArrayClear(scDataTypeArray_t *array);
 void SC_ArrayFree( scDataTypeArray_t *array );
 
-void SC_HashNew( scDataTypeHash_t **hash );
-qboolean SC_HashGet( const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
-qboolean SC_HashSet( scDataTypeHash_t **hash, const char *key, scDataTypeValue_t *value );
-void SC_HashGetKeys( const scDataTypeHash_t *hash, scDataTypeArray_t **array );
-qboolean SC_HashDelete( scDataTypeHash_t **hash, const char *key );
-void SC_HashClear( scDataTypeHash_t **hash );
+scDataTypeHash_t* SC_HashNew( void );
+qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
+qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
+scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash);
+qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key);
+void SC_HashClear( scDataTypeHash_t *hash );
 void SC_HashFree( scDataTypeHash_t *hash );
 
 void SC_NamespaceInit( void );
@@ -185,7 +185,7 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value );
 qboolean SC_NamespaceDelete( const char *path );
 
-void SC_FunctionNew( scDataTypeFunction_t **func );
+scDataTypeFunction_t* SC_FunctionNew(void);
 
 char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
