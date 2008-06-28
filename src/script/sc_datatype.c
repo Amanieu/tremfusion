@@ -188,9 +188,11 @@ void SC_ArraySet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value)
   if(index >= array->buflen)
     arrayRealloc(array, index + 1);
 
-  // TODO: memset new data
   if(index >= array->size)
+  {
+    memset(array->data + array->size, 0x00, (index - array->size) * sizeof(*array->data));
     array->size = index + 1;
+  }
 
   memcpy(&array->data[index], value, sizeof(scDataTypeValue_t));
 }
