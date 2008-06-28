@@ -125,7 +125,7 @@ static PyObject *convert_from_array( scDataTypeArray_t *array )
   list = PyList_New( array->size );
   for( i = 0; i < array->size; i++ )
   {
-    PyList_SetItem( list, i, convert_from_sc_value( & (&array->data)[i] ) );
+    PyList_SetItem( list, i, convert_from_sc_value( &array->data[i] ) );
   }
   return list;
 }
@@ -138,8 +138,8 @@ static PyObject *convert_from_hash( scDataTypeHash_t *hash )
   dict = PyDict_New();
   for( i = 0; i < hash->size; i++ )
   {
-    temp = convert_from_sc_value( &(&hash->data)[i].value );
-    PyDict_SetItemString( dict, &(&hash->data)[i].key->data, temp);
+    temp = convert_from_sc_value( &hash->data[i].value );
+    PyDict_SetItemString( dict, SC_StringToChar(&hash->data[i].key), temp);
   }
   return dict;
 }
