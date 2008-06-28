@@ -43,10 +43,15 @@ void test_strings()
 
   printf("\t1: New\n");
   s1 = SC_StringNewFromChar("Hello");
+  SC_StringGCInc(s1);
   s2 = SC_StringNewFromChar(", ");
+  SC_StringGCInc(s2);
   s3 = SC_StringNewFromChar("world !");
+  SC_StringGCInc(s3);
   s4 = SC_StringNewFromChar("\n" );
+  SC_StringGCInc(s4);
   dest = SC_StringNew();
+  SC_StringGCInc(dest);
   printf("\t  ... ok\n");
 
   printf("\t2: Copy/Cat\n");
@@ -66,12 +71,12 @@ void test_strings()
   printf("\t  ... ok\n");
 
   printf("\t5: Delete\n");
-  SC_StringFree(s1);
-  SC_StringFree(s2);
-  SC_StringFree(s3);
-  SC_StringFree(s4);
+  SC_StringGCDec(s1);
+  SC_StringGCDec(s2);
+  SC_StringGCDec(s3);
+  SC_StringGCDec(s4);
 
-  SC_StringFree(dest);
+  SC_StringGCDec(dest);
   printf("\t  ... ok\n");
 
   printf("  ... Test strings: ok\n");
@@ -86,6 +91,7 @@ void test_arrays( )
 
   printf("\t1: Create array\n");
   array = SC_ArrayNew();
+  SC_ArrayGCInc(array);
   printf("\t  ... ok\n");
 
   printf("\t2: Get undef values\n");
@@ -140,7 +146,7 @@ void test_arrays( )
   printf("\t  ... ok\n");
 
   printf("\t5: Free array\n");
-  SC_ArrayFree(array);
+  SC_ArrayGCDec(array);
   printf("\t  ... ok\n");
 
   printf("  ... Test arrays: ok\n");
@@ -158,6 +164,7 @@ void test_hashs()
 
   printf("\t1: Create hash table\n");
   hash = SC_HashNew();
+  SC_HashGCInc(hash);
   assert( hash->size == 0 );
   printf("\t  ... ok\n");
 
@@ -198,6 +205,7 @@ void test_hashs()
 
   printf("\t4: Get keys\n");
   array = SC_HashGetKeys(hash);
+  SC_ArrayGCInc(array);
   assert( array->size == 2 );
 
   assert( SC_ArrayGet( array, 0, & value2 ) );
@@ -207,6 +215,8 @@ void test_hashs()
   assert( SC_ArrayGet( array, 1, & value2 ) );
   assert( value2.type == TYPE_STRING );
   assert( strcmp( SC_StringToChar(value2.data.string), "plop" ) == 0 || strcmp( SC_StringToChar(value2.data.string), "coin" ) == 0 );
+
+  SC_ArrayGCDec(array);
   printf("\t  ... ok\n");
 
   printf("\t5: Delete values\n");
@@ -243,7 +253,7 @@ void test_hashs()
   printf("\t  ... ok\n");
 
   printf("\t8: Delete hash\n");
-  SC_HashFree( hash );
+  SC_HashGCDec(hash);
   printf("\t  ... ok\n");
 
   printf("  ... Test hashmap: ok\n");
@@ -256,7 +266,7 @@ void test_namespaces( )
   printf("D\\ Test Namespaces\n");
 
   printf("\t1: Init namespaces\n");
-  SC_NamespaceInit( );
+  SC_NamespaceInit();
   printf("\t  ... ok\n");
 
   printf("\t2: Looking for root\n");
@@ -302,11 +312,11 @@ void test_namespaces( )
 
 int main()
 {
-  BG_InitMemory( );
-  test_strings( );
-  test_arrays( );
-  test_hashs( );
-  test_namespaces( );
+  BG_InitMemory();
+  test_strings();
+  test_arrays();
+  test_hashs();
+  test_namespaces();
 
   printf("unittest: ok\n");
 

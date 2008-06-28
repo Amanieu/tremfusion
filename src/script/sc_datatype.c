@@ -30,6 +30,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 scNamespace_t *namespace_root;
 
+static void stringFree(scDataTypeString_t *string);
+static void arrayFree(scDataTypeArray_t *array);
+static void hashFree( scDataTypeHash_t *hash );
+static void functionFree(scDataTypeFunction_t *function);
+
 static void print_string( scDataTypeString_t *string );
 static void print_value( scDataTypeValue_t *value, int tab );
 static void print_hash( scDataTypeHash_t *hash, int tab );
@@ -62,6 +67,7 @@ scDataTypeString_t *SC_StringNew(void)
   string->data = NULL;
   strRealloc(string, 1);
   string->data[0] = '\0';
+  string->gc.count = 0;
   return string;
 }
 
@@ -77,7 +83,7 @@ const char* SC_StringToChar(scDataTypeString_t *string)
   return string->data;
 }
 
-void SC_StringFree(scDataTypeString_t *string)
+static void stringFree(scDataTypeString_t *string)
 {
   if(string->data)
     BG_Free(string->data);
@@ -114,6 +120,18 @@ void SC_StringClear(scDataTypeString_t *string)
   string->data[0] = '\0';
 }
 
+void SC_StringGCInc(scDataTypeString_t *string)
+{
+  string->gc.count++;
+}
+
+void SC_StringGCDec(scDataTypeString_t *string)
+{
+  string->gc.count--;
+  if(string->gc.count == 0)
+    stringFree(string);
+}
+
 // Value
 
 qboolean SC_ValueIsScalar( const scDataTypeValue_t *value )
@@ -123,20 +141,57 @@ qboolean SC_ValueIsScalar( const scDataTypeValue_t *value )
          value->type == TYPE_STRING;
 }
 
-void SC_ValueFree( scDataTypeValue_t *value )
+void SC_ValueGCInc(scDataTypeValue_t *value)
 {
-  switch( value->type )
+  switch(value->type)
   {
     case TYPE_STRING:
-      SC_StringFree( value->data.string );
+      SC_StringGCInc(value->data.string);
       break;
 
     case TYPE_ARRAY:
-      SC_ArrayFree( value->data.array );
+      SC_ArrayGCInc(value->data.array);
       break;
 
     case TYPE_HASH:
-      SC_HashFree( value->data.hash );
+      SC_HashGCInc(value->data.hash);
+      break;
+
+    case TYPE_FUNCTION:
+      SC_FunctionGCInc(value->data.function);
+      break;
+
+    case TYPE_NAMESPACE:
+      SC_HashGCInc((scNamespace_t*) value->data.namespace);
+      break;
+
+    default:
+      break;
+  }
+}
+
+void SC_ValueGCDec(scDataTypeValue_t *value)
+{
+  switch(value->type)
+  {
+    case TYPE_STRING:
+      SC_StringGCDec(value->data.string);
+      break;
+
+    case TYPE_ARRAY:
+      SC_ArrayGCDec(value->data.array);
+      break;
+
+    case TYPE_HASH:
+      SC_HashGCDec(value->data.hash);
+      break;
+
+    case TYPE_FUNCTION:
+      SC_FunctionGCDec(value->data.function);
+      break;
+
+    case TYPE_NAMESPACE:
+      SC_HashGCDec((scNamespace_t*) value->data.namespace);
       break;
 
     default:
@@ -168,6 +223,7 @@ scDataTypeArray_t *SC_ArrayNew(void)
   array->buflen = 0;
   array->size = 0;
   array->data = NULL;
+  array->gc.count = 0;
   return array;
 }
 
@@ -188,11 +244,14 @@ void SC_ArraySet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value)
   if(index >= array->buflen)
     arrayRealloc(array, index + 1);
 
+  SC_ValueGCInc(value);
   if(index >= array->size)
   {
     memset(array->data + array->size, 0x00, (index - array->size) * sizeof(*array->data));
     array->size = index + 1;
   }
+  else 
+    SC_ValueGCDec(&array->data[index]);
 
   memcpy(&array->data[index], value, sizeof(scDataTypeValue_t));
 }
@@ -202,9 +261,9 @@ qboolean SC_ArrayDelete(scDataTypeArray_t *array, int index)
   if(index >= array->size)
     return qfalse;
 
+  SC_ValueGCDec(&array->data[index]);
   array->data[index].type = TYPE_UNDEF;
 
-  // TODO: run GC
 
   if( index == array->size - 1 )
   {
@@ -217,16 +276,30 @@ qboolean SC_ArrayDelete(scDataTypeArray_t *array, int index)
 
 void SC_ArrayClear(scDataTypeArray_t *array)
 {
-  array->size = 0;
+  int i;
 
-  // TODO: run GC
+  array->size = 0;
+  for(i = 0; i < array->size; i++)
+    SC_ValueGCDec(&array->data[i]);
 }
 
-void SC_ArrayFree(scDataTypeArray_t *array)
+static void arrayFree(scDataTypeArray_t *array)
 {
   SC_ArrayClear(array);
   BG_Free(array->data);
   BG_Free(array);
+}
+
+void SC_ArrayGCInc(scDataTypeArray_t *array)
+{
+  array->gc.count++;
+}
+
+void SC_ArrayGCDec(scDataTypeArray_t *array)
+{
+  array->gc.count--;
+  if(array->gc.count == 0)
+    arrayFree(array);
 }
 
 // Hash
@@ -255,6 +328,7 @@ scDataTypeHash_t* SC_HashNew(void)
   hash->size = 0;
   hash->buflen = 0;
   hash->data = NULL;
+  hash->gc.count = 0;
   return hash;
 }
 
@@ -301,6 +375,8 @@ qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t 
     }
     if( strcmp( SC_StringToChar(iKey), key ) == 0 )
     {
+      SC_ValueGCInc(value);
+      SC_ValueGCDec(&hash->data[i].value);
       memcpy(&hash->data[i].value, value, sizeof(scDataTypeValue_t));
       return qtrue;
     }
@@ -316,6 +392,7 @@ qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t 
     hash->size++;
   }
   
+  SC_ValueGCInc(value);
   SC_Strcpy(&hash->data[freeIdx].key, key);
   memcpy(&hash->data[freeIdx].value, value, sizeof(scDataTypeValue_t));
 
@@ -338,6 +415,7 @@ scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
     {
       value.data.string = SC_StringNewFromChar(SC_StringToChar(&hash->data[iHash].key));
       SC_ArraySet( array, iArray, &value );
+      SC_StringGCDec(value.data.string);
       iArray++;
     }
   }
@@ -357,7 +435,7 @@ qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key)
     {
       SC_StringClear(&hash->data[i].key);
 
-      // TODO: run GC
+      SC_ValueGCDec(&hash->data[i].value);
 
       if( i == hash->size - 1 )
       {
@@ -380,18 +458,29 @@ void SC_HashClear( scDataTypeHash_t *hash )
   for( i = 0; i < hash->size; i++ )
   {
     SC_StringClear(&hash->data[i].key);
-
-    // TODO: run GC
+    SC_ValueGCDec(&hash->data[i].value);
   }
 
   hash->size = 0;
 }
 
-void SC_HashFree( scDataTypeHash_t *hash )
+static void hashFree( scDataTypeHash_t *hash )
 {
   SC_HashClear(hash);
   BG_Free(hash->data);
   BG_Free(hash);
+}
+
+void SC_HashGCInc(scDataTypeHash_t *hash)
+{
+  hash->gc.count++;
+}
+
+void SC_HashGCDec(scDataTypeHash_t *hash)
+{
+  hash->gc.count--;
+  if(hash->gc.count == 0)
+    hashFree(hash);
 }
 
 // namespace
@@ -504,13 +593,33 @@ qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )
 void SC_NamespaceInit( void )
 {
   namespace_root = (scNamespace_t*) SC_HashNew();
+  SC_HashGCInc((scNamespace_t*) namespace_root);
 }
 
 // Function
 
 scDataTypeFunction_t* SC_FunctionNew()
 {
-  return ( scDataTypeFunction_t* ) BG_Alloc( sizeof( scDataTypeFunction_t ) );
+  scDataTypeFunction_t *function = ( scDataTypeFunction_t* ) BG_Alloc( sizeof( scDataTypeFunction_t ) );
+  function->gc.count = 0;
+  return function;
+}
+
+static void functionFree(scDataTypeFunction_t *function)
+{
+  BG_Free(function);
+}
+
+void SC_FunctionGCInc(scDataTypeFunction_t *function)
+{
+  function->gc.count++;
+}
+
+void SC_FunctionGCDec(scDataTypeFunction_t *function)
+{
+  function->gc.count--;
+  if(function->gc.count == 0)
+    functionFree(function);
 }
 
 // Display data tree

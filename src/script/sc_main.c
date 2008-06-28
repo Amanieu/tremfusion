@@ -69,7 +69,6 @@ static void autoload_global(void)
   Com_Printf("%i global files parsed\n", numFiles);
 }
 
-// TODO: move it to common scripting layer
 static void autoload_local(char mapname[MAX_STRING_CHARS])
 {
   int             numdirs;
