@@ -23,9 +23,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifdef USE_PYTHON
 
 #include "sc_public.h"
-#include "../python/python_local.h"
+#include "sc_python.h"
+//#include "../python/python_local.h"
 
-static scDataTypeValue_t *convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
+// TODO: move these to something like src/python/py_game.c
+static PyMethodDef game_methods[] = {
+ {NULL, NULL, 0, NULL}
+};
+
+PyObject *gamemodule;
+PyObject *vec3d_module;
+PyObject *vec3d;
+
+static void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
+
+/* Convert a python object into a script data value */
+void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
 {
 //  int ltype = lua_type(L, -1);
 //  switch(ltype)
@@ -104,28 +117,50 @@ static scDataTypeValue_t *convert_to_sc_value ( PyObject *pyvalue, scDataTypeVal
   value->type = TYPE_UNDEF;
 }
 
-static PyObject *convert_from_sc_value( scDataTypeValue_t *value )
+static PyObject *convert_from_array( scDataTypeArray_t *array )
+{
+  int i;
+  PyObject *list;
+
+  list = PyList_New( array->size );
+  for( i = 0; i < array->size; i++ )
+  {
+    PyList_SetItem( list, i, convert_from_sc_value( & (&array->data)[i] ) );
+  }
+  return list;
+}
+
+static PyObject *convert_from_hash( scDataTypeHash_t *hash )
+{
+  int i;
+  PyObject *dict, *temp;
+
+  dict = PyDict_New();
+  for( i = 0; i < hash->size; i++ )
+  {
+    temp = convert_from_sc_value( &(&hash->data)[i].value );
+    PyDict_SetItemString( dict, &(&hash->data)[i].key->data, temp);
+  }
+  return dict;
+}
+
+/* Convert a script data value to a python object */
+PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 {
   switch( value->type )
   {
     case TYPE_UNDEF:
       return Py_BuildValue(""); // Python None object
-      break;
     case TYPE_INTEGER:
       return Py_BuildValue("i", value->data.integer ); // Python int or long type
-      break;
     case TYPE_FLOAT:
       return Py_BuildValue("f", value->data.floating ); // Python float type
-      break;
     case TYPE_STRING:
       return Py_BuildValue("s", & value->data.string->data ); // Python str type
-      break;
-//    case TYPE_ARRAY:
-//      push_array( L, value->data.array );
-//      break;
-//    case TYPE_HASH:
-//      push_hash( L, value->data.hash );
-//      break;
+    case TYPE_ARRAY:
+      return convert_from_array( value->data.array );
+    case TYPE_HASH:
+      return convert_from_hash( value->data.hash );
 //    case TYPE_NAMESPACE:
 //      push_hash( L, (scDataTypeHash_t*) value->data.namespace );
 //      break;
@@ -133,9 +168,74 @@ static PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 //      push_function( L, value->data.function );
 //      break;
     default:
+#ifdef UNITTEST
+      printf("convert_from_sc_value type fallthrough %d \n", value->type);
+#endif
       return Py_BuildValue(""); // Python None object
       break;
   }
+}
+#ifndef UNITTEST
+void SC_Python_Init( void )
+{
+  char            buf[MAX_STRING_CHARS];
+
+  G_Printf("------- Game Python Initialization -------\n");
+
+  PyImport_AddModule("game");
+  gamemodule = Py_InitModule("game", game_methods);
+  if (PyType_Ready(&EntityType) < 0)
+    return;
+  Py_INCREF(&EntityType);
+  PyModule_AddObject(gamemodule, "Entity", (PyObject *)&EntityType);
+  if (PyType_Ready(&EntityStateType) < 0)
+    return;
+  Py_INCREF(&EntityStateType);
+  PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
+  if (PyType_Ready(&Vec3dType) < 0)
+    return;
+  Py_INCREF(&Vec3dType);
+  PyModule_AddObject(gamemodule, "Vec3d", (PyObject *)&Vec3dType);
+  PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
+  vec3d_module= PyImport_ImportModule("vec3d");
+  if (!vec3d_module){
+    Com_Printf("^1Cannot find vec3d.py\n");
+    vec3d = NULL;
+  } else {
+    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
+  }
+  
+  // load global scripts
+  G_Printf("global python scripts:\n");
+//  initPython_global();
+
+  // load map-specific lua scripts
+  G_Printf("map specific python scripts:\n");
+  trap_Cvar_VariableStringBuffer("mapname", buf, sizeof(buf));
+//  initPython_local( buf );
+
+  G_Printf("-----------------------------------\n");
+}
+
+/*
+=================
+SC_Python_Shutdown
+=================
+*/
+void SC_Python_Shutdown( void )
+{
+  G_Printf("------- Game Python Finalization -------\n");
+
+  if (vec3d_module){ 
+    Py_DECREF( vec3d_module);
+  }
+  if (vec3d){
+    Py_DECREF( vec3d );
+  }
+  if (gamemodule){
+    Py_DECREF( gamemodule );
+  }
+  G_Printf("-----------------------------------\n");
 }
 
 void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
@@ -166,9 +266,10 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
     narg++;
   }
   // do the call
-  ReturnValue =PyObject_CallObject( (PyObject *)func->data.pyfunc, ArgsTuple); // do the call
+  ReturnValue = PyObject_CallObject( func->data.pyfunc, ArgsTuple); // do the call
   Py_DECREF(ArgsTuple);
   convert_to_sc_value(ReturnValue, ret, func->return_type);
+  Py_DECREF(ReturnValue);
 }
-
+#endif /*#ifndef UNITTEST*/
 #endif

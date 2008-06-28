@@ -22,11 +22,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 // sc_python.h
 
-#include "sc_public.h"
+#ifdef USE_PYTHON
 
+PyTypeObject EntityType;
+PyTypeObject EntityStateType;
+PyTypeObject Vec3dType;
+extern PyObject *vec3d;
+PyObject *convert_from_sc_value( scDataTypeValue_t *value );
 
-//void                SC_Python_Init( void );
-//void                SC_Python_Shutdown( void );
+void                SC_Python_Init( void );
+void                SC_Python_Shutdown( void );
 //qboolean            SC_Python_RunScript( const char *filename );
 void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 

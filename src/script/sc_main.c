@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 #include "sc_lua.h"
+#include "sc_python.h"
 
 void SC_Init( void )
 {
@@ -35,6 +36,9 @@ void SC_Init( void )
 #ifdef USE_LUA
   SC_Lua_Init( );
 #endif
+#ifdef USE_PYTHON
+  SC_Python_Init( );
+#endif 
 }
 
 static void autoload_global(void)
@@ -112,6 +116,9 @@ void SC_Shutdown( void )
 #ifdef USE_LUA
   SC_Lua_Shutdown( );
 #endif
+#ifdef USE_PYTHON
+  SC_Python_Shutdown( );
+#endif
 }
 
 void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
@@ -124,6 +131,10 @@ void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, 
 #ifdef USE_LUA
     case LANGAGE_LUA:
       return SC_Lua_RunFunction( func, args, ret );
+#endif
+#ifdef USE_PYTHON
+    case LANGAGE_PYTHON:
+      return SC_Python_RunFunction( func, args, ret );
 #endif
     default:
 	  break;
