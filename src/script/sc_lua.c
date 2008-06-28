@@ -39,28 +39,25 @@ static scDataTypeString_t* pop_string(lua_State *L);
 
 static int bridge( lua_State *L )
 {
-  // TODO: error cases
+  scDataTypeFunction_t *function;
   int top = lua_gettop(L);
   int i;
-  scDataTypeValue_t func, ret;
+  scDataTypeValue_t ret;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
-  scDataTypeString_t *path;
+  
+  // TODO: error cases
 
-  path = pop_string(L);
-  SC_NamespaceGet(path->data, &func);
+  lua_getfield(L, -top, "_function");
+  function = lua_touserdata(L, -1);
+  lua_pop(L, 1);
 
-  if(func.type != TYPE_FUNCTION)
+  for(i = top-2; i >= 0; i--)
   {
-    // TODO: error case here
-  }
-
-  for(i = top-1; i >= 0; i--)
-  {
-    pop_value(L, & args[i], func.data.function->argument[i]);
+    pop_value(L, &args[i], function->argument[i]);
   }
   args[top].type = TYPE_UNDEF;
 
-  SC_RunFunction(func.data.function, args, &ret);
+  SC_RunFunction(function, args, &ret);
   if(ret.type != TYPE_UNDEF)
   {
     push_value(L, &ret);
@@ -229,8 +226,20 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function )
 {
-  // TODO: create metatable
+  // function global table
+  lua_newtable(L);
+  lua_pushlightuserdata(L, function);
+  lua_setfield(L, -2, "_function");
+
+  /*lua_pushcfunction(L, bridge);
+  lua_setfield(L, -2, "ref");*/
+
+  // function metatable
+  lua_newtable(L);
   lua_pushcfunction(L, bridge);
+  lua_setfield(L, -2, "__call");
+
+  lua_setmetatable(L, -2);
 }
 
 static void push_value( lua_State *L, scDataTypeValue_t *value )
@@ -448,7 +457,7 @@ void SC_Lua_DumpStack( void )
   lua_State      *L = g_luaState;
   int             top = lua_gettop(L);
 
-  Com_Printf( va( "size: %d\n", top ) );
+  Com_Printf("--------- SC_Lua_DumpStack ----------\n");
   for(i = 1; i <= top; i++)
   {
     // repeat for each level
@@ -480,6 +489,7 @@ void SC_Lua_DumpStack( void )
     Com_Printf(" ");			// put a separator
   }
   Com_Printf("\n");				// end the listing
+  Com_Printf("-------------------------------------\n");
 }
 
 void SC_Lua_ImportValue( const char *path, scDataTypeValue_t *value )
