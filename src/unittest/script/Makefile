@@ -26,7 +26,5 @@ endif
 sc_datatype_test: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS) -I$(SCRIPTDIR)
 
-clean: 
-	@echo "CLEAN $(B)"
-	@rm -f $(OBJ)
+
 	

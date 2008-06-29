@@ -27,8 +27,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 PyTypeObject EntityType;
 PyTypeObject EntityStateType;
 PyTypeObject Vec3dType;
+
+
+typedef struct {
+  PyObject_HEAD
+  int num; /* client number */
+  scDataTypeFunction_t *function;
+} PyFunction;
+PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function);
+PyTypeObject PyFunctionType;
+
 extern PyObject *vec3d;
-PyObject *convert_from_sc_value( scDataTypeValue_t *value );
+PyObject *convert_from_value( scDataTypeValue_t *value );
+void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );

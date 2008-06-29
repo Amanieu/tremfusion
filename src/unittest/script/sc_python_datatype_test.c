@@ -25,52 +25,58 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 #include <Python.h>
 
-#include "../../script/sc_script.h"
+#include "../../script/sc_public.h"
 #include "../../script/sc_python.h"
 
 #define HELLO_WORLD "Hello, world !"
 
-void print_string( scDataTypeString_t *string );
-void print_value( scDataTypeValue_t *value, int tab );
-void print_hash( scDataTypeHash_t *hash, int tab );
-void print_array( scDataTypeArray_t *array, int tab );
-void print_namespace( scNamespace_t *hash, int tab );
-void print_root_namespace( );
+static void print_string( scDataTypeString_t *string );
+static void print_value( scDataTypeValue_t *value, int tab );
+static void print_hash( scDataTypeHash_t *hash, int tab );
+static void print_array( scDataTypeArray_t *array, int tab );
+static void print_namespace( scNamespace_t *hash, int tab );
+
+// Display data tree
 
 static void print_tabs( int tab )
 {
   while( tab-- )
-    printf("\t");
+    Com_Printf("\t");
 }
 
-void print_string( scDataTypeString_t *string )
+static void print_string( scDataTypeString_t *string )
 {
-  printf( & string->data );
+  Com_Printf(string->data);
 }
 
-void print_value( scDataTypeValue_t *value, int tab )
+static void print_value( scDataTypeValue_t *value, int tab )
 {
   switch( value->type )
   {
     case TYPE_UNDEF:
       print_tabs( tab );
-      printf("<UNDEF>");
+      Com_Printf("<UNDEF>");
+      break;
+
+    case TYPE_BOOLEAN:
+      print_tabs(tab);
+      Com_Printf(value->data.boolean ? "true\n" : "false\n");
       break;
 
     case TYPE_INTEGER:
       print_tabs( tab );
-      printf( "%ld\n", value->data.integer );
+      Com_Printf(va("%ld\n", value->data.integer));
       break;
 
     case TYPE_FLOAT:
       print_tabs( tab );
-      printf( "%f\n", value->data.floating );
+      Com_Printf(va("%f\n", value->data.floating));
       break;
 
     case TYPE_STRING:
       print_tabs( tab );
       print_string( value->data.string );
-      printf("\n");
+      Com_Printf("\n");
       break;
 
     case TYPE_ARRAY:
@@ -85,11 +91,67 @@ void print_value( scDataTypeValue_t *value, int tab )
       print_namespace( value->data.namespace, tab );
       break;
 
+    case TYPE_FUNCTION:
+      print_tabs(tab);
+      Com_Printf(va("function in %s\n", SC_LangageToString(value->data.function->langage)));
+    break;
+
     default:
       print_tabs( tab );
-      printf("unknow type\n");
+      Com_Printf("unknow type\n");
       break;
   }
+}
+
+static void print_array( scDataTypeArray_t *array, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Array [\n");
+  for( i = 0; i < array->size; i++ )
+    print_value( &array->data[i], tab + 1 );
+
+  print_tabs(tab);
+  Com_Printf("]\n");
+}
+
+static void print_hash( scDataTypeHash_t *hash, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Hash [\n");
+  for( i = 0; i < hash->buflen; i++ )
+  {
+    if(SC_StringIsEmpty(&hash->data[i].key))
+      continue;
+    print_tabs( tab );
+    print_string( &hash->data[i].key );
+    Com_Printf(" =>\n");
+    print_value( &hash->data[i].value, tab + 1 );
+  }
+
+  print_tabs(tab);
+  Com_Printf("]\n");
+}
+
+static void print_namespace( scNamespace_t *hash, int tab )
+{
+  int i;
+
+  print_tabs(tab);
+  Com_Printf("Namespace [\n");
+  for( i = 0; i < ( ( scDataTypeHash_t* ) hash )->size; i++ )
+  {
+    print_tabs( tab );
+    print_string( &((scDataTypeHash_t*)hash)->data[i].key);
+    Com_Printf(" =>\n");
+    print_value( &((scDataTypeHash_t*)hash)->data[i].value, tab + 1 );
+  }
+
+  print_tabs(tab);
+  Com_Printf("]\n");
 }
 
 void print_pyobject ( PyObject *object )
@@ -97,69 +159,11 @@ void print_pyobject ( PyObject *object )
   PyObject *repr;
   repr = PyObject_Repr( object );
   if (!repr)
-    printf("NULL\n");
+    printf("NU LL\n");
   printf("%s\n", PyString_AsString( repr ));
-  
   Py_DECREF( repr );
 }
 
-void print_array( scDataTypeArray_t *array, int tab )
-{
-  int i;
-
-  print_tabs(tab);
-  printf("Array [\n");
-  for( i = 0; i < array->size; i++ )
-    print_value( & (& array->data)[ i ], tab + 1 );
-
-  print_tabs(tab);
-  printf("]\n");
-}
-
-void print_hash( scDataTypeHash_t *hash, int tab )
-{
-  int i;
-
-  print_tabs(tab);
-  printf("Hash [\n");
-  for( i = 0; i < hash->size; i++)
-  {
-    print_tabs( tab );
-    print_string( (& hash->data)[i].key );
-    printf(" =>\n");
-    print_value( & (& hash->data)[i].value, tab + 1 );
-  }
-
-  print_tabs(tab);
-  printf("]\n");
-}
-
-void print_namespace( scNamespace_t *hash, int tab )
-{
-  int i;
-
-  print_tabs(tab);
-  printf("Namespace [\n");
-  for( i = 0; i < ( ( scDataTypeHash_t* ) hash )->size; i++ )
-  {
-    print_tabs( tab );
-    print_string( ( & ( ( scDataTypeHash_t* ) hash )->data )[ i ].key );
-    printf(" =>\n");
-    print_value( & ( & ( ( scDataTypeHash_t* ) hash )->data )[ i ].value, tab + 1 );
-  }
-
-  print_tabs(tab);
-  printf("]\n");
-}
-
-void print_root_namespace( )
-{
-  scDataTypeValue_t value;
-
-  SC_NamespaceGet( "", & value );
-
-  print_namespace( value.data.namespace, 0 );
-}
 
 int value_equals( PyObject *pyvalue, scDataTypeValue_t *value)
 {
@@ -205,30 +209,30 @@ void test_basic( void )
 
   printf("A\\ Test Basic Conversion\n");
   printf("\t1: String coversion\n");
-  SC_StringNewFromChar( &s1, HELLO_WORLD );
+  s1 = SC_StringNewFromChar( HELLO_WORLD );
   value = BG_Alloc( sizeof( scDataTypeValue_t ));
   value->type = TYPE_STRING;
   value->data.string = s1;
   
-  temp = convert_from_sc_value( value );
+  temp = convert_from_value( value );
 //  print_pyobject( temp );
   assert( value_equals( temp, value ) );
   
   Py_DECREF( temp );
   printf("\t  ... ok\n");
-  SC_ValueFree( value );
+  SC_ValueGCDec( value );
   printf("\t2: Interger coversion\n");
   value->type = TYPE_INTEGER;
   value->data.integer = 1337;
-  temp = convert_from_sc_value( value );
+  temp = convert_from_value( value );
   assert( value_equals( temp, value ) );
   printf("\t  ... ok\n");
   Py_DECREF( temp );
-  SC_ValueFree( value );
+  SC_ValueGCDec( value );
   printf("\t2: Float coversion\n");
   value->type = TYPE_FLOAT;
   value->data.floating = 1337.0;
-  temp = convert_from_sc_value( value );
+  temp = convert_from_value( value );
   assert( value_equals( temp, value ) );
   printf("\t  ... ok\n");
   Py_DECREF( temp );
@@ -245,24 +249,24 @@ void test_advanced( void )
 
   printf("B\\ Test Advanced Conversion\n");
   printf("\t1: Array conversion\n");
-  SC_ArrayNew( &array );
+  array = SC_ArrayNew();
   
   value1.type = TYPE_STRING;
-  SC_StringNewFromChar( & value1.data.string, HELLO_WORLD );
-  SC_ArraySet( &array, 4, & value1 );
+  value1.data.string = SC_StringNewFromChar( HELLO_WORLD );
+  SC_ArraySet( array, 4, & value1 );
 
   value1.type = TYPE_INTEGER;
   value1.data.integer = 1337;
-  SC_ArraySet( &array, 30, & value1 );
+  SC_ArraySet( array, 30, & value1 );
 
   value1.type = TYPE_FLOAT;
   value1.data.floating = 43.7;
-  SC_ArraySet( &array, 0, & value1 );
+  SC_ArraySet( array, 0, & value1 );
   
   arrayvalue.type = TYPE_ARRAY;
   arrayvalue.data.array = array;
   
-  temp = convert_from_sc_value( &arrayvalue );
+  temp = convert_from_value( &arrayvalue );
   
   assert(PyList_Check(temp));
   //TODO: Proper testing
@@ -274,32 +278,36 @@ void test_advanced( void )
   printf("\t  ... ok\n");
   
   printf("\t2: Hash conversion\n");
-  SC_HashNew( &hash );
+  hash = SC_HashNew();
 
   SC_HashGet( hash, "plop", & value1 );
 
   SC_HashGet( hash, "", & value1 );
 
   value1.type = TYPE_STRING;
-  SC_StringNewFromChar( & value1.data.string, HELLO_WORLD );
-  SC_HashSet( &hash, "plop", & value1 );
+  value1.data.string = SC_StringNewFromChar( HELLO_WORLD );
+  SC_HashSet( hash, "plop", & value1 );
 
   value1.type = TYPE_INTEGER;
   value1.data.integer = 1337;
-  SC_HashSet( &hash, "dfad", & value1 );
+  SC_HashSet( hash, "dfad", & value1 );
 
   value1.type = TYPE_FLOAT;
   value1.data.floating = 43.7;
-  SC_HashSet( &hash, "plop", & value1 );
+  SC_HashSet( hash, "plop", & value1 );
   
   hashvalue.type = TYPE_HASH;
   hashvalue.data.hash = hash;
   
-  temp = convert_from_sc_value( &hashvalue );
+  temp = convert_from_value( &hashvalue );
   
   assert(PyDict_Check(temp));
   
   print_pyobject( temp ); 
+  
+  convert_to_value ( temp, &value1, TYPE_ANY );
+  
+  print_value( &value1, 0 );
   
   printf("\t  ... ok\n");
   
