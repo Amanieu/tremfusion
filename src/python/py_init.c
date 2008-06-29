@@ -26,32 +26,35 @@ void PY_Init( void )
 {
   PyObject *servermodule;
   
-  Com_Printf( "----- PY_Init -----\n" );
-  // Initialize python
-  Py_Initialize();
-  // Make python threads work at all
-  PyEval_InitThreads( );
-  
-  PyRun_SimpleString("import os, sys, time"); // Import some basic modules
-  PyRun_SimpleString("print \"Python version: \" + sys.version.replace(\"\\n\", \"\\nBuilt with: \")"); // Make sys.version prettier and print it
-  
-  // Create a module for server related stuff...
-  servermodule = Py_InitModule("server", server_methods);
-  // ...like whether or not its running
-  PyRun_SimpleString( serverModuleInitstring);
-  PyRun_SimpleString("server.running = True\n");
-  Python_Initialized = qtrue;
+//  Com_Printf( "----- PY_Init -----\n" );
+//  // Initialize python
+//  Py_Initialize();
+//  // Make python threads work at all
+//  PyEval_InitThreads( );
+//  
+//  PyRun_SimpleString("import os, sys, time"); // Import some basic modules
+//  PyRun_SimpleString("print \"Python version: \" + sys.version.replace(\"\\n\", \"\\nBuilt with: \")"); // Make sys.version prettier and print it
+//  
+//  // Create a module for server related stuff...
+//  servermodule = Py_InitModule("server", server_methods);
+//  // ...like whether or not its running
+//  PyRun_SimpleString( serverModuleInitstring);
+//  PyRun_SimpleString("server.running = True\n");
+//  Python_Initialized = qtrue;
 }
 
 void PY_CvarInit( void ){
-  PyImport_AddModule("cvar"); //Add module
-  Py_InitModule("cvar", cvar_methods);
-  PyRun_SimpleString("import cvar\n");
+  if (Python_Initialized)
+  {
+    PyImport_AddModule("cvar"); //Add module
+    Py_InitModule("cvar", cvar_methods);
+    PyRun_SimpleString("import cvar\n");
+  }
 }
 
 void PY_Shutdown() {
-  Python_Initialized = qfalse;
-  Com_Printf("Shutdown python interpreter\n");
-  Py_Finalize();
-  Com_Printf("Shutdown of python interpreter complete\n");
+//  Python_Initialized = qfalse;
+//  Com_Printf("Shutdown python interpreter\n");
+//  Py_Finalize();
+//  Com_Printf("Shutdown of python interpreter complete\n");
 }

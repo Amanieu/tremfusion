@@ -35,6 +35,13 @@ PyObject *gamemodule;
 PyObject *vec3d_module;
 PyObject *vec3d;
 
+/* 
+ * We can't keep making new python module objects everytime we call 
+ * update_context so we steal them from the main dict
+ */
+PyObject *mainModule;
+PyObject *mainDict;
+
 static void convert_to_sc_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 
 /* Convert a python object into a script data value */
@@ -122,7 +129,7 @@ static PyObject *convert_from_array( scDataTypeArray_t *array )
   int i;
   PyObject *list;
 
-  list = PyList_New( array->size );
+  list = PyList_New( array->size ); // Creat a new python list
   for( i = 0; i < array->size; i++ )
   {
     PyList_SetItem( list, i, convert_from_sc_value( &array->data[i] ) );
@@ -176,12 +183,19 @@ PyObject *convert_from_sc_value( scDataTypeValue_t *value )
   }
 }
 #ifndef UNITTEST
+
 void SC_Python_Init( void )
 {
   char            buf[MAX_STRING_CHARS];
 
   G_Printf("------- Game Python Initialization -------\n");
-
+  Py_Initialize();
+  // Make python threads work at all
+  PyEval_InitThreads( );
+  
+  mainModule = PyImport_AddModule("__main__"); // get __main__ ...
+  mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ...
+  
   PyImport_AddModule("game");
   gamemodule = Py_InitModule("game", game_methods);
   if (PyType_Ready(&EntityType) < 0)
@@ -192,27 +206,18 @@ void SC_Python_Init( void )
     return;
   Py_INCREF(&EntityStateType);
   PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
-  if (PyType_Ready(&Vec3dType) < 0)
-    return;
-  Py_INCREF(&Vec3dType);
-  PyModule_AddObject(gamemodule, "Vec3d", (PyObject *)&Vec3dType);
-  PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
-  vec3d_module= PyImport_ImportModule("vec3d");
-  if (!vec3d_module){
-    Com_Printf("^1Cannot find vec3d.py\n");
-    vec3d = NULL;
-  } else {
-    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
-  }
-  
-  // load global scripts
-  G_Printf("global python scripts:\n");
-//  initPython_global();
-
-  // load map-specific lua scripts
-  G_Printf("map specific python scripts:\n");
-  trap_Cvar_VariableStringBuffer("mapname", buf, sizeof(buf));
-//  initPython_local( buf );
+//  if (PyType_Ready(&Vec3dType) < 0)
+//    return;
+//  Py_INCREF(&Vec3dType);
+//  PyModule_AddObject(gamemodule, "Vec3d", (PyObject *)&Vec3dType);
+//  PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
+//  vec3d_module= PyImport_ImportModule("vec3d");
+//  if (!vec3d_module){
+//    Com_Printf("^1Cannot find vec3d.py\n");
+//    vec3d = NULL;
+//  } else {
+//    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
+//  }
 
   G_Printf("-----------------------------------\n");
 }
@@ -225,17 +230,38 @@ SC_Python_Shutdown
 void SC_Python_Shutdown( void )
 {
   G_Printf("------- Game Python Finalization -------\n");
+  Py_DECREF( mainModule );
+  Py_DECREF( mainDict );
 
-  if (vec3d_module){ 
-    Py_DECREF( vec3d_module);
-  }
-  if (vec3d){
-    Py_DECREF( vec3d );
-  }
-  if (gamemodule){
-    Py_DECREF( gamemodule );
-  }
+//  if (vec3d_module){ 
+//    Py_DECREF( vec3d_module);
+//    vec3d = NULL;
+//  }
+//  if (vec3d){
+//    Py_DECREF( vec3d );
+//    vec3d = NULL;
+//  }
+//  Py_DECREF( &EntityStateType );
+//  Py_DECREF( &EntityType );
+//  if (gamemodule){
+//    Py_DECREF( gamemodule );
+//    gamemodule = NULL;
+//  }
+  Py_Finalize();
   G_Printf("-----------------------------------\n");
+}
+
+
+static void update_context()
+{
+  // TODO: make better updating system
+  scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
+  int i;
+  for( i = 0; i < hash->size; i++ )
+  {
+//    push_value( L, &hash->data[i].value);
+//    lua_setglobal( L, SC_StringToChar(&hash->data[i].key));
+  }
 }
 
 void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )

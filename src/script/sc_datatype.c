@@ -569,9 +569,9 @@ qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )
   while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
   {
     Q_strncpyz( tmp, base, idx - base + 1 );
-	tmp[idx-base] = '\0';
+    tmp[idx-base] = '\0';
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, &tmpval ) )
-	{
+    {
       if( tmpval.type != TYPE_NAMESPACE )
         return qfalse;
     }
