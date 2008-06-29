@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_PYTHON
 
+#define MAX_PYTHONFILE 32768
+
 #include "sc_public.h"
 #include "sc_python.h"
 //#include "../python/python_local.h"
@@ -186,8 +188,8 @@ PyObject *convert_from_sc_value( scDataTypeValue_t *value )
 
 void SC_Python_Init( void )
 {
-  char            buf[MAX_STRING_CHARS];
-
+  scDataTypeValue_t *value;
+  
   G_Printf("------- Game Python Initialization -------\n");
   Py_Initialize();
   // Make python threads work at all
@@ -195,7 +197,12 @@ void SC_Python_Init( void )
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ...
+//  
+//  value = BG_Alloc( sizeof( scDataTypeValue_t ));
+//  value->type = TYPE_INTEGER;
+//  value->data.integer = 1337;
   
+//  SC_NamespaceSet("game.test", value);
   PyImport_AddModule("game");
   gamemodule = Py_InitModule("game", game_methods);
   if (PyType_Ready(&EntityType) < 0)
@@ -251,17 +258,87 @@ void SC_Python_Shutdown( void )
   G_Printf("-----------------------------------\n");
 }
 
+static void update_module( scDataTypeString_t *module, scDataTypeValue_t *value )
+{
+  PyObject *pyModule;
+  scDataTypeHash_t* hash =(scDataTypeHash_t*) value->data.namespace;
+  
+  pyModule = PyImport_AddModule( SC_StringToChar( module ) );
+  if (!pyModule)
+    return; //ERROR!
+  int i;
+  for( i = 0; i < hash->size; i++ )
+  {
+    PyModule_AddObject( pyModule, SC_StringToChar(&hash->data[i].key), convert_from_sc_value( &hash->data[i].value ));
+  }
+}
 
-static void update_context()
+static void update_context( void )
 {
   // TODO: make better updating system
   scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
   int i;
   for( i = 0; i < hash->size; i++ )
   {
-//    push_value( L, &hash->data[i].value);
-//    lua_setglobal( L, SC_StringToChar(&hash->data[i].key));
+    if ( hash->data[i].value.type == TYPE_NAMESPACE )
+    {
+      update_module( &hash->data[i].key,  &hash->data[i].value );
+    }
+    else 
+    {
+      PyModule_AddObject( mainModule, SC_StringToChar(&hash->data[i].key), convert_from_sc_value( &hash->data[i].value ));
+    }
   }
+}
+
+/*
+=================
+SC_Python_RunScript
+=================
+*/
+qboolean SC_Python_RunScript( const char *filename )
+{
+  int             len;
+  fileHandle_t    f;
+  char            buf[MAX_PYTHONFILE];
+  PyObject       *codeObject, *loc, *dum;
+
+  Com_Printf("...loading '%s'\n", filename);
+
+  len = trap_FS_FOpenFile(filename, &f, FS_READ);
+  if(!f)
+  {
+    Com_Printf(va(S_COLOR_RED "file not found: %s\n", filename));
+    return qfalse;
+  }
+
+  if(len >= MAX_PYTHONFILE)
+  {
+    Com_Printf(va(S_COLOR_RED "file too large: %s is %i, max allowed is %i\n", filename, len, MAX_PYTHONFILE));
+    trap_FS_FCloseFile(f);
+    return qfalse;
+  }
+
+  trap_FS_Read(buf, len, f);
+  buf[len] = 0;
+  trap_FS_FCloseFile(f);
+
+  update_context();
+  loc = PyDict_New ();
+  codeObject = Py_CompileString( buf, filename, Py_file_input );
+  if (!codeObject){
+    PyErr_Print( );
+    return qfalse;
+  }
+  PyDict_SetItemString (mainDict, "__builtins__", PyEval_GetBuiltins ());
+  dum = PyEval_EvalCode( (PyCodeObject*)codeObject, mainDict, loc );
+  if (!dum){
+    PyErr_Print( );
+    return qfalse;
+  }
+  Py_XDECREF(loc);
+  Py_XDECREF(dum);
+  return qtrue;
 }
 
 void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )

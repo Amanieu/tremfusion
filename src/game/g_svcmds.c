@@ -251,7 +251,7 @@ static void Svcmd_Script_f(void)
 {
   char filename[128];
   trap_Argv( 1, filename, 128 );
-  SC_RunScript( LANGAGE_LUA, filename );
+  SC_RunScript( SC_LangageFromFilename(filename), filename );
 }
 
 /*

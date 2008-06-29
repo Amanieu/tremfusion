@@ -32,7 +32,7 @@ PyObject *convert_from_sc_value( scDataTypeValue_t *value );
 
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );
-//qboolean            SC_Python_RunScript( const char *filename );
+qboolean            SC_Python_RunScript( const char *filename );
 void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 
 #endif

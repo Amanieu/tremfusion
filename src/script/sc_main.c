@@ -151,6 +151,10 @@ int SC_RunScript( scLangage_t langage, const char *filename )
     case LANGAGE_LUA:
       return SC_Lua_RunScript( filename );
 #endif
+#ifdef USE_PYTHON
+    case LANGAGE_PYTHON:
+      return SC_Python_RunScript( filename );
+#endif     
     default:
       Com_Printf(va("Can't load %s: unknow langage\n", filename));
 	  break;
