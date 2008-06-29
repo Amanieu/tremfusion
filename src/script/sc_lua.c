@@ -37,7 +37,32 @@ static void push_value(lua_State *L, scDataTypeValue_t *value);
 static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 static scDataTypeString_t* pop_string(lua_State *L);
 
-static int bridge( lua_State *L )
+static int null_metamethod(lua_State *L)
+{
+  // TODO: error message
+  return 0;
+}
+
+static int index_metamethod(lua_State *L)
+{
+  lua_getfield(L, -2, "_data");
+  lua_replace(L, -3);
+  lua_rawget(L, -2);
+  lua_remove(L, -2);
+
+  return 1;
+}
+
+static int newindex_metamethod(lua_State *L)
+{
+  lua_getfield(L, -3, "_data");
+  lua_replace(L, -4);
+  lua_rawset(L, -3);
+
+  return 0;
+}
+
+static int call_metamethod( lua_State *L )
 {
   scDataTypeFunction_t *function;
   int top = lua_gettop(L);
@@ -47,7 +72,7 @@ static int bridge( lua_State *L )
   
   // TODO: error cases
 
-  lua_getfield(L, -top, "_function");
+  lua_getfield(L, -top, "_ref");
   function = lua_touserdata(L, -1);
   lua_pop(L, 1);
 
@@ -203,19 +228,42 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
 {
   int i;
 
+  // global table
+  lua_newtable(L);
+
+  lua_pushlightuserdata(L, array);
+  lua_setfield(L, -2, "_ref");
+
+  // data table
   lua_newtable( L );
   for( i = 0; i < array->size; i++ )
   {
     push_value( L, &array->data[i] );
     lua_rawseti( L, -1, i );
   }
+  lua_setfield(L, -2, "_data");
+
+  // metatable
+  lua_newtable(L);
+  lua_pushcfunction(L, index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, newindex_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_setmetatable(L, -2);
 }
 
 static void push_hash( lua_State *L, scDataTypeHash_t *hash )
 {
   int i;
 
+  // global table
   lua_newtable( L );
+
+  lua_pushlightuserdata(L, hash);
+  lua_setfield(L, -2, "_ref");
+
+  // data table
+  lua_newtable(L);
   for( i = 0; i < hash->buflen; i++ )
   {
     if(SC_StringIsEmpty(&hash->data[i].key))
@@ -223,6 +271,15 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
     push_value( L, &hash->data[i].value);
     lua_setfield( L, -2, SC_StringToChar(&hash->data[i].key));
   }
+  lua_setfield(L, -2, "_data");
+
+  // metatable
+  lua_newtable(L);
+  lua_pushcfunction(L, index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, newindex_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_setmetatable(L, -2);
 }
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function )
@@ -230,12 +287,16 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   // function global table
   lua_newtable(L);
   lua_pushlightuserdata(L, function);
-  lua_setfield(L, -2, "_function");
+  lua_setfield(L, -2, "_ref");
 
   // function metatable
   lua_newtable(L);
-  lua_pushcfunction(L, bridge);
+  lua_pushcfunction(L, call_metamethod);
   lua_setfield(L, -2, "__call");
+  lua_pushcfunction(L, null_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, null_metamethod);
+  lua_setfield(L, -2, "__newindex");
 
   lua_setmetatable(L, -2);
 }
@@ -329,12 +390,14 @@ void SC_Lua_Init( void )
 {
   g_luaState = lua_open();
 
-  luaL_openlib(g_luaState, "stack", stacklib, 0);
+  luaL_register(g_luaState, "stack", stacklib);
+  lua_pop(g_luaState, 1);
 
   // Lua standard lib
   luaopen_base(g_luaState);
   luaopen_string(g_luaState);
   luaopen_table(g_luaState);
+  lua_pop(g_luaState, 4);
 }
 
 /*
