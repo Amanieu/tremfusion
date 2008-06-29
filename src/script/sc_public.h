@@ -53,6 +53,7 @@ typedef enum
 {
   TYPE_ANY=-1,
   TYPE_UNDEF,
+  TYPE_BOOLEAN,
   TYPE_INTEGER,
   TYPE_FLOAT,
   TYPE_STRING,
@@ -67,6 +68,7 @@ typedef struct
   int count;
 } scGC_t;
 
+typedef char  scDataTypeBoolean_t;
 typedef long  scDataTypeInteger_t;
 typedef float scDataTypeFloat_t;
 typedef struct
@@ -89,6 +91,7 @@ struct scDataTypeValue_s
   scDataType_t    type;
   union
   {
+    scDataTypeBoolean_t   boolean;
     scDataTypeInteger_t   integer;
     scDataTypeFloat_t     floating;
     scDataTypeString_t    *string;
@@ -173,7 +176,6 @@ void SC_StringClear(scDataTypeString_t *string);
 void SC_StringGCInc(scDataTypeString_t *string);
 void SC_StringGCDec(scDataTypeString_t *string);
 
-qboolean SC_ValueIsScalar( const scDataTypeValue_t *value );
 void SC_ValueGCInc(scDataTypeValue_t *value);
 void SC_ValueGCDec(scDataTypeValue_t *value);
 

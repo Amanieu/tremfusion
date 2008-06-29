@@ -147,12 +147,11 @@ static void pop_value( lua_State *L, scDataTypeValue_t *value, scDataType_t type
       }
       break;
 
-    // TODO: add boolean datatype
-    /*case LUA_TBOOLEAN:
+    case LUA_TBOOLEAN:
       value->type = TYPE_BOOLEAN;
       value->data.boolean = lua_toboolean(L, -1);
       lua_pop(L, 1);
-      break;*/
+      break;
 
     case LUA_TSTRING:
       value->type = TYPE_STRING;
@@ -248,6 +247,9 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
   {
     case TYPE_UNDEF:
       lua_pushnil(L);
+      break;
+    case TYPE_BOOLEAN:
+      lua_pushboolean(L, value->data.boolean);
       break;
     case TYPE_INTEGER:
       lua_pushinteger(L, value->data.integer);

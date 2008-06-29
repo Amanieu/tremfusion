@@ -132,13 +132,6 @@ void SC_StringGCDec(scDataTypeString_t *string)
 
 // Value
 
-qboolean SC_ValueIsScalar( const scDataTypeValue_t *value )
-{
-  return value->type == TYPE_INTEGER ||
-         value->type == TYPE_FLOAT ||
-         value->type == TYPE_STRING;
-}
-
 void SC_ValueGCInc(scDataTypeValue_t *value)
 {
   switch(value->type)
@@ -666,6 +659,11 @@ static void print_value( scDataTypeValue_t *value, int tab )
     case TYPE_UNDEF:
       print_tabs( tab );
       Com_Printf("<UNDEF>");
+      break;
+
+    case TYPE_BOOLEAN:
+      print_tabs(tab);
+      Com_Printf(value->data.boolean ? "true\n" : "false\n");
       break;
 
     case TYPE_INTEGER:
