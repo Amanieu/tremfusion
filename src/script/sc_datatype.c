@@ -46,10 +46,9 @@ static void print_namespace( scNamespace_t *hash, int tab );
 static void strRealloc( scDataTypeString_t *string, int maxLen )
 {
   char* old = string->data;
-  // TODO: implement a real realloc
-  // FIXME: must unlarge the string with a bigger buffer
-  string->buflen = maxLen;
-  string->data = (char*) BG_Alloc(maxLen);
+  // TODO: need a real realloc
+  string->buflen = maxLen * 2; // growing buffer
+  string->data = (char*) BG_Alloc(string->buflen);
 
   if(old)
   {
@@ -60,14 +59,13 @@ static void strRealloc( scDataTypeString_t *string, int maxLen )
 
 scDataTypeString_t *SC_StringNew(void)
 {
-  // FIXME: need an ideal buffer size
   scDataTypeString_t *string = (scDataTypeString_t*) BG_Alloc(sizeof(scDataTypeString_t));
+  string->gc.count = 0;
   string->length = 0;
   string->buflen = 0;
   string->data = NULL;
-  strRealloc(string, 1);
+  strRealloc(string, 32);
   string->data[0] = '\0';
-  string->gc.count = 0;
   return string;
 }
 
@@ -204,11 +202,8 @@ static void arrayRealloc(scDataTypeArray_t *array, int buflen)
 {
   scDataTypeValue_t *old = array->data;
 
-  // FIXME: must unlarge the array with a bigger buffer
-  // FIXME: create new tag
-
-  array->buflen = buflen;
-  array->data = (scDataTypeValue_t*) BG_Alloc( sizeof(scDataTypeValue_t) * buflen);
+  array->buflen = buflen * 2;
+  array->data = (scDataTypeValue_t*) BG_Alloc( sizeof(scDataTypeValue_t) * array->buflen);
 
   if(old)
   {
@@ -220,10 +215,11 @@ static void arrayRealloc(scDataTypeArray_t *array, int buflen)
 scDataTypeArray_t *SC_ArrayNew(void)
 {
   scDataTypeArray_t *array = (scDataTypeArray_t*) BG_Alloc(sizeof(scDataTypeArray_t));
+  array->gc.count = 0;
   array->buflen = 0;
   array->size = 0;
   array->data = NULL;
-  array->gc.count = 0;
+  arrayRealloc(array, 8);
   return array;
 }
 
@@ -311,8 +307,7 @@ static void hashRealloc(scDataTypeHash_t *hash, int buflen)
   scDataTypeHashEntry_t *old = hash->data;
 
   // FIXME: can't use realloc
-  // FIXME: must unlarge the hash with a bigger buffer
-  hash->buflen = buflen;
+  hash->buflen = buflen * 2;
   hash->data = (scDataTypeHashEntry_t*) BG_Alloc(sizeof(scDataTypeHashEntry_t) * hash->buflen);
 
   if(old)
@@ -325,10 +320,11 @@ static void hashRealloc(scDataTypeHash_t *hash, int buflen)
 scDataTypeHash_t* SC_HashNew(void)
 {
   scDataTypeHash_t *hash = (scDataTypeHash_t*) BG_Alloc(sizeof(scDataTypeHash_t));
+  hash->gc.count = 0;
   hash->size = 0;
   hash->buflen = 0;
   hash->data = NULL;
-  hash->gc.count = 0;
+  hashRealloc(hash, 8);
   return hash;
 }
 
@@ -415,7 +411,6 @@ scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
     {
       value.data.string = SC_StringNewFromChar(SC_StringToChar(&hash->data[iHash].key));
       SC_ArraySet( array, iArray, &value );
-      SC_StringGCDec(value.data.string);
       iArray++;
     }
   }
