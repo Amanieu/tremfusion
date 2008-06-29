@@ -216,8 +216,10 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
   int i;
 
   lua_newtable( L );
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < hash->buflen; i++ )
   {
+    if(SC_StringIsEmpty(&hash->data[i].key))
+      continue;
     push_value( L, &hash->data[i].value);
     lua_setfield( L, -2, SC_StringToChar(&hash->data[i].key));
   }
@@ -229,9 +231,6 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_newtable(L);
   lua_pushlightuserdata(L, function);
   lua_setfield(L, -2, "_function");
-
-  /*lua_pushcfunction(L, bridge);
-  lua_setfield(L, -2, "ref");*/
 
   // function metatable
   lua_newtable(L);
@@ -361,8 +360,10 @@ static void update_context(lua_State *L)
   // TODO: make better updating system
   scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
   int i;
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < hash->buflen; i++ )
   {
+    if(SC_StringIsEmpty(&hash->data[i].key))
+      continue;
     push_value( L, &hash->data[i].value);
     lua_setglobal( L, SC_StringToChar(&hash->data[i].key));
   }
