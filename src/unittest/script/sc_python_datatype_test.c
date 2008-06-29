@@ -296,6 +296,8 @@ void test_advanced( void )
   value1.data.floating = 43.7;
   SC_HashSet( hash, "plop", & value1 );
   
+  SC_HashSet( hash, "arraytest", & arrayvalue );
+  
   hashvalue.type = TYPE_HASH;
   hashvalue.data.hash = hash;
   

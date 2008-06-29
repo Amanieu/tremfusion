@@ -58,11 +58,50 @@ static scDataTypeHash_t* convert_to_hash( PyObject *hash_obj )
   return hash;
 }
 
+static scDataTypeArray_t* convert_to_array( PyObject *array_obj )
+{
+  scDataTypeValue_t val;
+  int index;
+  scDataTypeArray_t *array = SC_ArrayNew();
+  PyObject *iterator = PyObject_GetIter(array_obj);
+  PyObject *item;
+
+  if (iterator == NULL) {
+    return array;
+  }
+
+  index = 0;
+  while (item = PyIter_Next(iterator)) {
+    convert_to_value( item, &val, TYPE_ANY );
+    SC_ArraySet(array, index, &val);
+    Py_DECREF(item);
+    index++;
+  }
+
+  Py_DECREF(iterator);
+
+  if (PyErr_Occurred()) {
+      /* propagate error */
+  }
+  else {
+      /* continue doing useful work */
+  }
+  return array;
+}
 static scDataTypeString_t* convert_to_string( PyObject *str_obj  )
 {
   const char *pystr = PyString_AsString( str_obj );
   scDataTypeString_t *string = SC_StringNewFromChar(pystr);
   return string;
+}
+
+static scDataTypeFunction_t* convert_to_function( PyObject *function_obj  )
+{
+  scDataTypeFunction_t *function = SC_FunctionNew();
+  function->langage = LANGAGE_PYTHON;
+  Py_INCREF(function_obj);
+  function->data.pyfunc= function_obj;
+  return function;
 }
 
 /* Convert a python object into a script data value */
@@ -91,41 +130,21 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
     value->type = TYPE_STRING;
     value->data.string = convert_to_string( pyvalue );
   }
-  else if (  PyDict_Check(pyvalue) )
+  else if ( PyDict_Check(pyvalue) )
   {
     value->type = TYPE_HASH;
     value->data.hash = convert_to_hash( pyvalue );
   }
-//    case LUA_TTABLE:
-//      if(type == TYPE_ANY)
-//      {
-//        int isArray = pop_hash(L, &value->data.hash);
-//        // TODO: implement SC_HashToArray function
-//        /*if(isArray)
-//        {
-//          scDataTypeHash_t *hash = value->data.hash;
-//          value->type = TYPE_ARRAY;
-//          SC_HashToArray(hash, &value->data.array);
-//        }
-//        else*/
-//          value->type = TYPE_HASH;
-//      }
-//      if(type == TYPE_ARRAY)
-//      {
-//        value->type = TYPE_ARRAY;
-//        pop_array(L, &value->data.array);
-//      }
-//      else if(type == TYPE_HASH)
-//      {
-//        value->type = TYPE_HASH;
-//        pop_hash(L, &value->data.hash);
-//      }
-//      else
-//      {
-//        //TODO: Error
-//      }
-//      break;
-//
+  else if ( PyList_Check(pyvalue) || PyTuple_Check( pyvalue ) )
+  {
+    value->type = TYPE_ARRAY;
+    value->data.array = convert_to_array( pyvalue );
+  }
+  else if ( PyCallable_Check(pyvalue) )
+  {
+    value->type = TYPE_FUNCTION;
+    value->data.function = convert_to_function( pyvalue );
+  }
 //    case LUA_TFUNCTION:
 //      value->type = TYPE_FUNCTION;
 //      pop_function(L, value->data.function);
