@@ -299,7 +299,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 			}
 		}
 		for ( i = 0 ; i < fs_numExtraPaks ; i++ ) {
-			if ( pack->pakBasename == fs_extraPaks[i] ) {
+			if ( !Q_stricmp( pack->pakBasename, fs_extraPaks[i] ) ) {
 				return qtrue;		// on the aproved list
 			}
 		}
@@ -2685,7 +2685,7 @@ static void FS_ReorderExtraPaks( void )
 		p_previous = p_insert_index; // track the pointer-to-current-item
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
-			if (s->pack && fs_extraPaks[i] == s->pack->pakBasename) {
+			if (s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
