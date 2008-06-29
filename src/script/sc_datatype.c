@@ -300,19 +300,24 @@ void SC_ArrayGCDec(scDataTypeArray_t *array)
 
 // Hash
 
-// TODO: Make a better HashTable implementation
-
-static void hashRealloc(scDataTypeHash_t *hash, int buflen)
+static void hashRealloc(scDataTypeHash_t *hash)
 {
   scDataTypeHashEntry_t *old = hash->data;
+  int oldLen = hash->buflen;
+  int i;
 
-  // FIXME: can't use realloc
-  hash->buflen = buflen * 2;
+  hash->buflen *= 2;
   hash->data = (scDataTypeHashEntry_t*) BG_Alloc(sizeof(scDataTypeHashEntry_t) * hash->buflen);
+  hash->size = 0;
+
+  memset(hash->data, 0x00, sizeof(scDataTypeHashEntry_t) * hash->buflen);
 
   if(old)
   {
-    memcpy( hash->data, old, sizeof(scDataTypeHashEntry_t) * hash->size);
+    for(i=0; i < oldLen; i++)
+      if(!SC_StringIsEmpty(&old[i].key))
+        SC_HashSet(hash, SC_StringToChar(&old[i].key), &old[i].value);
+
     BG_Free(old);
   }
 }
@@ -322,16 +327,45 @@ scDataTypeHash_t* SC_HashNew(void)
   scDataTypeHash_t *hash = (scDataTypeHash_t*) BG_Alloc(sizeof(scDataTypeHash_t));
   hash->gc.count = 0;
   hash->size = 0;
-  hash->buflen = 0;
+  hash->buflen = 16;
   hash->data = NULL;
-  hashRealloc(hash, 8);
+  hashRealloc(hash);
   return hash;
+}
+
+static unsigned int getHash(const char *key)
+{
+  int hash = 0;
+  int i;
+  int len = strlen(key);
+
+  for(i = 0; i < len; i++)
+  {
+    hash += key[i];
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+  }
+  hash += (hash << 3);
+  hash ^= (hash >> 11);
+  hash += (hash << 15);
+  return hash;
+}
+
+static unsigned int findSlot(scDataTypeHash_t *hash, const char *key)
+{
+  unsigned int i;
+
+  i = getHash(key) % hash->buflen;
+
+  while(!SC_StringIsEmpty(&hash->data[i].key) && strcmp(key, SC_StringToChar(&hash->data[i].key)))
+    i = (i + 1) % hash->buflen;
+
+  return i;
 }
 
 qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value)
 {
-  int i;
-  scDataTypeString_t *iKey;
+  unsigned int i;
 
   if(strlen(key) == 0)
   {
@@ -339,73 +373,59 @@ qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *
     return qfalse;
   }
 
-  for( i = 0; i < hash->size; i++ )
+  i = findSlot(hash, key);
+  if(SC_StringIsEmpty(&hash->data[i].key) || strcmp(SC_StringToChar(&hash->data[i].key), key) != 0)
   {
-    iKey = &hash->data[i].key;
-    if( iKey && strcmp( SC_StringToChar(iKey), key ) == 0 )
-    {
-      memcpy(value, &hash->data[i].value, sizeof(scDataTypeValue_t));
-      return qtrue;
-    }
+    value->type = TYPE_UNDEF;
+    return qfalse;
   }
 
-  value->type = TYPE_UNDEF;
-  return qfalse;
+  memcpy(value, &hash->data[i].value, sizeof(scDataTypeValue_t));
+  return qtrue;
 }
 
 qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value )
 {
-  int i, freeIdx = -1;
-  scDataTypeString_t *iKey;
+  unsigned int i;
 
   if(strlen(key) == 0)
     return qfalse;
 
-  for( i = 0; i < hash->size; i++ )
+  i = findSlot(hash, key);
+
+  if(!SC_StringIsEmpty(&hash->data[i].key))
   {
-    iKey = &hash->data[i].key;
-    if( ! iKey )
-    {
-      if(freeIdx == -1)
-        freeIdx = i;
-    }
-    if( strcmp( SC_StringToChar(iKey), key ) == 0 )
-    {
-      SC_ValueGCInc(value);
-      SC_ValueGCDec(&hash->data[i].value);
-      memcpy(&hash->data[i].value, value, sizeof(scDataTypeValue_t));
-      return qtrue;
-    }
+    SC_ValueGCInc(value);
+    SC_ValueGCDec(&hash->data[i].value);
+    memcpy(&hash->data[i].value, value, sizeof(scDataTypeValue_t));
+    return qtrue;
   }
-
-  if( freeIdx == -1 )
+  else
   {
-    freeIdx = hash->size;
-
-    if(hash->size == hash->buflen)
-      hashRealloc( hash, hash->size + 1 );
-
+    if(hash->size >= hash->buflen * 75 / 100)
+      hashRealloc(hash);
+    
     hash->size++;
-  }
-  
-  SC_ValueGCInc(value);
-  SC_Strcpy(&hash->data[freeIdx].key, key);
-  memcpy(&hash->data[freeIdx].value, value, sizeof(scDataTypeValue_t));
 
-  return qtrue;
+    SC_ValueGCInc(value);
+    SC_Strcpy(&hash->data[i].key, key);
+    memcpy(&hash->data[i].value, value, sizeof(scDataTypeValue_t));
+
+    return qtrue;
+  }
 }
 
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
 {
   scDataTypeArray_t *array;
-  int iHash, iArray;
+  unsigned int iHash, iArray;
   scDataTypeValue_t value;
   
   array = SC_ArrayNew();
 
   iArray = 0;
   value.type = TYPE_STRING;
-  for( iHash = 0; iHash < hash->size; iHash++ )
+  for( iHash = 0; iHash < hash->buflen; iHash++ )
   {
     if(!SC_StringIsEmpty(&hash->data[iHash].key))
     {
@@ -420,40 +440,48 @@ scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
 
 qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key)
 {
-  scDataTypeString_t *iKey;
-  int i;
+  unsigned int i,j, k;
 
-  for(i = 0; i < hash->size; i++)
+  if(strcmp(key, "") == 0)
+    return qfalse;
+
+  i = findSlot(hash, key);
+  if(strcmp(SC_StringToChar(&hash->data[i].key), key) != 0)
+    return qfalse;
+
+  SC_StringClear(&hash->data[i].key);
+  SC_ValueGCDec(&hash->data[i].value);
+  hash->size--;
+
+  j = (i+1) % hash->buflen;
+  while(!SC_StringIsEmpty(&hash->data[j].key))
   {
-    iKey = &hash->data[i].key;
-    if(iKey && strcmp (SC_StringToChar(iKey), key) == 0)
+    k = getHash(SC_StringToChar(&hash->data[j].key)) % hash->buflen;
+
+    if((j > i && (k <= i || k > j)) ||
+       (j < i && (k <= i && k > j)))
     {
-      SC_StringClear(&hash->data[i].key);
-
-      SC_ValueGCDec(&hash->data[i].value);
-
-      if( i == hash->size - 1 )
-      {
-        do
-        {
-          hash->size--;
-        } while(SC_StringIsEmpty(&hash->data[hash->size - 1].key) && hash->size > 0);
-      }
-
-      return qtrue;
+      SC_Strcpy(&hash->data[i].key, SC_StringToChar(&hash->data[j].key));
+      SC_StringClear(&hash->data[j].key);
+      memcpy(&hash->data[i].value, &hash->data[j].value, sizeof(scDataTypeValue_t));
+      i = j;
     }
+    j = (j+1) % hash->buflen;
   }
 
-  return qfalse;
+  return qtrue;
 }
 
 void SC_HashClear( scDataTypeHash_t *hash )
 {
   int i;
-  for( i = 0; i < hash->size; i++ )
+  for( i = 0; i < hash->buflen; i++ )
   {
-    SC_StringClear(&hash->data[i].key);
-    SC_ValueGCDec(&hash->data[i].value);
+    if(!SC_StringIsEmpty(&hash->data[i].key))
+    {
+      SC_StringClear(&hash->data[i].key);
+      SC_ValueGCDec(&hash->data[i].value);
+    }
   }
 
   hash->size = 0;
@@ -461,6 +489,7 @@ void SC_HashClear( scDataTypeHash_t *hash )
 
 static void hashFree( scDataTypeHash_t *hash )
 {
+  // FIXME: Memory leak with keys
   SC_HashClear(hash);
   BG_Free(hash->data);
   BG_Free(hash);

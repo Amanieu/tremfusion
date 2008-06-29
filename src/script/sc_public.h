@@ -112,7 +112,6 @@ struct scDataTypeHash_s
   scGC_t                gc;
   int                   size;
   int                   buflen;
-  // TODO: a hash table should be a tree
   struct scDataTypeHashEntry_s
   {
     scDataTypeString_t  key;

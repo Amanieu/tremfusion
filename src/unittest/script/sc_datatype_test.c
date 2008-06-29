@@ -179,7 +179,7 @@ void test_hashs()
   printf("\t3: Set/Get values\n");
   value1.type = TYPE_STRING;
   value1.data.string = SC_StringNewFromChar(HELLO_WORLD);
-  SC_HashSet( hash, "plop", & value1 );
+  assert(SC_HashSet( hash, "plop", & value1 ) == qtrue);
   assert( hash->size == 1 );
   assert( SC_HashGet( hash, "plop", & value2 ) );
   assert( value2.type == TYPE_STRING );
