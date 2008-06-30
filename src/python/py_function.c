@@ -65,15 +65,27 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs )
   scDataTypeValue_t ret;
   scDataTypeValue_t *arg;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
-  argcount =0;
-  for (arg=self->function->argument; arg->type != TYPE_UNDEF; arg++ )
-  {
-    argcount++;
-  }
+  argcount = 0;
   
-//  function = self->function;
+  argcount = PyTuple_Size( pArgs );
+  
+  for( i=0; i < argcount; i++)
+  {
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], self->function->argument[i] );
+    if (args[i].type != self->function->argument[i] )
+    {
+      PyErr_SetNone(PyExc_TypeError);
+      return NULL;
+    }
+  }
+  args[argcount].type = TYPE_UNDEF;
+  
+  SC_RunFunction( self->function, args, &ret );
+  
+  
+  
   Com_Printf("HII\n");
-  return Py_BuildValue("i", argcount );
+  return convert_from_value(&ret);
 }
 
 static PyMemberDef PyFunction_members[] = {

@@ -340,7 +340,9 @@ void test_function( void )
   
   args[0].type = TYPE_STRING;
   args[0].data.string = SC_StringNewFromChar( HELLO_WORLD );
-  args[1].type = TYPE_UNDEF;
+  args[1].type = TYPE_STRING;
+  args[1].data.string = SC_StringNewFromChar( HELLO_WORLD );
+  args[2].type = TYPE_UNDEF;
   
   print_value( &args[0], 0 );
   

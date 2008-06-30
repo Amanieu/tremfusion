@@ -441,6 +441,11 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
     ArgsTuple = PyTuple_New( 0 );
   ReturnValue = PyObject_CallObject( func->data.pyfunc, ArgsTuple); // do the call
   Py_DECREF(ArgsTuple);
+  if (!ReturnValue)
+  {
+    PyErr_Print();
+    return;
+  }
   convert_to_value(ReturnValue, ret, TYPE_ANY);
   Py_DECREF(ReturnValue);
 }
