@@ -371,7 +371,7 @@ static void QDECL Parse_ScriptError(script_t *script, char *str, ...)
   if (script->flags & SCFL_NOERRORS) return;
 
   va_start(ap, str);
-  vsprintf(text, str, ap);
+  Q_vsnprintf(text, sizeof(text), str, ap);
   va_end(ap);
   Com_Printf( "file %s, line %d: %s\n", script->filename, script->line, text);
 }
@@ -389,7 +389,7 @@ static void QDECL Parse_ScriptWarning(script_t *script, char *str, ...)
   if (script->flags & SCFL_NOWARNINGS) return;
 
   va_start(ap, str);
-  vsprintf(text, str, ap);
+  Q_vsnprintf(text, sizeof(text), str, ap);
   va_end(ap);
   Com_Printf( "file %s, line %d: %s\n", script->filename, script->line, text);
 }
@@ -1120,7 +1120,7 @@ static void QDECL Parse_SourceError(source_t *source, char *str, ...)
   va_list ap;
 
   va_start(ap, str);
-  vsprintf(text, str, ap);
+  Q_vsnprintf(text, sizeof(text), str, ap);
   va_end(ap);
   Com_Printf( "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text);
 }
@@ -1136,7 +1136,7 @@ static void QDECL Parse_SourceWarning(source_t *source, char *str, ...)
   va_list ap;
 
   va_start(ap, str);
-  vsprintf(text, str, ap);
+  Q_vsnprintf(text, sizeof(text), str, ap);
   va_end(ap);
   Com_Printf( "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text);
 }
