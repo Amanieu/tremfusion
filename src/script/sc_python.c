@@ -48,12 +48,14 @@ static scDataTypeHash_t* convert_to_hash( PyObject *hash_obj )
 {
   scDataTypeValue_t val;
   scDataTypeHash_t *hash = SC_HashNew();
-  PyObject *key, *value;
+  PyObject *key, *value, *keystr;
   Py_ssize_t pos = 0;
 
   while (PyDict_Next(hash_obj, &pos, &key, &value)) {
       convert_to_value( value, &val, TYPE_ANY );
-      SC_HashSet(hash, PyString_AsString( key ), &val);
+      keystr = PyObject_Str( key );
+      SC_HashSet(hash, PyString_AsString( keystr ), &val);
+      Py_DECREF(keystr);
   }
   return hash;
 }
@@ -218,7 +220,7 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
     case TYPE_FLOAT:
       return Py_BuildValue("f", value->data.floating ); // Python float type
     case TYPE_STRING:
-      return Py_BuildValue("s", & value->data.string->data ); // Python str type
+      return Py_BuildValue("s", value->data.string->data ); // Python str type
     case TYPE_ARRAY:
       return convert_from_array( value->data.array );
     case TYPE_HASH:
@@ -400,38 +402,47 @@ qboolean SC_Python_RunScript( const char *filename )
   return qtrue;
 }
 
+#endif /*#ifndef UNITTEST*/
+
 void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
-  int narg;
   scDataType_t *dt;
-  scDataTypeValue_t *value;
 //  PyObject *pyvalue;
   PyObject *ArgsTuple, *ReturnValue;
-
-  narg = 0;
-  dt = (scDataType_t*) func->argument;
-  value = args;
   
-  while( *dt != TYPE_UNDEF )
+  if (args)
   {
-    narg++;
+    scDataTypeValue_t *value;
+    int index, narg;
+    value = args;
+    
+    narg = 0;
+    
+    while ( value->type != TYPE_UNDEF )
+    {
+      narg++;
+      value++;
+    }
+#ifdef UNITTEST
+    printf("%d args\n", narg);
+#endif
+    ArgsTuple = PyTuple_New( narg );
+    
+    value = args;
+    index = 0;
+    while ( value->type != TYPE_UNDEF )
+    {
+      PyTuple_SetItem( ArgsTuple, index++, convert_from_value( value ) );
+      narg++;
+      value++;
+    }
   }
-  
-  ArgsTuple = PyTuple_New( narg );
-  narg = 0;
-  while( *dt != TYPE_UNDEF )
-  {
-    PyTuple_SetItem(ArgsTuple, narg, convert_from_value( args ) );
-
-    dt++;
-    value++;
-    narg++;
-  }
-  // do the call
+  else
+    ArgsTuple = PyTuple_New( 0 );
   ReturnValue = PyObject_CallObject( func->data.pyfunc, ArgsTuple); // do the call
   Py_DECREF(ArgsTuple);
-  convert_to_value(ReturnValue, ret, func->return_type);
+  convert_to_value(ReturnValue, ret, TYPE_ANY);
   Py_DECREF(ReturnValue);
 }
-#endif /*#ifndef UNITTEST*/
+
 #endif

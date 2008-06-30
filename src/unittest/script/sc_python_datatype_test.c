@@ -55,7 +55,7 @@ static void print_value( scDataTypeValue_t *value, int tab )
   {
     case TYPE_UNDEF:
       print_tabs( tab );
-      Com_Printf("<UNDEF>");
+      Com_Printf("<UNDEF>\n");
       break;
 
     case TYPE_BOOLEAN:
@@ -182,7 +182,8 @@ int value_equals( PyObject *pyvalue, scDataTypeValue_t *value)
     case TYPE_STRING:
       if (!PyString_Check( pyvalue ) )
         return 0;
-     return strcmp( PyString_AsString( pyvalue ), & value->data.string->data ) == 0;
+     printf( "testing if %s == %s\n", PyString_AsString( pyvalue ), value->data.string->data );
+     return strcmp( PyString_AsString( pyvalue ), value->data.string->data ) == 0;
 //
 //    case TYPE_ARRAY:
 //      print_array( value->data.array, tab );
@@ -317,13 +318,63 @@ void test_advanced( void )
   printf("  ... Test Advanced Conversion: ok\n");
 }
 
+PyObject *test_module;
+
+void test_function( void )
+{
+  PyObject *test_function;
+  scDataTypeValue_t value, value1, *ret, *ret2;
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+
+  printf("C\\ Test Function Conversion\n");
+  printf("\t1: Python Function to Script Function coversion\n");
+  ret = BG_Alloc( sizeof( scDataTypeValue_t ));
+
+  test_function = PyObject_GetAttrString(test_module, "test_function" );
+  if (!test_function)
+  {
+    PyErr_Print();
+    printf("Cannot find test_function in test_module.py\n");
+    return;
+  }
+  
+  args[0].type = TYPE_STRING;
+  args[0].data.string = SC_StringNewFromChar( HELLO_WORLD );
+  args[1].type = TYPE_UNDEF;
+  
+  print_value( &args[0], 0 );
+  
+  assert(PyCallable_Check(test_function));
+  convert_to_value( test_function, &value , TYPE_ANY );
+  
+  SC_Python_RunFunction( value.data.function, args, ret );
+  
+  print_value( ret, 0 );
+  
+  SC_Python_RunFunction( ret->data.function, NULL, ret2);
+}
+
 int main ()
 {
   Py_Initialize();
   PyRun_SimpleString("import os, sys, time"); // Import some basic modules
   PyRun_SimpleString("print \"Python version: \" + sys.version.replace(\"\\n\", \"\\nBuilt with: \")"); // Make sys.version prettier and print it
+//  PyRun_SimpleString("print sys.path");
+  PyRun_SimpleString("sys.path.append(\".\")");
   BG_InitMemory( );
+  
+  test_module = PyImport_ImportModule("test_module");
+  if (!test_module)
+  {
+    printf("Python test module \"test_module.py\" cannot be found\nCannot test python function conversion\n");
+    PyErr_Print( );// print the error
+  }
+  
   test_basic();
   test_advanced();
+  
+  if (test_module)
+    test_function();
+  
   Py_Finalize();
 }
