@@ -3,6 +3,7 @@
 #include "sys_local.h"
 
 #include <curses.h>
+#include <signal.h>
 
 #define LOG_BUF_SIZE 2048
 
@@ -34,11 +35,41 @@ _window win3;
 _window win4;
 _window win5;
 
+/* helper functions */
+static void NewWin ( _window * );
+static void ResizeWin ( _window * );
+static void SetWins ( void );
+static void InitWins ( void );
+static void ResizeWins ( void );
+static void RefreshWins ( void );
+static void DrawWins ( void );
+static void ClearWins ( void );
+
+static void SigTrap ( void );
+static void SigHndlr ( int );
+
+static void CursResize ( void );
+static void LogPrint ( char * );
+
+/* tremulous functions */
+void CON_Print ( const char * );
+void CON_Init ( void );
+void CON_Shutdown ( void );
+char *CON_Input ( void );
+
+/* create a new window */
 static void NewWin ( _window *win )
 {
 	win->win = newwin(win->lines, win->cols, win->y, win->x);
 }
 
+/* resize a window */
+static void ResizeWin ( _window *win )
+{
+	wresize(win->win, win->lines, win->cols);
+}
+
+/* set the size of the windows from the root window size */
 static void SetWins ( void )
 {
 	int root_y, root_x;
@@ -76,6 +107,7 @@ static void SetWins ( void )
 	win5.y = (root_y - 1);
 }
 
+/* make all of the happy windows */
 static void InitWins ( void )
 {
 	NewWin(&win0);
@@ -86,6 +118,20 @@ static void InitWins ( void )
 	NewWin(&win5);
 }
 
+/* resize all windows to their win.lines/cols size */
+static void ResizeWins ( void )
+
+{
+	ResizeWin(&win0);
+	ResizeWin(&win1);
+	ResizeWin(&win2);
+	ResizeWin(&win3);
+	ResizeWin(&win4);
+	ResizeWin(&win5);
+}
+
+
+/* refresh all of the windows */
 static void RefreshWins ( void )
 {
 	wrefresh(win0.win);
@@ -96,6 +142,7 @@ static void RefreshWins ( void )
 	wrefresh(win5.win);
 }
 
+/* draw the default stuff on the windows */
 static void DrawWins ( void )
 {
 	char title[] = "[Tremulous Dedicated Server]";
@@ -117,10 +164,44 @@ static void DrawWins ( void )
 	// window 4
 
 	// window 5
-
-	RefreshWins();
 }
 
+/* clear all of the windows */
+static void ClearWins ( void )
+{
+	wclear(win0.win);
+	wclear(win1.win);
+	wclear(win2.win);
+	wclear(win3.win);
+	wclear(win4.win);
+	wclear(win5.win);
+}
+
+static void SigTrap ( void )
+{
+	signal( SIGWINCH, SigHndlr );
+}
+
+static void SigHndlr ( int signal )
+{
+	CursResize();
+}
+
+/* resize the windows, redraw them, and set the bear trap */
+/* FIXME: make this work 100% of the time (works less than 5% of the time right now), and redraw the log window */
+static void CursResize ( void )
+{
+	endwin();
+	SetWins();
+	ResizeWins();
+	ClearWins();
+	DrawWins();
+	RefreshWins();
+
+	SigTrap();
+}
+
+/* print to the log screen */
 static void LogPrint ( char *msg )
 {
 	int i;
@@ -151,6 +232,10 @@ static void LogPrint ( char *msg )
 	logwinline++;
 }
 
+
+/* -- tremulous functions -- */
+
+
 void CON_Print ( const char *msg )
 {
 	if ( logline > LOG_BUF_SIZE )
@@ -166,6 +251,7 @@ void CON_Print ( const char *msg )
 	snprintf(logbuf[logline], 1024, "%i: %s", reallogline, msg );
 	LogPrint(logbuf[logline]);
 
+	
 	logline++;
 	reallogline++;
 }
@@ -181,8 +267,7 @@ void CON_Init ( void )
 
 	SetWins();
 	InitWins();
-
-	DrawWins();
+	CursResize();
 }
 
 void CON_Shutdown ( void )
