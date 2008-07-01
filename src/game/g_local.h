@@ -1212,6 +1212,7 @@ void      trap_SendGameStat( const char *data );
 
 #ifndef Q3_VM
 void trap_AddCommand( const char *cmd_name, void (*function) (void));
+void trap_RemoveCommand( const char *cmd_name);
 #endif
 
 #endif

@@ -406,6 +406,6 @@ void G_SVCommandsInit( void )
 void G_SVCommandsShutdown( void )
 {
 #ifndef Q3_VM
-  ttrap_RemoveCommand( "script");
+  trap_RemoveCommand( "script");
 #endif
 }
