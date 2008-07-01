@@ -428,7 +428,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 
 	// if the menu is going to cover the entire screen, we
 	// don't need to render anything under it
-	if ( uivm && !VM_Call( uivm, UI_IS_FULLSCREEN )) {
+	if ( !VM_Call( uivm, UI_IS_FULLSCREEN )) {
 		switch( cls.state ) {
 		default:
 			Com_Error( ERR_FATAL, "SCR_DrawScreenField: bad cls.state" );
@@ -461,7 +461,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	}
 
 	// the menu draws next
-	if ( Key_GetCatcher( ) & KEYCATCH_UI && uivm ) {
+	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
 		VM_Call( uivm, UI_REFRESH, cls.realtime );
 	}
 
@@ -494,20 +494,25 @@ void SCR_UpdateScreen( void ) {
 	}
 	recursive = 1;
 
-	// if running in stereo, we need to draw the frame twice
-	if ( cls.glconfig.stereoEnabled ) {
-		SCR_DrawScreenField( STEREO_LEFT );
-		SCR_DrawScreenField( STEREO_RIGHT );
-	} else {
-		SCR_DrawScreenField( STEREO_CENTER );
-	}
+	/* If there is no VM, there are also no rendering commands issued. Stop the renderer in
+	 * that case. */
+	if(uivm)
+	{
+		// if running in stereo, we need to draw the frame twice
+		if ( cls.glconfig.stereoEnabled ) {
+			SCR_DrawScreenField( STEREO_LEFT );
+			SCR_DrawScreenField( STEREO_RIGHT );
+		} else {
+			SCR_DrawScreenField( STEREO_CENTER );
+		}
 
-	if ( com_speeds->integer ) {
-		re.EndFrame( &time_frontend, &time_backend );
-	} else {
-		re.EndFrame( NULL, NULL );
+		if ( com_speeds->integer ) {
+			re.EndFrame( &time_frontend, &time_backend );
+		} else {
+			re.EndFrame( NULL, NULL );
+		}
 	}
-
+	
 	recursive = 0;
 }
 
