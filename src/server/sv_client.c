@@ -152,9 +152,8 @@ void SV_DirectConnect( netadr_t from ) {
 
 		for (i=0 ; i<MAX_CHALLENGES ; i++) {
 			if (NET_CompareAdr(from, svs.challenges[i].adr)) {
-				if ( challenge == svs.challenges[i].challenge ) {
-					break;		// good
-				}
+				if ( challenge == svs.challenges[i].challenge )
+					break;
 			}
 		}
 		if (i == MAX_CHALLENGES) {

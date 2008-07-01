@@ -243,7 +243,7 @@ void SV_MasterHeartbeat( void ) {
 			sv_master[i]->modified = qfalse;
 	
 			Com_Printf( "Resolving %s\n", sv_master[i]->string );
-			if ( !NET_StringToAdr( sv_master[i]->string, &adr[i] ) ) {
+			if ( !NET_StringToAdr( sv_master[i]->string, &adr[i], NA_IP ) ) {
 				Com_Printf( "Couldn't resolve address: %s\n", sv_master[i]->string );
 				continue;
 			}
@@ -296,7 +296,7 @@ void SV_MasterGameStat( const char *data )
 		return;		// only dedicated servers send stats
 
   Com_Printf( "Resolving %s\n", MASTER_SERVER_NAME );
-  if( !NET_StringToAdr( MASTER_SERVER_NAME, &adr ) )
+  if( !NET_StringToAdr( MASTER_SERVER_NAME, &adr, NA_IP ) )
   {
     Com_Printf( "Couldn't resolve address: %s\n", MASTER_SERVER_NAME );
     return;
