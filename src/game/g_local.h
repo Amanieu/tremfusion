@@ -894,6 +894,8 @@ qboolean  SpotWouldTelefrag( gentity_t *spot );
 // g_svcmds.c
 //
 qboolean  ConsoleCommand( void );
+void G_SVCommandsInit( void );
+void G_SVCommandsShutdown( void );
 
 //
 // g_weapon.c
@@ -1207,6 +1209,10 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+#ifndef Q3_VM
+void trap_AddCommand( const char *cmd_name, void (*function) (void));
+#endif
 
 #endif
 

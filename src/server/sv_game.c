@@ -490,6 +490,12 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case TRAP_CEIL:
 		return FloatAsInt( ceil( VMF(1) ) );
 
+	case G_ADD_COMMAND:
+	  Cmd_AddCommand( VMA(1), VMA(2) );
+	  return 0;
+	case G_REMOVE_COMMAND:
+	  Cmd_RemoveCommand( VMA(1) );
+	  return 0;
 
 	default:
 		Com_Error( ERR_DROP, "Bad game system trap: %ld", (long int) args[0] );

@@ -293,3 +293,14 @@ int trap_Parse_SourceFileAndLine( int handle, char *filename, int *line )
   return syscall( G_PARSE_SOURCE_FILE_AND_LINE, handle, filename, line );
 }
 
+void trap_AddCommand( const char *cmd_name, void (*function) (void))
+{
+  syscall( G_ADD_COMMAND, cmd_name, function );
+  return;
+}
+
+void trap_RemoveCommand( const char *cmd_name)
+{
+  syscall( G_REMOVE_COMMAND, cmd_name);
+  return;
+}

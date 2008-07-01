@@ -524,6 +524,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   BG_InitMemory( );
 
+  G_SVCommandsInit();
   G_InitScript( );
 
   // set some level globals
@@ -686,6 +687,7 @@ void G_ShutdownGame( int restart )
   G_admin_namelog_cleanup( );
 
   SC_Shutdown( );
+  G_SVCommandsShutdown();
 
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;

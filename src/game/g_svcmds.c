@@ -358,11 +358,11 @@ qboolean  ConsoleCommand( void )
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;
 
-  if( !Q_stricmp(cmd, "script") )
-  {
-    Svcmd_Script_f();
-    return qtrue;
-  }
+//  if( !Q_stricmp(cmd, "script") )
+//  {
+//    Svcmd_Script_f();
+//    return qtrue;
+//  }
 
   if( g_dedicated.integer )
   {
@@ -396,3 +396,16 @@ qboolean  ConsoleCommand( void )
   return qfalse;
 }
 
+void G_SVCommandsInit( void )
+{
+#ifndef Q3_VM
+  trap_AddCommand( "script", Svcmd_Script_f );
+#endif
+}
+
+void G_SVCommandsShutdown( void )
+{
+#ifndef Q3_VM
+  ttrap_RemoveCommand( "script");
+#endif
+}

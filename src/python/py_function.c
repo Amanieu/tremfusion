@@ -70,19 +70,15 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
   for( i=0; i < argcount; i++)
   {
     convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], self->function->argument[i] );
-    if (args[i].type != self->function->argument[i] )
+    if (args[i].type != self->function->argument[i] /*&& self->function->argument[i] !=  TYPE_ANY*/)
     {
       PyErr_SetNone(PyExc_TypeError);
       return NULL;
     }
   }
   args[argcount].type = TYPE_UNDEF;
-  
   SC_RunFunction( self->function, args, &ret );
   
-  
-  
-  Com_Printf("HII\n");
   return convert_from_value(&ret);
 }
 
@@ -91,7 +87,6 @@ static PyMemberDef PyFunction_members[] = {
 };
 
 static PyMethodDef PyFunction_methods[] = {
-//    {"__call__",    Call,          METH_VARARGS, "" },
     {NULL}  /* Sentinel */
 };
 

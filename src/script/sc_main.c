@@ -89,10 +89,10 @@ static void autoload_local(char mapname[MAX_STRING_CHARS])
     strcpy(filename, va("scripts/%s/", mapname));
     strcat(filename, dirptr);
     Com_Printf("***find file to parse***\n");
-    numFiles++;
 
     // load the file
-    SC_RunScript( SC_LangageFromFilename(filename), filename );
+    if (SC_RunScript(SC_LangageFromFilename(filename), filename) != -1 )
+      numFiles++;
   }
 
   Com_Printf("%i local files parsed\n", numFiles);
@@ -192,3 +192,7 @@ scLangage_t SC_LangageFromFilename(const char* filename)
   return LANGAGE_INVALID;
 }
 
+static void script_NameSpaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret )
+{
+  
+}
