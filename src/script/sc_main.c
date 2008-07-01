@@ -60,10 +60,10 @@ static void autoload_global(void)
     dirlen = strlen(dirptr);
     strcpy(filename, "scripts/global/");
     strcat(filename, dirptr);
-    numFiles++;
 
     // load the file
-    SC_RunScript(SC_LangageFromFilename(filename), filename);
+    if (SC_RunScript(SC_LangageFromFilename(filename), filename) != -1 )
+      numFiles++;
   }
 
   Com_Printf("%i global files parsed\n", numFiles);

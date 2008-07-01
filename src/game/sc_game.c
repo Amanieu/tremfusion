@@ -27,8 +27,15 @@ static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret )
   ret->type = TYPE_UNDEF;
 }
 
+static void game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret )
+{
+  trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(args[0].data.string));
+  ret->type = TYPE_UNDEF;
+}
+
 scLib_t lib[] = {
-  { "Print", game_Print, { TYPE_STRING, TYPE_UNDEF } },
+  { "Print", game_Print, { TYPE_STRING , TYPE_UNDEF }, TYPE_UNDEF },
+  { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
   { "" }
 };
 

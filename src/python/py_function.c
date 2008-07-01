@@ -58,12 +58,10 @@ int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function)
   return 0;
 }
 
-static PyObject *Call( PyFunction* self, PyObject* pArgs )
+static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
 {
-  scDataTypeFunction_t *function;
   int i, argcount;
   scDataTypeValue_t ret;
-  scDataTypeValue_t *arg;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   argcount = 0;
   
@@ -93,7 +91,7 @@ static PyMemberDef PyFunction_members[] = {
 };
 
 static PyMethodDef PyFunction_methods[] = {
-    {"__call__",    Call,          METH_VARARGS, "" },
+//    {"__call__",    Call,          METH_VARARGS, "" },
     {NULL}  /* Sentinel */
 };
 
@@ -113,7 +111,7 @@ PyTypeObject PyFunctionType = {
     0,                         /*tp_as_sequence*/
     0,                         /*tp_as_mapping*/
     0,                         /*tp_hash */
-    0,                         /*tp_call*/
+    (ternaryfunc)Call,         /*tp_call*/
     0,                         /*tp_str*/
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
@@ -129,15 +127,15 @@ PyTypeObject PyFunctionType = {
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
     0,                         /* tp_iternext */
-    PyFunction_methods,            /* tp_methods */
-    PyFunction_members,            /* tp_members */
-    0,          /* tp_getset */
+    PyFunction_methods,        /* tp_methods */
+    PyFunction_members,        /* tp_members */
+    0,                         /* tp_getset */
     0,                         /* tp_base */
     0,                         /* tp_dict */
     0,                         /* tp_descr_get */
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
-    0,     /* tp_init */
+    0,                         /* tp_init */
     0,                         /* tp_alloc */
     PyFunction_new,                /* tp_new */
 };
