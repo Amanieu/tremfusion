@@ -24,12 +24,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 #ifdef _WIN32
-// #include <winsock.h>
-#include <Ws2tcpip.h>
-#include <Wspiapi.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#if WINVER < 0x501
+#include <wspiapi.h>
+#else
+#include <ws2spi.h>
+#endif
 
 typedef int socklen_t;
-#define sa_family_t	ADDRESS_FAMILY
+typedef unsigned short sa_family_t;
 #define EAGAIN				WSAEWOULDBLOCK
 #define EADDRNOTAVAIL	WSAEADDRNOTAVAIL
 #define EAFNOSUPPORT	WSAEAFNOSUPPORT
@@ -61,7 +65,9 @@ static struct epoll_event *ev;
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
+#ifndef __sun
 #include <ifaddrs.h>
+#endif
 
 #ifdef __sun
 #include <sys/filio.h>
@@ -524,7 +530,7 @@ Sys_SendPacket
 ==================
 */
 void Sys_SendPacket( int length, const void *data, netadr_t to ) {
-	int				ret;
+	int				ret = SOCKET_ERROR;
 	struct sockaddr_storage	addr;
 
 	if( to.type != NA_BROADCAST && to.type != NA_IP && to.type != NA_IP6 ) {
@@ -550,9 +556,9 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
 	}
 	else {
 		if(addr.ss_family == AF_INET)
-			ret = sendto( ip_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(addr) );
-		else
-			ret = sendto( ip6_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(addr) );
+			ret = sendto( ip_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in) );
+		else if(addr.ss_family == AF_INET6)
+			ret = sendto( ip6_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in6) );
 	}
 	if( ret == SOCKET_ERROR ) {
 		int err = socketError;
@@ -790,12 +796,14 @@ int NET_IP6Socket( char *net_interface, int port, int *err ) {
 		return INVALID_SOCKET;
 	}
 
+#ifdef IPV6_V6ONLY
 	// ipv4 addresses should not be allowed to connect via this socket.
 	if(setsockopt(newsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &i, sizeof(i)) == SOCKET_ERROR)
 	{
 		// win32 systems don't seem to support this anyways.
 		Com_DPrintf("WARNING: NET_IP6Socket: setsockopt IPV6_V6ONLY: %s\n", NET_ErrorString());
 	}
+#endif
 
 	// make it broadcast capable
 	if( setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST, (char *) &i, sizeof(i) ) == SOCKET_ERROR ) {
@@ -1081,7 +1089,28 @@ void NET_AddLocalNetmask(struct sockaddr *sa, int position)
 	}
 }
 
-#ifdef _WIN32
+#if defined(__linux__) || defined(MACOSX) || defined(__BSD__)
+void NET_GetLocalAddress(void)
+{
+	struct ifaddrs *ifap, *search;
+	int retval;
+
+	if(getifaddrs(&ifap))
+		Com_Printf("NET_GetLocalAddress: Unable to get list of network interfaces: %s\n", NET_ErrorString());
+	else
+	{
+		for(search = ifap; search; search = search->ifa_next)
+		{
+			if((retval = NET_AddLocalAddress(search->ifa_addr)) >= 0)
+				NET_AddLocalNetmask(search->ifa_netmask, retval);
+		}
+	
+		freeifaddrs(ifap);
+		
+		Sys_ShowIP();
+	}
+}
+#else
 void NET_GetLocalAddress( void ) {
 	char				hostname[256];
 	struct addrinfo		hint;
@@ -1109,96 +1138,6 @@ void NET_GetLocalAddress( void ) {
 	memset(localIP6mask, 0xFF, sizeof(localIP6mask));
 
 	Sys_ShowIP();
-}
-
-#else
-/* int NET_AddInterfaceToList(char (*interfaces)[IF_NAMESIZE], int numinterfaces, char *add)
-{
-	int index;
-	
-	for(index = 0; index < numinterfaces && index < MAX_IPS; index++)
-	{
-		if(!strcmp(interfaces[index], add))
-			break;
-	}
-	
-	if(index >= numinterfaces && index < MAX_IPS)
-	{
-		Q_strncpyz(interfaces[index], add, IF_NAMESIZE);
-		numinterfaces++;
-	}
-	
-	return numinterfaces;
-}*/
-
-void NET_GetLocalAddress(void)
-{
-	struct ifaddrs *ifap, *search;
-	int retval;
-
-	if(getifaddrs(&ifap))
-		Com_Printf("NET_GetLocalAddress: Unable to get list of network interfaces: %s\n", NET_ErrorString());
-	else
-	{
-		for(search = ifap; search; search = search->ifa_next)
-		{
-			if((retval = NET_AddLocalAddress(search->ifa_addr)) >= 0)
-				NET_AddLocalNetmask(search->ifa_netmask, retval);
-		}
-	
-		freeifaddrs(ifap);
-		
-		Sys_ShowIP();
-	}
-
-/*
-	char interfaces[MAX_IPS][IF_NAMESIZE];
-	int numinterfaces;
-	struct ifreq irbuf[MAX_IPS], ireq;
-	struct ifconf ifc;
-	int index, numdev;
-	
-	memset(interfaces, '\0', sizeof(interfaces));
-
-	ifc.ifc_req = irbuf;
-	
-	// compile a list of all available interfaces on this machine.
-	
-	if(ip_socket != INVALID_SOCKET)
-	{	
-		ifc.ifc_len = sizeof(irbuf);
-	
-		// Use our IP sockets for the ioctl stuff.
-		if(ioctl(ip_socket, SIOCGIFCONF, &ifc))
-		{
-			Com_Printf("NET_GetLocalAddress: Unable to get list of network interfaces: %s\n", NET_ErrorString());
-			return;
-		}
-		
-		numdev = ifc.ifc_len / sizeof(*irbuf);
-		
-		for(index = 0; index < numdev; index++)
-			numinterfaces = NET_AddInterfaceToList(interfaces, numinterfaces, irbuf[index].ifr_name);
-	}
-
-	if(ip6_socket != INVALID_SOCKET)
-	{	
-		ifc.ifc_len = sizeof(irbuf);
-
-		// Use our IP sockets for the ioctl stuff.
-		if(ioctl(ip6_socket, SIOCGIFCONF, &ifc))
-		{
-			Com_Printf("NET_GetLocalAddress: Unable to get list of network interfaces: %s\n", NET_ErrorString());
-			return;
-		}
-		
-		numdev = ifc.ifc_len / sizeof(*irbuf);
-		
-		for(index = 0; index < numdev; index++)
-			numinterfaces = NET_AddInterfaceToList(interfaces, numinterfaces, irbuf[index].ifr_name);
-	}
-	
-	*/
 }
 #endif
 
