@@ -3001,13 +3001,13 @@ static void Field_CompleteKeyname( void )
 Field_CompleteFilename
 ===============
 */
-static void Field_CompleteFilename( const char *dir,
-		const char *ext, qboolean stripExt )
+static void Field_CompleteFilenameMuiltipleExtensions( const char *dir,
+		extensions_t *exts, qboolean stripExt )
 {
 	matchCount = 0;
 	shortestMatch[ 0 ] = 0;
 
-	FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+	FS_FilenameCompletion2( dir, exts, stripExt, FindMatches );
 
 	if( matchCount == 0 )
 		return;
@@ -3026,7 +3026,40 @@ static void Field_CompleteFilename( const char *dir,
 
 	Com_Printf( "]%s\n", completionField->buffer );
 	
-	FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
+	FS_FilenameCompletion2( dir, exts, stripExt, PrintMatches );
+}
+
+/*
+===============
+Field_CompleteFilename
+===============
+*/
+static void Field_CompleteFilename( const char *dir,
+    const char *ext, qboolean stripExt )
+{
+  matchCount = 0;
+  shortestMatch[ 0 ] = 0;
+
+  FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+
+  if( matchCount == 0 )
+    return;
+
+  Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
+    strlen( completionString ) ], shortestMatch,
+    sizeof( completionField->buffer ) );
+  completionField->cursor = strlen( completionField->buffer );
+
+  if( matchCount == 1 )
+  {
+    Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+    completionField->cursor++;
+    return;
+  }
+
+  Com_Printf( "]%s\n", completionField->buffer );
+  
+  FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
 }
 
 /*
@@ -3110,6 +3143,19 @@ static void Field_CompleteCommand( char *cmd,
 			{
 				Field_CompleteFilename( "", "cfg", qfalse );
 			}
+			else if( ( !Q_stricmp( baseCmd, "script" ) ) &&
+			  completionArgument == 2 )
+      {
+			  extensions_t exts;
+			  exts.num_extensions = 0;
+			  #ifdef USE_LUA
+			  exts.extensions[exts.num_extensions++] = "lua";
+			  #endif
+			  #ifdef USE_PYTHON
+			  exts.extensions[exts.num_extensions++] = "py";
+			  #endif
+			  Field_CompleteFilenameMuiltipleExtensions( "scripts", &exts, qfalse );
+      }
 			else if( !Q_stricmp( baseCmd, "condump" ) &&
 					completionArgument == 2 )
 			{

@@ -677,6 +677,14 @@ void FS_HomeRemove( const char *homePath );
 
 void	FS_FilenameCompletion( const char *dir, const char *ext,
 		qboolean stripExt, void(*callback)(const char *s) );
+
+typedef struct {
+  int  num_extensions;
+  char *extensions[10];
+}extensions_t;
+
+void  FS_FilenameCompletion2( const char *dir, extensions_t *exts,
+    qboolean stripExt, void(*callback)(const char *s) );
 /*
 ==============================================================
 

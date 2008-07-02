@@ -1759,6 +1759,165 @@ static int FS_AddFileToList( char *name, char *list[MAX_FOUND_FILES], int nfiles
 
 /*
 ===============
+FS_ListFilteredFilesWithMuiltipleExtensions
+
+Returns a uniqued list of files that match the given criteria
+from all search paths
+===============
+*/
+char **FS_ListFilteredFilesWithMuiltipleExtensions( const char *path, extensions_t *exts, char *filter, int *numfiles ) {
+  int       nfiles;
+  char      **listCopy;
+  char      *list[MAX_FOUND_FILES];
+  searchpath_t  *search;
+  int       i, e;
+  int       pathLength;
+  int       extensionLengths[10];
+  int       length, pathDepth, temp;
+  pack_t      *pak;
+  fileInPack_t  *buildBuffer;
+  char      zpath[MAX_ZPATH];
+  qboolean  extensionmatches;
+
+  if ( !fs_searchpaths ) {
+    Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
+  }
+
+  if ( !path ) {
+    *numfiles = 0;
+    return NULL;
+  }
+
+  pathLength = strlen( path );
+  if ( path[pathLength-1] == '\\' || path[pathLength-1] == '/' ) {
+    pathLength--;
+  }
+  for (e=0; e < exts->num_extensions; e++)
+  {
+    extensionLengths[e] = strlen( exts->extensions[e] );
+  }
+  nfiles = 0;
+  FS_ReturnPath(path, zpath, &pathDepth);
+
+  //
+  // search through the path, one element at a time, adding to list
+  //
+  for (search = fs_searchpaths ; search ; search = search->next) {
+    // is the element a pak file?
+    if (search->pack) {
+
+      //ZOID:  If we are pure, don't search for files on paks that
+      // aren't on the pure list
+      if ( !FS_PakIsPure(search->pack) && !Cvar_VariableIntegerValue("cl_unpure") ) {
+        continue;
+      }
+
+      // look through all the pak file elements
+      pak = search->pack;
+      buildBuffer = pak->buildBuffer;
+      for (i = 0; i < pak->numfiles; i++) {
+        char  *name;
+        int   zpathLen, depth;
+
+        // check for directory match
+        name = buildBuffer[i].name;
+        //
+        if (filter) {
+          // case insensitive
+          if (!Com_FilterPath( filter, name, qfalse ))
+            continue;
+          // unique the match
+          nfiles = FS_AddFileToList( name, list, nfiles );
+        }
+        else {
+
+          zpathLen = FS_ReturnPath(name, zpath, &depth);
+
+          if ( (depth-pathDepth)>2 || pathLength > zpathLen || Q_stricmpn( name, path, pathLength ) ) {
+            continue;
+          }
+          
+          // check for extension match
+          length = strlen( name );
+          
+          extensionmatches = qfalse;
+          for (e=0; e < exts->num_extensions; e++)
+          {
+            if ( length < extensionLengths[e] ) {
+              continue;
+            }
+            if ( !Q_stricmp( name + length - extensionLengths[e], exts->extensions[e] ) ) {
+              extensionmatches = qtrue;
+            }
+          }
+          if (!extensionmatches)
+            continue;
+          
+          // unique the match
+
+          temp = pathLength;
+          if (pathLength) {
+            temp++;   // include the '/'
+          }
+          nfiles = FS_AddFileToList( name + temp, list, nfiles );
+        }
+      }
+    } else if (search->dir) { // scan for files in the filesystem
+      char  *netpath;
+      int   numSysFiles;
+      char  **sysFiles;
+      char  *name;
+
+      // don't scan directories for files if we are pure or restricted
+      if ( fs_numServerPaks && !Cvar_VariableIntegerValue("cl_unpure") ) {
+            continue;
+        } else {
+        netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
+        sysFiles = Sys_ListFiles( netpath, NULL, filter, &numSysFiles, qfalse );
+        for ( i = 0 ; i < numSysFiles ; i++ ) {
+          // unique the match
+          name = sysFiles[i];
+          
+          // check for extension match
+          length = strlen( name );
+          extensionmatches = qfalse;
+          for (e=0; e < exts->num_extensions; e++)
+          {
+            if ( length < extensionLengths[e] ) {
+              continue;
+            }
+            if ( !Q_stricmp( name + length - extensionLengths[e], exts->extensions[e] ) ) {
+              extensionmatches = qtrue;
+            }
+          }
+          if (!extensionmatches){
+            continue;
+          }
+          nfiles = FS_AddFileToList( name, list, nfiles );
+        }
+        Sys_FreeFileList( sysFiles );
+      }
+    }   
+  }
+
+  // return a copy of the list
+  *numfiles = nfiles;
+
+  if ( !nfiles ) {
+    return NULL;
+  }
+
+  listCopy = Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ) );
+  for ( i = 0 ; i < nfiles ; i++ ) {
+    listCopy[i] = list[i];
+  }
+  listCopy[i] = NULL;
+
+  return listCopy;
+}
+
+/*
+===============
 FS_ListFilteredFiles
 
 Returns a uniqued list of files that match the given criteria
@@ -3244,14 +3403,14 @@ void	FS_Flush( fileHandle_t f ) {
 	fflush(fsh[f].handleFiles.file.o);
 }
 
-void	FS_FilenameCompletion( const char *dir, const char *ext,
+void	FS_FilenameCompletion2( const char *dir, extensions_t *exts,
 		qboolean stripExt, void(*callback)(const char *s) ) {
 	char	**filenames;
 	int		nfiles;
 	int		i;
 	char	filename[ MAX_STRING_CHARS ];
 
-	filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles );
+	filenames = FS_ListFilteredFilesWithMuiltipleExtensions( dir, exts, NULL, &nfiles );
 
 	FS_SortFileList( filenames, nfiles );
 
@@ -3266,4 +3425,28 @@ void	FS_FilenameCompletion( const char *dir, const char *ext,
 		callback( filename );
 	}
 	FS_FreeFileList( filenames );
+}
+
+void  FS_FilenameCompletion( const char *dir, const char *ext,
+    qboolean stripExt, void(*callback)(const char *s) ) {
+  char  **filenames;
+  int   nfiles;
+  int   i;
+  char  filename[ MAX_STRING_CHARS ];
+
+  filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles );
+
+  FS_SortFileList( filenames, nfiles );
+
+  for( i = 0; i < nfiles; i++ ) {
+    FS_ConvertPath( filenames[ i ] );
+    Q_strncpyz( filename, filenames[ i ], MAX_STRING_CHARS );
+
+    if( stripExt ) {
+      COM_StripExtension(filename, filename, sizeof(filename));
+    }
+
+    callback( filename );
+  }
+  FS_FreeFileList( filenames );
 }
