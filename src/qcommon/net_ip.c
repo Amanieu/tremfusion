@@ -71,7 +71,7 @@ static struct epoll_event *ev;
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
-#ifndef __sun
+#if !defined(__sun) && !defined(__sgi)
 #include <ifaddrs.h>
 #endif
 
@@ -610,7 +610,7 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
 		(ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6) )
 		return;
 
-	if(net_enabled->integer & NET_DISABLEMCAST)
+	if(to.type == NA_MULTICAST6 && (net_enabled->integer & NET_DISABLEMCAST))
 		return;
 
 	memset(&addr, 0, sizeof(addr));
@@ -930,7 +930,7 @@ void NET_SetMulticast6(void)
 	
 	memcpy(&curgroup.ipv6mr_multiaddr, &addr.sin6_addr, sizeof(curgroup.ipv6mr_multiaddr));
 
-	if(!*net_mcast6iface->string)
+	if(*net_mcast6iface->string)
 	{
 #ifdef _WIN32
 		curgroup.ipv6mr_interface = atoi(net_mcast6iface->string);
@@ -952,7 +952,7 @@ void NET_JoinMulticast6(void)
 {
 	int err;
 	
-	if(ip6_socket == INVALID_SOCKET || multicast6_socket != INVALID_SOCKET || net_enabled->integer & NET_DISABLEMCAST)
+	if(ip6_socket == INVALID_SOCKET || multicast6_socket != INVALID_SOCKET || (net_enabled->integer & NET_DISABLEMCAST))
 		return;
 	
 	if(IN6_IS_ADDR_MULTICAST(&boundto.sin6_addr) || IN6_IS_ADDR_UNSPECIFIED(&boundto.sin6_addr))
@@ -1196,7 +1196,13 @@ NET_GetLocalAddress
 void NET_AddLocalAddress(char *ifname, struct sockaddr *addr, struct sockaddr *netmask)
 {
 	int addrlen;
-	sa_family_t family = addr->sa_family;
+	sa_family_t family;
+	
+	// only add addresses that have all required info.
+	if(!addr || !netmask || !ifname)
+		return;
+	
+	family = addr->sa_family;
 
 	if(numIP < MAX_IPS)
 	{
