@@ -1110,7 +1110,21 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 				*text = 0;
 				if ( Cvar_Flags( cvarName ) != CVAR_NONEXISTENT )
 				{
-					Q_strncpyz( textOut, Cvar_VariableString( cvarName ), sizeof(cmd.cmd) - ( textOut - cmd.cmd ) );
+					char cvarValue[ MAX_CVAR_VALUE_STRING ];
+					char *badchar;
+					Cvar_VariableStringBuffer( cvarName, cvarValue, sizeof( cvarValue ) );
+					do {
+						badchar = strchr( cvarValue, ';' );
+						if ( badchar )
+							*badchar = '.';
+						else
+						{
+							badchar = strchr( cvarValue, '\n' );
+							if ( badchar )
+								*badchar = '.';
+						}
+					} while ( badchar );
+					Q_strncpyz( textOut, cvarValue, sizeof(cmd.cmd) - ( textOut - cmd.cmd ) );
 					while ( *textOut )
 						textOut++;
 					if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
