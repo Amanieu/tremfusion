@@ -130,6 +130,11 @@ vmCvar_t  g_privateMessages;
 
 vmCvar_t  g_tag;
 
+vmCvar_t  sc_python;
+vmCvar_t  py_initialized;
+vmCvar_t  sc_lua;
+vmCvar_t  lua_initialized;
+
 static cvarTable_t   gameCvarTable[ ] =
 {
   // don't override the cheat state set by the system
@@ -243,9 +248,13 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_privateMessages, "g_privateMessages", "1", CVAR_ARCHIVE, 0, qfalse  },
 
-  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse }
+  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse },
+  
+  { &sc_python,       "sc_python",       "1", CVAR_LATCH, 0, qfalse },
+  { &py_initialized,  "py_initialized",  "0", CVAR_ROM,  0, qfalse },
+  { &sc_lua,          "sc_lua",          "1", CVAR_LATCH, 0, qfalse },
+  { &lua_initialized, "lua_initialized", "0", CVAR_ROM,  0, qfalse },
 };
-
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );
 
 

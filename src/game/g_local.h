@@ -1161,6 +1161,11 @@ extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
 
+extern  vmCvar_t  sc_python;
+extern  vmCvar_t  py_initialized;
+extern  vmCvar_t  sc_lua;
+extern  vmCvar_t  lua_initialized;
+
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );
 int       trap_Milliseconds( void );

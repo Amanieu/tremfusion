@@ -34,10 +34,12 @@ void SC_Init( void )
   SC_NamespaceInit( );
 
 #ifdef USE_LUA
-  SC_Lua_Init( );
+  if (sc_lua.integer)
+    SC_Lua_Init( );
 #endif
 #ifdef USE_PYTHON
-  SC_Python_Init( );
+  if (sc_python.integer)
+    SC_Python_Init( );
 #endif 
 }
 
@@ -113,10 +115,12 @@ void SC_AutoLoad( void )
 void SC_Shutdown( void )
 {
 #ifdef USE_LUA
-  SC_Lua_Shutdown( );
+  if (sc_lua.integer)
+    SC_Lua_Shutdown( );
 #endif
 #ifdef USE_PYTHON
-  SC_Python_Shutdown( );
+  if (sc_python.integer)
+    SC_Python_Shutdown( );
 #endif
 }
 

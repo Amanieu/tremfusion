@@ -73,7 +73,7 @@ static scDataTypeArray_t* convert_to_array( PyObject *array_obj )
   }
 
   index = 0;
-  while (item = PyIter_Next(iterator)) {
+  while ( (item = PyIter_Next(iterator) ) ) {
     convert_to_value( item, &val, TYPE_ANY );
     SC_ArraySet(array, index, &val);
     Py_DECREF(item);
@@ -249,6 +249,8 @@ void SC_Python_Init( void )
   // Make python threads work at all
   PyEval_InitThreads( );
   
+  trap_Cvar_Set( "py_initialized", "1" );
+  
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ...
 //  
@@ -311,6 +313,7 @@ void SC_Python_Shutdown( void )
 //    Py_DECREF( gamemodule );
 //    gamemodule = NULL;
 //  }
+  trap_Cvar_Set( "py_initialized", "0" );
   Py_Finalize();
   G_Printf("-----------------------------------\n");
 }
@@ -369,17 +372,27 @@ qboolean SC_Python_RunScript( const char *filename )
   len = trap_FS_FOpenFile(filename, &f, FS_READ);
   if(!f)
   {
-    Com_Printf(va(S_COLOR_RED "file not found: %s\n", filename));
+    Com_Printf(va(S_COLOR_RED "Cannot load %s: file not found\n", filename));
     return qfalse;
   }
 
   if(len >= MAX_PYTHONFILE)
   {
-    Com_Printf(va(S_COLOR_RED "file too large: %s is %i, max allowed is %i\n", filename, len, MAX_PYTHONFILE));
+    Com_Printf(S_COLOR_RED "Cannot load %s: file too large, file is %i, max allowed is %i\n", filename, len, MAX_PYTHONFILE);
     trap_FS_FCloseFile(f);
     return qfalse;
   }
-
+#ifndef UNITTEST
+  if (!sc_python.integer){
+    Com_Printf(S_COLOR_RED "Cannot load %s: python disabled\n", filename);
+    return qfalse;
+  }
+  
+  if (!py_initialized.integer){
+    Com_Printf(S_COLOR_RED "Cannot load %s: python not initilized\n", filename);
+    return qfalse;
+  }
+#endif
   trap_FS_Read(buf, len, f);
   buf[len] = 0;
   trap_FS_FCloseFile(f);
@@ -406,9 +419,19 @@ qboolean SC_Python_RunScript( const char *filename )
 
 void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
-  scDataType_t *dt;
-//  PyObject *pyvalue;
   PyObject *ArgsTuple, *ReturnValue;
+  
+#ifndef UNITTEST
+  if (!sc_python.integer){
+    Com_Printf(S_COLOR_RED "Cannot run function: python disabled\n");
+    return;
+  }
+  
+  if (!py_initialized.integer){
+    Com_Printf(S_COLOR_RED "Cannot run function: python not initilized\n");
+    return;
+  }
+#endif
   
   if (args)
   {
