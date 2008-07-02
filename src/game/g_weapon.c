@@ -323,10 +323,12 @@ void meleeAttack( gentity_t *ent, float range, float width, float height,
   gentity_t *traceEnt;
 
   G_WideTrace( &tr, ent, range, width, height, &traceEnt );
-  if( traceEnt == NULL || !traceEnt->takedamage )
+  if( traceEnt == NULL || !traceEnt->takedamage ) {
+    G_AddEvent( ent, EV_ALIEN_MISS, 0 );
     return;
+  }
   WideBloodSpurt( ent, traceEnt, &tr );
-    G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK, mod );
+  G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK, mod );
 }
 
 /*

@@ -752,6 +752,21 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       CG_FireWeapon( cent, WPM_TERTIARY );
       break;
 
+    case EV_ALIEN_HIT:
+        DEBUGNAME( "EV_ALIEN_HIT" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_HIT );
+        break;
+  	 
+    case EV_ALIEN_MISS:
+        DEBUGNAME( "EV_ALIEN_MISS" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_MISS );
+        break;
+  	 
+    case EV_ALIEN_TEAMHIT:
+        DEBUGNAME( "EV_ALIEN_TEAMHIT" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_TEAMHIT );
+        break;
+
     //=================================================================
 
     //

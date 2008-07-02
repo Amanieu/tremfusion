@@ -353,6 +353,15 @@ typedef enum
 
 typedef enum
 {
+   AFEEDBACK_HIT,
+   AFEEDBACK_MISS,
+   AFEEDBACK_TEAMHIT,
+
+   AFEEDBACK_NUM
+} alienFeedback_t;
+
+typedef enum
+{
   UP_NONE,
 
   UP_LIGHTARMOUR,
@@ -524,6 +533,11 @@ typedef enum
   EV_MGTURRET_SPINUP, // turret spinup sound should play
 
   EV_RPTUSE_SOUND,    // trigger a sound
+  
+  EV_ALIEN_HIT,       // Alien attack feedback hit enemy
+  EV_ALIEN_MISS,      // Alien attack feedback miss enemy
+  EV_ALIEN_TEAMHIT,   // Alien attack feedback hit teammate
+
   EV_LEV2_ZAP
 } entity_event_t;
 

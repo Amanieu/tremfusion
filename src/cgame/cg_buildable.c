@@ -1490,9 +1490,25 @@ void CG_Buildable( centity_t *cent )
       {
         int i = rand( ) % 4;
         trap_S_StartSound( NULL, es->number, CHAN_BODY, cgs.media.humanBuildableDamage[ i ] );
+        if( cent->lastBuildableHealthScale - healthScale > 99) {
+          cent->buildableHitPS = CG_SpawnNewParticleSystem( cgs.media.humanBuildableHitLargePS );
+        } else {
+          cent->buildableHitPS = CG_SpawnNewParticleSystem( cgs.media.humanBuildableHitSmallPS );
+        }
       }
-      else if( team == TEAM_ALIENS )
+      else if( team == TEAM_ALIENS ) {
         trap_S_StartSound( NULL, es->number, CHAN_BODY, cgs.media.alienBuildableDamage );
+        if( cent->lastBuildableHealthScale - healthScale > 30) {
+          cent->buildableHitPS = CG_SpawnNewParticleSystem( cgs.media.alienBuildableHitLargePS );
+        } else {
+          cent->buildableHitPS = CG_SpawnNewParticleSystem( cgs.media.alienBuildableHitSmallPS );
+        }
+      }
+      if( CG_IsParticleSystemValid( &cent->buildableHitPS ) )
+      {
+        CG_SetAttachmentCent( &cent->buildableHitPS->attachment, cent );
+        CG_AttachToCent( &cent->buildableHitPS->attachment );
+      }
 
       cent->lastBuildableDamageSoundTime = cg.time;
     }
