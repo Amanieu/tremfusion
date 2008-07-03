@@ -52,7 +52,7 @@ void G_ForceWeaponChange( gentity_t *ent, weapon_t weapon )
   if( weapon == WP_NONE ||
       !BG_InventoryContainsWeapon( weapon, ps->stats ) )
   {
-    ps.persistant[ PERS_NEWWEAPON ] =
+    ps->persistant[ PERS_NEWWEAPON ] =
       BG_PrimaryWeapon( ent->client->ps.stats );
   }
   else
