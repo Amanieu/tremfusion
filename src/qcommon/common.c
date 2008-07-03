@@ -271,7 +271,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	vsprintf (com_errorMessage,fmt,argptr);
 	va_end (argptr);
 
-	if (code != ERR_DISCONNECT && code != ERR_NEED_CD)
+	if (code != ERR_DISCONNECT)
 		Cvar_Set("com_errorMessage", com_errorMessage);
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
