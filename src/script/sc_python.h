@@ -31,7 +31,6 @@ PyTypeObject Vec3dType;
 
 typedef struct {
   PyObject_HEAD
-  int num; /* client number */
   scDataTypeFunction_t *function;
 } PyFunction;
 PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);

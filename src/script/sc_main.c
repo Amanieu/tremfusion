@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "sc_lua.h"
 #include "sc_python.h"
 
+static void SC_script_module_init( void );
+
 void SC_Init( void )
 {
   SC_NamespaceInit( );
@@ -41,6 +43,7 @@ void SC_Init( void )
   if (sc_python.integer)
     SC_Python_Init( );
 #endif 
+  SC_script_module_init();
 }
 
 static void autoload_global(void)
@@ -198,5 +201,18 @@ scLangage_t SC_LangageFromFilename(const char* filename)
 
 static void script_NameSpaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
-  
+  SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );
+  ret->type = TYPE_UNDEF;
 }
+
+static scLib_t script_lib[] = {
+  { "NameSpaceAdd", script_NameSpaceAdd, { TYPE_STRING , TYPE_ANY, TYPE_UNDEF }, TYPE_UNDEF },
+//  { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
+  { "" }
+};
+
+static void SC_script_module_init( void )
+{
+  SC_AddLibrary( "script", script_lib );
+}
+

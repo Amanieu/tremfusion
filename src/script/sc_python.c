@@ -250,6 +250,7 @@ void SC_Python_Init( void )
   PyEval_InitThreads( );
   
   trap_Cvar_Set( "py_initialized", "1" );
+  trap_Cvar_Update( &py_initialized ); 
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ...
@@ -441,7 +442,7 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
     
     narg = 0;
     
-    while ( value->type != TYPE_UNDEF )
+    while ( value->type != TYPE_UNDEF && value->type <= TYPE_NAMESPACE )
     {
       narg++;
       value++;
@@ -453,7 +454,7 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
     
     value = args;
     index = 0;
-    while ( value->type != TYPE_UNDEF )
+    while ( value->type != TYPE_UNDEF && value->type <= TYPE_NAMESPACE)
     {
       PyTuple_SetItem( ArgsTuple, index++, convert_from_value( value ) );
       narg++;

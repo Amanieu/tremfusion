@@ -70,7 +70,7 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
   for( i=0; i < argcount; i++)
   {
     convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], self->function->argument[i] );
-    if (args[i].type != self->function->argument[i] /*&& self->function->argument[i] !=  TYPE_ANY*/)
+    if (self->function->argument[i] !=  TYPE_ANY && args[i].type != self->function->argument[i])
     {
       PyErr_SetNone(PyExc_TypeError);
       return NULL;

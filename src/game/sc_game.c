@@ -33,7 +33,7 @@ static void game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret )
   ret->type = TYPE_UNDEF;
 }
 
-scLib_t lib[] = {
+static scLib_t game_lib[] = {
   { "Print", game_Print, { TYPE_STRING , TYPE_UNDEF }, TYPE_UNDEF },
   { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
   { "" }
@@ -41,6 +41,6 @@ scLib_t lib[] = {
 
 void SC_game_init( void )
 {
-  SC_AddLibrary( "game", lib );
+  SC_AddLibrary( "game", game_lib );
 }
 
