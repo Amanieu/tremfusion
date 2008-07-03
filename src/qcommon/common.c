@@ -275,6 +275,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		Cvar_Set("com_errorMessage", com_errorMessage);
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
+		SV_Shutdown( "Server disconnected" );
 		CL_Disconnect( qtrue );
 		VM_Forced_Unload_Start();
 		CL_FlushMemory( );
@@ -287,7 +288,9 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
 		CL_Disconnect( qtrue );
+		VM_Forced_Unload_Start();
 		CL_FlushMemory( );
+		VM_Forced_Unload_Done();
 		FS_PureServerSetLoadedPaks("", "");
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
@@ -295,7 +298,9 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		SV_Shutdown( "Server didn't have CD" );
 		if ( com_cl_running && com_cl_running->integer ) {
 			CL_Disconnect( qtrue );
+			VM_Forced_Unload_Start();
 			CL_FlushMemory( );
+			VM_Forced_Unload_Done();
 			com_errorEntered = qfalse;
 			CL_CDDialog();
 		} else {

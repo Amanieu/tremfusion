@@ -65,9 +65,9 @@ static struct epoll_event *ev;
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -272,14 +272,22 @@ Sys_StringToSockaddr
 static qboolean Sys_StringToSockaddr(const char *s, struct sockaddr *sadr, int sadr_len, sa_family_t family)
 {
 	struct addrinfo hints, *res = NULL, *search;
+	struct addrinfo *hintsp;
 	int retval;
 	
 	memset(sadr, '\0', sizeof(*sadr));
 	memset(&hints, '\0', sizeof(hints));
+
+	// workaround for buggy MacOSX getaddrinfo implementation that doesn't handle AF_UNSPEC in hints correctly.
+	if(family == AF_UNSPEC)
+		hintsp = NULL;
+	else
+	{
+		hintsp = &hints;
+		hintsp->ai_family = family;
+	}
 	
-	hints.ai_family = family;
-	
-	retval = getaddrinfo(s, NULL, &hints, &res);
+	retval = getaddrinfo(s, NULL, hintsp, &res);
 
 	if(!retval)
 	{
@@ -485,7 +493,7 @@ qboolean Sys_GetPacket( netadr_t *net_from, msg_t *net_message ) {
 	if(ip_socket != INVALID_SOCKET)
 	{
 		fromlen = sizeof(from);
-		ret = recvfrom( ip_socket, net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen );
+		ret = recvfrom( ip_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen );
 		
 		if (ret == SOCKET_ERROR)
 		{
@@ -529,7 +537,7 @@ qboolean Sys_GetPacket( netadr_t *net_from, msg_t *net_message ) {
 	if(ip6_socket != INVALID_SOCKET)
 	{
 		fromlen = sizeof(from);
-		ret = recvfrom(ip6_socket, net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
+		ret = recvfrom(ip6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
 		
 		if (ret == SOCKET_ERROR)
 		{
@@ -557,7 +565,7 @@ qboolean Sys_GetPacket( netadr_t *net_from, msg_t *net_message ) {
 	if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket)
 	{
 		fromlen = sizeof(from);
-		ret = recvfrom(multicast6_socket, net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
+		ret = recvfrom(multicast6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
 		
 		if (ret == SOCKET_ERROR)
 		{
@@ -837,7 +845,6 @@ int NET_IP6Socket( char *net_interface, int port, struct sockaddr_in6 *bindto, i
 	SOCKET				newsocket;
 	struct sockaddr_in6	address;
 	qboolean			_true = qtrue;
-	int					i = 1;
 
 	*err = 0;
 
@@ -867,11 +874,15 @@ int NET_IP6Socket( char *net_interface, int port, struct sockaddr_in6 *bindto, i
 	}
 
 #ifdef IPV6_V6ONLY
-	// ipv4 addresses should not be allowed to connect via this socket.
-	if(setsockopt(newsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &i, sizeof(i)) == SOCKET_ERROR)
 	{
-		// win32 systems don't seem to support this anyways.
-		Com_DPrintf("WARNING: NET_IP6Socket: setsockopt IPV6_V6ONLY: %s\n", NET_ErrorString());
+		int i;
+
+		// ipv4 addresses should not be allowed to connect via this socket.
+		if(setsockopt(newsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &i, sizeof(i)) == SOCKET_ERROR)
+		{
+			// win32 systems don't seem to support this anyways.
+			Com_DPrintf("WARNING: NET_IP6Socket: setsockopt IPV6_V6ONLY: %s\n", NET_ErrorString());
+		}
 	}
 #endif
 
@@ -1076,14 +1087,14 @@ void NET_OpenSocks( int port ) {
 	if ( rfc1929 ) {
 		buf[2] = 2;		// method #2 - method id #02: username/password
 	}
-	if ( send( socks_socket, buf, len, 0 ) == SOCKET_ERROR ) {
+	if ( send( socks_socket, (void *)buf, len, 0 ) == SOCKET_ERROR ) {
 		err = socketError;
 		Com_Printf( "NET_OpenSocks: send: %s\n", NET_ErrorString() );
 		return;
 	}
 
 	// get the response
-	len = recv( socks_socket, buf, 64, 0 );
+	len = recv( socks_socket, (void *)buf, 64, 0 );
 	if ( len == SOCKET_ERROR ) {
 		err = socketError;
 		Com_Printf( "NET_OpenSocks: recv: %s\n", NET_ErrorString() );
@@ -1123,14 +1134,14 @@ void NET_OpenSocks( int port ) {
 		}
 
 		// send it
-		if ( send( socks_socket, buf, 3 + ulen + plen, 0 ) == SOCKET_ERROR ) {
+		if ( send( socks_socket, (void *)buf, 3 + ulen + plen, 0 ) == SOCKET_ERROR ) {
 			err = socketError;
 			Com_Printf( "NET_OpenSocks: send: %s\n", NET_ErrorString() );
 			return;
 		}
 
 		// get the response
-		len = recv( socks_socket, buf, 64, 0 );
+		len = recv( socks_socket, (void *)buf, 64, 0 );
 		if ( len == SOCKET_ERROR ) {
 			err = socketError;
 			Com_Printf( "NET_OpenSocks: recv: %s\n", NET_ErrorString() );
@@ -1153,14 +1164,14 @@ void NET_OpenSocks( int port ) {
 	buf[3] = 1;		// address type: IPV4
 	*(int *)&buf[4] = INADDR_ANY;
 	*(short *)&buf[8] = htons( (short)port );		// port
-	if ( send( socks_socket, buf, 10, 0 ) == SOCKET_ERROR ) {
+	if ( send( socks_socket, (void *)buf, 10, 0 ) == SOCKET_ERROR ) {
 		err = socketError;
 		Com_Printf( "NET_OpenSocks: send: %s\n", NET_ErrorString() );
 		return;
 	}
 
 	// get the response
-	len = recv( socks_socket, buf, 64, 0 );
+	len = recv( socks_socket, (void *)buf, 64, 0 );
 	if( len == SOCKET_ERROR ) {
 		err = socketError;
 		Com_Printf( "NET_OpenSocks: recv: %s\n", NET_ErrorString() );

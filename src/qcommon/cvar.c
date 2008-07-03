@@ -229,6 +229,17 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			Z_Free( var->resetString );
 			var->resetString = CopyString( var_value );
 
+			if(flags & CVAR_ROM)
+			{
+				// this variable was set by the user,
+				// so force it to value given by the engine.
+
+				if(var->latchedString)
+					Z_Free(var->latchedString);
+				
+				var->latchedString = CopyString(var_value);
+			}
+
 			// ZOID--needs to be set so that cvars the game sets as 
 			// SERVERINFO get sent to clients
 			cvar_modifiedFlags |= flags;
@@ -254,13 +265,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			Z_Free( s );
 		}
 
-// use a CVAR_SET for rom sets, get won't override
-#if 0
-		// CVAR_ROM always overrides
-		if ( flags & CVAR_ROM ) {
-			Cvar_Set2( var_name, var_value, qtrue );
-		}
-#endif
 		return var;
 	}
 
@@ -568,8 +572,25 @@ Prints the contents of a cvar
 (preferred over Cvar_Command where cvar names and commands conflict)
 ============
 */
-void Cvar_Print_f( void ) {
-	Cvar_Print (Cvar_FindVar (Cmd_Argv(1)) );
+void Cvar_Print_f(void)
+{
+	char *name;
+	cvar_t *cv;
+	
+	if(Cmd_Argc() != 2)
+	{
+		Com_Printf ("usage: print <variable>\n");
+		return;
+	}
+
+	name = Cmd_Argv(1);
+
+	cv = Cvar_FindVar(name);
+	
+	if(cv)
+		Cvar_Print(cv);
+	else
+		Com_Printf ("Cvar %s does not exist.\n", name);
 }
 
 /*
@@ -614,8 +635,7 @@ void Cvar_Set_f( void ) {
 		return;
 	}
 	if ( c == 2 ) {
-		v = Cvar_FindVar (Cmd_Argv(1));
-		Cvar_Print( v );
+		Cvar_Print_f();
 		return;
 	}
 
