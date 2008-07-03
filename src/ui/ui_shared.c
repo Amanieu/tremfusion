@@ -4546,9 +4546,9 @@ void Item_TextColor( itemDef_t *item, vec4_t *newColor )
 
 static const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
-  static char   out[ 8192 ] = { 0 };
+  static char   out[ 8192 ] = "";
   char          *paint = out;
-  char          c[ 3 ] = { 0 };
+  char          c[ 3 ] = "^7";
   const char    *p = text;
   const char    *eol;
   const char    *q = NULL, *qMinus1 = NULL;
@@ -4676,6 +4676,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
       Q_strcat( out, sizeof( out ), "\n " );
       Q_strcat( out, sizeof( out ), c );
     }
+    else
+      c[ 0 ] = '\0';
 
     paint = out + strlen( out );
 
