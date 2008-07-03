@@ -289,18 +289,6 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		FS_PureServerSetLoadedPaks("", "");
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
-	} else if ( code == ERR_NEED_CD ) {
-		SV_Shutdown( "Server didn't have CD" );
-		if ( com_cl_running && com_cl_running->integer ) {
-			CL_Disconnect( qtrue );
-			CL_FlushMemory( );
-			com_errorEntered = qfalse;
-			CL_CDDialog();
-		} else {
-			Com_Printf("Server didn't have CD\n" );
-		}
-		FS_PureServerSetLoadedPaks("", "");
-		longjmp (abortframe, -1);
 	} else {
 		CL_Shutdown ();
 		SV_Shutdown (va("Server fatal crashed: %s", com_errorMessage));
