@@ -665,7 +665,7 @@ static qboolean PM_CheckWallJump( void )
     }
   }
   else
-    return;
+    return qfalse;
   
   if( pm->ps->pm_flags & PMF_RESPAWNED )
     return qfalse;    // don't allow jump until all buttons are up
