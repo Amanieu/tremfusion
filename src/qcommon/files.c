@@ -216,7 +216,6 @@ static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
 static	cvar_t		*fs_extrapaks;
-static	cvar_t		*fs_allowunpure;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
 static	int			fs_loadCount;			// total files read
@@ -224,6 +223,7 @@ static	int			fs_loadStack;			// total files in memory
 static	int			fs_packFiles;			// total number of files in packs
 
 static qboolean fs_unpureReferenced = qfalse;
+static qboolean fs_unpureAllowed = qfalse;
 static int fs_checksumFeed;
 
 typedef union qfile_gus {
@@ -1090,7 +1090,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			//   this test can make the search fail although the file is in the directory
 			// I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
 			// turned out I used FS_FileExists instead
-			if ( fs_numServerPaks && !fs_allowunpure->integer ) {
+			if ( fs_numServerPaks && !fs_unpureAllowed ) {
 
 				if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
@@ -1862,7 +1862,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 			char	*name;
 
 			// don't scan directories for files if we are pure or restricted
-			if ( fs_numServerPaks && !fs_allowunpure->integer ) {
+			if ( fs_numServerPaks && !fs_unpureAllowed ) {
 		        continue;
 		    } else {
 				netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
@@ -2676,6 +2676,8 @@ static void FS_ReorderExtraPaks( void )
 	searchpath_t **p_insert_index, // for linked list reordering
 		**p_previous; // when doing the scan
 
+	fs_unpureAllowed = qfalse;
+
 	// only relevant when we have a list of extra paks
 	if ( !fs_numExtraPaks )
 		return;
@@ -2685,13 +2687,17 @@ static void FS_ReorderExtraPaks( void )
 		p_previous = p_insert_index; // track the pointer-to-current-item
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
-			if (s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) {
+			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
+			    (s->dir && fs_extraPaks[i][0] == '.' && fs_extraPaks[i][1] == '\0')) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
 				*p_insert_index = s;
 				// increment insert list
 				p_insert_index = &s->next;
+
+				if (fs_extraPaks[i][0] == '.' && fs_extraPaks[i][1] == '\0')
+					fs_unpureAllowed = qtrue;
 				break; // iterate to next server pack
 			}
 			p_previous = &s->next;
@@ -2720,7 +2726,6 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE );
-	fs_allowunpure = Cvar_Get ("fs_allowunpure", "0", CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {
