@@ -1,6 +1,6 @@
-//#include "../qcommon/q_shared.h"
-//#include "../qcommon/qcommon.h"
-//#include "sys_local.h"
+#include "../qcommon/q_shared.h"
+#include "../qcommon/qcommon.h"
+#include "sys_local.h"
 
 #include <curses.h>
 #include <signal.h>
