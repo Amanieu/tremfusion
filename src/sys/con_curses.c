@@ -1,9 +1,11 @@
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
-#include "sys_local.h"
+//#include "../qcommon/q_shared.h"
+//#include "../qcommon/qcommon.h"
+//#include "sys_local.h"
 
 #include <curses.h>
 #include <signal.h>
+
+#include <sys/ioctl.h>
 
 #define LOG_BUF_SIZE 2048
 
@@ -26,6 +28,8 @@ typedef struct
 	int y;
 } _window;
 
+int root_y, root_x;
+
 WINDOW *rootwin;
 
 _window win0;
@@ -34,6 +38,8 @@ _window win2;
 _window win3;
 _window win4;
 _window win5;
+
+/* -- prototypes -- */
 
 /* helper functions */
 static void NewWin ( _window * );
@@ -44,12 +50,10 @@ static void ResizeWins ( void );
 static void RefreshWins ( void );
 static void DrawWins ( void );
 static void ClearWins ( void );
-
-static void SigTrap ( void );
-static void SigHndlr ( int );
-
 static void CursResize ( void );
+
 static void LogPrint ( char * );
+static void LogRedraw ( void );
 
 /* tremulous functions */
 void CON_Print ( const char * );
@@ -72,9 +76,14 @@ static void ResizeWin ( _window *win )
 /* set the size of the windows from the root window size */
 static void SetWins ( void )
 {
-	int root_y, root_x;
+	//getmaxyx(rootwin, root_y, root_x);
 
-	getmaxyx(rootwin, root_y, root_x);
+	struct winsize winsz = { 0, };
+
+	ioctl (fileno (stdout), TIOCGWINSZ, &winsz);
+
+	root_y = winsz.ws_row;
+	root_x = winsz.ws_col;
 
 	win0.lines = 2;
 	win0.cols = root_x;
@@ -116,6 +125,14 @@ static void InitWins ( void )
 	NewWin(&win3);
 	NewWin(&win4);
 	NewWin(&win5);
+
+	/*FIXME: experamental codes */
+	clearok(win0.win, TRUE);
+	clearok(win1.win, TRUE);
+	clearok(win2.win, TRUE);
+	clearok(win3.win, TRUE);
+	clearok(win4.win, TRUE);
+	clearok(win5.win, TRUE);
 }
 
 /* resize all windows to their win.lines/cols size */
@@ -128,12 +145,17 @@ static void ResizeWins ( void )
 	ResizeWin(&win3);
 	ResizeWin(&win4);
 	ResizeWin(&win5);
+
+	/*FIXME: figure this out */
+	mvwin(win5.win, win5.y, win5.x);
 }
 
 
 /* refresh all of the windows */
 static void RefreshWins ( void )
 {
+	wrefresh(rootwin);
+
 	wrefresh(win0.win);
 	wrefresh(win1.win);
 	wrefresh(win2.win);
@@ -164,11 +186,14 @@ static void DrawWins ( void )
 	// window 4
 
 	// window 5
+	mvwprintw(win5.win, 0, 0, "# rm -rf /");
 }
 
 /* clear all of the windows */
 static void ClearWins ( void )
 {
+	wclear(rootwin);
+
 	wclear(win0.win);
 	wclear(win1.win);
 	wclear(win2.win);
@@ -177,28 +202,21 @@ static void ClearWins ( void )
 	wclear(win5.win);
 }
 
-static void SigTrap ( void )
-{
-	signal( SIGWINCH, SigHndlr );
-}
-
-static void SigHndlr ( int signal )
-{
-	CursResize();
-}
-
 /* resize the windows, redraw them, and set the bear trap */
-/* FIXME: make this work 100% of the time (works less than 5% of the time right now), and redraw the log window */
+/* FIXME: make this work 100% of the time (currently at um... 95%?) */
+/* FIXME: weerd 5th window bug now */
 static void CursResize ( void )
 {
+	signal(SIGWINCH, (void*) CursResize);
+
 	endwin();
+	ClearWins();
 	SetWins();
 	ResizeWins();
 	ClearWins();
 	DrawWins();
+	LogRedraw();
 	RefreshWins();
-
-	SigTrap();
 }
 
 /* print to the log screen */
@@ -232,6 +250,16 @@ static void LogPrint ( char *msg )
 	logwinline++;
 }
 
+static void LogRedraw ( void )
+{
+	int i;
+
+	wclear(win4.win);
+	for(i = (logwinline - 1); i >= 0; i--)
+	{
+		mvwprintw(win4.win, i, 0, "%s", logwinbuf[i]);
+	}
+}
 
 /* -- tremulous functions -- */
 
@@ -251,7 +279,6 @@ void CON_Print ( const char *msg )
 	snprintf(logbuf[logline], 1024, "%i: %s", reallogline, msg );
 	LogPrint(logbuf[logline]);
 
-	
 	logline++;
 	reallogline++;
 }
@@ -268,6 +295,10 @@ void CON_Init ( void )
 	SetWins();
 	InitWins();
 	CursResize();
+
+	FILE *fd = fopen("/tmp/out", "a");
+	fprintf(fd, "CON_Init()\n");
+	fclose(fd);
 }
 
 void CON_Shutdown ( void )
