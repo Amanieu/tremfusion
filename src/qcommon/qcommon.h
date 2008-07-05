@@ -536,9 +536,7 @@ issues.
 #define FS_GENERAL_REF	0x01
 #define FS_UI_REF		0x02
 #define FS_CGAME_REF	0x04
-#define FS_QAGAME_REF	0x08
-// number of id paks that will never be autodownloaded from baseq3
-#define NUM_ID_PAKS		9
+#define FS_EXTRA_REF	0x08
 
 #define	MAX_FILE_HANDLES	64
 
