@@ -2642,6 +2642,12 @@ FS_SetExtraPaks
 static void FS_SetExtraPaks( const char *pakNames ) {
 	int		i, c;
 
+#ifndef DEDICATED
+	extern int cl_connectedToPureServer;
+	if ( cl_connectedToPureServer )
+		return;
+#endif
+
 	Cmd_TokenizeString( pakNames );
 
 	c = Cmd_Argc();
