@@ -2644,8 +2644,10 @@ static void FS_SetExtraPaks( const char *pakNames ) {
 
 #ifndef DEDICATED
 	extern int cl_connectedToPureServer;
-	if ( cl_connectedToPureServer )
+	if ( cl_connectedToPureServer ) {
+		fs_numExtraPaks = 0;
 		return;
+	}
 #endif
 
 	Cmd_TokenizeString( pakNames );
@@ -2921,7 +2923,7 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 
 	checksum = fs_checksumFeed;
 	numPaks = 0;
-	for (nFlags = FS_CGAME_REF; nFlags <= FS_GENERAL_REF; nFlags = nFlags >> 1) {
+	for (nFlags = FS_CGAME_REF; nFlags; nFlags = nFlags >> 1) {
 		if (nFlags & FS_GENERAL_REF) {
 			// add a delimter between must haves and general refs
 			Q_strcat(info, sizeof(info), "@ ");
