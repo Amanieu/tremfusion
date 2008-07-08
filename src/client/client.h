@@ -380,6 +380,8 @@ extern	cvar_t	*cl_altTab;
 
 extern  cvar_t  *cl_dlURLOverride;
 
+extern  cvar_t  *cl_defaultUI;
+
 //=================================================
 
 //

@@ -85,6 +85,8 @@ cvar_t	*cl_altTab;
 
 cvar_t  *cl_dlURLOverride;
 
+cvar_t  *cl_defaultUI;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -766,6 +768,10 @@ void CL_FlushMemory( void ) {
 
 	// shutdown all the client stuff
 	CL_ShutdownAll();
+
+	// get our menus back
+	Cvar_Set( "fs_game", cl_defaultUI->string );
+	FS_ConditionalRestart( clc.checksumFeed );
 
 	// if not running a server clear the whole hunk
 	if ( !com_sv_running->integer ) {
@@ -2700,6 +2706,8 @@ void CL_Init( void ) {
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
 	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
+
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

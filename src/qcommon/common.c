@@ -276,17 +276,17 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
 		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
 		// make sure we can get at our local stuff
 		FS_PureServerSetLoadedPaks("", "");
+		CL_FlushMemory( );
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if (code == ERR_DROP) {
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
 		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
 		FS_PureServerSetLoadedPaks("", "");
+		CL_FlushMemory( );
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else {
