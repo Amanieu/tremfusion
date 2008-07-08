@@ -25,9 +25,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define MAX_TAG_LENGTH          16
 #define MAX_FUNCTION_ARGUMENTS  16
+#define MAX_OBJECT_MEMBERS      32
 #define MAX_NAMESPACE_DEPTH     8
 #define MAX_NAMESPACE_LENGTH    16
 #define MAX_PATH_LENGTH         64
+#define MAX_OBJECT_DESCRIPTION  1024
+#define MAX_MEMBER_DESCRIPTION  1024
 
 #ifdef USE_PYTHON
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
@@ -61,6 +64,8 @@ typedef enum
   TYPE_ARRAY,
   TYPE_HASH,
   TYPE_NAMESPACE,
+  TYPE_OBJECT,
+  TYPE_OBJECTTYPE,
 } scDataType_t;
 
 typedef struct
@@ -86,20 +91,42 @@ typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
 typedef struct scDataTypeFunction_s scDataTypeFunction_t;
 typedef scDataTypeHash_t scNamespace_t;
 
+typedef struct scDataTypeObjectType_s scDataTypeObjectType_t;
+typedef struct scDataTypeObject_s scDataTypeObject_t;
+
+typedef struct scObjectMember_s scObjectMember_t;
+typedef struct scObjectType_s scObjectType_t;
+typedef struct scObjectInstance_s scObjectInstance_t;
+
 struct scDataTypeValue_s
 {
   scDataType_t    type;
   union
   {
-    scDataTypeBoolean_t   boolean;
-    scDataTypeInteger_t   integer;
-    scDataTypeFloat_t     floating;
-    scDataTypeString_t    *string;
-    scDataTypeFunction_t  *function;
-    scDataTypeArray_t     *array;
-    scDataTypeHash_t      *hash;
-    scNamespace_t         *namespace;
+    scDataTypeBoolean_t    boolean;
+    scDataTypeInteger_t    integer;
+    scDataTypeFloat_t      floating;
+    scDataTypeString_t     *string;
+    scDataTypeFunction_t   *function;
+    scDataTypeArray_t      *array;
+    scDataTypeHash_t       *hash;
+    scNamespace_t          *namespace;
+    scObjectInstance_t     *object;
+    scObjectType_t         *objecttype;
+    
   } data;
+};
+
+struct scDataTypeObjectType_s
+{
+  scDataTypeString_t typename;
+};
+
+struct scDataTypeObject_s
+{
+  scDataTypeObjectType_t  *type;
+//  scDataTypeHash_t       *members;
+//  scDataTypeHash_t        *values;
 };
 
 struct scDataTypeArray_s
@@ -229,7 +256,38 @@ typedef struct
   scDataType_t          return_type;
 } scLib_t;
 
+typedef void (*scObjectInit_t)(scObjectInstance_t*);
+typedef void (*scObjectSet_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
+typedef scDataTypeValue_t* (*scObjectGet_t)(scObjectInstance_t*, void *);
+
+struct scObjectMember_s
+{
+  char                  *name;
+  char                  *desc;
+  scDataType_t          type;
+  scObjectSet_t         set;
+  scObjectGet_t         get;
+  void                  *closure;
+};
+
+struct scObjectType_s
+{
+  char                  *name;
+  scObjectInit_t        init;
+  scObjectMember_t     *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
+};
+
+struct scObjectInstance_s
+{
+  scObjectType_t        *type;
+  void                  *pointer;
+};
+
+
+
 void SC_AddLibrary( const char *namespace, scLib_t lib[] );
+
+void SC_AddObjectType( const char *namespace_path, scObjectType_t type );
 
 #endif
 

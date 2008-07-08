@@ -48,3 +48,17 @@ void SC_AddLibrary( const char *namespace, scLib_t lib[] )
   }
 }
 
+void SC_AddObjectType( const char *namespace, scObjectType_t type )
+{
+  char name[ MAX_PATH_LENGTH + 1 ];
+  scDataTypeValue_t var;
+  int nslen = strlen( namespace );
+
+  Q_strncpyz( name, namespace, sizeof( name ) );
+  var.type = TYPE_OBJECTTYPE;
+  var.data.objecttype = &type;
+  Q_strncpyz( name + nslen, type.name, strlen( type.name ) + 1);
+  
+  SC_NamespaceSet( name, &var );
+//  name[nslen] = '.';
+}
