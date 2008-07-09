@@ -392,8 +392,6 @@ void SV_SendClientGameState( client_t *client ) {
  	Com_DPrintf ("SV_SendClientGameState() for %s\n", client->name);
 	Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
 	client->state = CS_PRIMED;
-	client->pureAuthentic = 0;
-	client->gotCP = qfalse;
 
 	// when we receive the first packet from the client, we will
 	// notice that it is from a different serverid and that the
@@ -817,10 +815,7 @@ static void SV_VerifyPaks_f( client_t *cl ) {}
 SV_ResetPureClient_f
 =================
 */
-static void SV_ResetPureClient_f( client_t *cl ) {
-	cl->pureAuthentic = 0;
-	cl->gotCP = qfalse;
-}
+static void SV_ResetPureClient_f( client_t *cl ) {}
 
 /*
 =================
