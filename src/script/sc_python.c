@@ -474,4 +474,5 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
   Py_DECREF(ReturnValue);
 }
 
+
 #endif

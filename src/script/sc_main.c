@@ -199,6 +199,16 @@ scLangage_t SC_LangageFromFilename(const char* filename)
   return LANGAGE_INVALID;
 }
 
+void SC_InitObjectType( scObjectType_t * type)
+{
+#ifdef USE_LUA
+//  SC_Lua_InitObectType( type );
+#endif
+#ifdef USE_PYTHON
+  SC_Python_InitObectType( type );
+#endif
+}
+
 static void script_NameSpaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
   SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );

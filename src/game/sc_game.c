@@ -39,8 +39,16 @@ static scLib_t game_lib[] = {
   { "" }
 };
 
-static void entity_init ( scObjectInstance_t *self ){
+static scObjectDef_t entity_object;
+
+static scObjectInstance_t *entity_init ( scObjectType_t *type, scDataTypeValue_t *args ){
+  scObjectInstance_t *self;
+  self = BG_Alloc( sizeof( scObjectInstance_t ) );
   
+  self->type = type;
+  Com_Printf("entity_init called\n");
+//  self->pointer =
+  return self;
 }
 
 typedef enum 
@@ -98,11 +106,13 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
 
 static scObjectMember_t entity_members[] = {
     { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME},
+    { NULL },
 };
 
-static scObjectType_t entity_object = {
+static scObjectDef_t entity_object = {
   "Entity",
   entity_init,
+  { TYPE_INTEGER, TYPE_UNDEF },
   entity_members,
 };
 

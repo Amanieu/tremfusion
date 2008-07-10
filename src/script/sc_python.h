@@ -33,6 +33,12 @@ typedef struct {
   PyObject_HEAD
   scDataTypeFunction_t *function;
 } PyFunction;
+
+typedef struct {
+  PyObject_HEAD
+  scObjectInstance_t *instance;
+} PyScObject;
+
 PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function);
 PyTypeObject PyFunctionType;
@@ -45,5 +51,6 @@ void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );
 qboolean            SC_Python_RunScript( const char *filename );
 void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
+void                SC_Python_InitObectType( scObjectType_t * type );
 
 #endif

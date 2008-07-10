@@ -95,6 +95,7 @@ typedef struct scDataTypeObjectType_s scDataTypeObjectType_t;
 typedef struct scDataTypeObject_s scDataTypeObject_t;
 
 typedef struct scObjectMember_s scObjectMember_t;
+typedef struct scObjectDef_s scObjectDef_t;
 typedef struct scObjectType_s scObjectType_t;
 typedef struct scObjectInstance_s scObjectInstance_t;
 
@@ -244,6 +245,7 @@ void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, 
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);
+void SC_InitObjectType( scObjectType_t * type);
 
 
 // sc_c.c
@@ -256,7 +258,7 @@ typedef struct
   scDataType_t          return_type;
 } scLib_t;
 
-typedef void (*scObjectInit_t)(scObjectInstance_t*);
+typedef scObjectInstance_t* (*scObjectInit_t)(scObjectType_t*, scDataTypeValue_t*);
 typedef void (*scObjectSet_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
 typedef scDataTypeValue_t* (*scObjectGet_t)(scObjectInstance_t*, void *);
 
@@ -270,11 +272,24 @@ struct scObjectMember_s
   void                  *closure;
 };
 
+struct scObjectDef_s
+{
+  const char            *name;
+  scObjectInit_t        init;
+  scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
+};
+
 struct scObjectType_s
 {
   char                  *name;
   scObjectInit_t        init;
-  scObjectMember_t     *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
+  scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
+  int                   membercount;
+#ifdef USE_PYTHON
+  PyTypeObject          *pythontype;
+#endif
 };
 
 struct scObjectInstance_s
@@ -287,7 +302,7 @@ struct scObjectInstance_s
 
 void SC_AddLibrary( const char *namespace, scLib_t lib[] );
 
-void SC_AddObjectType( const char *namespace_path, scObjectType_t type );
+void SC_AddObjectType( const char *namespace_path, scObjectDef_t type );
 
 #endif
 

@@ -1523,6 +1523,7 @@ ifeq ($(USE_PYTHON),1)
   GOBJ += \
     $(B)/base/python/py_entity.o \
     $(B)/base/python/py_function.o \
+    $(B)/base/python/py_object.o \
     $(B)/base/script/sc_python.o
 endif
 
