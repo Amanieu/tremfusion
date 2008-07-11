@@ -31,16 +31,26 @@ PyTypeObject Vec3dType;
 
 typedef struct {
   PyObject_HEAD
-  scDataTypeFunction_t *function;
+  scDataType_t           type;
+  union {
+    scDataTypeFunction_t *function;
+    scObjectType_t       *objecttype;
+  } data;
 } PyFunction;
 
 typedef struct {
   PyObject_HEAD
   scObjectInstance_t *instance;
+  scObjectType_t     *type;
 } PyScObject;
 
+PyTypeObject PyScObject_Type;
+
+PyObject *PyScObject_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+int PyScObject_init(PyScObject *self, scObjectType_t *type, scDataTypeValue_t *args);
+
 PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
-int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function);
+int PyFunction_init(PyFunction *self, int type, void *closure);
 PyTypeObject PyFunctionType;
 
 extern PyObject *vec3d;

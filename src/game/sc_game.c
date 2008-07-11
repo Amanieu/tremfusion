@@ -45,6 +45,8 @@ static scObjectInstance_t *entity_init ( scObjectType_t *type, scDataTypeValue_t
   scObjectInstance_t *self;
   self = BG_Alloc( sizeof( scObjectInstance_t ) );
   
+  self->pointer = (void*)&g_entities[ args[0].data.integer ];
+  
   self->type = type;
   Com_Printf("entity_init called\n");
 //  self->pointer =

@@ -30,13 +30,15 @@ static int PyFunction_traverse(PyFunction *self, visitproc visit, void *arg) {
 }
 // Deletion
 static int PyFunction_clear(PyFunction *self) {
-  SC_FunctionGCDec(self->function);
+  SC_FunctionGCDec(self->data.function);
   return 0;
 }
 // Deallocation
 static void PyFunction_dealloc(PyFunction* self) {
-  PyFunction_clear(self);
-  self->ob_type->tp_free((PyObject*)self);
+  if (self->type == TYPE_FUNCTION) {
+    PyFunction_clear(self);
+    self->ob_type->tp_free((PyObject*)self);
+  }
 }
 // 
 PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -45,16 +47,30 @@ PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
   self = (PyFunction *)type->tp_alloc(type, 0);
   if (self != NULL) {
-    self->function = NULL;
+    self->type = TYPE_UNDEF;
+    self->data.function = NULL;
+//    self->function = NULL;
   }
   
   return (PyObject *)self;
 }
 
-int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function)
+int PyFunction_init(PyFunction *self, int type, void *closure)
 {
-  SC_FunctionGCInc( function );
-  self->function = function;
+  self->type = type;
+  switch (type){
+    case TYPE_FUNCTION:
+      SC_FunctionGCInc( (scDataTypeFunction_t*)closure );
+      self->data.function = (scDataTypeFunction_t*)closure;
+      break;
+    case TYPE_OBJECTTYPE:
+      self->data.objecttype = (scObjectType_t*)closure;
+      break;
+    default:
+      Com_Printf("invalid PyFunction_init type: %d", type);
+      return -1;
+  }
+  
   return 0;
 }
 
@@ -63,23 +79,49 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
   int i, argcount;
   scDataTypeValue_t ret;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   argcount = 0;
+  PyObject *temp;
+  
+  switch (self->type){
+    case TYPE_FUNCTION:
+      memcpy( arguments, self->data.function->argument, sizeof( arguments ) );
+      break;
+    case TYPE_OBJECTTYPE:
+      memcpy( arguments, self->data.objecttype->initArguments, sizeof( arguments ) );
+      break;
+    default:
+      PyErr_SetNone(PyExc_SystemError);
+      return NULL;
+  }
   
   argcount = PyTuple_Size( pArgs );
   
   for( i=0; i < argcount; i++)
   {
-    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], self->function->argument[i] );
-    if (self->function->argument[i] !=  TYPE_ANY && args[i].type != self->function->argument[i])
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], arguments[i] );
+    if (arguments[i] !=  TYPE_ANY && args[i].type != arguments[i])
     {
       PyErr_SetNone(PyExc_TypeError);
       return NULL;
     }
   }
   args[argcount].type = TYPE_UNDEF;
-  SC_RunFunction( self->function, args, &ret );
   
-  return convert_from_value(&ret);
+  switch (self->type){
+    case TYPE_FUNCTION:
+      SC_RunFunction( self->data.function, args, &ret );
+      return convert_from_value(&ret);
+    case TYPE_OBJECTTYPE:
+      temp = PyScObject_new( &PyScObject_Type, NULL, NULL );
+      PyScObject_init( (PyScObject*)temp, self->data.objecttype, args);
+      if ( temp == NULL ) return Py_BuildValue("");
+      return temp;
+    default:
+      PyErr_SetNone(PyExc_SystemError);
+      return NULL;
+  }
+  
 }
 
 static PyMemberDef PyFunction_members[] = {

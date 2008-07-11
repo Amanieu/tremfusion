@@ -200,12 +200,21 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 #ifndef UNITTEST
   PyObject *temp;
   temp = PyFunction_new( &PyFunctionType, NULL, NULL );
-  PyFunction_init( (PyFunction*)temp, function );
+  PyFunction_init( (PyFunction*)temp, TYPE_FUNCTION, (void*)function );
   if ( temp == NULL ) return Py_BuildValue("");
   return temp;
 #else
   return Py_BuildValue("");
 #endif
+}
+
+static PyObject *convert_from_objecttype( scObjectType_t *type )
+{
+  PyObject *temp;
+  temp = PyFunction_new( &PyFunctionType, NULL, NULL );
+  PyFunction_init( (PyFunction*)temp, TYPE_OBJECTTYPE, (void*)type );
+  if ( temp == NULL ) return Py_BuildValue("");
+  return temp;
 }
 
 /* Convert a script data value to a python object */
@@ -230,6 +239,8 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
 //      break;
     case TYPE_FUNCTION:
       return convert_from_function( value->data.function );
+    case TYPE_OBJECTTYPE:
+      return convert_from_objecttype( value->data.objecttype );
     default:
 #ifdef UNITTEST
       printf("convert_from_value type fallthrough %d \n", value->type);
@@ -260,18 +271,16 @@ void SC_Python_Init( void )
 //  value->data.integer = 1337;
   
 //  SC_NamespaceSet("game.test", value);
-  PyImport_AddModule("game");
-  gamemodule = Py_InitModule("game", game_methods);
-  if (PyType_Ready(&EntityType) < 0)
-    return;
-  Py_INCREF(&EntityType);
-  PyModule_AddObject(gamemodule, "Entity", (PyObject *)&EntityType);
-  if (PyType_Ready(&EntityStateType) < 0)
-    return;
-  Py_INCREF(&EntityStateType);
-  PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
-  if (PyType_Ready(&PyFunctionType) < 0)
-      return;
+//  PyImport_AddModule("game");
+//  gamemodule = Py_InitModule("game", game_methods);
+//  if (PyType_Ready(&EntityType) < 0)
+//    return;
+//  Py_INCREF(&EntityType);
+//  PyModule_AddObject(gamemodule, "Entity", (PyObject *)&EntityType);
+//  if (PyType_Ready(&EntityStateType) < 0)
+//    return;
+//  Py_INCREF(&EntityStateType);
+//  PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
   
 //  if (PyType_Ready(&Vec3dType) < 0)
 //    return;
@@ -285,7 +294,11 @@ void SC_Python_Init( void )
 //  } else {
 //    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
 //  }
-
+  if (PyType_Ready(&PyFunctionType) < 0)
+    return;
+  if (PyType_Ready(&PyScObject_Type) < 0)
+    return;
+  Py_INCREF(&EntityType);
   G_Printf("-----------------------------------\n");
 }
 
@@ -323,6 +336,7 @@ static void update_module( scDataTypeString_t *module, scDataTypeValue_t *value 
 {
   PyObject *pyModule;
   scDataTypeHash_t* hash =(scDataTypeHash_t*) value->data.namespace;
+  char *keystring;
   
   pyModule = PyImport_AddModule( SC_StringToChar( module ) );
   if (!pyModule)
@@ -332,7 +346,10 @@ static void update_module( scDataTypeString_t *module, scDataTypeValue_t *value 
   {
     if(SC_StringIsEmpty(&hash->data[i].key))
       continue;
-    PyModule_AddObject( pyModule, SC_StringToChar(&hash->data[i].key), convert_from_value( &hash->data[i].value ));
+    keystring = (char*)SC_StringToChar(&hash->data[i].key);
+    if( PyObject_HasAttrString(pyModule, keystring) )
+      continue;
+    PyModule_AddObject( pyModule, keystring, convert_from_value( &hash->data[i].value ));
   }
 }
 
@@ -340,6 +357,7 @@ static void update_context( void )
 {
   // TODO: make better updating system
   scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
+  char *keystring;
   int i;
   for( i = 0; i < hash->buflen; i++ )
   {
@@ -351,7 +369,8 @@ static void update_context( void )
     }
     else 
     {
-      PyModule_AddObject( mainModule, SC_StringToChar(&hash->data[i].key), convert_from_value( &hash->data[i].value ));
+      keystring = (char*)SC_StringToChar(&hash->data[i].key);
+      PyModule_AddObject( mainModule, keystring, convert_from_value( &hash->data[i].value ));
     }
   }
 }

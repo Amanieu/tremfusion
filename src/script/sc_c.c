@@ -52,31 +52,36 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
 {
   char name[ MAX_PATH_LENGTH + 1 ];
   scDataTypeValue_t var;
-  scObjectType_t    type;
+  scObjectType_t    *type;
   int nslen = strlen( namespace );
   int i;
   
-  type.membercount = 0;
-  type.name    = (char*)def.name;
-  type.init    = def.init;
-  type.members = def.members;
-//  memcpy( type.members, def.members, sizeof( type.members ) );
-  memcpy( type.initArguments, def.initArguments, sizeof( type.initArguments ) );
+  type = BG_Alloc( sizeof(scObjectType_t) );
+  
+  type->membercount = 0;
+  type->name    = (char*)def.name;
+  type->init    = def.init;
+  type->members = def.members;
+//  memcpy( type->members, def.members, sizeof( type->members ) );
+  memcpy( type->initArguments, def.initArguments, sizeof( type->initArguments ) );
 #if USE_PYTHON
-  type.pythontype = NULL;
+  type->pythontype = NULL;
 #endif
   Q_strncpyz( name, namespace, sizeof( name ) );
-  var.type = TYPE_OBJECTTYPE;
-  var.data.objecttype = &type;
-  Q_strncpyz( name + nslen, def.name, strlen( def.name ) + 1);
+  name[nslen] = '.';
+  Q_strncpyz( name + nslen + 1, def.name, strlen( def.name ) + 1);
   
-  for (; type.members->name != NULL; type.members++) {
-    type.membercount++;
+  for (; type->members->name != NULL; type->members++) {
+    type->membercount++;
     
   }
-  for (i=0; i < type.membercount; i++)
-    type.members--;
-  SC_InitObjectType( &type );
+  for (i=0; i < type->membercount; i++)
+    type->members--;
+  SC_InitObjectType( type );
+  
+  var.type = TYPE_OBJECTTYPE;
+  var.data.objecttype = type;
+  
   SC_NamespaceSet( name, &var );
 //  name[nslen] = '.';
 }

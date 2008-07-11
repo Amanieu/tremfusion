@@ -268,6 +268,8 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash )
   {
     if(SC_StringIsEmpty(&hash->data[i].key))
       continue;
+    if ( hash->data[i].value.type == TYPE_OBJECTTYPE ) //Prevent error caused by indexing a nil value TODO: Fix this....
+      continue;
     push_value( L, &hash->data[i].value);
     lua_setfield( L, -2, SC_StringToChar(&hash->data[i].key));
   }
