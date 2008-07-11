@@ -283,12 +283,13 @@ struct scObjectDef_s
 struct scObjectType_s
 {
   char                  *name;
+  char                  *namespace_path;
   scObjectInit_t        init;
   scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
   int                   membercount;
 #ifdef USE_PYTHON
-  PyTypeObject          *pythontype;
+  void                 *pythontype;
 #endif
 };
 

@@ -210,11 +210,12 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 
 static PyObject *convert_from_objecttype( scObjectType_t *type )
 {
-  PyObject *temp;
-  temp = PyFunction_new( &PyFunctionType, NULL, NULL );
-  PyFunction_init( (PyFunction*)temp, TYPE_OBJECTTYPE, (void*)type );
-  if ( temp == NULL ) return Py_BuildValue("");
-  return temp;
+//  PyObject *temp;
+////  temp = PyFunction_new( &PyFunctionType, NULL, NULL );
+////  PyFunction_init( (PyFunction*)temp, TYPE_OBJECTTYPE, (void*)type );
+//  if ( temp == NULL ) return Py_BuildValue("");
+//  return temp;
+  return (PyObject*)type->pythontype;
 }
 
 /* Convert a script data value to a python object */
@@ -296,9 +297,9 @@ void SC_Python_Init( void )
 //  }
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
-  if (PyType_Ready(&PyScObject_Type) < 0)
-    return;
-  Py_INCREF(&EntityType);
+//  if (PyType_Ready(&PyScObject_Type) < 0)
+//    return;
+//  Py_INCREF(&EntityType);
   G_Printf("-----------------------------------\n");
 }
 

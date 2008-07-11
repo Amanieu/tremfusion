@@ -70,6 +70,7 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
   Q_strncpyz( name, namespace, sizeof( name ) );
   name[nslen] = '.';
   Q_strncpyz( name + nslen + 1, def.name, strlen( def.name ) + 1);
+  type->namespace_path = name;
   
   for (; type->members->name != NULL; type->members++) {
     type->membercount++;

@@ -36,20 +36,38 @@ static void PyScObject_dealloc(PyScObject* self) {
   self->ob_type->tp_free((PyObject*)self);
 }
 // 
-PyObject *PyScObject_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds)
 {
   PyScObject *self;
 
-  self = (PyScObject *)type->tp_alloc(type, 0);
+  self = (PyScObject *)type->tp_alloc((PyTypeObject*)type, 0);
+  
+  self->type = type->tp_scobjtype;
   
   return (PyObject *)self;
 }
 
-int PyScObject_init(PyScObject *self, scObjectType_t *type, scDataTypeValue_t *args)
+int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
 {
-  self->type = type;
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  int               i, argcount;
   
-  self->instance = type->init( type, args);
+  memcpy( arguments, self->type->initArguments, sizeof( arguments ) );
+  argcount = PyTuple_Size( pArgs );
+  
+  for( i=0; i < argcount; i++)
+  {
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], arguments[i] );
+    if (arguments[i] !=  TYPE_ANY && args[i].type != arguments[i])
+    {
+      PyErr_SetNone(PyExc_TypeError);
+      return -1;
+    }
+  }
+  args[argcount].type = TYPE_UNDEF;
+  
+  self->instance = self->type->init( self->type, args);
   
   return 0;
 }
@@ -81,46 +99,11 @@ static PyMemberDef PyScObject_members[] = {
   {NULL}  /* Sentinel */
 };
 
-static PyObject *getattr(PyScObject *self, char *name)
-{
-  scObjectMember_t *member;
-  scDataTypeValue_t *value;
-  
-  member = self->type->members;
-  
-  for (; member->name != NULL; member++) {
-    if (strcmp(member->name, name) == 0){
-      value = member->get( self->instance, member->closure );
-      return convert_from_value( value );
-    }
-  }
-  PyErr_SetNone( PyExc_AttributeError );
-  return NULL;
-}
-
-static int setattr(PyScObject *self, char *name, PyObject *pyvalue)
-{
-  scObjectMember_t *member;
-  scDataTypeValue_t *value;
-  
-  member = self->type->members;
-  
-  for (; member->name != NULL; member++) {
-    if (strcmp(member->name, name) == 0){
-      convert_to_value( pyvalue, value, member->type );
-      member->set( self->instance, value, member->closure );
-      return 0;
-    }
-  }
-  PyErr_SetNone( PyExc_AttributeError );
-  return -1;
-}
-
 static PyMethodDef PyScObject_methods[] = {
     {NULL}  /* Sentinel */
 };
 
-PyTypeObject PyScObject_Type = {
+ScPyTypeObject PyScObject_Type = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
     "script.PyScObject",             /*tp_name*/
@@ -128,8 +111,8 @@ PyTypeObject PyScObject_Type = {
     0,                         /*tp_itemsize*/
     (destructor)PyScObject_dealloc, /*tp_dealloc*/
     0,                         /*tp_print*/
-    (getattrfunc)getattr,      /*tp_getattr*/
-    (setattrfunc)setattr,      /*tp_setattr*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
     0,                         /*tp_compare*/
     0,                         /*tp_repr*/
     0,                         /*tp_as_number*/
@@ -159,23 +142,72 @@ PyTypeObject PyScObject_Type = {
     0,                         /* tp_dictoffset */
     (initproc)PyScObject_init, /* tp_init */
     0,                         /* tp_alloc */
-    PyScObject_new,                /* tp_new */
+    (newfunc)PyScObject_new,   /* tp_new */
     0,                         /*tp_scobjtype*/
 };
 
-//static PyObject *get_wrapper(PyObject *self, void *closure)
-//{
-//  return Py_BuildValue("");
-//}
-//
-//static int set_wrapper(PyObject *self, PyObject *value, void *closure)
-//{
-//  return 0;
-//}
+static PyObject *get_wrapper(PyScObject *self, void *closure)
+{
+  scObjectMember_t *member;
+  scDataTypeValue_t *value;
+  
+  member = (scObjectMember_t*)closure;
+  
+  value = member->get( self->instance, member->closure );
+  return convert_from_value( value );
+}
+
+static int set_wrapper(PyScObject *self, PyObject *pyvalue, void *closure)
+{
+  scObjectMember_t *member;
+  scDataTypeValue_t value;
+  
+  member = (scObjectMember_t*)closure;
+  
+  convert_to_value( pyvalue, &value, member->type );
+  
+  if( member->type !=  TYPE_ANY && member->type != value.type )
+  {
+    PyErr_SetNone(PyExc_TypeError);
+    return -1;
+  }
+  
+  member->set( self->instance, &value, member->closure );
+  return 0;
+}
 
 /* Create a copy of PyScObjectType and make it work somehow */
 void SC_Python_InitObectType( scObjectType_t * type )
 {
+  ScPyTypeObject   *newtype;
+  scObjectMember_t *member;
+  PyGetSetDef      *getsetdef;
+  int              i;
+  
+  newtype   = BG_Alloc( sizeof( ScPyTypeObject ) );
+  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * (type->membercount + 1) );
+  member    = type->members;
+  
+  for (i=0; member->name != NULL; member++, i++) {
+    getsetdef[i].name    = member->name;
+    getsetdef[i].doc     = member->desc;
+    getsetdef[i].get     = (getter)get_wrapper;
+    getsetdef[i].set     = (setter)set_wrapper;
+    getsetdef[i].closure = (void*)member;
+  }
+  getsetdef[i+1].name = NULL;
+  
+  memcpy( newtype, &PyScObject_Type, sizeof( PyScObject_Type ) );
+  
+  newtype->tp_name      = type->name;
+  newtype->tp_getset    = getsetdef;
+  newtype->tp_scobjtype = type;
+  
+  if (PyType_Ready((PyTypeObject*)newtype) < 0)
+    return;
+  Py_INCREF(newtype);
+  type->pythontype = (void*)newtype;
+  
 }
 
 #endif
