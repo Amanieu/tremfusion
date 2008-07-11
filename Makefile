@@ -17,9 +17,6 @@ ifeq ($(COMPILE_PLATFORM),darwin)
   COMPILE_ARCH=$(shell uname -p | sed -e s/i.86/x86/)
 endif
 
-ifndef BUILD_STANDALONE
-  BUILD_STANDALONE =
-endif
 ifndef BUILD_CLIENT
   BUILD_CLIENT     =
 endif
