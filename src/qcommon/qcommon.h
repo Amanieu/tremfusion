@@ -938,7 +938,7 @@ void	CL_ForwardCommandToServer( const char *string );
 void CL_ShutdownAll( void );
 // shutdown all the client stuff
 
-void CL_FlushMemory( void );
+void CL_FlushMemory( qboolean defaultUI );
 // dump all memory on an error
 
 void CL_StartHunkUsers( qboolean rendererOnly );

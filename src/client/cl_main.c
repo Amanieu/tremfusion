@@ -1062,14 +1062,16 @@ ways a client gets into a game
 Also called by Com_Error
 =================
 */
-void CL_FlushMemory( void ) {
+void CL_FlushMemory( qboolean defaultUI ) {
 
 	// shutdown all the client stuff
 	CL_ShutdownAll();
 
 	// get our menus back
-	Cvar_Set( "fs_game", cl_defaultUI->string );
-	FS_ConditionalRestart( clc.checksumFeed );
+	if ( defaultUI ) {
+		Cvar_Set( "fs_game", cl_defaultUI->string );
+		FS_ConditionalRestart( clc.checksumFeed );
+	}
 
 	// if not running a server clear the whole hunk
 	if ( !com_sv_running->integer ) {
@@ -1799,7 +1801,7 @@ void CL_DownloadsComplete( void ) {
 	// this will also (re)load the UI
 	// if this is a local client then only the client part of the hunk
 	// will be cleared, note that this is done after the hunk mark has been set
-	CL_FlushMemory();
+	CL_FlushMemory(qfalse);
 
 	// initialize the CGame
 	cls.cgameStarted = qtrue;

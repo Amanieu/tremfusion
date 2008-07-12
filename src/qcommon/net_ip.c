@@ -1330,11 +1330,6 @@ void NET_OpenIP( void ) {
 
 	NET_GetLocalAddress();
 
-#ifdef USE_EPOLL
-			if (NET_Sleep_ctor())
-				Com_Error(ERR_FATAL, "WARNING: Couldn't initialize epoll\n");
-#endif
-
 	// automatically scan for a valid port, so multiple
 	// dedicated servers can be started without requiring
 	// a different net_port for each one
@@ -1381,6 +1376,11 @@ void NET_OpenIP( void ) {
 		if(ip_socket == INVALID_SOCKET)
 			Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
 	}
+
+#ifdef USE_EPOLL
+	if (NET_Sleep_ctor())
+		Com_Error(ERR_FATAL, "ERROR: Couldn't initialize epoll\n");
+#endif
 }
 
 

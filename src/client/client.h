@@ -433,7 +433,7 @@ extern	cvar_t	*cl_voip;
 //
 
 void CL_Init (void);
-void CL_FlushMemory(void);
+void CL_FlushMemory(qboolean defaultUI);
 void CL_ShutdownAll(void);
 void CL_AddReliableCommand( const char *cmd );
 

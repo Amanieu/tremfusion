@@ -276,21 +276,21 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
 		SV_Shutdown( "Server disconnected" );
-		CL_Disconnect( qtrue );
 		// make sure we can get at our local stuff
 		FS_PureServerSetLoadedPaks("", "");
+		CL_Disconnect( qtrue );
 		VM_Forced_Unload_Start();
-		CL_FlushMemory( );
+		CL_FlushMemory( qtrue );
 		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if (code == ERR_DROP) {
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
-		CL_Disconnect( qtrue );
 		FS_PureServerSetLoadedPaks("", "");
+		CL_Disconnect( qtrue );
 		VM_Forced_Unload_Start();
-		CL_FlushMemory( );
+		CL_FlushMemory( qtrue );
 		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
@@ -2727,7 +2727,7 @@ void Com_Frame( void ) {
 		com_dedicated->modified = qfalse;
 		if ( !com_dedicated->integer ) {
 			SV_Shutdown( "dedicated set to 0" );
-			CL_FlushMemory();
+			CL_FlushMemory(qtrue);
 		}
 	}
 
