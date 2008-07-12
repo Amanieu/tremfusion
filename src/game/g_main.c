@@ -321,7 +321,7 @@ void QDECL G_Printf( const char *fmt, ... )
   char    text[ 1024 ];
 
   va_start( argptr, fmt );
-  vsprintf( text, fmt, argptr );
+  Q_vsnprintf( text, sizeof( text ), fmt, argptr );
   va_end( argptr );
 
   trap_Print( text );
@@ -333,7 +333,7 @@ void QDECL G_Error( const char *fmt, ... )
   char    text[ 1024 ];
 
   va_start( argptr, fmt );
-  vsprintf( text, fmt, argptr );
+  Q_vsnprintf( text, sizeof( text ), fmt, argptr );
   va_end( argptr );
 
   trap_Error( text );
@@ -693,7 +693,7 @@ void QDECL Com_Error( int level, const char *error, ... )
   char    text[ 1024 ];
 
   va_start( argptr, error );
-  vsprintf( text, error, argptr );
+  Q_vsnprintf( text, sizeof( text ), error, argptr );
   va_end( argptr );
 
   G_Error( "%s", text );
@@ -705,7 +705,7 @@ void QDECL Com_Printf( const char *msg, ... )
   char    text[ 1024 ];
 
   va_start( argptr, msg );
-  vsprintf( text, msg, argptr );
+  Q_vsnprintf( text, sizeof( text ), msg, argptr );
   va_end( argptr );
 
   G_Printf( "%s", text );
@@ -1208,7 +1208,6 @@ void G_CalculateStages( void )
       (int)( ceil( (float)g_alienStage2Threshold.integer * alienPlayerCountMod ) ) &&
       g_alienStage.integer == S1 && g_alienMaxStage.integer > S1 )
   {
-    G_Checktrigger_stages( TEAM_ALIENS, S2 );
     trap_Cvar_Set( "g_alienStage", va( "%d", S2 ) );
     level.alienStage2Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
@@ -1218,7 +1217,6 @@ void G_CalculateStages( void )
       (int)( ceil( (float)g_alienStage3Threshold.integer * alienPlayerCountMod ) ) &&
       g_alienStage.integer == S2 && g_alienMaxStage.integer > S2 )
   {
-    G_Checktrigger_stages( TEAM_ALIENS, S3 );
     trap_Cvar_Set( "g_alienStage", va( "%d", S3 ) );
     level.alienStage3Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
@@ -1228,7 +1226,6 @@ void G_CalculateStages( void )
       (int)( ceil( (float)g_humanStage2Threshold.integer * humanPlayerCountMod ) ) &&
       g_humanStage.integer == S1 && g_humanMaxStage.integer > S1 )
   {
-    G_Checktrigger_stages( TEAM_HUMANS, S2 );
     trap_Cvar_Set( "g_humanStage", va( "%d", S2 ) );
     level.humanStage2Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
@@ -1238,7 +1235,6 @@ void G_CalculateStages( void )
       (int)( ceil( (float)g_humanStage3Threshold.integer * humanPlayerCountMod ) ) &&
       g_humanStage.integer == S2 && g_humanMaxStage.integer > S2 )
   {
-    G_Checktrigger_stages( TEAM_HUMANS, S3 );
     trap_Cvar_Set( "g_humanStage", va( "%d", S3 ) );
     level.humanStage3Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
@@ -1595,7 +1591,7 @@ void QDECL G_LogPrintf( const char *fmt, ... )
   Com_sprintf( string, sizeof( string ), "%3i:%i%i ", min, tens, sec );
 
   va_start( argptr, fmt );
-  vsprintf( string +7 , fmt,argptr );
+  Q_vsnprintf( string + 7, sizeof( string ) - 7, fmt, argptr );
   va_end( argptr );
 
   if( g_dedicated.integer )

@@ -1780,7 +1780,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
 {
   gclient_t *cl;
   int       clientNum, flags;
-  int       score, ping, credit;
+  int       score, ping;
 
   // if we are doing a chase cam or a remote view, grab the latest info
   if( ent->client->sess.spectatorState == SPECTATOR_FOLLOW )
@@ -1793,13 +1793,9 @@ void SpectatorClientEndFrame( gentity_t *ent )
       {
         flags = ( cl->ps.eFlags & ~( EF_VOTED | EF_TEAMVOTED ) ) |
                 ( ent->client->ps.eFlags & ( EF_VOTED | EF_TEAMVOTED ) );
-        // although it's not really necessary to keep credits continuously in sync,
-        // it makes a fair few things simpler and reduces the chance of bugs arising
-        credit = ent->client->ps.persistant[ PERS_CREDIT ];
         score = ent->client->ps.persistant[ PERS_SCORE ];
         ping = ent->client->ps.ping;
         ent->client->ps = cl->ps;
-        ent->client->ps.persistant[ PERS_CREDIT ] = credit;
         ent->client->ps.persistant[ PERS_SCORE ] = score;
         ent->client->ps.ping = ping;
         ent->client->ps.pm_flags |= PMF_FOLLOW;

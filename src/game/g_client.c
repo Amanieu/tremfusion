@@ -1297,7 +1297,7 @@ void ClientBegin( int clientNum )
   if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
     trap_SendServerCommand( clientNum, "disconnect \"Your client is missing files.\n\n"
       "To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
-      "For a client with fast http-download visit themerge.tremforges.net\n\n"
+      "For a client with fast http-download visit tremfusion.tremforges.net\n\n"
       "Open your console and enter: /cl_allowDownload 1\n\"" );
     return;
   }
