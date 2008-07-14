@@ -44,6 +44,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define QKEY_FILE "qkey"
 #define QKEY_SIZE 2048
 
+// file containing our RSA public and private keys
+#define PKEY_FILE "pkey"
+
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
 
 // snapshots are a view of the server at a given time

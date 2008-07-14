@@ -1345,6 +1345,7 @@ typedef enum {
 
 /* This should not be changed because this value is
  * expected to be the same on the client and on the server */
+#define RSA_PUBLIC_EXPONENT 65537
 #define RSA_KEY_LENGTH 2048
 #define RSA_STRING_LENGTH (RSA_KEY_LENGTH / 4 + 1)
 

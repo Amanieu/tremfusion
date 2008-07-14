@@ -26,7 +26,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 #include "qcommon.h"
 
-// dlopen has only been tested on Linux, don't use it on other platforms
 #ifdef WIN32
 #define DEFAULT_GMP_LIB "libgmp-3.dll"
 #define DEFAULT_NETTLE_LIB "libnettle-2.dll"
@@ -37,12 +36,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define DEFAULT_GMP_LIB "libgmp.so.3"
 #define DEFAULT_NETTLE_LIB "libnettle.so.2"
 #endif
-
-#define PKEY_FILE "pkey"
-
-/* This should not be changed because this value is
- * expected to be the same on the client and on the server */
-#define RSA_PUBLIC_EXPONENT 65537
 
 // FIXME: add support for USE_LOCAL_HEADERS
 #include <gmp.h>

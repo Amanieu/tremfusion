@@ -31,12 +31,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ADMBP_begin() G_admin_buffer_begin()
 #define ADMBP_end() G_admin_buffer_end(ent)
 
-#define MAX_ADMIN_LEVELS 32 
+#define MAX_ADMIN_GROUPS 32
 #define MAX_ADMIN_ADMINS 1024
-#define MAX_ADMIN_BANS 1024
+#define MAX_ADMIN_BANS 4092
 #define MAX_ADMIN_NAMELOGS 128
 #define MAX_ADMIN_NAMELOG_NAMES 5
-#define MAX_ADMIN_FLAGS 64
 #define MAX_ADMIN_COMMANDS 64
 #define MAX_ADMIN_CMD_LEN 20
 #define MAX_ADMIN_BAN_REASON 50
@@ -75,48 +74,40 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_ADMIN_LISTITEMS 20
 #define MAX_ADMIN_SHOWBANS 10
 
-// important note: QVM does not seem to allow a single char to be a
-// member of a struct at init time.  flag has been converted to char*
 typedef struct
 {
   char *keyword;
   qboolean ( * handler ) ( gentity_t *ent, int skiparg );
-  char *flag;
   char *function;  // used for !help
   char *syntax;  // used for !help
 }
 g_admin_cmd_t;
 
-typedef struct g_admin_level
+typedef struct g_admin_group
 {
-  int level;
   char name[ MAX_NAME_LENGTH ];
-  char flags[ MAX_ADMIN_FLAGS ];
+  char longname[ MAX_NAME_LENGTH ];
+  char rights[ MAX_STRING_CHARS ];
+  g_admin_group_t *inherit;
 }
-g_admin_level_t;
+g_admin_group_t;
 
 typedef struct g_admin_admin
 {
-  char guid[ 33 ];
   char name[ MAX_NAME_LENGTH ];
-  int level;
-  char flags[ MAX_ADMIN_FLAGS ];
-  char pubkey[ RSA_STRING_LENGTH ];
-  char msg[ RSA_STRING_LENGTH ];
-  char msg2[ RSA_STRING_LENGTH ];
-  int counter;
+  g_admin_group_t *group;
+  char id[ RSA_STRING_LENGTH ];
 }
 g_admin_admin_t;
 
 typedef struct g_admin_ban
 {
   char name[ MAX_NAME_LENGTH ];
-  char guid[ 33 ];
-  char ip[ 18 ];
+  char id[ RSA_STRING_LENGTH ];
+  char ip[ 40 ]; // Enough space for IPv6
   char reason[ MAX_ADMIN_BAN_REASON ];
-  char made[ 18 ]; // big enough for strftime() %c
   int expires;
-  char banner[ MAX_NAME_LENGTH ];
+  g_admin_admin_t *banner;
 }
 g_admin_ban_t;
 
@@ -125,15 +116,15 @@ typedef struct g_admin_command
   char command[ MAX_ADMIN_CMD_LEN ];
   char exec[ MAX_QPATH ];
   char desc[ 50 ];
-  int levels[ MAX_ADMIN_LEVELS + 1 ];
+  char syntax[ 50 ];
 }
 g_admin_command_t;
 
 typedef struct g_admin_namelog
 {
   char      name[ MAX_ADMIN_NAMELOG_NAMES ][MAX_NAME_LENGTH ];
-  char      ip[ 16 ];
-  char      guid[ 33 ];
+  char      ip[ 40 ];
+  char      id[ RSA_STRING_LENGTH ];
   int       slot;
   qboolean  banned;
 }

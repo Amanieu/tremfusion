@@ -326,13 +326,12 @@ typedef struct
   qboolean            teamVote;
 
   vec3_t              lastDeathLocation;
-  char                guid[ 33 ];
-  char                ip[ 16 ];
+  char                id[ RSA_STRING_LENGTH ];
+  char                ip[ 40 ];
   qboolean            muted;
   qboolean            denyBuild;
-  int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
-  g_admin_admin_t     *admin;
+  g_admin_group_t     *group;
   int                 pubkey_authenticated; // -1 = does not have pubkey, 0 = not authenticated, 1 = authenticated
   int                 cl_pubkeyID;
   char                pubkey_msg[ RSA_STRING_LENGTH ];
