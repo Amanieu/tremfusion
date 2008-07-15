@@ -32,11 +32,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ADMBP_end() G_admin_buffer_end(ent)
 
 #define MAX_ADMIN_GROUPS 32
-#define MAX_ADMIN_ADMINS 1024
+#define MAX_ADMIN_ADMINS 4092
 #define MAX_ADMIN_BANS 4092
 #define MAX_ADMIN_NAMELOGS 128
 #define MAX_ADMIN_NAMELOG_NAMES 5
-#define MAX_ADMIN_COMMANDS 64
+#define MAX_ADMIN_COMMANDS 256
 #define MAX_ADMIN_CMD_LEN 20
 #define MAX_ADMIN_BAN_REASON 50
 
@@ -88,7 +88,7 @@ typedef struct g_admin_group
   char name[ MAX_NAME_LENGTH ];
   char longname[ MAX_NAME_LENGTH ];
   char rights[ MAX_STRING_CHARS ];
-  g_admin_group_t *inherit;
+  struct g_admin_group *inherit;
 }
 g_admin_group_t;
 
