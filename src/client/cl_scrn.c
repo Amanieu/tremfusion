@@ -361,6 +361,7 @@ void SCR_DrawVoipMeter( void ) {
 
 
 
+#ifdef USE_VOIP
 /*
 ===============================================================================
 
@@ -389,6 +390,7 @@ void SCR_DebugGraph (float value, int color)
 	values[current&1023].color = color;
 	current++;
 }
+#endif
 
 /*
 ==============

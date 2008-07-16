@@ -189,6 +189,13 @@ ifeq ($(wildcard .svn),.svn)
     VERSION:=$(VERSION)_SVN$(SVN_REV)
     USE_SVN=1
   endif
+else
+ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
+  SVN_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+  ifneq ($(SVN_REV),)
+    VERSION:=$(VERSION)_SVN$(SVN_REV)
+  endif
+endif
 endif
 
 USE_HG=
@@ -1268,6 +1275,7 @@ ifeq ($(ARCH),x86)
     $(B)/client/snapvectora.o
 endif
 
+ifeq ($(USE_VOIP),1)
 ifeq ($(USE_INTERNAL_SPEEX),1)
 Q3OBJ += \
   $(B)/client/bits.o \
@@ -1310,6 +1318,7 @@ Q3OBJ += \
   $(B)/client/vbr.o \
   $(B)/client/vq.o \
   $(B)/client/window.o
+endif
 endif
 
 
