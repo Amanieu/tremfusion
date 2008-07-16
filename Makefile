@@ -189,13 +189,16 @@ ifeq ($(wildcard .svn),.svn)
     VERSION:=$(VERSION)_SVN$(SVN_REV)
     USE_SVN=1
   endif
-else
-ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
-  SVN_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
-  ifneq ($(SVN_REV),)
-    VERSION:=$(VERSION)_SVN$(SVN_REV)
-  endif
 endif
+
+# Wrapper for git-svn
+USE_GIT=
+ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
+  GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+  ifneq ($(GIT_REV),)
+    VERSION:=$(VERSION)_SVN$(GIT_REV)
+    USE_GIT=1
+  endif
 endif
 
 USE_HG=
@@ -1650,6 +1653,12 @@ ifeq ($(USE_SVN),1)
   $(B)/client/cl_console.o : .svn/entries
   $(B)/client/common.o : .svn/entries
   $(B)/ded/common.o : .svn/entries
+endif
+
+ifeq ($(USE_GIT),1)
+  $(B)/client/cl_console.o : .git/svn/.metadata
+  $(B)/client/common.o : .git/svn/.metadata
+  $(B)/ded/common.o : .git/svn/.metadata
 endif
 
 ifeq ($(USE_HG),1)
