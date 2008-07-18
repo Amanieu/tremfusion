@@ -122,7 +122,6 @@ vmCvar_t  g_adminLog;
 vmCvar_t  g_adminParseSay;
 vmCvar_t  g_adminNameProtect;
 vmCvar_t  g_adminTempBan;
-vmCvar_t  g_adminPubkeyID;
 
 vmCvar_t  g_dretchPunt;
 
@@ -238,7 +237,6 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_adminParseSay, "g_adminParseSay", "1", CVAR_ARCHIVE, 0, qfalse  },
   { &g_adminNameProtect, "g_adminNameProtect", "1", CVAR_ARCHIVE, 0, qfalse  },
   { &g_adminTempBan, "g_adminTempBan", "120", CVAR_ARCHIVE, 0, qfalse  },
-  { &g_adminPubkeyID, "g_adminPubkeyID", "2", CVAR_ARCHIVE | CVAR_SERVERINFO, 0, qfalse  },
 
   { &g_dretchPunt, "g_dretchPunt", "0", CVAR_ARCHIVE, 0, qfalse  },
 
@@ -2386,10 +2384,6 @@ void G_RunFrame( int levelTime )
   // check team votes
   CheckTeamVote( TEAM_HUMANS );
   CheckTeamVote( TEAM_ALIENS );
-
-  // generate public-key messages
-  if ( g_adminPubkeyID.integer )
-    G_admin_pubkey();
 
   // for tracking changes
   CheckCvars( );

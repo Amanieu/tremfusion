@@ -3010,34 +3010,26 @@ void Cmd_Damage_f( gentity_t *ent )
 static void Cmd_Pubkey_f( gentity_t *ent )
 {
   char buffer[ RSA_STRING_LENGTH ];
-  g_admin_admin_t *admin = ent->client->pers.admin;
-  if ( !g_adminPubkeyID.integer || ent->client->pers.adminLevel < g_adminPubkeyID.integer || trap_Argc() != 2 )
+  if ( trap_Argc() != 2 || ent->client->pers.id[0] )
     return;
-  if ( admin->pubkey[0] )
-    return;
-  trap_Argv( 1, buffer, sizeof( buffer ) );
-  Q_strncpyz( admin->pubkey, buffer, sizeof( admin->pubkey ) );
-  admin->counter = -1;
-  G_admin_writeconfig( );
+  trap_Argv( 1, ent->client->pers.id, sizeof( ent->client->pers.id ) );
+  trap_RSA_GenerateMessage( ent->client->pers.id, ent->client->pers.pubkey_msg, buffer );
+  trap_SendServerCommand( ent - g_entities, va( "pubkey_decrypt %s", buffer ) );
 }
 
 static void Cmd_Pubkey_Identify_f( gentity_t *ent )
 {
-  char buffer[ MAX_STRING_CHARS ];
+  char buffer[ RSA_STRING_LENGTH ];
   char userinfo[ MAX_INFO_STRING ];
-  g_admin_admin_t *admin = ent->client->pers.admin;
-  if ( !g_adminPubkeyID.integer || ent->client->pers.admin->level < g_adminPubkeyID.integer || trap_Argc() != 2 )
-    return;
-  if ( ent->client->pers.pubkey_authenticated != 0 || !admin->pubkey[0] || admin->counter == -1 || !ent->client->pers.pubkey_msg[0] )
+  if ( trap_Argc() != 2 || !ent->client->pers.pubkey_msg[0] )
     return;
   trap_Argv( 1, buffer, sizeof( buffer ) );
-  if ( Q_strncmp( buffer, ent->client->pers.pubkey_msg, MAX_STRING_CHARS ) )
+  if ( Q_stricmp( buffer, ent->client->pers.pubkey_msg ) )
     return;
   ent->client->pers.pubkey_authenticated = 1;
   ent->client->pers.pubkey_msg[0] = '\0';
-  ent->client->pers.adminLevel = admin->level;
+  ent->client->pers.admin = G_admin_admin( ent );
   trap_GetUserinfo( ent - g_entities, userinfo, sizeof( userinfo ) );
-  Q_strncpyz( ent->client->pers.guid, Info_ValueForKey( userinfo, "cl_guid" ), sizeof( ent->client->pers.guid ) );
   Info_SetValueForKey( userinfo, "name", ent->client->pers.connect_name );
   trap_SetUserinfo( ent - g_entities, userinfo );
   ClientUserinfoChanged( ent - g_entities );

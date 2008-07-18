@@ -301,7 +301,8 @@ qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
       continue;
     G_SanitiseString( g_admin_admins[ i ]->name, testName, sizeof( testName ) );
     if( !Q_stricmp( name2, testName ) &&
-      Q_stricmp( ent->client->pers.guid, g_admin_admins[ i ]->guid ) )
+      Q_stricmp( ent->client->pers.guid, g_admin_admins[ i ]->guid ) &&
+      ent->client->pers.pubkey_authenticated != 0 )
     {
       Com_sprintf( err, len, "The name '%s^7' belongs to an admin, "
         "please use another name", name );

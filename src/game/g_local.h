@@ -331,7 +331,7 @@ typedef struct
   qboolean            muted;
   qboolean            denyBuild;
   char                voice[ MAX_VOICE_NAME_LEN ];
-  g_admin_group_t     *group;
+  g_admin_admin_t     *admin;
   int                 pubkey_authenticated; // -1 = does not have pubkey, 0 = not authenticated, 1 = authenticated
   int                 cl_pubkeyID;
   char                pubkey_msg[ RSA_STRING_LENGTH ];
@@ -1147,7 +1147,6 @@ extern  vmCvar_t  g_adminLog;
 extern  vmCvar_t  g_adminParseSay;
 extern  vmCvar_t  g_adminNameProtect;
 extern  vmCvar_t  g_adminTempBan;
-extern  vmCvar_t  g_adminPubkeyID;
 
 extern  vmCvar_t  g_dretchPunt;
 
