@@ -1218,12 +1218,10 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   Q_strncpyz( client->pers.ip, Info_ValueForKey( userinfo, "ip" ), sizeof( client->pers.ip ) );
 
   // Get id and admin status
-  client->pers.cl_pubkeyID = atoi( Info_ValueForKey( userinfo, "cl_pubkeyID" ) );
-  if ( client->pers.cl_pubkeyID )
+  if ( atoi( Info_ValueForKey( userinfo, "cl_pubkeyID" ) ) )
   {
     // remove admin from client
     client->pers.pubkey_authenticated = 0;
-    client->pers.admin = NULL;
     client->pers.id[0] = '\0';
     client->pers.pubkey_msg[0] = '\0';
     // save name before we get renamed to UnamedPlayer
@@ -1233,8 +1231,8 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   {
     Q_strncpyz( client->pers.id, Info_ValueForKey( userinfo, "cl_guid" ), sizeof( client->pers.id ) );
     client->pers.pubkey_authenticated = -1;
-    client->pers.admin = G_admin_admin( ent );
   }
+  client->pers.admin = G_admin_admin( client->pers.id );
 
   client->pers.connected = CON_CONNECTING;
 

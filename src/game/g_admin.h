@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_ADMIN_BANS 4092
 #define MAX_ADMIN_NAMELOGS 128
 #define MAX_ADMIN_NAMELOG_NAMES 5
-#define MAX_ADMIN_COMMANDS 256
+#define MAX_ADMIN_SCRIPTS 256
 #define MAX_ADMIN_CMD_LEN 20
 #define MAX_ADMIN_BAN_REASON 50
 
@@ -56,20 +56,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * @ - does not show up as an admin in !listplayers
  * $ - sees all information in !listplayers 
  */
-#define ADMF_IMMUNITY '1'
-#define ADMF_NOCENSORFLOOD '2' /* TODO */
-#define ADMF_TEAMCHANGEFREE '3'
-#define ADMF_SPEC_ALLCHAT '4'
-#define ADMF_FORCETEAMCHANGE '5'
-#define ADMF_UNACCOUNTABLE '6'
-#define ADMF_NO_VOTE_LIMIT '7'
-#define ADMF_CAN_PERM_BAN '8'
-#define ADMF_TEAMCHAT_CMD '9'
-#define ADMF_ACTIVITY '0'
+#define ADMF_IMMUNITY "@immunity"
+#define ADMF_NOCENSORFLOOD "@noflood" /* TODO */
+#define ADMF_TEAMCHANGEFREE "@freeteamchange"
+#define ADMF_SPEC_ALLCHAT "@specallchat"
+#define ADMF_FORCETEAMCHANGE "@forceteamchange"
+#define ADMF_UNACCOUNTABLE "@noreason"
+#define ADMF_NO_VOTE_LIMIT "@unlimitedvotes"
+#define ADMF_CAN_PERM_BAN "@canpermban"
+#define ADMF_TEAMCHAT_CMD "@teamchatcmd"
+#define ADMF_ACTIVITY "@caninactive"
 
-#define ADMF_IMMUTABLE '!'
-#define ADMF_INCOGNITO '@'
-#define ADMF_SEESFULLLISTPLAYERS '$'
+#define ADMF_IMMUTABLE "@immutable"
+#define ADMF_INCOGNITO "@incognito"
+#define ADMF_SEESFULLLISTPLAYERS "@fulllistplayers"
 
 #define MAX_ADMIN_LISTITEMS 20
 #define MAX_ADMIN_SHOWBANS 10
@@ -87,7 +87,8 @@ typedef struct g_admin_group
 {
   char name[ MAX_NAME_LENGTH ];
   char longname[ MAX_NAME_LENGTH ];
-  char rights[ MAX_STRING_CHARS ];
+  char rights[ 8192 ];
+  int level;
   struct g_admin_group *inherit;
 }
 g_admin_group_t;
@@ -111,14 +112,14 @@ typedef struct g_admin_ban
 }
 g_admin_ban_t;
 
-typedef struct g_admin_command
+typedef struct g_admin_script
 {
   char command[ MAX_ADMIN_CMD_LEN ];
-  char exec[ MAX_QPATH ];
+  char script[ MAX_QPATH ];
   char desc[ 50 ];
   char syntax[ 50 ];
 }
-g_admin_command_t;
+g_admin_script_t;
 
 typedef struct g_admin_namelog
 {
@@ -134,11 +135,10 @@ qboolean G_admin_ban_check( char *userinfo, char *reason, int rlen );
 qboolean G_admin_cmd_check( gentity_t *ent, qboolean say );
 qboolean G_admin_readconfig( gentity_t *ent, int skiparg );
 void G_admin_writeconfig( void );
-qboolean G_admin_permission( gentity_t *ent, char flag );
+qboolean G_admin_permission( gentity_t *ent, char *right );
 qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len );
 void G_admin_namelog_update( gclient_t *ent, qboolean disconnect );
-g_admin_admin_t *G_admin_admin( gentity_t *ent );
-void G_admin_pubkey( void );
+g_admin_admin_t *G_admin_admin( char *id );
 
 // ! command functions
 qboolean G_admin_time( gentity_t *ent, int skiparg );

@@ -333,7 +333,6 @@ typedef struct
   char                voice[ MAX_VOICE_NAME_LEN ];
   g_admin_admin_t     *admin;
   int                 pubkey_authenticated; // -1 = does not have pubkey, 0 = not authenticated, 1 = authenticated
-  int                 cl_pubkeyID;
   char                pubkey_msg[ RSA_STRING_LENGTH ];
   char                connect_name[ MAX_NAME_LENGTH ]; // Name of client before admin was removed with pubkey
 } clientPersistant_t;
@@ -1142,7 +1141,6 @@ extern  vmCvar_t  g_layoutAuto;
 
 extern  vmCvar_t  g_emoticonsAllowedInNames;
 
-extern  vmCvar_t  g_admin;
 extern  vmCvar_t  g_adminLog;
 extern  vmCvar_t  g_adminParseSay;
 extern  vmCvar_t  g_adminNameProtect;

@@ -3013,7 +3013,14 @@ static void Cmd_Pubkey_f( gentity_t *ent )
   if ( trap_Argc() != 2 || ent->client->pers.id[0] )
     return;
   trap_Argv( 1, ent->client->pers.id, sizeof( ent->client->pers.id ) );
-  trap_RSA_GenerateMessage( ent->client->pers.id, ent->client->pers.pubkey_msg, buffer );
+  if (!trap_RSA_GenerateMessage( ent->client->pers.id, ent->client->pers.pubkey_msg, buffer ))
+  {
+    // bad public key
+    ent->client->pers.id[0] = '\0';
+    ent->client->pers.pubkey_authenticated = -1;
+    ent->client->pers.pubkey_msg[0] = '\0';
+    return;
+  }
   trap_SendServerCommand( ent - g_entities, va( "pubkey_decrypt %s", buffer ) );
 }
 
@@ -3028,7 +3035,7 @@ static void Cmd_Pubkey_Identify_f( gentity_t *ent )
     return;
   ent->client->pers.pubkey_authenticated = 1;
   ent->client->pers.pubkey_msg[0] = '\0';
-  ent->client->pers.admin = G_admin_admin( ent );
+  ent->client->pers.admin = G_admin_admin( ent->client->pers.id );
   trap_GetUserinfo( ent - g_entities, userinfo, sizeof( userinfo ) );
   Info_SetValueForKey( userinfo, "name", ent->client->pers.connect_name );
   trap_SetUserinfo( ent - g_entities, userinfo );
