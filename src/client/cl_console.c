@@ -600,7 +600,8 @@ void Con_DrawSolidConsole( float frac ) {
 		y = 0;
 	}
 	else {
-		SCR_DrawPic( 0, 0, SCREEN_WIDTH, y, cls.consoleShader );
+		vec4_t consoleColor = {0, 0, 0.1, 0.5};
+		SCR_FillRect(0, 0, SCREEN_WIDTH, y, consoleColor);
 	}
 
 	color[0] = 1;
