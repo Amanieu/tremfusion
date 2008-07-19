@@ -1,3 +1,15 @@
+/*
+ * BUGS
+ *
+ * 1) when resizing the terminal rapidly (sometimes normaly) the window will not be redrawn properly, not quite sure of the cause, but
+ * i think its mostly ironed out.
+ *
+ * 2) part of bug one, the 5th window likes to disappear alot in this bug (indicating wrong terminal size being used?)
+ *
+ * basicly if you dont abuse the window of the terminal it should be fine, the quick fix is to resize the window again to get it to redraw
+ * 
+ */
+
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
@@ -8,6 +20,8 @@
 #include <sys/ioctl.h>
 
 #define LOG_BUF_SIZE 2048
+
+int con_state = 0; /* has CON_Init been run yet? */
 
 char logbuf[LOG_BUF_SIZE][1024];
 int logline = 0;
@@ -43,13 +57,13 @@ _window win5;
 
 /* helper functions */
 static void NewWin ( _window * );
-static void ResizeWin ( _window * );
+/* static void ResizeWin ( _window * ); unused function */
 static void SetWins ( void );
 static void InitWins ( void );
-static void ResizeWins ( void );
+/* static void ResizeWins ( void ); unused function */
 static void RefreshWins ( void );
 static void DrawWins ( void );
-static void ClearWins ( void );
+/* static void ClearWins ( void ); unused function */
 static void CursResize ( void );
 
 static void LogPrint ( char * );
@@ -67,16 +81,20 @@ static void NewWin ( _window *win )
 	win->win = newwin(win->lines, win->cols, win->y, win->x);
 }
 
+
 /* resize a window */
+/* FIXME: unneeded now? */
+#if 0
 static void ResizeWin ( _window *win )
 {
 	wresize(win->win, win->lines, win->cols);
 }
+#endif
 
 /* set the size of the windows from the root window size */
 static void SetWins ( void )
 {
-	//getmaxyx(rootwin, root_y, root_x);
+	/* this function LIES! getmaxyx(rootwin, root_y, root_x); */
 
 	struct winsize winsz = { 0, };
 
@@ -119,6 +137,13 @@ static void SetWins ( void )
 /* make all of the happy windows */
 static void InitWins ( void )
 {
+	rootwin = initscr();
+	if ( rootwin == NULL )
+	{
+		fprintf(stderr, "Fatal Error: initscr()\n");
+		exit(1); /* FIXME: use a more formal exit, or a fallback? */
+	}
+
 	NewWin(&win0);
 	NewWin(&win1);
 	NewWin(&win2);
@@ -126,18 +151,13 @@ static void InitWins ( void )
 	NewWin(&win4);
 	NewWin(&win5);
 
-	/*FIXME: experamental codes */
-	clearok(win0.win, TRUE);
-	clearok(win1.win, TRUE);
-	clearok(win2.win, TRUE);
-	clearok(win3.win, TRUE);
-	clearok(win4.win, TRUE);
-	clearok(win5.win, TRUE);
+	clearok(curscr, TRUE);
 }
 
 /* resize all windows to their win.lines/cols size */
+/* FIXME: unneeded now? */
+#if 0
 static void ResizeWins ( void )
-
 {
 	ResizeWin(&win0);
 	ResizeWin(&win1);
@@ -149,7 +169,7 @@ static void ResizeWins ( void )
 	/*FIXME: figure this out */
 	mvwin(win5.win, win5.y, win5.x);
 }
-
+#endif
 
 /* refresh all of the windows */
 static void RefreshWins ( void )
@@ -168,28 +188,31 @@ static void RefreshWins ( void )
 static void DrawWins ( void )
 {
 	char title[] = "[Tremulous Dedicated Server]";
-	// window 0
+
+	/* window 0: title window */
 	mvwprintw(win0.win, 0, 0, "%s", title);
 
-	// window 1
+	/* window 1: game status window */
 	box(win1.win, 0, 0);
 	mvwprintw(win1.win, 0, 1, "[game status]");
 
-	// window 2
+	/* window 2: player status window */
 	box(win2.win, 0, 0);
 	mvwprintw(win2.win, 0, 1, "[player status]");
 
-	// window 3
+	/* window 3: log window (uesd for a boarder, window 4 sits inside this one) */
 	box(win3.win, 0, 0);
 	mvwprintw(win3.win, 0, 1, "[log]");
 
-	// window 4
+	/* window 4: the actual log window, sits inside window 3 */
 
-	// window 5
+	/* window 5: the shell window, the command prompt lives here */
 	mvwprintw(win5.win, 0, 0, "# rm -rf /");
 }
 
 /* clear all of the windows */
+/* FIXME: unneeded now? */
+#if 0
 static void ClearWins ( void )
 {
 	wclear(rootwin);
@@ -201,22 +224,20 @@ static void ClearWins ( void )
 	wclear(win4.win);
 	wclear(win5.win);
 }
+#endif
 
 /* resize the windows, redraw them, and set the bear trap */
-/* FIXME: make this work 100% of the time (currently at um... 95%?) */
-/* FIXME: weerd 5th window bug now */
 static void CursResize ( void )
 {
 	signal(SIGWINCH, (void*) CursResize);
 
 	endwin();
-	ClearWins();
 	SetWins();
-	ResizeWins();
-	ClearWins();
+	InitWins();
 	DrawWins();
 	LogRedraw();
 	RefreshWins();
+
 }
 
 /* print to the log screen */
@@ -266,44 +287,59 @@ static void LogRedraw ( void )
 
 void CON_Print ( const char *msg )
 {
-	if ( logline > LOG_BUF_SIZE )
+	if ( con_state )
 	{
-		logline = 0;
-		snprintf(logbuf[logline], 1024, "NOTICE: log buffer filled, starting over");
+		if ( logline > LOG_BUF_SIZE )
+		{
+			logline = 0;
+			snprintf(logbuf[logline], 41, "NOTICE: log buffer filled, starting over");
+			LogPrint(logbuf[logline]);
+			logline++;
+		}
+
+		/* FIXME: add the whole colorization thing, people seem to like that */
+
+		snprintf(logbuf[logline], 1024, "%i: %s", reallogline, msg );
 		LogPrint(logbuf[logline]);
+
 		logline++;
+		reallogline++;
 	}
-
-	/* FIXME: add the whole colorization thing, people seem to like that */
-
-	snprintf(logbuf[logline], 1024, "%i: %s", reallogline, msg );
-	LogPrint(logbuf[logline]);
-
-	logline++;
-	reallogline++;
+	else
+	{
+		fprintf(stderr, "WARNING: CON_Print() called before CON_Init()\nCon_Print(\"%s\")\n", msg);
+	}
 }
 
 void CON_Init ( void )
 {
-	rootwin = initscr();
-	if ( rootwin == NULL )
+	if ( !con_state )
 	{
-		printf("Fatal Error: initscr()\n");
-		exit(1);
+		con_state++;
+
+		/* FIXME: add terminal checking (to make sure we have a usable TTY of sorts (would this be redundant since ncurses does this(it does do this right?)) */
+
+		SetWins();
+		InitWins();
+		CursResize();
 	}
-
-	SetWins();
-	InitWins();
-	CursResize();
-
-	FILE *fd = fopen("/tmp/out", "a");
-	fprintf(fd, "CON_Init()\n");
-	fclose(fd);
+	else
+	{
+		fprintf(stderr, "WARNING: CON_Init() called after a previous CON_Init() and before CON_Shutdown()\n");
+	}
 }
 
 void CON_Shutdown ( void )
 {
-	endwin();
+	if ( con_state )
+	{
+		con_state--;
+		endwin();
+	}
+	else
+	{
+		fprintf(stderr, "WARNING: CON_Shutdown called before CON_Init()\n");
+	}
 }
 
 char *CON_Input ( void )
