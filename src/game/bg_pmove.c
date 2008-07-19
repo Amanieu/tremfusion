@@ -543,7 +543,9 @@ static void PM_CheckCharge( void )
   if( pm->ps->stats[ STAT_MISC ] > 0 )
     pm->ps->pm_flags |= PMF_CHARGE;
   else
+
     pm->ps->pm_flags &= ~PMF_CHARGE;
+
 }
 
 /*
@@ -621,6 +623,7 @@ static qboolean PM_CheckPounce( void )
   return qtrue;
 }
 
+
 /*
 =============
 PM_CheckWallJump
@@ -628,15 +631,47 @@ PM_CheckWallJump
 */
 static qboolean PM_CheckWallJump( void )
 {
-  vec3_t  dir, forward, right;
+  vec3_t  dir, forward, right, movedir, point;
   vec3_t  refNormal = { 0.0f, 0.0f, 1.0f };
   float   normalFraction = 1.5f;
   float   cmdFraction = 1.0f;
   float   upFraction = 1.5f;
+  trace_t trace;
 
+  ProjectPointOnPlane( movedir, pml.forward, refNormal );
+  VectorNormalize( movedir );
+  
+  if( pm->cmd.forwardmove < 0 )
+    VectorNegate( movedir, movedir );
+  
+  //allow strafe transitions
+  if( pm->cmd.rightmove )
+  {
+    VectorCopy( pml.right, movedir );
+    
+    if( pm->cmd.rightmove < 0 )
+      VectorNegate( movedir, movedir );
+  }
+  
+  //trace into direction we are moving
+  VectorMA( pm->ps->origin, 0.25f, movedir, point );
+  pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask );
+  
+  if( trace.fraction < 1.0f &&
+      !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) &&
+      trace.plane.normal[ 2 ] < MIN_WALK_NORMAL )
+  {
+    if( !VectorCompare( trace.plane.normal, pm->ps->grapplePoint ) )
+    {
+      VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
+    }
+  }
+  else
+    return qfalse;
+  
   if( pm->ps->pm_flags & PMF_RESPAWNED )
     return qfalse;    // don't allow jump until all buttons are up
-
+  
   if( pm->cmd.upmove < 10 )
     // not holding jump
     return qfalse;
@@ -714,15 +749,17 @@ static qboolean PM_CheckWallJump( void )
   return qtrue;
 }
 
+
+
 static qboolean PM_CheckJump( void )
 {
   vec3_t normal;
 
-  if( BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude == 0.0f )
+  if( pm->ps->groundEntityNum == ENTITYNUM_NONE )
     return qfalse;
 
-  if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
-    return PM_CheckWallJump( );
+  if( BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude == 0.0f )
+    return qfalse;
 
   //can't jump and pounce at the same time
   if( ( pm->ps->weapon == WP_ALEVEL3 ||
@@ -1157,6 +1194,7 @@ static void PM_AirMove( void )
   float     scale;
   usercmd_t cmd;
 
+  PM_CheckWallJump( );
   PM_Friction( );
 
   fmove = pm->cmd.forwardmove;
@@ -2240,41 +2278,6 @@ static void PM_GroundTrace( void )
       PM_GroundTraceMissed( );
       pml.groundPlane = qfalse;
       pml.walking = qfalse;
-
-      if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
-      {
-        ProjectPointOnPlane( movedir, pml.forward, refNormal );
-        VectorNormalize( movedir );
-
-        if( pm->cmd.forwardmove < 0 )
-          VectorNegate( movedir, movedir );
-
-        //allow strafe transitions
-        if( pm->cmd.rightmove )
-        {
-          VectorCopy( pml.right, movedir );
-
-          if( pm->cmd.rightmove < 0 )
-            VectorNegate( movedir, movedir );
-        }
-
-        //trace into direction we are moving
-        VectorMA( pm->ps->origin, 0.25f, movedir, point );
-        pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask );
-
-        //if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) &&
-        //    ( trace.entityNum == ENTITYNUM_WORLD ) )
-        if( trace.fraction < 1.0f &&
-                !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) )
-        {
-          if( !VectorCompare( trace.plane.normal, pm->ps->grapplePoint ) )
-          {
-            VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
-            PM_CheckWallJump( );
-          }
-        }
-      }
-
       return;
     }
   }
@@ -2903,8 +2906,11 @@ static void PM_Weapon( void )
     // Discharging
     else
     {
-      pm->ps->stats[ STAT_MISC ] -= pml.msec;
-      
+      if( pm->ps->stats[ STAT_MISC ] < LEVEL4_TRAMPLE_CHARGE_MIN )
+        pm->ps->stats[ STAT_MISC ] = 0;
+      else
+        pm->ps->stats[ STAT_MISC ] -= pml.msec;
+
       // If the charger has stopped moving take a chunk of charge away
       if( VectorLength( pm->ps->velocity ) < 64.0f || pm->cmd.rightmove )
         pm->ps->stats[ STAT_MISC ] -= LEVEL4_TRAMPLE_STOP_PENALTY * pml.msec;

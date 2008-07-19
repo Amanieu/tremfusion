@@ -36,7 +36,6 @@ G_ForceWeaponChange
 */
 void G_ForceWeaponChange( gentity_t *ent, weapon_t weapon )
 {
-  int i;
   playerState_t *ps = &ent->client->ps;
 
   if( !ent )
@@ -53,22 +52,8 @@ void G_ForceWeaponChange( gentity_t *ent, weapon_t weapon )
   if( weapon == WP_NONE ||
       !BG_InventoryContainsWeapon( weapon, ps->stats ) )
   {
-    //switch to the first non blaster weapon
-    for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-    {
-      if( i == WP_BLASTER )
-        continue;
-
-      if( BG_InventoryContainsWeapon( i, ps->stats ) )
-      {
-        ps->persistant[ PERS_NEWWEAPON ] = i;
-        break;
-      }
-    }
-
-    //only got the blaster to switch to
-    if( i == WP_NUM_WEAPONS )
-      ps->persistant[ PERS_NEWWEAPON ] = WP_BLASTER;
+    ps->persistant[ PERS_NEWWEAPON ] =
+      BG_PrimaryWeapon( ent->client->ps.stats );
   }
   else
     ps->persistant[ PERS_NEWWEAPON ] = weapon;
@@ -170,9 +155,12 @@ static void G_WideTrace( trace_t *tr, gentity_t *ent, float range,
   VectorMA( muzzle, range, forward, end );
 
   G_UnlaggedOn( muzzle, range );
+  //prefer the target in the crosshairs
+  trap_Trace( tr, muzzle, NULL, NULL, end, ent->s.number, CONTENTS_BODY );
 
-  // Trace against entities
-  trap_Trace( tr, muzzle, mins, maxs, end, ent->s.number, CONTENTS_BODY );
+  if( tr->entityNum == ENTITYNUM_NONE )
+    // Trace against entities
+    trap_Trace( tr, muzzle, mins, maxs, end, ent->s.number, CONTENTS_BODY );
 
   // If we started in a solid that means someone is within our muzzle box,
   // depending on which tremded is used the trace may not give us the entity 

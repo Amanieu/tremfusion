@@ -551,6 +551,7 @@ void G_LeaveTeam( gentity_t *self )
   G_StopFromFollowing( self );
 
   G_TeamVote( self, qfalse );
+  self->suicideTime = 0;
 
   for( i = 0; i < level.num_entities; i++ )
   {
@@ -2661,13 +2662,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
     if( clientnum < 0 )
       clientnum = level.maxclients - 1;
 
+    // can't follow self
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+      continue;
+
     // avoid selecting existing follow target
     if( clientnum == original && !selectAny )
       continue; //effectively break;
-
-    // can't follow self
-    if( &level.clients[ clientnum ] == ent->client )
-      continue;
 
     // can only follow connected clients
     if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
