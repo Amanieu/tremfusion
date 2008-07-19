@@ -491,12 +491,9 @@ g_admin_admin_t *G_admin_admin( char *id )
 static void admin_log( gentity_t *admin, char *cmd, int skiparg )
 {
   fileHandle_t f;
-  int len, i, j;
+  int len;
   char string[ MAX_STRING_CHARS ];
   int min, tens, sec;
-  g_admin_admin_t *a;
-  g_admin_level_t *l;
-  char flags[ MAX_ADMIN_FLAGS * 2 ];
   gentity_t *victim = NULL;
   int pids[ MAX_CLIENTS ];
   char name[ MAX_NAME_LENGTH ];
@@ -518,30 +515,6 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
   tens = sec / 10;
   sec -= tens * 10;
 
-  *flags = '\0';
-  if( admin )
-  {
-    for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
-    {
-      if( !Q_stricmp( g_admin_admins[ i ]->guid , admin->client->pers.guid ) )
-      {
-
-        a = g_admin_admins[ i ];
-        Q_strncpyz( flags, a->flags, sizeof( flags ) );
-        for( j = 0; j < MAX_ADMIN_LEVELS && g_admin_levels[ j ]; j++ )
-        {
-          if( g_admin_levels[ j ]->level == a->level )
-          {
-            l = g_admin_levels[ j ];
-            Q_strcat( flags, sizeof( flags ), l->flags );
-            break;
-          }
-        }
-        break;
-      }
-    }
-  }
-
   if( G_SayArgc() > 1 + skiparg )
   {
     G_SayArgv( 1 + skiparg, name, sizeof( name ) );
@@ -559,12 +532,12 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
                  tens,
                  sec,
                  ( admin ) ? admin->s.clientNum : -1,
-                 ( admin ) ? admin->client->pers.guid
+                 ( admin ) ? admin->client->pers.id
                  : "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
                  ( admin ) ? admin->client->pers.netname : "console",
-                 flags,
+                 "",
                  cmd,
-                 victim->client->pers.guid,
+                 victim->client->pers.id,
                  victim->client->pers.netname,
                  G_SayConcatArgs( 2 + skiparg ) );
   }
@@ -576,10 +549,10 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
                  tens,
                  sec,
                  ( admin ) ? admin->s.clientNum : -1,
-                 ( admin ) ? admin->client->pers.guid
+                 ( admin ) ? admin->client->pers.id
                  : "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
                  ( admin ) ? admin->client->pers.netname : "console",
-                 flags,
+                 "",
                  cmd,
                  G_SayConcatArgs( 1 + skiparg ) );
   }
@@ -610,7 +583,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
     if( vic->client && vic->client->pers.connected != CON_CONNECTED )
       continue;
 
-    l = vic->client->pers.adminLevel;
+    l = vic->client->pers.admin->group;
 
     G_SanitiseString( vic->client->pers.netname, name, sizeof( name ) );
     if( !strstr( name, search ) )
