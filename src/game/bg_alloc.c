@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 #define  FREEMEMCOOKIE  ((int)0xDEADBE3F)  // Any unlikely to be used value
-#define  ROUNDBITS    31          // Round to 32 bytes
+#define  ROUNDBITS    31UL          // Round to 32 bytes
 
 typedef struct freeMemNode_s
 {

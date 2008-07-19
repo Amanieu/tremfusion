@@ -2177,7 +2177,6 @@ PM_GroundTrace
 static void PM_GroundTrace( void )
 {
   vec3_t      point;
-  vec3_t      movedir;
   vec3_t      refNormal = { 0.0f, 0.0f, 1.0f };
   trace_t     trace;
 
