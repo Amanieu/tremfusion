@@ -74,7 +74,6 @@ void Con_ToggleConsole_f (void) {
 		return;
 	}
 
-	Field_Clear( &g_consoleField );
 	g_consoleField.widthInChars = g_console_field_width;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_CONSOLE );
@@ -801,7 +800,6 @@ void Con_Close( void ) {
 	if ( !com_cl_running->integer ) {
 		return;
 	}
-	Field_Clear( &g_consoleField );
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CONSOLE );
 	con.finalFrac = 0;				// none visible
 	con.displayFrac = 0;
