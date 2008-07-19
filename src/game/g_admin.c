@@ -563,14 +563,14 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
 static int admin_listadmins( gentity_t *ent, int start, char *search )
 {
   int drawn = 0;
-  char guid_stub[9];
+  char id_stub[9];
   char name[ MAX_NAME_LENGTH ] = {""};
   char name2[ MAX_NAME_LENGTH ] = {""};
   char lname[ MAX_NAME_LENGTH ] = {""};
   char lname_fmt[ 5 ];
   int i,j;
   gentity_t *vic;
-  int l = 0;
+  g_admin_group_t *g = NULL;
   qboolean dup = qfalse;
 
   ADMBP_begin();
@@ -590,8 +590,8 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
       continue;
 
     for( j = 0; j < 8; j++ )
-      guid_stub[ j ] = vic->client->pers.guid[ j + 24 ];
-    guid_stub[ j ] = '\0';
+      id_stub[ j ] = vic->client->pers.id[ j ];
+    id_stub[ j ] = '\0';
 
     lname[ 0 ] = '\0';
     Q_strncpyz( lname_fmt, "%s", sizeof( lname_fmt ) );
