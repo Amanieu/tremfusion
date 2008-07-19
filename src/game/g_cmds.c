@@ -1043,12 +1043,12 @@ void Cmd_VSay_f( gentity_t *ent )
     case VOICE_CHAN_LOCAL:
       trap_SendServerCommand( -1, va(
         "voice %d %d %d %d \"%s\"\n",
-        ent-g_entities, vchan, cmdNum, trackNum, arg ) );
+        (int)(ent-g_entities), vchan, cmdNum, trackNum, arg ) );
       break;
     case VOICE_CHAN_TEAM:
       G_TeamCommand( ent->client->pers.teamSelection, va(
         "voice %d %d %d %d \"%s\"\n",
-        ent-g_entities, vchan, cmdNum, trackNum, arg ) );
+        (int)(ent-g_entities), vchan, cmdNum, trackNum, arg ) );
       break;
     default:
       break;
@@ -2965,7 +2965,7 @@ static void Cmd_Test_f( gentity_t *ent )
 {
   trap_SendServerCommand( ent - g_entities, va(
     "  r.contents = %d\n  targeted = %d\n", 
-    ent->r.contents, ( ent->targeted ) ? ent->targeted - g_entities : 0 ) );
+    ent->r.contents, ( ent->targeted ) ? (int)(ent->targeted - g_entities) : 0 ) );
 }
 
 /*
@@ -3329,12 +3329,12 @@ void G_PrivateMessage( gentity_t *ent )
       ( matches == 1 ) ? "" : "s",
       color,
       msg,
-      ent ? ent-g_entities : -1 ) );
+      ent ? (int)(ent-g_entities) : -1 ) );
     if( ent )
     {
       trap_SendServerCommand( pids[ i ], va(
         "print \">> to reply, say: /m %d [your message] <<\n\"",
-        ( ent - g_entities ) ) );
+        (int)( ent - g_entities ) ) );
     }
     trap_SendServerCommand( pids[ i ], va(
       "cp \"^%cprivate message from ^7%s^7\"", color,

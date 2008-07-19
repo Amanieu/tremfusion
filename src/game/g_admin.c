@@ -763,7 +763,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
       {
         G_DecolorString( g_admin_levels[ j ]->name, lname, sizeof( lname ) );
         Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
-          ( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
+          (int)( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
             - strlen( lname ) ) );
         Com_sprintf( lname, sizeof( lname ), lname_fmt,
            g_admin_levels[ j ]->name );
@@ -819,7 +819,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
       {
         G_DecolorString( g_admin_levels[ j ]->name, lname, sizeof( lname ) );
         Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
-          ( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
+          (int)( admin_level_maxname + strlen( g_admin_levels[ j ]->name )
             - strlen( lname ) ) );
         Com_sprintf( lname, sizeof( lname ), lname_fmt,
            g_admin_levels[ j ]->name );
@@ -2290,7 +2290,7 @@ qboolean G_admin_listplayers( gentity_t *ent, int skiparg )
         {
           G_DecolorString( lname, lname2, sizeof( lname2 ) );
           Com_sprintf( lname_fmt, sizeof( lname_fmt ), "%%%is",
-            ( admin_level_maxname + strlen( lname ) - strlen( lname2 ) ) );
+            (int)( admin_level_maxname + strlen( lname ) - strlen( lname2 ) ) );
           Com_sprintf( lname2, sizeof( lname2 ), lname_fmt, lname );
         }
         break;
@@ -2417,12 +2417,12 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
 
     G_DecolorString( g_admin_bans[ i ]->name, n1, sizeof( n1 ) );
     Com_sprintf( name_fmt, sizeof( name_fmt ), "%%%is",
-      ( max_name + strlen( g_admin_bans[ i ]->name ) - strlen( n1 ) ) );
+      (int)( max_name + strlen( g_admin_bans[ i ]->name ) - strlen( n1 ) ) );
     Com_sprintf( n1, sizeof( n1 ), name_fmt, g_admin_bans[ i ]->name );
 
     G_DecolorString( g_admin_bans[ i ]->banner, n2, sizeof( n2 ) );
     Com_sprintf( banner_fmt, sizeof( banner_fmt ), "%%%is",
-      ( max_banner + strlen( g_admin_bans[ i ]->banner ) - strlen( n2 ) ) );
+      (int)( max_banner + strlen( g_admin_bans[ i ]->banner ) - strlen( n2 ) ) );
     Com_sprintf( n2, sizeof( n2 ), banner_fmt, g_admin_bans[ i ]->banner );
 
     ADMBP( va( "%4i %s^7 %-15s %-8s %s^7 %-10s\n     \\__ %s\n",
