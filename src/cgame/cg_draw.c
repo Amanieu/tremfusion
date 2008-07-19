@@ -347,7 +347,6 @@ static void CG_DrawPlayerCreditsValue( rectDef_t *rect, vec4_t color, qboolean p
 
 static void CG_DrawAttackFeedback( rectDef_t *rect )
 {
-        playerState_t *ps = &cg.snap->ps;
         int frame = cg.feedbackAnimation;
         qhandle_t shader;
         vec4_t hit_color = { 1, 0, 0, 0.5 };
