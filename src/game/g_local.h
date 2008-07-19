@@ -326,12 +326,15 @@ typedef struct
   qboolean            teamVote;
 
   vec3_t              lastDeathLocation;
-  char                guid[ 33 ];
-  char                ip[ 16 ];
+  char                id[ RSA_STRING_LENGTH ];
+  char                ip[ 40 ];
   qboolean            muted;
   qboolean            denyBuild;
-  int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
+  g_admin_admin_t     *admin;
+  int                 pubkey_authenticated; // -1 = does not have pubkey, 0 = not authenticated, 1 = authenticated
+  char                pubkey_msg[ RSA_STRING_LENGTH ];
+  char                connect_name[ MAX_NAME_LENGTH ]; // Name of client before admin was removed with pubkey
 } clientPersistant_t;
 
 #define MAX_UNLAGGED_MARKERS 10
@@ -1138,7 +1141,6 @@ extern  vmCvar_t  g_layoutAuto;
 
 extern  vmCvar_t  g_emoticonsAllowedInNames;
 
-extern  vmCvar_t  g_admin;
 extern  vmCvar_t  g_adminLog;
 extern  vmCvar_t  g_adminParseSay;
 extern  vmCvar_t  g_adminNameProtect;
@@ -1196,3 +1198,5 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+int      trap_RSA_GenerateMessage( const char *public_key, char *cleartext, char *encrypted );

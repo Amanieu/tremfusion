@@ -220,7 +220,9 @@ typedef enum {
   G_PARSE_READ_TOKEN,
   G_PARSE_SOURCE_FILE_AND_LINE,
 
-  G_SEND_GAMESTAT
+  G_SEND_GAMESTAT,
+  
+  G_RSA_GENMSG // ( const char *public_key, char *cleartext, char *encrypted )
 } gameImport_t;
 
 

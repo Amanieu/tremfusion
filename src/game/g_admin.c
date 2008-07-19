@@ -38,142 +38,142 @@ static char g_bfb[ 32000 ];
 // note: list ordered alphabetically
 g_admin_cmd_t g_admin_cmds[ ] =
   {
-    {"admintest", G_admin_admintest, "a",
+    {"admintest", G_admin_admintest,
       "display your current admin level",
       ""
     },
 
-    {"allowbuild", G_admin_denybuild, "d",
+    {"allowbuild", G_admin_denybuild,
       "restore a player's ability to build",
       "[^3name|slot#^7]"
     },
 
-    {"allready", G_admin_allready, "y",
+    {"allready", G_admin_allready,
       "makes everyone ready in intermission",
       ""
     },
 
-    {"ban", G_admin_ban, "b",
+    {"ban", G_admin_ban,
       "ban a player by IP and GUID with an optional expiration time and reason."
       "  time is seconds or suffix with 'w' - weeks, 'd' - days, 'h' - hours, "
       "or 'm' - minutes",
       "[^3name|slot#|IP^7] (^5time^7) (^5reason^7)"
     },
 
-    {"cancelvote", G_admin_cancelvote, "c",
+    {"cancelvote", G_admin_cancelvote,
       "cancel a vote taking place",
       ""
     },
 
-    {"denybuild", G_admin_denybuild, "d",
+    {"denybuild", G_admin_denybuild,
       "take away a player's ability to build",
       "[^3name|slot#^7]"
     },
 
-    {"help", G_admin_help, "h",
+    {"help", G_admin_help,
       "display commands available to you or help on a specific command",
       "(^5command^7)"
     },
 
-    {"kick", G_admin_kick, "k",
+    {"kick", G_admin_kick,
       "kick a player with an optional reason",
       "(^5reason^7)"
     },
 
-    {"listadmins", G_admin_listadmins, "D",
+    {"listadmins", G_admin_listadmins,
       "display a list of all server admins and their levels",
       "(^5name|start admin#^7)"
     },
 
-    {"listlayouts", G_admin_listlayouts, "L",
+    {"listlayouts", G_admin_listlayouts,
       "display a list of all available layouts for a map",
       "(^5mapname^7)"
     },
 
-    {"listplayers", G_admin_listplayers, "i",
+    {"listplayers", G_admin_listplayers,
       "display a list of players, their client numbers and their levels",
       ""
     },
 
-    {"lock", G_admin_lock, "K",
+    {"lock", G_admin_lock,
       "lock a team to prevent anyone from joining it",
       "[^3a|h^7]"
     },
 
-    {"map", G_admin_map, "M",
+    {"map", G_admin_map,
       "load a map (and optionally force layout)",
       "[^3mapname^7] (^5layout^7)"
     },
 
-    {"mute", G_admin_mute, "m",
+    {"mute", G_admin_mute,
       "mute a player",
       "[^3name|slot#^7]"
     },
 
-    {"namelog", G_admin_namelog, "e",
+    {"namelog", G_admin_namelog,
       "display a list of names used by recently connected players",
       "(^5name^7)"
     },
 
-    {"nextmap", G_admin_nextmap, "n",
+    {"nextmap", G_admin_nextmap,
       "go to the next map in the cycle",
       ""
     },
 
-    {"passvote", G_admin_passvote, "V",
+    {"passvote", G_admin_passvote,
       "pass a vote currently taking place",
       ""
     },
 
-    {"putteam", G_admin_putteam, "p",
+    {"putteam", G_admin_putteam,
       "move a player to a specified team",
       "[^3name|slot#^7] [^3h|a|s^7]"
     },
 
-    {"readconfig", G_admin_readconfig, "G",
+    {"readconfig", G_admin_readconfig,
       "reloads the admin config file and refreshes permission flags",
       ""
     },
 
-    {"rename", G_admin_rename, "N",
+    {"rename", G_admin_rename,
       "rename a player",
       "[^3name|slot#^7] [^3new name^7]"
     },
 
-    {"restart", G_admin_restart, "r",
+    {"restart", G_admin_restart,
       "restart the current map (optionally using named layout)",
       "(^5layout^7)"
     },
 
-    {"setlevel", G_admin_setlevel, "s",
+    {"setlevel", G_admin_setlevel,
       "sets the admin level of a player",
       "[^3name|slot#|admin#^7] [^3level^7]"
     },
 
-    {"showbans", G_admin_showbans, "B",
+    {"showbans", G_admin_showbans,
       "display a (partial) list of active bans",
       "(^5start at ban#^7)"
     },
 
-    {"spec999", G_admin_spec999, "P",
+    {"spec999", G_admin_spec999,
       "move 999 pingers to the spectator team",
       ""},
 
-    {"time", G_admin_time, "C",
+    {"time", G_admin_time,
       "show the current local server time",
       ""},
 
-    {"unban", G_admin_unban, "b",
+    {"unban", G_admin_unban,
       "unbans a player specified by the slot as seen in showbans",
       "[^3ban slot#^7]"
     },
 
-    {"unlock", G_admin_unlock, "K",
+    {"unlock", G_admin_unlock,
       "unlock a locked team",
       "[^3a|h^7]"
     },
 
-    {"unmute", G_admin_mute, "m",
+    {"unmute", G_admin_mute,
       "unmute a muted player",
       "[^3name|slot#^7]"
     }
@@ -182,84 +182,55 @@ g_admin_cmd_t g_admin_cmds[ ] =
 static int adminNumCmds = sizeof( g_admin_cmds ) / sizeof( g_admin_cmds[ 0 ] );
 
 static int admin_level_maxname = 0;
-g_admin_level_t *g_admin_levels[ MAX_ADMIN_LEVELS ];
+g_admin_group_t *g_admin_groups[ MAX_ADMIN_GROUPS ];
 g_admin_admin_t *g_admin_admins[ MAX_ADMIN_ADMINS ];
 g_admin_ban_t *g_admin_bans[ MAX_ADMIN_BANS ];
-g_admin_command_t *g_admin_commands[ MAX_ADMIN_COMMANDS ];
+g_admin_script_t *g_admin_scripts[ MAX_ADMIN_SCRIPTS ];
 g_admin_namelog_t *g_admin_namelog[ MAX_ADMIN_NAMELOGS ];
 
-qboolean G_admin_permission( gentity_t *ent, char flag )
+g_admin_admin_t guest_admin = { "", NULL, "" };
+
+static void admin_command_permission( g_admin_group_t *group, char *right, qboolean *permission )
 {
-  int i;
-  int l = 0;
-  char *flags;
+  const char *found = group->rights - 1;
+
+  if ( group->inherit )
+    admin_command_permission( group->inherit, right, permission );
+
+  while (( found = Q_stristr( found + 1, right ) ))
+  {
+    if ( !isspace(found[ strlen(right) ]) && found[ strlen(right) ] != '\0' )
+      continue;
+    if ( found != group->rights && found[-1] != '-' && !isspace(found[-1]) )
+      continue;
+    if ( found == group->rights || found[-1] != '-' )
+      *permission = qtrue;
+    else
+      *permission = qfalse;
+  }
+}
+
+qboolean G_admin_permission( gentity_t *ent, char *right )
+{
+  qboolean permission = qfalse;
 
   // console always wins
   if( !ent )
     return qtrue;
 
-  for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
+  // if the command starts with "un", skip "un"
+  if ( !Q_stricmpn(right, "un", 2) )
+    right += 2;
+  else if ( !Q_stricmpn(right + 1, "un", 2) )
   {
-    if( !Q_stricmp( ent->client->pers.guid, g_admin_admins[ i ]->guid ) )
-    {
-      flags = g_admin_admins[ i ]->flags;
-      while( *flags )
-      {
-        if( *flags == flag )
-          return qtrue;
-        else if( *flags == '-' )
-        {
-          while( *flags++ )
-          {
-            if( *flags == flag )
-              return qfalse;
-            if( *flags == '+' )
-              break;
-          }
-        }
-        else if( *flags == '*' )
-        {
-          while( *flags++ )
-          {
-            if( *flags == flag )
-              return qfalse;
-          }
-          // flags with significance only for individuals (
-          // like ADMF_INCOGNITO and ADMF_IMMUTABLE are NOT covered
-          // by the '*' wildcard.  They must be specified manually.
-          return ( flag != ADMF_INCOGNITO && flag != ADMF_IMMUTABLE );
-        }
-        flags++;
-      }
-      l = g_admin_admins[ i ]->level;
-    }
+    right[2] = right[0];
+    right += 2;
   }
-  for( i = 0; i < MAX_ADMIN_LEVELS && g_admin_levels[ i ]; i++ )
-  {
-    if( g_admin_levels[ i ]->level == l )
-    {
-      flags = g_admin_levels[ i ]->flags;
-      while( *flags )
-      {
-        if( *flags == flag )
-          return qtrue;
-        if( *flags == '*' )
-        {
-          while( *flags++ )
-          {
-            if( *flags == flag )
-              return qfalse;
-          }
-          // flags with significance only for individuals (
-          // like ADMF_INCOGNITO and ADMF_IMMUTABLE are NOT covered
-          // by the '*' wildcard.  They must be specified manually.
-          return ( flag != ADMF_INCOGNITO && flag != ADMF_IMMUTABLE );
-        }
-        flags++;
-      }
-    }
-  }
-  return qfalse;
+
+  // recursively go through all of the inherited groups
+  admin_command_permission( ent->client->pers.admin->group, right, &permission );
+
+  return permission;
 }
 
 qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
@@ -297,41 +268,17 @@ qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len )
 
   for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
   {
-    if( g_admin_admins[ i ]->level < 1 )
-      continue;
     G_SanitiseString( g_admin_admins[ i ]->name, testName, sizeof( testName ) );
     if( !Q_stricmp( name2, testName ) &&
-      Q_stricmp( ent->client->pers.guid, g_admin_admins[ i ]->guid ) )
+      ent->client->pers.admin != g_admin_admins[ i ] )
     {
-      Com_sprintf( err, len, "The name '%s^7' belongs to an admin, "
-        "please use another name", name );
+      // Don't show a message if they haven't authenticated yet
+      if ( ent->client->pers.pubkey_authenticated != 0 )
+        Com_sprintf( err, len, "The name '%s^7' belongs to an admin, "
+          "please use another name", name );
+      else
+        err[0] = '\0';
       return qfalse;
-    }
-  }
-  return qtrue;
-}
-
-static qboolean admin_higher_guid( char *admin_guid, char *victim_guid )
-{
-  int i;
-  int alevel = 0;
-
-  for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
-  {
-    if( !Q_stricmp( admin_guid, g_admin_admins[ i ]->guid ) )
-    {
-      alevel = g_admin_admins[ i ]->level;
-      break;
-    }
-  }
-  for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
-  {
-    if( !Q_stricmp( victim_guid, g_admin_admins[ i ]->guid ) )
-    {
-      if( alevel < g_admin_admins[ i ]->level )
-        return qfalse;
-      if( strstr( g_admin_admins[ i ]->flags, va( "%c", ADMF_IMMUTABLE ) ) )
-        return qfalse;
     }
   }
   return qtrue;
@@ -339,16 +286,11 @@ static qboolean admin_higher_guid( char *admin_guid, char *victim_guid )
 
 static qboolean admin_higher( gentity_t *admin, gentity_t *victim )
 {
-
   // console always wins
   if( !admin )
     return qtrue;
-  // just in case
-  if( !victim )
-    return qtrue;
 
-  return admin_higher_guid( admin->client->pers.guid,
-    victim->client->pers.guid );
+  return (admin->client->pers.admin->group->level >= victim->client->pers.admin->group->level);
 }
 
 static void admin_writeconfig_string( char *s, fileHandle_t f )
@@ -375,53 +317,28 @@ static void admin_writeconfig_int( int v, fileHandle_t f )
   trap_FS_Write( "\n", 1, f );
 }
 
-static void admin_writeconfig( void )
+void G_admin_writeconfig( void )
 {
   fileHandle_t f;
-  int len, i, j;
+  int len, i;
   int t;
-  char levels[ MAX_STRING_CHARS ] = {""};
 
-  if( !g_admin.string[ 0 ] )
-  {
-    G_Printf( S_COLOR_YELLOW "WARNING: g_admin is not set. "
-      " configuration will not be saved to a file.\n" );
-    return;
-  }
   t = trap_RealTime( NULL );
-  len = trap_FS_FOpenFile( g_admin.string, &f, FS_WRITE );
+  len = trap_FS_FOpenFile( "admin.dat", &f, FS_WRITE );
   if( len < 0 )
   {
-    G_Printf( "admin_writeconfig: could not open g_admin file \"%s\"\n",
-              g_admin.string );
+    G_Printf( "G_admin_writeconfig: could not open admin.dat file" );
     return;
-  }
-  for( i = 0; i < MAX_ADMIN_LEVELS && g_admin_levels[ i ]; i++ )
-  {
-    trap_FS_Write( "[level]\n", 8, f );
-    trap_FS_Write( "level   = ", 10, f );
-    admin_writeconfig_int( g_admin_levels[ i ]->level, f );
-    trap_FS_Write( "name    = ", 10, f );
-    admin_writeconfig_string( g_admin_levels[ i ]->name, f );
-    trap_FS_Write( "flags   = ", 10, f );
-    admin_writeconfig_string( g_admin_levels[ i ]->flags, f );
-    trap_FS_Write( "\n", 1, f );
   }
   for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
   {
-    // don't write level 0 users
-    if( g_admin_admins[ i ]->level < 1 )
-      continue;
-
     trap_FS_Write( "[admin]\n", 8, f );
     trap_FS_Write( "name    = ", 10, f );
     admin_writeconfig_string( g_admin_admins[ i ]->name, f );
-    trap_FS_Write( "guid    = ", 10, f );
-    admin_writeconfig_string( g_admin_admins[ i ]->guid, f );
-    trap_FS_Write( "level   = ", 10, f );
-    admin_writeconfig_int( g_admin_admins[ i ]->level, f );
-    trap_FS_Write( "flags   = ", 10, f );
-    admin_writeconfig_string( g_admin_admins[ i ]->flags, f );
+    trap_FS_Write( "id      = ", 10, f );
+    admin_writeconfig_string( g_admin_admins[ i ]->id, f );
+    trap_FS_Write( "group   = ", 10, f );
+    admin_writeconfig_string( g_admin_admins[ i ]->group->name, f );
     trap_FS_Write( "\n", 1, f );
   }
   for( i = 0; i < MAX_ADMIN_BANS && g_admin_bans[ i ]; i++ )
@@ -435,37 +352,16 @@ static void admin_writeconfig( void )
     trap_FS_Write( "[ban]\n", 6, f );
     trap_FS_Write( "name    = ", 10, f );
     admin_writeconfig_string( g_admin_bans[ i ]->name, f );
-    trap_FS_Write( "guid    = ", 10, f );
-    admin_writeconfig_string( g_admin_bans[ i ]->guid, f );
+    trap_FS_Write( "id      = ", 10, f );
+    admin_writeconfig_string( g_admin_bans[ i ]->id, f );
     trap_FS_Write( "ip      = ", 10, f );
     admin_writeconfig_string( g_admin_bans[ i ]->ip, f );
     trap_FS_Write( "reason  = ", 10, f );
     admin_writeconfig_string( g_admin_bans[ i ]->reason, f );
-    trap_FS_Write( "made    = ", 10, f );
-    admin_writeconfig_string( g_admin_bans[ i ]->made, f );
     trap_FS_Write( "expires = ", 10, f );
     admin_writeconfig_int( g_admin_bans[ i ]->expires, f );
     trap_FS_Write( "banner  = ", 10, f );
-    admin_writeconfig_string( g_admin_bans[ i ]->banner, f );
-    trap_FS_Write( "\n", 1, f );
-  }
-  for( i = 0; i < MAX_ADMIN_COMMANDS && g_admin_commands[ i ]; i++ )
-  {
-    levels[ 0 ] = '\0';
-    trap_FS_Write( "[command]\n", 10, f );
-    trap_FS_Write( "command = ", 10, f );
-    admin_writeconfig_string( g_admin_commands[ i ]->command, f );
-    trap_FS_Write( "exec    = ", 10, f );
-    admin_writeconfig_string( g_admin_commands[ i ]->exec, f );
-    trap_FS_Write( "desc    = ", 10, f );
-    admin_writeconfig_string( g_admin_commands[ i ]->desc, f );
-    trap_FS_Write( "levels  = ", 10, f );
-    for( j = 0; g_admin_commands[ i ]->levels[ j ] != -1; j++ )
-    {
-      Q_strcat( levels, sizeof( levels ),
-                va( "%i ", g_admin_commands[ i ]->levels[ j ] ) );
-    }
-    admin_writeconfig_string( levels, f );
+    admin_writeconfig_string( g_admin_bans[ i ]->banner->id, f );
     trap_FS_Write( "\n", 1, f );
   }
   trap_FS_FCloseFile( f );
@@ -529,109 +425,75 @@ static void admin_readconfig_int( char **cnf, int *v )
 // ones to make new installs easier for admins
 static void admin_default_levels( void )
 {
-  g_admin_level_t *l;
+  g_admin_group_t *g;
   int i;
 
-  for( i = 0; i < MAX_ADMIN_LEVELS && g_admin_levels[ i ]; i++ )
+  for( i = 0; i < MAX_ADMIN_GROUPS && g_admin_groups[ i ]; i++ )
   {
-    BG_Free( g_admin_levels[ i ] );
-    g_admin_levels[ i ] = NULL;
+    BG_Free( g_admin_groups[ i ] );
+    g_admin_groups[ i ] = NULL;
   }
   for( i = 0; i <= 5; i++ )
   {
-    l = BG_Alloc( sizeof( g_admin_level_t ) );
-    l->level = i;
-    *l->name = '\0';
-    *l->flags = '\0';
-    g_admin_levels[ i ] = l;
+    g = BG_Alloc( sizeof( g_admin_group_t ) );
+    g->level = i;
+    *g->name = '\0';
+    *g->longname = '\0';
+    *g->rights = '\0';
+    g->inherit = ( i ? g_admin_groups[ i-1 ] : NULL );
+    g_admin_groups[ i ] = g;
   }
-  Q_strncpyz( g_admin_levels[ 0 ]->name, "^4Unknown Player",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 0 ]->flags, "iahC", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 0 ]->name, "guest", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 0 ]->longname, "^4Unknown Player",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 0 ]->rights, "!help !time !admintest !listplayers !listlayouts", sizeof( g->rights ) );
 
-  Q_strncpyz( g_admin_levels[ 1 ]->name, "^5Server Regular",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 1 ]->flags, "iahC", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 1 ]->name, "regular", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 1 ]->longname, "^5Server Regular",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 1 ]->rights, "", sizeof( g->rights ) );
 
-  Q_strncpyz( g_admin_levels[ 2 ]->name, "^6Team Manager",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 2 ]->flags, "iahCpP", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 2 ]->name, "teammgr", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 2 ]->longname, "^6Team Manager",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 2 ]->rights, "!putteam !spec999 !lock", sizeof( g->rights ) );
 
-  Q_strncpyz( g_admin_levels[ 3 ]->name, "^2Junior Admin",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 3 ]->flags, "iahCpPkm$", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 3 ]->name, "junior", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 3 ]->longname, "^2Junior Admin",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 3 ]->rights, "!kick !mute !denybuild !rename !listadmins !allowbuild @fulllistplayers", sizeof( g->rights ) );
 
-  Q_strncpyz( g_admin_levels[ 4 ]->name, "^3Senior Admin",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 4 ]->flags, "iahCpPkmBbe$", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 4 ]->name, "senior", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 4 ]->longname, "^3Senior Admin",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 4 ]->rights, "!namelog !ban !adjustban !showbans !cancelvote", sizeof( g->rights ) );
 
-  Q_strncpyz( g_admin_levels[ 5 ]->name, "^1Server Operator",
-    sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 5 ]->flags, "*", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_groups[ 5 ]->name, "operator", sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 5 ]->longname, "^1Server Operator",
+    sizeof( g->name ) );
+  Q_strncpyz( g_admin_groups[ 5 ]->rights, "!passvote !setlevel !map !nextmap !readconfig !restart", sizeof( g->rights ) );
 }
 
-//  return a level for a player entity.
-int G_admin_level( gentity_t *ent )
+// return the admin struct for an id
+g_admin_admin_t *G_admin_admin( char *id )
 {
   int i;
-  qboolean found = qfalse;
-
-  if( !ent )
-  {
-    return MAX_ADMIN_LEVELS;
-  }
 
   for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
   {
-    if( !Q_stricmp( g_admin_admins[ i ]->guid, ent->client->pers.guid ) )
-    {
-
-      found = qtrue;
-      break;
-    }
+    if( !Q_stricmp( g_admin_admins[ i ]->id, id ) )
+      return g_admin_admins[ i ];
   }
 
-  if( found )
-  {
-    return g_admin_admins[ i ]->level;
-  }
-
-  return 0;
-}
-
-static qboolean admin_command_permission( gentity_t *ent, char *command )
-{
-  int i, j;
-  int level;
-
-  if( !ent )
-    return qtrue;
-  level = ent->client->pers.adminLevel;
-  for( i = 0; i < MAX_ADMIN_COMMANDS && g_admin_commands[ i ]; i++ )
-  {
-    if( !Q_stricmp( command, g_admin_commands[ i ]->command ) )
-    {
-      for( j = 0; g_admin_commands[ i ]->levels[ j ] != -1; j++ )
-      {
-        if( g_admin_commands[ i ]->levels[ j ] == level )
-        {
-          return qtrue;
-        }
-      }
-    }
-  }
-  return qfalse;
+  return &guest_admin;
 }
 
 static void admin_log( gentity_t *admin, char *cmd, int skiparg )
 {
   fileHandle_t f;
-  int len, i, j;
+  int len;
   char string[ MAX_STRING_CHARS ];
   int min, tens, sec;
-  g_admin_admin_t *a;
-  g_admin_level_t *l;
-  char flags[ MAX_ADMIN_FLAGS * 2 ];
   gentity_t *victim = NULL;
   int pids[ MAX_CLIENTS ];
   char name[ MAX_NAME_LENGTH ];
@@ -653,30 +515,6 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
   tens = sec / 10;
   sec -= tens * 10;
 
-  *flags = '\0';
-  if( admin )
-  {
-    for( i = 0; i < MAX_ADMIN_ADMINS && g_admin_admins[ i ]; i++ )
-    {
-      if( !Q_stricmp( g_admin_admins[ i ]->guid , admin->client->pers.guid ) )
-      {
-
-        a = g_admin_admins[ i ];
-        Q_strncpyz( flags, a->flags, sizeof( flags ) );
-        for( j = 0; j < MAX_ADMIN_LEVELS && g_admin_levels[ j ]; j++ )
-        {
-          if( g_admin_levels[ j ]->level == a->level )
-          {
-            l = g_admin_levels[ j ];
-            Q_strcat( flags, sizeof( flags ), l->flags );
-            break;
-          }
-        }
-        break;
-      }
-    }
-  }
-
   if( G_SayArgc() > 1 + skiparg )
   {
     G_SayArgv( 1 + skiparg, name, sizeof( name ) );
@@ -694,12 +532,12 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
                  tens,
                  sec,
                  ( admin ) ? admin->s.clientNum : -1,
-                 ( admin ) ? admin->client->pers.guid
+                 ( admin ) ? admin->client->pers.id
                  : "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
                  ( admin ) ? admin->client->pers.netname : "console",
-                 flags,
+                 "",
                  cmd,
-                 victim->client->pers.guid,
+                 victim->client->pers.id,
                  victim->client->pers.netname,
                  G_SayConcatArgs( 2 + skiparg ) );
   }
@@ -711,10 +549,10 @@ static void admin_log( gentity_t *admin, char *cmd, int skiparg )
                  tens,
                  sec,
                  ( admin ) ? admin->s.clientNum : -1,
-                 ( admin ) ? admin->client->pers.guid
+                 ( admin ) ? admin->client->pers.id
                  : "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
                  ( admin ) ? admin->client->pers.netname : "console",
-                 flags,
+                 "",
                  cmd,
                  G_SayConcatArgs( 1 + skiparg ) );
   }
@@ -745,7 +583,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
     if( vic->client && vic->client->pers.connected != CON_CONNECTED )
       continue;
 
-    l = vic->client->pers.adminLevel;
+    l = vic->client->pers.admin->group;
 
     G_SanitiseString( vic->client->pers.netname, name, sizeof( name ) );
     if( !strstr( name, search ) )
@@ -1072,14 +910,6 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
 
   G_admin_cleanup();
 
-  if( !g_admin.string[ 0 ] )
-  {
-    ADMP( "^3!readconfig: g_admin is not set, not loading configuration "
-      "from a file\n" );
-    admin_default_levels();
-    return qfalse;
-  }
-
   len = trap_FS_FOpenFile( g_admin.string, &f, FS_READ );
   if( len < 0 )
   {
@@ -1154,6 +984,22 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       else if( !Q_stricmp( t, "flags" ) )
       {
         admin_readconfig_string( &cnf, a->flags, sizeof( a->flags ) );
+      }
+      else if( !Q_stricmp( t, "pubkey" ) )
+      {
+        admin_readconfig_string( &cnf, a->pubkey, sizeof( a->pubkey ) );
+      }
+      else if( !Q_stricmp( t, "msg" ) )
+      {
+        admin_readconfig_string( &cnf, a->msg, sizeof( a->msg ) );
+      }
+      else if( !Q_stricmp( t, "msg2" ) )
+      {
+        admin_readconfig_string( &cnf, a->msg2, sizeof( a->msg2 ) );
+      }
+      else if( !Q_stricmp( t, "counter" ) )
+      {
+        admin_readconfig_int( &cnf, &a->counter );
       }
       else
       {
@@ -1265,6 +1111,10 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       *a->guid = '\0';
       a->level = 0;
       *a->flags = '\0';
+      *a->pubkey = '\0';
+      *a->msg = '\0';
+      *a->msg2 = '\0';
+      a->counter = -1;
       admin_open = qtrue;
     }
     else if( !Q_stricmp( t, "[ban]" ) )
@@ -1321,7 +1171,10 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
   // reset adminLevel
   for( i = 0; i < level.maxclients; i++ )
     if( level.clients[ i ].pers.connected != CON_DISCONNECTED )
-      level.clients[ i ].pers.adminLevel = G_admin_level( &g_entities[ i ] );
+    {
+      level.clients[ i ].pers.admin = G_admin_admin( &g_entities[ i ] );
+      level.clients[ i ].pers.adminLevel = ( level.clients[ i ].pers.pubkey_authenticated && level.clients[ i ].pers.admin ? level.clients[ i ].pers.admin->level : 0 );
+    }
   return qtrue;
 }
 
@@ -1480,9 +1333,10 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
   {
     if( !Q_stricmp( g_admin_admins[ i ]->guid, guid ) )
     {
-      g_admin_admins[ i ]->level = l;
-      Q_strncpyz( g_admin_admins[ i ]->name, adminname,
-                  sizeof( g_admin_admins[ i ]->name ) );
+      a = g_admin_admins[ i ];
+      a->level = l;
+      Q_strncpyz( a->name, adminname,
+                  sizeof( a->name ) );
       updated = qtrue;
     }
   }
@@ -1498,6 +1352,10 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
     Q_strncpyz( a->name, adminname, sizeof( a->name ) );
     Q_strncpyz( a->guid, guid, sizeof( a->guid ) );
     *a->flags = '\0';
+    *a->pubkey = '\0';
+    *a->msg = '\0';
+    *a->msg2 = '\0';
+    a->counter = -1;
     g_admin_admins[ i ] = a;
   }
 
@@ -1505,13 +1363,14 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
     "print \"^3!setlevel: ^7%s^7 was given level %d admin rights by %s\n\"",
     adminname, l, ( ent ) ? ent->client->pers.netname : "console" ) );
   if( vic )
+  {
+    vic->client->pers.admin = ( l ? a : NULL );
     vic->client->pers.adminLevel = l;
+    if ( l && l >= g_adminPubkeyID.integer && !a->pubkey[0] && vic->client->pers.cl_pubkeyID )
+      trap_SendServerCommand( vic - g_entities, "pubkey_request" );
+  }
 
-  if( !g_admin.string[ 0 ] )
-    ADMP( "^3!setlevel: ^7WARNING g_admin not set, not saving admin record "
-      "to a file\n" );
-  else
-    admin_writeconfig();
+  G_admin_writeconfig();
   return qtrue;
 }
 
@@ -1605,8 +1464,7 @@ qboolean G_admin_kick( gentity_t *ent, int skiparg )
       vic->client->pers.guid,
       vic->client->pers.ip, g_adminTempBan.integer,
       "automatic temp ban created by kick" );
-    if( g_admin.string[ 0 ] )
-      admin_writeconfig();
+      G_admin_writeconfig();
   }
 
   trap_SendServerCommand( pids[ 0 ],
@@ -1799,10 +1657,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
 
   g_admin_namelog[ logmatch ]->banned = qtrue;
 
-  if( !g_admin.string[ 0 ] )
-    ADMP( "^3!ban: ^7WARNING g_admin not set, not saving ban to a file\n" );
-  else
-    admin_writeconfig();
+  G_admin_writeconfig();
 
   if( g_admin_namelog[ logmatch ]->slot == -1 )
   {
@@ -1858,8 +1713,7 @@ qboolean G_admin_unban( gentity_t *ent, int skiparg )
           bnum,
           g_admin_bans[ bnum - 1 ]->name,
           ( ent ) ? ent->client->pers.netname : "console" ) );
-  if( g_admin.string[ 0 ] )
-    admin_writeconfig();
+  G_admin_writeconfig();
   return qtrue;
 }
 

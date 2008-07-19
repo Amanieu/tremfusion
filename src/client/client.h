@@ -44,6 +44,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define QKEY_FILE "qkey"
 #define QKEY_SIZE 2048
 
+// file containing our RSA public and private keys
+#define PKEY_FILE "pkey"
+
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
 
 // snapshots are a view of the server at a given time
@@ -352,6 +355,9 @@ extern	vm_t			*cgvm;	// interface to cgame dll or vm
 extern	vm_t			*uivm;	// interface to ui dll or vm
 extern	refexport_t		re;		// interface to refresh .dll
 
+extern  struct rsa_public_key public_key;
+extern  struct rsa_private_key private_key;
+
 
 //
 // cvars
@@ -403,6 +409,8 @@ extern	cvar_t	*cl_autoRecordDemo;
 extern	cvar_t	*cl_altTab;
 
 extern  cvar_t  *cl_dlURLOverride;
+
+extern  cvar_t  *cl_pubkeyID;
 
 extern  cvar_t  *cl_defaultUI;
 
