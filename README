@@ -1,22 +1,4 @@
-MG Development
+TremFusion
 
-MGDev is maintained by Mercenaries Guild - http://www.mercenariesguild.net
-You can find us on IRC at #mercenariesguild on freenode, or contact
-mgdev@mercenariesguild.net
-
-Only the changes to src/ are included in the provided patch, the rest should be obtainable solely from the pk3.
-You will need to apply the patch with -p1 rather than -p0 as it is not an ordinary svn diff
-If the diff isn't working for you, you may also be able to get the source from SVN:
-svn co svn://source.mercenariesguild.net/mgdev/ mgdev
-You can also see a webview of the repository at:
-http://source.mercenariesguild.net/mgdev/
-
-Contributors include:
-Tony J. White "tjw"
-Asa "Norfenstein" Kravets
-Michael "Risujin" Levin
-Ben Millwood "benmachine"
-Chris "Lakitu7" Schwarz
-Roman "kevlarman" Tetelman
-Andrei "Garoth" Thorpe
-Evan "Odin" Goers
+TremFusion is maintained by the TremFusion Development Team - http://tremfusion.tremforges.net/
+You can find us on IRC at #tremfusion on freenode

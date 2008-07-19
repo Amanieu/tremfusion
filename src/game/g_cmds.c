@@ -551,6 +551,7 @@ void G_LeaveTeam( gentity_t *self )
   G_StopFromFollowing( self );
 
   G_TeamVote( self, qfalse );
+  self->suicideTime = 0;
 
   for( i = 0; i < level.num_entities; i++ )
   {
@@ -2103,20 +2104,6 @@ void Cmd_Buy_f( gentity_t *ent )
       return;
     }
 
-    //can afford this?
-    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
-      return;
-    }
-
-    //have space to carry this?
-    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
-      return;
-    }
-
     if( BG_Weapon( weapon )->team != TEAM_HUMANS )
     {
       //shouldn't need a fancy dialog
@@ -2135,6 +2122,20 @@ void Cmd_Buy_f( gentity_t *ent )
     if( !BG_WeaponAllowedInStage( weapon, g_humanStage.integer ) || !BG_WeaponIsAllowed( weapon ) )
     {
       trap_SendServerCommand( ent-g_entities, "print \"You can't buy this item\n\"" );
+      return;
+    }
+
+    //can afford this?
+    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
+      return;
+    }
+
+    //have space to carry this?
+    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
       return;
     }
 
@@ -2661,13 +2662,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
     if( clientnum < 0 )
       clientnum = level.maxclients - 1;
 
+    // can't follow self
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+      continue;
+
     // avoid selecting existing follow target
     if( clientnum == original && !selectAny )
       continue; //effectively break;
-
-    // can't follow self
-    if( &level.clients[ clientnum ] == ent->client )
-      continue;
 
     // can only follow connected clients
     if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
@@ -2787,8 +2788,6 @@ void Cmd_FollowCycle_f( gentity_t *ent )
   // won't work unless spectating
   if( ent->client->sess.spectatorState == SPECTATOR_NOT )
     return;
-  if( ent->client->sess.spectatorState == SPECTATOR_NOT )
-    return;
 
   G_FollowNewClient( ent, dir );
 }
@@ -2806,6 +2805,9 @@ void Cmd_PTRCVerify_f( gentity_t *ent )
   char                s[ MAX_TOKEN_CHARS ] = { 0 };
   int                 code;
 
+  if( ent->client->pers.connection )
+    return;
+
   trap_Argv( 1, s, sizeof( s ) );
 
   if( !s[ 0 ] )
@@ -2813,16 +2815,16 @@ void Cmd_PTRCVerify_f( gentity_t *ent )
 
   code = atoi( s );
 
-  if( G_VerifyPTRC( code ) )
+  connection = G_FindConnectionForCode( code );
+  if( connection )
   {
-    connection = G_FindConnectionForCode( code );
-
     // valid code
     if( connection->clientTeam != TEAM_NONE )
       trap_SendServerCommand( ent->client->ps.clientNum, "ptrcconfirm" );
 
     // restore mapping
     ent->client->pers.connection = connection;
+    connection->clientNum = ent->client->ps.clientNum;
   }
   else
   {
@@ -2850,6 +2852,13 @@ void Cmd_PTRCRestore_f( gentity_t *ent )
   int                 code;
   connectionRecord_t  *connection;
 
+  if( ent->client->pers.joinedATeam )
+  {
+    trap_SendServerCommand( ent - g_entities,
+      "print \"You cannot use a PTR code after joining a team\n\"" );
+    return;
+  }
+
   trap_Argv( 1, s, sizeof( s ) );
 
   if( !s[ 0 ] )
@@ -2857,28 +2866,18 @@ void Cmd_PTRCRestore_f( gentity_t *ent )
 
   code = atoi( s );
 
-  if( G_VerifyPTRC( code ) )
+  connection = ent->client->pers.connection;
+  if( connection && connection->ptrCode == code )
   {
-    if( ent->client->pers.joinedATeam )
-    {
-      trap_SendServerCommand( ent - g_entities,
-        "print \"You cannot use a PTR code after joining a team\n\"" );
-    }
-    else
-    {
-      // valid code
-      connection = G_FindConnectionForCode( code );
+    // set the correct team
+    G_ChangeTeam( ent, connection->clientTeam );
 
-      if( connection )
-      {
-        // set the correct team
-        G_ChangeTeam( ent, connection->clientTeam );
-
-        // set the correct credit
-        ent->client->ps.persistant[ PERS_CREDIT ] = 0;
-        G_AddCreditToClient( ent->client, connection->clientCredit, qtrue );
-      }
-    }
+    // set the correct credit
+    ent->client->ps.persistant[ PERS_CREDIT ] = 0;
+    G_AddCreditToClient( ent->client, connection->clientCredit, qtrue );
+    if ( connection->oldClient != ent - g_entities )
+        G_AddCreditToClient( &level.clients[ connection->oldClient ], -connection->clientCredit, qtrue );
+    connection->oldClient = ent - g_entities;
   }
   else
   {

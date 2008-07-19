@@ -76,10 +76,7 @@ void CL_JoystickEvent( int axis, int value, int time ) {
 void CL_InitKeyCommands( void ) {
 }
 
-void CL_CDDialog( void ) {
-}
-
-void CL_FlushMemory( void ) {
+void CL_FlushMemory( qboolean defaultUI ) {
 }
 
 void CL_StartHunkUsers( qboolean rendererOnly ) {
