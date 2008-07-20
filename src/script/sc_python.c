@@ -200,7 +200,7 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 #ifndef UNITTEST
   PyObject *temp;
   temp = PyFunction_new( &PyFunctionType, NULL, NULL );
-  PyFunction_init( (PyFunction*)temp, TYPE_FUNCTION, (void*)function );
+  PyFunction_init( (PyFunction*)temp, function );
   if ( temp == NULL ) return Py_BuildValue("");
   return temp;
 #else
@@ -297,6 +297,10 @@ void SC_Python_Init( void )
 //  }
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
+  if (PyType_Ready(&PyScMethod_Type) < 0)
+    return;
+  Py_INCREF(&PyScMethod_Type);
+
 //  if (PyType_Ready(&PyScObject_Type) < 0)
 //    return;
 //  Py_INCREF(&EntityType);

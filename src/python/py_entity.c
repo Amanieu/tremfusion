@@ -60,11 +60,11 @@ static PyObject *Vec3d_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
   return (PyObject *)self;
 }
 
-static int Vec3d_init(Vec3d *self, vec3_t *vector)
-{
-  self->vector = vector;
-  return 0;
-}
+//static int Vec3d_init(Vec3d *self, vec3_t *vector)
+//{
+//  self->vector = vector;
+//  return 0;
+//}
 
 typedef enum {
   X,
@@ -547,9 +547,9 @@ PyObject *EntityForGentity( gentity_t *gentity )
 PyObject *Vec3dforVec3_t( vec3_t *vect )
 {
 //  vec3_t vector;
-  PyObject *ArgsTuple, *temp;
-  temp = Vec3d_new( &Vec3dType, NULL, NULL );
-  Vec3d_init( temp, vect );
+  PyObject /**ArgsTuple,*/ *temp;
+//  temp = Vec3d_new( &Vec3dType, NULL, NULL );
+//  Vec3d_init( temp, vect );
   if ( temp == NULL ) return Py_BuildValue("");
 //  if ( vec3d == NULL) return Py_BuildValue(""); // Failed to load vec3d.py
 //  VectorCopy(vect, vector);

@@ -56,7 +56,8 @@ static scObjectInstance_t *entity_init ( scObjectType_t *type, scDataTypeValue_t
 typedef enum 
 {
   ENTITY_CLASSNAME,
-} ent_getset_t;
+  ENTITY_LINK,
+} ent_closures;
 
 static void entity_set ( scObjectInstance_t *self, scDataTypeValue_t *value, void *closure)
 {
@@ -106,16 +107,43 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
   }
 }
 
+static scDataTypeValue_t *entity_method(scObjectInstance_t *self, scDataTypeValue_t *args, void *closure)
+{
+  int methodnum;
+  scDataTypeValue_t *value;
+
+  methodnum = (int)closure;
+  value = BG_Alloc(sizeof(scDataTypeValue_t));
+  value->type = TYPE_UNDEF;
+  
+  switch (methodnum) {
+    case ENTITY_LINK:
+      Com_Printf("Entity link called\n");
+//      trap_LinkEntity( (gentity_t*)self->pointer );
+      break;
+    default:
+      break;
+  }
+  return value;
+}
+
+//trap_LinkEntity
 static scObjectMember_t entity_members[] = {
-    { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME},
+    { "classname", "", TYPE_STRING, entity_set, entity_get,
+        (void*)ENTITY_CLASSNAME },
     { NULL },
 };
 
-static scObjectDef_t entity_object = {
-  "Entity",
-  entity_init,
-  { TYPE_INTEGER, TYPE_UNDEF },
-  entity_members,
+static scObjectMethod_t entity_methods[] = {
+  { "link", "", { TYPE_UNDEF }, entity_method, TYPE_UNDEF, (void*)ENTITY_LINK },
+    { NULL },
+};
+
+static scObjectDef_t entity_object = { 
+  "Entity", 
+  entity_init, { TYPE_INTEGER, TYPE_UNDEF }, 
+  entity_members, 
+  entity_methods, 
 };
 
 

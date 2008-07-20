@@ -53,6 +53,8 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
   char name[ MAX_PATH_LENGTH + 1 ];
   scDataTypeValue_t var;
   scObjectType_t    *type;
+  scObjectMember_t  *member;
+  scObjectMethod_t  *method;
   int nslen = strlen( namespace );
   int i;
   
@@ -62,6 +64,7 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
   type->name    = (char*)def.name;
   type->init    = def.init;
   type->members = def.members;
+  type->methods = def.methods;
 //  memcpy( type->members, def.members, sizeof( type->members ) );
   memcpy( type->initArguments, def.initArguments, sizeof( type->initArguments ) );
 #if USE_PYTHON
@@ -72,12 +75,16 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
   Q_strncpyz( name + nslen + 1, def.name, strlen( def.name ) + 1);
   type->namespace_path = name;
   
-  for (; type->members->name != NULL; type->members++) {
+  member = type->members;
+  for (; member->name != NULL; member++) {
     type->membercount++;
     
   }
-  for (i=0; i < type->membercount; i++)
-    type->members--;
+  method = type->methods;
+  for (; method->name != NULL; method++) {
+    type->methodcount++;
+  }
+  
   SC_InitObjectType( type );
   
   var.type = TYPE_OBJECTTYPE;

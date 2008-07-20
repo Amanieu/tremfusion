@@ -102,26 +102,32 @@ typedef struct _scpytypeobject {
 typedef struct {
   PyObject_HEAD
   scDataType_t           type;
-  union {
-    scDataTypeFunction_t *function;
-    scObjectType_t       *objecttype;
-  } data;
+  scDataTypeFunction_t *function;
 } PyFunction;
+PyTypeObject PyFunctionType;
+PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function);
+
 
 typedef struct {
   PyObject_HEAD
   scObjectInstance_t *instance;
   scObjectType_t     *type;
-} PyScObject;
-
+} PyScObject; 
 ScPyTypeObject PyScObject_Type;
-
 PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds);
 int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs);
 
-PyObject *PyFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
-int PyFunction_init(PyFunction *self, int type, void *closure);
-PyTypeObject PyFunctionType;
+typedef struct {
+  PyObject_HEAD
+  scObjectInstance_t *instance;
+  scObjectMethod_t   *method;
+  PyObject           *parent;
+} PyScMethod;
+
+PyTypeObject PyScMethod_Type;
+PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+int PyScMethod_init(PyScMethod *self, PyObject *parent, scObjectInstance_t* instance, scObjectMethod_t* method);
 
 extern PyObject *vec3d;
 PyObject *convert_from_value( scDataTypeValue_t *value );

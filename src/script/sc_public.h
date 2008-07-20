@@ -95,6 +95,7 @@ typedef struct scDataTypeObjectType_s scDataTypeObjectType_t;
 typedef struct scDataTypeObject_s scDataTypeObject_t;
 
 typedef struct scObjectMember_s scObjectMember_t;
+typedef struct scObjectMethod_s scObjectMethod_t;
 typedef struct scObjectDef_s scObjectDef_t;
 typedef struct scObjectType_s scObjectType_t;
 typedef struct scObjectInstance_s scObjectInstance_t;
@@ -259,6 +260,7 @@ typedef struct
 } scLib_t;
 
 typedef scObjectInstance_t* (*scObjectInit_t)(scObjectType_t*, scDataTypeValue_t*);
+typedef scDataTypeValue_t*  (*scObjectMethodFunc_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
 typedef void (*scObjectSet_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
 typedef scDataTypeValue_t* (*scObjectGet_t)(scObjectInstance_t*, void *);
 
@@ -272,12 +274,23 @@ struct scObjectMember_s
   void                  *closure;
 };
 
+struct scObjectMethod_s
+{
+  char                  *name;
+  char                  *desc;
+  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scObjectMethodFunc_t  method;
+  scDataType_t          return_type;
+  void                  *closure;
+};
+
 struct scObjectDef_s
 {
   const char            *name;
   scObjectInit_t        init;
   scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
+  scObjectMethod_t      *methods;
 };
 
 struct scObjectType_s
@@ -288,6 +301,8 @@ struct scObjectType_s
   scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
   int                   membercount;
+  scObjectMethod_t      *methods;
+  int                   methodcount;
 #ifdef USE_PYTHON
   void                 *pythontype;
 #endif
