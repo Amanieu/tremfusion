@@ -193,9 +193,14 @@ g_admin_admin_t guest_admin = { "", NULL, "" };
 static void admin_command_permission( g_admin_group_t *group, char *right, qboolean *permission )
 {
   const char *found = group->rights - 1;
+  int i;
 
-  if ( group->inherit )
-    admin_command_permission( group->inherit, right, permission );
+  for ( i = 0; i < MAX_ADMIN_GROUPS; i++ )
+  {
+    if ( !group->inherit[ i ] )
+      break;
+    admin_command_permission( group->inherit[ i ], right, permission );
+  }
 
   while (( found = Q_stristr( found + 1, right ) ))
   {
@@ -440,7 +445,8 @@ static void admin_default_levels( void )
     *g->name = '\0';
     *g->longname = '\0';
     *g->rights = '\0';
-    g->inherit = ( i ? g_admin_groups[ i-1 ] : NULL );
+    g->inherit[ 0 ] = ( i ? g_admin_groups[ i-1 ] : NULL );
+    g->inherit[ 1 ] = NULL;
     g_admin_groups[ i ] = g;
   }
   Q_strncpyz( g_admin_groups[ 0 ]->name, "guest", sizeof( g->name ) );
