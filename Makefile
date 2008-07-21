@@ -504,10 +504,6 @@ ifeq ($(PLATFORM),mingw32)
     CLIENT_LDFLAGS += $(SDL_LIBS)
   endif
 
-
-
-  BUILD_CLIENT_SMP = 0
-
 else # ifeq mingw32
 
 #############################################################################
