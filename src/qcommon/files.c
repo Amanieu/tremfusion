@@ -2730,7 +2730,7 @@ static void FS_ReorderExtraPaks( void )
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
 			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
-			    (s->dir && fs_extraPaks[i][0] == '.' && fs_extraPaks[i][1] == '\0')) {
+			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ))) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
@@ -2738,7 +2738,7 @@ static void FS_ReorderExtraPaks( void )
 				// increment insert list
 				p_insert_index = &s->next;
 
-				if (fs_extraPaks[i][0] == '.' && fs_extraPaks[i][1] == '\0')
+				if (s->dir)
 					fs_unpureAllowed = qtrue;
 				else
 					s->pack->referenced |= FS_EXTRA_REF;
