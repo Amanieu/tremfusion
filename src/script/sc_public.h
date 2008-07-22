@@ -103,6 +103,7 @@ typedef struct scObjectInstance_s scObjectInstance_t;
 struct scDataTypeValue_s
 {
   scDataType_t    type;
+  scGC_t          gc;
   union
   {
     scDataTypeBoolean_t    boolean;
@@ -205,8 +206,10 @@ void SC_StringClear(scDataTypeString_t *string);
 void SC_StringGCInc(scDataTypeString_t *string);
 void SC_StringGCDec(scDataTypeString_t *string);
 
+scDataTypeValue_t *SC_ValueNew( void );
 void SC_ValueGCInc(scDataTypeValue_t *value);
 void SC_ValueGCDec(scDataTypeValue_t *value);
+scDataTypeValue_t *SC_ValueStringFromChar( const char* str );
 
 scDataTypeArray_t *SC_ArrayNew( void );
 qboolean SC_ArrayGet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value);

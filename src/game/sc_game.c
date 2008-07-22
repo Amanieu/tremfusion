@@ -57,6 +57,8 @@ typedef enum
 {
   ENTITY_CLASSNAME,
   ENTITY_LINK,
+  ENTITY_MODEL,
+  ENTITY_MODEL2,
 } ent_closures;
 
 static void entity_set ( scObjectInstance_t *self, scDataTypeValue_t *value, void *closure)
@@ -69,13 +71,18 @@ static void entity_set ( scObjectInstance_t *self, scDataTypeValue_t *value, voi
   switch (settype)
   {
     case ENTITY_CLASSNAME:
-      if (value->type != TYPE_STRING)
-      {
-        //TODO: Raise a Type Error
-        return;
-      }
+      if (value->type != TYPE_STRING) return; // NOTE: Type checking should be 
+                                              // preformed by the language specific code
       entity->classname = (char*)SC_StringToChar(value->data.string);
       break;
+    case ENTITY_MODEL:
+      if (value->type != TYPE_STRING) return; // NOTE: Type checking should be 
+                                              // preformed by the language specific code
+      entity->model = (char*)SC_StringToChar(value->data.string);
+    case ENTITY_MODEL2:
+      if (value->type != TYPE_STRING) return; // NOTE: Type checking should be 
+                                              // preformed by the language specific code
+      entity->model2 = (char*)SC_StringToChar(value->data.string);
     default:
       // Error
       break;
@@ -92,14 +99,14 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
   entity = (gentity_t*)self->pointer;
   value = BG_Alloc(sizeof(scDataTypeValue_t));
   
-  
   switch (gettype)
   {
     case ENTITY_CLASSNAME:
-      string = SC_StringNewFromChar( entity->classname );
-      value->type = TYPE_STRING;
-      value->data.string = string;
-      return value;
+      return SC_ValueStringFromChar( entity->classname );
+    case ENTITY_MODEL:
+      return SC_ValueStringFromChar( entity->model );
+    case ENTITY_MODEL2:
+      return SC_ValueStringFromChar( entity->model2 );
     default:
       value->type = TYPE_UNDEF;
       return value;
@@ -131,6 +138,10 @@ static scDataTypeValue_t *entity_method(scObjectInstance_t *self, scDataTypeValu
 static scObjectMember_t entity_members[] = {
     { "classname", "", TYPE_STRING, entity_set, entity_get,
         (void*)ENTITY_CLASSNAME },
+    { "model", "", TYPE_STRING, entity_set, entity_get,
+            (void*)ENTITY_MODEL },
+    { "model2", "", TYPE_STRING, entity_set, entity_get,
+            (void*)ENTITY_MODEL2 },
     { NULL },
 };
 

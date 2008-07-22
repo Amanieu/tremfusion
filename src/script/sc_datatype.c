@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 scNamespace_t *namespace_root;
 
 static void stringFree(scDataTypeString_t *string);
+static void valueFree(scDataTypeValue_t *value);
 static void arrayFree(scDataTypeArray_t *array);
 static void hashFree( scDataTypeHash_t *hash );
 static void functionFree(scDataTypeFunction_t *function);
@@ -90,7 +91,10 @@ static void stringFree(scDataTypeString_t *string)
 
 void SC_Strcat( scDataTypeString_t *string, const char *src )
 {
-  int len = strlen(src);
+  int len;
+  if (!src)
+    return;
+  len = strlen(src);
   if(len == 0)
     return;
 
@@ -132,8 +136,18 @@ void SC_StringGCDec(scDataTypeString_t *string)
 
 // Value
 
+scDataTypeValue_t *SC_ValueNew( void )
+{
+  scDataTypeValue_t *value;
+  
+  value = BG_Alloc( sizeof( scDataTypeValue_t ) );
+  value->gc.count = 0;
+  return value;
+}
+
 void SC_ValueGCInc(scDataTypeValue_t *value)
 {
+  value->gc.count++;
   switch(value->type)
   {
     case TYPE_STRING:
@@ -188,6 +202,23 @@ void SC_ValueGCDec(scDataTypeValue_t *value)
     default:
       break;
   }
+  value->gc.count--;
+  if(value->gc.count == 0)
+    valueFree(value);
+}
+
+scDataTypeValue_t *SC_ValueStringFromChar( const char* str )
+{
+  scDataTypeValue_t *value;
+  value = SC_ValueNew();
+  value->type = TYPE_STRING;
+  value->data.string = SC_StringNewFromChar( str );
+  return value;
+}
+
+static void valueFree(scDataTypeValue_t *value)
+{
+  BG_Free(value);
 }
 
 // Array
@@ -778,4 +809,3 @@ char* SC_LangageToString(scLangage_t langage)
 
   return "unknow";
 }
- 
