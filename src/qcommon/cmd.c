@@ -311,22 +311,24 @@ void Cmd_Exec_f( void ) {
 	char	filename[MAX_QPATH];
 	int i;
 	qboolean alreadyRan = qfalse;
+	qboolean success = qfalse;
 
 	if (Cmd_Argc () < 2) {
 		Com_Printf ("exec <filename> (args) : execute a script file\n");
 		return;
 	}
 
+	Com_Printf ("execing %s\n",Cmd_Argv(1));
+
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
 	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" ); 
 	len = FS_ReadFile( filename, (void **)&f);
 	if (!f) {
-		Com_Printf ("couldn't exec %s\n",Cmd_Argv(1));
-		return;
+		goto exec_next;
 	}
-	Com_Printf ("execing %s\n",Cmd_Argv(1));
 
 exec_again:
+	success = qtrue;
 	COM_Compress (f);
 	
 	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
@@ -346,18 +348,24 @@ exec_again:
 	{
 		fileHandle_t h;
 		FS_FreeFile (f);
+
+exec_next:
 		alreadyRan = qtrue;
 		len = FS_SV_FOpenFileRead(filename, &h);
-		if (!h)
-			return;
-		f = Hunk_AllocateTempMemory(len + 1);
-		FS_Read(f, len, h);
-		f[len] = 0;
-		FS_FCloseFile(h);
-		goto exec_again;
+		if (h)
+		{
+			f = Hunk_AllocateTempMemory(len + 1);
+			FS_Read(f, len, h);
+			f[len] = 0;
+			FS_FCloseFile(h);
+			goto exec_again;
+		}
 	}
 	else
 		Hunk_FreeTempMemory(f);
+
+	if (!success)
+		Com_Printf ("couldn't exec %s\n",Cmd_Argv(1));
 }
 
 
