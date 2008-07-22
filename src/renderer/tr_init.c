@@ -132,6 +132,7 @@ cvar_t	*r_lodCurveError;
 cvar_t	*r_fullscreen;
 cvar_t	*r_minimize;
 
+cvar_t	*r_mode;
 cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_pixelAspect;
@@ -918,6 +919,7 @@ void R_Register( void )
 	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
 	r_minimize = ri.Cvar_Get( "r_minimize", "0", 0 );
+	r_mode = ri.Cvar_Get( "r_mode", "-1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_width = ri.Cvar_Get( "r_width", "640", CVAR_ARCHIVE | CVAR_LATCH );
 	r_height = ri.Cvar_Get( "r_height", "480", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
