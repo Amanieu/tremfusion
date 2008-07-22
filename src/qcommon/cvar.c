@@ -724,6 +724,46 @@ void Cvar_Toggle_f( void ) {
 
 /*
 ============
+Cvar_ToggleList_f
+
+Toggles a cvar between a list of strings for easy single key binding
+============
+*/
+void Cvar_ToggleList_f( void ) {
+	int n;
+	char *strval;
+
+	if( Cmd_Argc() < 3 ) {
+		Com_Printf ("usage: togglelist <variable> <value1> <value2> ...\n");
+		return;
+	}
+
+	strval = Cvar_VariableString( Cmd_Argv(1) );
+
+	n = 2;
+	for(;;) {
+		if( !strcmp( Cmd_Argv(n), strval ) ) {
+			// found it, set it to the next (or wrapped to the first) one in the list
+			if( ++n < Cmd_Argc() ) {
+				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(n), qfalse );
+			}
+			else {
+				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse );
+			}
+			break;
+		}
+
+		++n;
+		if( n >= Cmd_Argc() ) {
+			// not found, set it to the first one in the list
+			Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse );
+			break;
+		}
+	}
+}
+
+/*
+============
 Cvar_Set_f
 
 Allows setting and defining of arbitrary cvars from console, even if they
@@ -1080,6 +1120,7 @@ void Cvar_Init (void) {
 
 	Cmd_AddCommand ("print", Cvar_Print_f);
 	Cmd_AddCommand ("toggle", Cvar_Toggle_f);
+	Cmd_AddCommand ("togglelist", Cvar_ToggleList_f);
 	Cmd_AddCommand ("set", Cvar_Set_f);
 	Cmd_AddCommand ("sets", Cvar_Set_f);
 	Cmd_AddCommand ("setu", Cvar_Set_f);
