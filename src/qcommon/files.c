@@ -2827,6 +2827,7 @@ static void FS_Startup( const char *gameName )
 		FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
+	fs_extrapaks->modified = qfalse; // We just loaded, it's not modified
 
 	Com_DPrintf( "----------------------\n" );
 	Com_DPrintf( "%d files in pk3 files\n", fs_packFiles );
