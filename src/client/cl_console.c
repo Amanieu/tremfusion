@@ -599,7 +599,18 @@ void Con_DrawSolidConsole( float frac ) {
 		y = 0;
 	}
 	else {
-		vec4_t consoleColor = {0, 0, 0.1, 0.75};
+		vec4_t consoleColor;
+		consoleColor[0] = cl_consoleColorR->value;
+		consoleColor[1] = cl_consoleColorG->value;
+		consoleColor[2] = cl_consoleColorB->value;
+		consoleColor[3] = cl_consoleColorA->value;
+		for (i = 0; i < 4; i++)
+		{
+			if ( consoleColor[i] < 0 )
+				consoleColor[i] = 0;
+			else if ( consoleColor[i] > 1 )
+				consoleColor[i] = 1;
+		}
 		SCR_FillRect(0, 0, SCREEN_WIDTH, y, consoleColor);
 	}
 

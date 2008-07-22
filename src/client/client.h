@@ -405,6 +405,11 @@ extern  cvar_t  *cl_dlURLOverride;
 
 extern  cvar_t  *cl_defaultUI;
 
+extern  cvar_t  *cl_consoleColorR;
+extern  cvar_t  *cl_consoleColorG;
+extern  cvar_t  *cl_consoleColorB;
+extern  cvar_t  *cl_consoleColorA;
+
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
 extern	cvar_t	*cl_mumbleScale;
