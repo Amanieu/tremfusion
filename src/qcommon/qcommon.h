@@ -243,6 +243,9 @@ extern int demo_protocols[];
 #ifndef MASTER_SERVER_NAME
 #define MASTER_SERVER_NAME	"master.tremulous.net"
 #endif
+#ifndef MOTD_SERVER_NAME
+#define MOTD_SERVER_NAME	"master.tremforges.net"
+#endif
 
 #define	PORT_MASTER			30710
 #define	PORT_SERVER			30720
