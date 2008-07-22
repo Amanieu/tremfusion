@@ -310,6 +310,7 @@ void Cmd_Exec_f( void ) {
 	int		len;
 	char	filename[MAX_QPATH];
 	int i;
+	qboolean alreadyRan = qfalse;
 
 	if (Cmd_Argc () < 2) {
 		Com_Printf ("exec <filename> (args) : execute a script file\n");
@@ -325,6 +326,7 @@ void Cmd_Exec_f( void ) {
 	}
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
 
+exec_again:
 	COM_Compress (f);
 	
 	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
@@ -340,7 +342,22 @@ void Cmd_Exec_f( void ) {
 		
 	Cbuf_InsertText (f);
 
-	FS_FreeFile (f);
+	if (!alreadyRan)
+	{
+		fileHandle_t h;
+		FS_FreeFile (f);
+		alreadyRan = qtrue;
+		len = FS_SV_FOpenFileRead(filename, &h);
+		if (!h)
+			return;
+		f = Hunk_AllocateTempMemory(len + 1);
+		FS_Read(f, len, h);
+		f[len] = 0;
+		FS_FCloseFile(h);
+		goto exec_again;
+	}
+	else
+		Hunk_FreeTempMemory(f);
 }
 
 

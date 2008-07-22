@@ -801,12 +801,12 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to qtrue.
 ============
 */
-void Cvar_WriteVariables( fileHandle_t f ) {
+void Cvar_WriteVariables( fileHandle_t f, qboolean vmCvars ) {
 	cvar_t	*var;
 	char	buffer[1024];
 
 	for (var = cvar_vars ; var ; var = var->next) {
-		if( var->flags & CVAR_ARCHIVE ) {
+		if( ( var->flags & CVAR_ARCHIVE ) && ( ( var->flags & (CVAR_VM_CREATED|CVAR_USER_CREATED) ) != 0 ) == vmCvars ) {
 			// write the latched value, even if it hasn't taken effect yet
 			if ( var->latchedString ) {
 				if( strlen( var->name ) + strlen( var->latchedString ) + 10 > sizeof( buffer ) ) {
@@ -1023,7 +1023,7 @@ basically a slightly modified Cvar_Get for the interpreted modules
 void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags ) {
 	cvar_t	*cv;
 
-	cv = Cvar_Get( varName, defaultValue, flags );
+	cv = Cvar_Get( varName, defaultValue, flags | CVAR_VM_CREATED );
 	if ( !vmCvar ) {
 		return;
 	}
