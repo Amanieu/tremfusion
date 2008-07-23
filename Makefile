@@ -1478,7 +1478,9 @@ GOBJ_ = \
   \
   $(B)/base/script/sc_datatype.o \
   $(B)/base/script/sc_main.o \
-  $(B)/base/script/sc_c.o
+  $(B)/base/script/sc_c.o \
+  $(B)/base/script/sc_common.o
+  
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)

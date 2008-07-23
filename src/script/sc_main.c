@@ -44,6 +44,7 @@ void SC_Init( void )
     SC_Python_Init( );
 #endif 
   SC_script_module_init();
+  SC_Common_Init();
 }
 
 static void autoload_global(void)

@@ -57,6 +57,10 @@ typedef enum
   ENTITY_LINK,
   ENTITY_MODEL,
   ENTITY_MODEL2,
+  ENTITY_TARGET,
+  ENTITY_TARGETNAME,
+  ENTITY_TEAM,
+  ENTITY_ORIGIN,
 } ent_closures;
 
 static void entity_set ( scObjectInstance_t *self, scDataTypeValue_t *value, void *closure)
@@ -92,6 +96,7 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
   scDataTypeValue_t *value;
   int gettype = (int)closure;
   scDataTypeString_t *string;
+  scObjectInstance_t *instance;
   gentity_t *entity;
   
   entity = (gentity_t*)self->pointer;
@@ -105,6 +110,12 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
       return SC_ValueStringFromChar( entity->model );
     case ENTITY_MODEL2:
       return SC_ValueStringFromChar( entity->model2 );
+    case ENTITY_ORIGIN:
+      instance = SC_Vec3_New( entity->r.currentOrigin);
+      value->type = TYPE_OBJECTINSTANCE;
+      value->data.objectinstance = instance;
+      return value;
+      //SC_Vec3_New
     default:
       value->type = TYPE_UNDEF;
       return value;
@@ -131,7 +142,6 @@ static scDataTypeValue_t *entity_method(scObjectInstance_t *self, scDataTypeValu
   return value;
 }
 
-//trap_LinkEntity
 static scObjectMember_t entity_members[] = {
     { "classname", "", TYPE_STRING, entity_set, entity_get,
         (void*)ENTITY_CLASSNAME },
@@ -139,6 +149,8 @@ static scObjectMember_t entity_members[] = {
             (void*)ENTITY_MODEL },
     { "model2", "", TYPE_STRING, entity_set, entity_get,
             (void*)ENTITY_MODEL2 },
+//    { "origin", "", TYPE_OBJECTINSTANCE, entity_set, entity_get,
+//            (void*)ENTITY_ORIGIN },   
     { NULL },
 };
 

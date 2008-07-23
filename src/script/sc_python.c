@@ -208,13 +208,18 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 #endif
 }
 
+static PyObject *convert_from_objectinstance( scObjectInstance_t *instance )
+{
+  PyScObject *pyobjectinstance;
+  pyobjectinstance = (PyScObject*)PyScObject_new( (ScPyTypeObject*)instance->type->pythontype, NULL, NULL);
+  
+  pyobjectinstance->instance = instance;
+  
+  return (PyObject*)pyobjectinstance;
+}
+
 static PyObject *convert_from_objecttype( scObjectType_t *type )
 {
-//  PyObject *temp;
-////  temp = PyFunction_new( &PyFunctionType, NULL, NULL );
-////  PyFunction_init( (PyFunction*)temp, TYPE_OBJECTTYPE, (void*)type );
-//  if ( temp == NULL ) return Py_BuildValue("");
-//  return temp;
   return (PyObject*)type->pythontype;
 }
 
@@ -240,6 +245,8 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
 //      break;
     case TYPE_FUNCTION:
       return convert_from_function( value->data.function );
+    case TYPE_OBJECTINSTANCE:
+      return convert_from_objectinstance( value->data.objectinstance );
     case TYPE_OBJECTTYPE:
       return convert_from_objecttype( value->data.objecttype );
     default:

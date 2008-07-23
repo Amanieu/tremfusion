@@ -64,7 +64,7 @@ typedef enum
   TYPE_ARRAY,
   TYPE_HASH,
   TYPE_NAMESPACE,
-  TYPE_OBJECT,
+  TYPE_OBJECTINSTANCE,
   TYPE_OBJECTTYPE,
 } scDataType_t;
 
@@ -114,7 +114,7 @@ struct scDataTypeValue_s
     scDataTypeArray_t      *array;
     scDataTypeHash_t       *hash;
     scNamespace_t          *namespace;
-    scObjectInstance_t     *object;
+    scObjectInstance_t     *objectinstance;
     scObjectType_t         *objecttype;
     
   } data;
@@ -322,6 +322,10 @@ struct scObjectInstance_s
 void SC_AddLibrary( const char *namespace, scLib_t lib[] );
 
 void SC_AddObjectType( const char *namespace_path, scObjectDef_t type );
+
+// sc_common.c
+scObjectInstance_t *SC_Vec3_New( float *vect );
+void SC_Common_Init( void );
 
 #endif
 
