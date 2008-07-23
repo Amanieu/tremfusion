@@ -520,7 +520,7 @@ void BotAlienAI(bot_state_t *bs, float thinktime) {
 		//target
 		BotAddInfo(bs, "goal", va("%d",bs->goal.entitynum) );
 		//Enemy Info
-		if(bs->enemyent->client)
+		if( bs->enemyent && bs->enemyent->client)
 			BotAddInfo(bs, "enemyname", va("%s",bs->enemyent->client->pers.netname) );
 		// copy config string
 		trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);

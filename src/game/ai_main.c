@@ -409,6 +409,13 @@ int BotAI(int client, float thinktime) {
 			//args[strlen(args)-1] = '\0';
 			//trap_BotQueueConsoleMessage(bs->cs, CMS_CHAT, args);
 		}
+//		else if (!Q_stricmp(buf, "servermenu")) {
+//		  if( bot_developer.integer){
+//        memmove(args, args+1, strlen(args));
+//        args[strlen(args)-1] = '\0';
+//        Bot_Print(BPDEBUG, "[BOT_MENU] %s\n", args);
+//      }
+//    }
 		else if (!Q_stricmp(buf, "scores"))	// parse scores?
 			{  }
 		else if (!Q_stricmp(buf, "clientLevelShot"))

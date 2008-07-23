@@ -1160,7 +1160,7 @@ void ClientUserinfoChanged( int clientNum )
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, userinfo );
 
-  G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );
+//  G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );
 }
 
 

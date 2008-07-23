@@ -520,7 +520,7 @@ qboolean BotGoalForClosestBuildable(bot_state_t* bs, bot_goal_t* goal, int bclas
 		}
 	}
 	if(closest < 0) return qfalse; //No emenys within distance
-	BotAddInfo(bs, "closest enemy building", ent->classname);	
+//	BotAddInfo(bs, "closest enemy building", ent->classname);	
 	closesttarget =  &g_entities[ closest ];
 	// create a goal
 	//TraceDownToGround(bs, closesttarget->s.origin, origin);
@@ -592,7 +592,7 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 	if(closest < 0) return -1; //No emenys within distance
 	trap_AAS_EntityInfo(closest, &closestentinfo);	
 	closesttarget =  &g_entities[ closest ];
-	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);	
+//	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);	
 	return closest;
 }
 
@@ -641,7 +641,7 @@ qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal){
 	if(closest < 0) return qfalse; //No emenys within distance
 	trap_AAS_EntityInfo(closest, &closestentinfo);	
 	closesttarget =  &g_entities[ closest ];
-	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);
+//	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);
 	
 	// create a goal
 	OrgToGoal(closesttarget->s.origin, goal);

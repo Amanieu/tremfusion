@@ -90,6 +90,8 @@ if options.usedebug:
   qvmglobstring = "../build/debug-*/base/vm/*.qvm"
 else:
   qvmglobstring = "../build/release-*/base/vm/*.qvm"
+  
+print "glob.glob(qvmglobstring):", glob.glob(qvmglobstring)
 
 for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue

@@ -645,9 +645,9 @@ void HBotUpdateInventory(bot_state_t* bs){
 #define TIME_BETWEENBUYINGAMMO	4
 
 void BuyAmmo(bot_state_t* bs){
-	if(bs->buyammo_time > FloatTime() - TIME_BETWEENBUYINGAMMO) return;
-	trap_EA_Command(bs->client, "buy ammo" );
-	bs->buyammo_time = FloatTime();
+//	if(bs->buyammo_time > level.time - TIME_BETWEENBUYINGAMMO) return;
+//	trap_EA_Command(bs->client, "buy ammo" );
+//	bs->buyammo_time = level.time;
 }
 // armoury AI: buy stuff depending on credits (stage, situation)
 void HBotShop(bot_state_t* bs){
@@ -656,6 +656,7 @@ void HBotShop(bot_state_t* bs){
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
 	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
+	BotAddInfo(bs, "totalcredit", va("%d", totalcredit) );
 	switch(g_humanStage.integer){
 		case 0:
 			if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN){
@@ -671,7 +672,13 @@ void HBotShop(bot_state_t* bs){
 				trap_EA_Command(bs->client, "buy larmour" );
 				trap_EA_Command(bs->client, "buy battpack" );
 				trap_EA_Command(bs->client, "buy lgun" );
-			}break;
+			}
+			else {
+			  trap_EA_Command(bs->client, "sell weapons" );
+        trap_EA_Command(bs->client, "sell upgrades" );
+        trap_EA_Command(bs->client, "buy rifle" );
+			}
+			break;
 		case 1:
 			if( totalcredit >= 660 && weap != WP_PULSE_RIFLE ){
 				trap_EA_Command(bs->client, "sell weapons" );
@@ -736,7 +743,7 @@ qboolean HBotAttack2(bot_state_t* bs){
 // if enemy is found: bs->enemy and return qtrue
 
 qboolean HBotFindEnemy(bot_state_t* bs){
-  if(bs->findenemy_time > FloatTime() - TIME_BETWEENFINDINGENEMY) return qtrue;
+  if(bs->findenemy_time > level.time - TIME_BETWEENFINDINGENEMY) return qtrue;
   bs->findenemy_time = FloatTime();
 	// return 0 if no alien building can be found
 	
@@ -1260,9 +1267,12 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
 		// ammo
 		//BotAddInfo(bs, "ammo", va("%d",bs->inventory[BI_AMMO]) );
 		//target
-		BotAddInfo(bs, "goal", va("%d",bs->goal.entitynum) );
+//		if (bs->goal != NULL)
+		  BotAddInfo(bs, "goal", va("%d",  bs->goal.entitynum ) );
+//		else
+//		  BotAddInfo(bs, "goal", "None");
 		//Enemy Info
-		if(bs->enemyent->client)
+		if( bs->enemyent && bs->enemyent->client)
 			BotAddInfo(bs, "enemyname", va("%s",bs->enemyent->client->pers.netname) );
 		// copy config string
 		trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);

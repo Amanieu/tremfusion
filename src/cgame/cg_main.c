@@ -1664,11 +1664,11 @@ void CG_LoadHudMenu( void )
 
   Menu_Reset( );
 
-  trap_Cvar_VariableStringBuffer( "cg_hudFiles", buff, sizeof( buff ) );
-  hudSet = buff;
+//  trap_Cvar_VariableStringBuffer( "cg_hudFiles", buff, sizeof( buff ) );
+//  hudSet = buff;
 
-  if( !cg_hudFilesEnable.integer || hudSet[ 0 ] == '\0' )
-    hudSet = "ui/hud.txt";
+//  if( !cg_hudFilesEnable.integer || hudSet[ 0 ] == '\0' )
+  hudSet = "ui/hud.txt";
 
   CG_LoadMenus( hudSet );
 }
