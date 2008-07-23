@@ -416,7 +416,7 @@ char *CON_Input ( void )
 				input_buf_pos = 0;
 
 				/* i wont tell about this command if you wont >.>  */
-				if ( !Q_strncmp("clear", text, strlen("clear")) )
+				if ( !Q_strncmp("clear", text, strlen(text)) )
 				{
 					LogClear();
 					return(NULL);
