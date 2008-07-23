@@ -111,11 +111,11 @@ static scDataTypeValue_t *entity_get ( scObjectInstance_t *self, void *closure )
     case ENTITY_MODEL2:
       return SC_ValueStringFromChar( entity->model2 );
     case ENTITY_ORIGIN:
-      instance = SC_Vec3_New( entity->r.currentOrigin);
+      instance = SC_Vec3FromVec3_t( entity->r.currentOrigin);
       value->type = TYPE_OBJECTINSTANCE;
       value->data.objectinstance = instance;
       return value;
-      //SC_Vec3_New
+      //SC_Vec3FromVec3_t
     default:
       value->type = TYPE_UNDEF;
       return value;

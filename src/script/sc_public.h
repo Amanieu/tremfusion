@@ -324,7 +324,7 @@ void SC_AddLibrary( const char *namespace, scLib_t lib[] );
 void SC_AddObjectType( const char *namespace_path, scObjectDef_t type );
 
 // sc_common.c
-scObjectInstance_t *SC_Vec3_New( float *vect );
+scObjectInstance_t *SC_Vec3FromVec3_t( float *vect );
 void SC_Common_Init( void );
 
 #endif

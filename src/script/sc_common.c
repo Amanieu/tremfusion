@@ -113,7 +113,7 @@ static scObjectDef_t vec3_object = {
   vec3_methods, 
 };
 
-scObjectInstance_t *SC_Vec3_New( float *vect )
+scObjectInstance_t *SC_Vec3FromVec3_t( float *vect )
 {
   scObjectInstance_t *instance;
   instance = BG_Alloc( sizeof( scObjectInstance_t ) );
