@@ -1,4 +1,12 @@
 /*
+ * TODO:
+ * 1) console history
+ * 2) log scrolling
+ * 3) info for the stats windows
+ * 4) terminal size checking
+ * 5) console tab completion
+ * 6) console input line size checking (typing in more than your terminal is wide)
+ * 
  * BUGS
  *
  * 1) when resizing the terminal rapidly (sometimes normaly) the window will not be redrawn properly, not quite sure of the cause, but
@@ -8,6 +16,8 @@
  *
  * basicly if you dont abuse the window of the terminal it should be fine, the quick fix is to resize the window again to get it to redraw
  * 
+ * 3) the cursor doesnt seem to get placed correctly
+ *
  */
 
 #include "../qcommon/q_shared.h"
@@ -15,21 +25,22 @@
 #include "sys_local.h"
 
 #include <curses.h>
+#include <fcntl.h>
 #include <signal.h>
-
+#include <unistd.h>
 #include <sys/ioctl.h>
 
 #define LOG_BUF_SIZE 2048
 
-int con_state = 0; /* has CON_Init been run yet? */
+static int con_state = 0; /* has CON_Init been run yet? */
 
-char logbuf[LOG_BUF_SIZE][1024];
-int logline = 0;
+static char logbuf[LOG_BUF_SIZE][1024]; /* buffer that holds all of the log lines */
+static int logline = 0; /* current log buffer line */
 
-char *logwinbuf[LOG_BUF_SIZE];
-int logwinline = 0;
+static char *logwinbuf[LOG_BUF_SIZE]; /* buffer for the log window (points to the log buffer) */
+static int logwinline = 0; /* current log window line */
 
-int reallogline = 0;
+static int reallogline = 0; /* count of total lines printed */
 
 typedef struct
 {
@@ -42,34 +53,45 @@ typedef struct
 	int y;
 } _window;
 
-int root_y, root_x;
+static int root_y, root_x; /* size of the root window */
 
-WINDOW *rootwin;
+/* FIXME: use _window indoesd of WINDOW */
+static WINDOW *rootwin; /* root window */
 
-_window win0;
-_window win1;
-_window win2;
-_window win3;
-_window win4;
-_window win5;
+/* windows */
+static _window win0;
+#if 0
+static _window win1;
+static _window win2;
+#endif
+static _window win3;
+static _window win4;
+static _window win5;
+
+static char title[] = "[TremFusion Dedicated Server]"; /* console title */
+
+static char input_prompt[] = "console-> "; /* input prompt */
+static char input_buf[1024]; /* input buffer */
+static int input_buf_pos = 0; /* input buffer position */
 
 /* -- prototypes -- */
 
 /* helper functions */
 static void NewWin ( _window * );
-/* static void ResizeWin ( _window * ); unused function */
 static void SetWins ( void );
 static void InitWins ( void );
-/* static void ResizeWins ( void ); unused function */
 static void RefreshWins ( void );
 static void DrawWins ( void );
-/* static void ClearWins ( void ); unused function */
 static void CursResize ( void );
-
 static void LogPrint ( char * );
 static void LogRedraw ( void );
+static void LogClear ( void );
+static void ErrPrint ( const char * );
+static void InputRedraw ( void );
+static void WinRefresh ( _window * );
 
 /* tremulous functions */
+/* FIXME: already defined in in sys_local.h */
 void CON_Print ( const char * );
 void CON_Init ( void );
 void CON_Shutdown ( void );
@@ -80,16 +102,6 @@ static void NewWin ( _window *win )
 {
 	win->win = newwin(win->lines, win->cols, win->y, win->x);
 }
-
-
-/* resize a window */
-/* FIXME: unneeded now? */
-#if 0
-static void ResizeWin ( _window *win )
-{
-	wresize(win->win, win->lines, win->cols);
-}
-#endif
 
 /* set the size of the windows from the root window size */
 static void SetWins ( void )
@@ -108,6 +120,7 @@ static void SetWins ( void )
 	win0.x = 0;
 	win0.y = 0;
 
+	#if 0
 	win1.lines = 8;
 	win1.cols = root_x;
 	win1.x = 0;
@@ -127,6 +140,18 @@ static void SetWins ( void )
 	win4.cols = (win3.cols - 2);
 	win4.x = (win3.x + 1);
 	win4.y = (win3.y + 1);
+	#endif
+
+	/* FIXME: remove this code (win3 and win4) when we get those windows setup */
+	win3.lines = (root_y - win0.lines - 1);
+	win3.cols = root_x;
+	win3.x = 0;
+	win3.y = (win0.lines);
+
+	win4.lines = (win3.lines - 2);
+	win4.cols = (win3.cols - 2);
+	win4.x = (win3.x + 1);
+	win4.y = (win3.y + 1);
 
 	win5.lines = 1;
 	win5.cols = root_x;
@@ -140,58 +165,48 @@ static void InitWins ( void )
 	rootwin = initscr();
 	if ( rootwin == NULL )
 	{
-		fprintf(stderr, "Fatal Error: initscr()\n");
+		ErrPrint("Fatal Error: initscr()\n");
 		exit(1); /* FIXME: use a more formal exit, or a fallback? */
 	}
 
+	cbreak();
+	nodelay(rootwin, TRUE);
+	clearok(rootwin, TRUE);
+	noecho();
+
 	NewWin(&win0);
+	#if 0
 	NewWin(&win1);
 	NewWin(&win2);
+	#endif
 	NewWin(&win3);
 	NewWin(&win4);
 	NewWin(&win5);
-
-	clearok(curscr, TRUE);
 }
-
-/* resize all windows to their win.lines/cols size */
-/* FIXME: unneeded now? */
-#if 0
-static void ResizeWins ( void )
-{
-	ResizeWin(&win0);
-	ResizeWin(&win1);
-	ResizeWin(&win2);
-	ResizeWin(&win3);
-	ResizeWin(&win4);
-	ResizeWin(&win5);
-
-	/*FIXME: figure this out */
-	mvwin(win5.win, win5.y, win5.x);
-}
-#endif
 
 /* refresh all of the windows */
 static void RefreshWins ( void )
 {
 	wrefresh(rootwin);
 
-	wrefresh(win0.win);
-	wrefresh(win1.win);
-	wrefresh(win2.win);
-	wrefresh(win3.win);
-	wrefresh(win4.win);
-	wrefresh(win5.win);
+	WinRefresh(&win0);
+	#if 0
+	WinRefresh(&win1);
+	WinRefresh(&win2);
+	#endif
+	WinRefresh(&win3);
+	WinRefresh(&win4);
+	WinRefresh(&win5);
 }
 
 /* draw the default stuff on the windows */
 static void DrawWins ( void )
 {
-	char title[] = "[Tremulous Dedicated Server]";
-
 	/* window 0: title window */
 	mvwprintw(win0.win, 0, 0, "%s", title);
 
+	/* FIXME: turn these windows back on */
+	#if 0
 	/* window 1: game status window */
 	box(win1.win, 0, 0);
 	mvwprintw(win1.win, 0, 1, "[game status]");
@@ -199,6 +214,7 @@ static void DrawWins ( void )
 	/* window 2: player status window */
 	box(win2.win, 0, 0);
 	mvwprintw(win2.win, 0, 1, "[player status]");
+	#endif
 
 	/* window 3: log window (uesd for a boarder, window 4 sits inside this one) */
 	box(win3.win, 0, 0);
@@ -207,24 +223,8 @@ static void DrawWins ( void )
 	/* window 4: the actual log window, sits inside window 3 */
 
 	/* window 5: the shell window, the command prompt lives here */
-	mvwprintw(win5.win, 0, 0, "# rm -rf /");
+	mvwprintw(win5.win, 0, 0, "%s", input_prompt);
 }
-
-/* clear all of the windows */
-/* FIXME: unneeded now? */
-#if 0
-static void ClearWins ( void )
-{
-	wclear(rootwin);
-
-	wclear(win0.win);
-	wclear(win1.win);
-	wclear(win2.win);
-	wclear(win3.win);
-	wclear(win4.win);
-	wclear(win5.win);
-}
-#endif
 
 /* resize the windows, redraw them, and set the bear trap */
 static void CursResize ( void )
@@ -236,8 +236,8 @@ static void CursResize ( void )
 	InitWins();
 	DrawWins();
 	LogRedraw();
+	InputRedraw();
 	RefreshWins();
-
 }
 
 /* print to the log screen */
@@ -267,10 +267,11 @@ static void LogPrint ( char *msg )
 		mvwprintw(win4.win, logwinline, 0, "%s", logwinbuf[logwinline]);
 	}
 
-	wrefresh(win4.win);
+	WinRefresh(&win4);
 	logwinline++;
 }
 
+/* redraw the log window after a resize or some such event */
 static void LogRedraw ( void )
 {
 	int i;
@@ -281,6 +282,32 @@ static void LogRedraw ( void )
 		mvwprintw(win4.win, i, 0, "%s", logwinbuf[i]);
 	}
 }
+
+static void LogClear ( void )
+{
+	wclear(win4.win);
+	WinRefresh(&win4);
+	logwinline = 0;
+}
+
+/* use this when we cant trust CON_Print() */
+static void ErrPrint ( const char * msg )
+{
+	fputs(msg, stderr);
+}
+
+/* redraw the input prompt after a resize or some such event */
+static void InputRedraw ( void )
+{
+	mvwprintw(win5.win, 0, strlen(input_prompt), "%s", input_buf);
+}
+
+/* refresh a window */
+static void WinRefresh ( _window * win )
+{
+	wrefresh(win->win);
+}
+
 
 /* -- tremulous functions -- */
 
@@ -307,7 +334,10 @@ void CON_Print ( const char *msg )
 	}
 	else
 	{
-		fprintf(stderr, "WARNING: CON_Print() called before CON_Init()\nCon_Print(\"%s\")\n", msg);
+		char buf[1024];
+
+		snprintf(buf, sizeof(buf), "WARNING: CON_Print() called before CON_Init()\nCon_Print(\"%s\")\n", msg);
+		ErrPrint(buf);
 	}
 }
 
@@ -315,17 +345,26 @@ void CON_Init ( void )
 {
 	if ( !con_state )
 	{
-		con_state++;
+		signal(SIGTTIN, SIG_IGN);
+		signal(SIGTTOU, SIG_IGN);
+
+		fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | O_NONBLOCK );
 
 		/* FIXME: add terminal checking (to make sure we have a usable TTY of sorts (would this be redundant since ncurses does this(it does do this right?)) */
+		if (isatty(STDIN_FILENO)!=1)
+		{
+			ErrPrint("WARNING: stdin is not a tty\n");
+		}
 
 		SetWins();
 		InitWins();
 		CursResize();
+
+		con_state++;
 	}
 	else
 	{
-		fprintf(stderr, "WARNING: CON_Init() called after a previous CON_Init() and before CON_Shutdown()\n");
+		ErrPrint("WARNING: CON_Init() called after a previous CON_Init() and before CON_Shutdown()\n");
 	}
 }
 
@@ -338,11 +377,130 @@ void CON_Shutdown ( void )
 	}
 	else
 	{
-		fprintf(stderr, "WARNING: CON_Shutdown called before CON_Init()\n");
+		ErrPrint("WARNING: CON_Shutdown called before CON_Init()\n");
 	}
 }
 
 char *CON_Input ( void )
 {
-	return(NULL);
+	if ( con_state )
+	{
+		int buf;
+
+		buf = wgetch(rootwin);
+
+		if ( buf == ERR )
+		{
+			return(NULL);
+		}
+
+		/* detect enter */
+		if ( buf == '\n' )
+		{
+			if ( input_buf_pos > 0 )
+			{
+				int i;
+				static char text[1024];
+
+
+				Q_strncpyz(text, input_buf, sizeof(text));
+
+				for (i = input_buf_pos; i >= 0; i--)
+				{
+					mvwdelch(win5.win, 0, (strlen(input_prompt) + i));
+				}
+
+				WinRefresh(&win5);
+
+				input_buf[0] = '\0';
+				input_buf_pos = 0;
+
+				/* i wont tell about this command if you wont >.>  */
+				if ( !Q_strncmp("clear", text, strlen("clear")) )
+				{
+					LogClear();
+					return(NULL);
+				}
+
+				return(text);
+			}
+			else
+			{
+				return(NULL);
+			}
+		}
+
+		/* backspace */
+		if ( buf == 127 || buf == '\b' )
+		{
+			if ( input_buf_pos > 0 )
+			{
+				input_buf[(input_buf_pos - 1)] = '\0';
+				mvwdelch(win5.win, 0, (strlen(input_prompt) + (input_buf_pos - 1)));
+				WinRefresh(&win5);
+
+				input_buf_pos--;
+			}
+
+			return(NULL);
+		}
+
+		/* ^L */
+		if ( buf == '\f' )
+		{
+			CursResize();
+			return(NULL);
+		}
+
+		/* escape codes */
+		if ( buf == 27 )
+		{
+			buf = wgetch(rootwin);
+
+			if ( buf == '[' || buf == 'O' )
+			{
+				buf = wgetch(rootwin);
+
+				switch (buf)
+				{
+					case 'A':
+						return(NULL);
+					break;
+
+					case 'B':
+						return(NULL);
+					break;
+
+					case 'C':
+						return(NULL);
+					break;
+
+					case 'D':
+						return(NULL);
+					break;
+
+					default:
+						return(NULL);
+					break;
+				}
+			}
+		}
+
+		if ( buf > 31 && buf < 128 )
+		{
+			input_buf[input_buf_pos] = buf;
+			input_buf[(input_buf_pos + 1)] = '\0';
+
+			mvwaddch(win5.win, 0, (strlen(input_prompt) + input_buf_pos), buf);
+			WinRefresh(&win5);
+
+			input_buf_pos++;
+		}
+
+		return(NULL);
+	}
+	else
+	{
+		return(NULL);
+	}
 }
