@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //#include "../botlib/be_aas.h"
 //#include "../botlib/be_ea.h"
 //#include "../botlib/be_ai_char.h"
-#include "../botlib/be_ai_chat.h"
+//#include "../botlib/be_ai_chat.h"
 //#include "../botlib/be_ai_gen.h"
 //#include "../botlib/be_ai_goal.h"
 //#include "../botlib/be_ai_move.h"
@@ -94,6 +94,7 @@ int alien_numaltroutegoals;
 aas_altroutegoal_t human_altroutegoals[MAX_ALTROUTEGOALS];
 int human_numaltroutegoals;
 
+void BotRoamGoal(bot_state_t *bs, vec3_t goal);
 
 /*
 ==================
@@ -319,12 +320,12 @@ however this saves us a lot of code
 ==================
 */
 int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) {
-  vec3_t target, dir, dir2;
+  vec3_t target, dir; //, dir2;
   char netname[MAX_NETNAME];
   char buf[MAX_MESSAGE_SIZE];
-  int areanum;
+//  int areanum;
   float croucher;
-  aas_entityinfo_t entinfo, botinfo;
+//  aas_entityinfo_t entinfo, botinfo;
   bot_waypoint_t *wp;
 
 //  if (bs->ltgtype == LTG_TEAMHELP && !retreat) {
@@ -635,7 +636,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
         if (bs->ltgtype == LTG_CAMPORDER) {
           BotAI_BotInitialChat(bs, "camp_arrive", EasyClientName(bs->teammate, netname, sizeof(netname)), NULL);
           trap_BotEnterChat(bs->cs, bs->decisionmaker, CHAT_TELL);
-          BotVoiceChatOnly(bs, bs->decisionmaker, VOICECHAT_INPOSITION);
+          //BotVoiceChatOnly(bs, bs->decisionmaker, VOICECHAT_INPOSITION);
         }
         bs->arrive_time = FloatTime();
       }
@@ -693,7 +694,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
       }
       BotAI_BotInitialChat(bs, "patrol_start", buf, NULL);
       trap_BotEnterChat(bs->cs, bs->decisionmaker, CHAT_TELL);
-      BotVoiceChatOnly(bs, bs->decisionmaker, VOICECHAT_YES);
+//      BotVoiceChatOnly(bs, bs->decisionmaker, VOICECHAT_YES);
       trap_EA_Action(bs->client, ACTION_AFFIRMATIVE);
       bs->teammessage_time = 0;
     }
@@ -978,7 +979,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
       if (bs->teammessage_time && bs->teammessage_time < FloatTime()) {
         BotAI_BotInitialChat(bs, "attackenemybase_start", NULL);
         trap_BotEnterChat(bs->cs, 0, CHAT_TEAM);
-        BotVoiceChatOnly(bs, -1, VOICECHAT_ONOFFENSE);
+        //BotVoiceChatOnly(bs, -1, VOICECHAT_ONOFFENSE);
         bs->teammessage_time = 0;
       }
       switch(BotTeam(bs)) {
@@ -2352,63 +2353,8 @@ void BotMapScripts(bot_state_t *bs) {
   mapname[sizeof(mapname)-1] = '\0';
 
   if (!Q_stricmp(mapname, "q3tourney6")) {
-    vec3_t mins = {700, 204, 672}, maxs = {964, 468, 680};
-    vec3_t buttonorg = {304, 352, 920};
-    //NOTE: NEVER use the func_bobbing in q3tourney6
-    bs->tfl &= ~TFL_FUNCBOB;
-    //if the bot is below the bounding box
-    if (bs->origin[0] > mins[0] && bs->origin[0] < maxs[0]) {
-      if (bs->origin[1] > mins[1] && bs->origin[1] < maxs[1]) {
-        if (bs->origin[2] < mins[2]) {
-          return;
-        }
-      }
-    }
-    shootbutton = qfalse;
-    //if an enemy is below this bounding box then shoot the button
-    for (i = 0; i < maxclients && i < MAX_CLIENTS; i++) {
-
-      if (i == bs->client) continue;
-      //
-      BotEntityInfo(i, &entinfo);
-      //
-      if (!entinfo.valid) continue;
-      //if the enemy isn't dead and the enemy isn't the bot self
-      if (EntityIsDead(&entinfo) || entinfo.number == bs->entitynum) continue;
-      //
-      if (entinfo.origin[0] > mins[0] && entinfo.origin[0] < maxs[0]) {
-        if (entinfo.origin[1] > mins[1] && entinfo.origin[1] < maxs[1]) {
-          if (entinfo.origin[2] < mins[2]) {
-            //if there's a team mate below the crusher
-            if (BotSameTeam(bs, i)) {
-              shootbutton = qfalse;
-              break;
-            }
-            else {
-              shootbutton = qtrue;
-            }
-          }
-        }
-      }
-    }
-    if (shootbutton) {
-      bs->flags |= BFL_IDEALVIEWSET;
-      VectorSubtract(buttonorg, bs->eye, dir);
-      vectoangles(dir, bs->ideal_viewangles);
-      aim_accuracy = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_AIM_ACCURACY, 0, 1);
-      bs->ideal_viewangles[PITCH] += 8 * crandom() * (1 - aim_accuracy);
-      bs->ideal_viewangles[PITCH] = AngleMod(bs->ideal_viewangles[PITCH]);
-      bs->ideal_viewangles[YAW] += 8 * crandom() * (1 - aim_accuracy);
-      bs->ideal_viewangles[YAW] = AngleMod(bs->ideal_viewangles[YAW]);
-      //
-      if (BotInFieldOfVision(bs->viewangles, 20, bs->ideal_viewangles)) {
-        trap_EA_Attack(bs->client);
-      }
-    }
   }
   else if (!Q_stricmp(mapname, "mpq3tourney6")) {
-    //NOTE: NEVER use the func_bobbing in mpq3tourney6
-    bs->tfl &= ~TFL_FUNCBOB;
   }
 }
 

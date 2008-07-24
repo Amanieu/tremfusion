@@ -70,6 +70,11 @@ extern float floattime;
 #define LTG_MAKELOVE_UNDER      14
 #define LTG_MAKELOVE_ONTOP      15
 
+//patrol flags
+#define PATROL_LOOP         1
+#define PATROL_REVERSE        2
+#define PATROL_BACK         4
+
 //goal flag, see ../botlib/be_ai_goal.h for the other GFL_*
 #define GFL_AIR     128
 
@@ -358,6 +363,7 @@ void BotInitWaypoints(void);
 qboolean TeamPlayIsOn( void );
 void BotSetEntityNumForGoalWithModel(bot_goal_t *goal, int eType, char *modelname);
 int BotReachedGoal(bot_state_t *bs, bot_goal_t *goal);
+char *EasyClientName(int client, char *buf, int size);
 
 extern bot_waypoint_t botai_waypoints[MAX_WAYPOINTS];
 extern bot_waypoint_t *botai_freewaypoints;
