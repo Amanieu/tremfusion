@@ -329,7 +329,7 @@ void BotCheckEvents(bot_state_t *bs, entityState_t *state) {
 			if(dist < 300.0){
 				VectorCopy(state->origin, bs->lastheardorigin);
 				bs->lastheardtime = FloatTime();
-				//Bot_Print(BPMSG, "Event happend %0.0f units away at time \n", dist, FloatTime());
+//				Bot_Print(BPMSG, "Event happend %0.0f units away at time \n", dist, FloatTime());
 				//vectoangles(dir, bs->ideal_viewangles); 
 			}			
 			break;
@@ -618,7 +618,7 @@ int BotAIStartFrame(int time) {
 		//BotAIRegularUpdate();		// update the ai itemlist, see BotUpdateEntityItems
 	}
 	
-	//floattime = trap_AAS_Time();
+	floattime = trap_AAS_Time();
 
 	// execute scheduled bot AI
 	for( i = 0; i < MAX_CLIENTS; i++ ) {

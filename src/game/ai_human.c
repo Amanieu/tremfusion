@@ -35,7 +35,7 @@ typedef enum{
     HS_TALK
 }hstates_t;
 
-char *stateNames[ ] =
+static char *stateNames[ ] =
 {
 "HS_SPAWN",
 "HS_GEAR",
@@ -518,10 +518,11 @@ qboolean HBotEquipOK(bot_state_t* bs){
 	int totalcredit;
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
-	
 	if(!G_FindBuildable(BA_H_ARMOURY)) return qtrue; //No arm so cant buy more ammo
+	BotAddInfo(bs, "Value of Bots Equipment:", va("%d", BG_GetValueOfPlayer( &bs->cur_ps )-400 ) );
+  BotAddInfo(bs, "bs->cur_ps.persistant[ PERS_CREDIT ]", va("%d", bs->cur_ps.persistant[ PERS_CREDIT ] ) );
 	if(G_BuildableRange( bs->cur_ps.origin, 1000, BA_H_ARMOURY )){
-		totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
+		totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) - 400  + bs->cur_ps.persistant[ PERS_CREDIT ];
 		switch(g_humanStage.integer){
 			case 0:
 				if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN) return qfalse;
@@ -645,9 +646,9 @@ void HBotUpdateInventory(bot_state_t* bs){
 #define TIME_BETWEENBUYINGAMMO	4
 
 void BuyAmmo(bot_state_t* bs){
-//	if(bs->buyammo_time > level.time - TIME_BETWEENBUYINGAMMO) return;
-//	trap_EA_Command(bs->client, "buy ammo" );
-//	bs->buyammo_time = level.time;
+	if(bs->buyammo_time > level.time - TIME_BETWEENBUYINGAMMO) return;
+	trap_EA_Command(bs->client, "buy ammo" );
+	bs->buyammo_time = level.time;
 }
 // armoury AI: buy stuff depending on credits (stage, situation)
 void HBotShop(bot_state_t* bs){
@@ -655,10 +656,7 @@ void HBotShop(bot_state_t* bs){
 	int       maxAmmo, maxClips;
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
-	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS] - 400;
-	BotAddInfo(bs, "BG_GetValueOfPlayer", va("%d", BG_GetValueOfPlayer( &bs->cur_ps )) );
-	BotAddInfo(bs, "bs->inventory[BI_CREDITS]", va("%d", bs->inventory[BI_CREDITS]) );
-	BotAddInfo(bs, "totalcredit", va("%d", totalcredit) );
+	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->cur_ps.persistant[ PERS_CREDIT ] - 400;
 	switch(g_humanStage.integer){
 		case 0:
 			if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN){
@@ -675,7 +673,7 @@ void HBotShop(bot_state_t* bs){
 				trap_EA_Command(bs->client, "buy battpack" );
 				trap_EA_Command(bs->client, "buy lgun" );
 			}
-			else {
+			else if( weap != WP_MACHINEGUN ) {
 			  trap_EA_Command(bs->client, "sell weapons" );
         trap_EA_Command(bs->client, "sell upgrades" );
         trap_EA_Command(bs->client, "buy rifle" );
@@ -957,7 +955,7 @@ qboolean HBotAttack(bot_state_t* bs){
 		BotAIBlocked(bs, &moveresult, qtrue);
 		//BotMovementViewTarget(int movestate, bot_goal_t *goal, int travelflags, float lookahead, vec3_t target)
 		if (bs->lastheardtime > FloatTime() - 0.5){
-			//Bot_Print(BPMSG, "I heard something looking at it\n");
+//			Bot_Print(BPMSG, "I heard something, looking at it\n");
 			VectorSubtract(bs->lastheardorigin, bs->origin, dir);
 			vectoangles(dir, bs->ideal_viewangles); 
 		}
@@ -1275,7 +1273,8 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
 //		  BotAddInfo(bs, "goal", "None");
 		//Enemy Info
 		if( bs->enemyent && bs->enemyent->client)
-			BotAddInfo(bs, "enemyname", va("%s",bs->enemyent->client->pers.netname) );
+		BotAddInfo(bs, "enemyname", va("%s",bs->enemyent->client->pers.netname) );
+		
 		// copy config string
 		trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);
 	}

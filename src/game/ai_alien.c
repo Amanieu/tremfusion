@@ -28,9 +28,14 @@ typedef enum{
 	AS_SPAWN,
 	AS_EVO,
 	AS_ATTACK
-}hstates_t;
+}astates_t;
 
-float ABotFindWidth(int weapon){ //, float width, float range){
+static void ABotUpdateInventory(bot_state_t* bs);
+static float ABotFindWidth(int weapon);
+static qboolean ABotFindEnemy(bot_state_t* bs);
+static float ABotFindRange(int weapon);
+
+static float ABotFindWidth(int weapon){ //, float width, float range){
 	float width, range;
 	switch(weapon){		
 		case WP_ABUILD2:
@@ -69,7 +74,7 @@ float ABotFindWidth(int weapon){ //, float width, float range){
 	return width;
 }
 
-float ABotFindRange(int weapon){ //, float width, float range){
+static float ABotFindRange(int weapon){ //, float width, float range){
 	float width, range;
 	switch(weapon){		
 		case WP_ABUILD2:
@@ -281,42 +286,67 @@ qboolean HumansNearby(bot_state_t* bs){
   return qfalse;
 }
  
+// armoury AI: buy stuff depending on credits (stage, situation)
+#define CanEvoTo(x) -1 != BG_ClassCanEvolveFromTo( currentClass, x, \
+                                             bs->cur_ps.persistant[ PERS_CREDIT ], \
+                                             g_alienStage.integer, 0 )
+
 qboolean ABotClassOK(bot_state_t* bs){
-	int numEvos;
-	int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
-	if(!HumansNearby(bs)){	
-		numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->value;
-		switch(g_alienStage.integer){
-			case 0:
-			case 1:
-				if(numEvos >= 3 && currentClass != PCL_ALIEN_LEVEL3) return qfalse;
-				break;
-			case 2:
-				if(numEvos >= 5 && currentClass != PCL_ALIEN_LEVEL4) return qfalse;
-				break;
-		}
-	} else {
-		return qtrue;
-	}
-	return qtrue;
+  int numEvos;
+  int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
+  if(!HumansNearby(bs)){  
+    numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->value;
+    switch(g_alienStage.integer){
+      case 0:
+      case 1:
+        if( CanEvoTo( PCL_ALIEN_LEVEL3 ) && currentClass != PCL_ALIEN_LEVEL3) return qfalse;
+        break;
+      case 2:
+        if( CanEvoTo( PCL_ALIEN_LEVEL4 ) && currentClass != PCL_ALIEN_LEVEL4) return qfalse;
+        break;
+    }
+  } else {
+    return qtrue;
+  }
+  return qtrue;
+}
+
+void ABotEvolve(bot_state_t* bs){
+  int numEvos;
+  int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
+  numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->cost;
+  switch(g_alienStage.integer){
+    case 0:
+    case 1:
+      if( CanEvoTo( PCL_ALIEN_LEVEL3 ) )
+        trap_EA_Command(bs->client, "class level3" );
+        break;
+    case 2:
+      if( CanEvoTo( PCL_ALIEN_LEVEL4 ) )
+        trap_EA_Command(bs->client, "class level4" );
+      break;
+  } 
+  //now update your inventory
+  ABotUpdateInventory(bs);
 }
 
 void ABotCheckRespawn(bot_state_t* bs){
 	char buf[144];
 
-  if( bs->cur_ps.pm_type == PM_DEAD || bs->cur_ps.pm_type == PM_SPECTATOR ){
-   	
-  	//on the spawn queue?
-	if( bs->cur_ps.pm_flags & PMF_QUEUED)
-    	return;
-    
-   	Com_sprintf(buf, sizeof(buf), "class %s", "level0");
-	trap_EA_Command(bs->client, buf);   	
+  if( bs->cur_ps.pm_type == PM_DEAD ||
+      bs->cur_ps.pm_type == PM_SPECTATOR ||
+      bs->cur_ps.pm_type == PM_FREEZE )
+  {
+    //on the spawn queue?
+    if( bs->cur_ps.pm_flags & PMF_QUEUED)
+      return;
+    Com_sprintf(buf, sizeof(buf), "class %s", "level0");
+    trap_EA_Command(bs->client, buf);   	
   }
 }
 
 // inventory becomes quite useless, thanks to the BG_Inventory functions..
-void ABotUpdateInventory(bot_state_t* bs){
+static void ABotUpdateInventory(bot_state_t* bs){
   
   bs->inventory[BI_HEALTH] = bs->cur_ps.stats[ STAT_HEALTH ];
   bs->inventory[BI_CREDITS] = bs->cur_ps.persistant[ PERS_CREDIT ];
@@ -327,30 +357,10 @@ void ABotUpdateInventory(bot_state_t* bs){
   //    bs->cur_ps.stats[ STAT_STAMINA ]);
 }
 
-// armoury AI: buy stuff depending on credits (stage, situation)
-void ABotEvolve(bot_state_t* bs){
-	int numEvos;
-	int  currentClass = bs->ent->client->ps.stats[ STAT_CLASS ];
-	numEvos = bs->inventory[BI_CREDITS] + BG_Class(currentClass)->value;
-	switch(g_alienStage.integer){
-		case 0:
-		case 1:
-			if( numEvos >= 3)
-				trap_EA_Command(bs->client, "class level3" );
-				break;
-		case 2:
-			if( numEvos >= 5)
-				trap_EA_Command(bs->client, "class level4" );
-			break;
-	}	
-	//now update your inventory
-	ABotUpdateInventory(bs);
-}
-
 // ABotFindEnemy
 // if enemy is found: set bs->goal and bs->enemy and return qtrue
 
-qboolean ABotFindEnemy(bot_state_t* bs){
+static qboolean ABotFindEnemy(bot_state_t* bs){
 	// return 0 if no alien building can be found
 	
 	//find alien in FOV
