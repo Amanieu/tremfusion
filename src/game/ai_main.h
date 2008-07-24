@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../botlib/be_ai_goal.h"	// bot_goal_t
 #include "../botlib/be_ai_move.h"	// bot_initmove_t
 #include "../botlib/be_ai_weap.h"	// weaponinfo_t
+#include "../botlib/be_ai_chat.h" // weaponinfo_t
+
 #include "chars.h"				//characteristics
 #endif
 
@@ -67,6 +69,9 @@ extern float floattime;
 #define LTG_ATTACKENEMYBASE     13  //attack the enemy base
 #define LTG_MAKELOVE_UNDER      14
 #define LTG_MAKELOVE_ONTOP      15
+
+//goal flag, see ../botlib/be_ai_goal.h for the other GFL_*
+#define GFL_AIR     128
 
 // Neural network
 #define MAX_NODESWITCHES  50
@@ -113,6 +118,26 @@ typedef enum
   NEXT_STATE_LOS, // Go to next state when u can see the goal
   NEXT_STATE_DISTANCE //Go to the next state when u are close enough to the goal.
 } nextstatetype_t;
+
+#define MAX_ACTIVATESTACK   8
+#define MAX_ACTIVATEAREAS   32
+
+typedef struct bot_activategoal_s
+{
+  int inuse;
+  bot_goal_t goal;            //goal to activate (buttons etc.)
+  float time;               //time to activate something
+  float start_time;           //time starting to activate something
+  float justused_time;          //time the goal was used
+  int shoot;                //true if bot has to shoot to activate
+  int weapon;               //weapon to be used for activation
+  vec3_t target;              //target to shoot at to activate something
+  vec3_t origin;              //origin of the blocking entity to activate
+  int areas[MAX_ACTIVATEAREAS];     //routing areas disabled by blocking entity
+  int numareas;             //number of disabled routing areas
+  int areasdisabled;            //true if the areas are disabled for the routing
+  struct bot_activategoal_s *next;    //next activate goal on stack
+} bot_activategoal_t;
 
 //bot state
 typedef struct bot_state_s
@@ -266,12 +291,12 @@ typedef struct bot_state_s
   vec3_t formation_origin;            //origin the bot uses for relative positioning
   bot_goal_t formation_goal;            //formation goal
 
-//	  bot_activategoal_t *activatestack;        //first activate goal on the stack
-//	  bot_activategoal_t activategoalheap[MAX_ACTIVATESTACK]; //activate goal heap
+  bot_activategoal_t *activatestack;        //first activate goal on the stack
+  bot_activategoal_t activategoalheap[MAX_ACTIVATESTACK]; //activate goal heap
 //
-//	  bot_waypoint_t *checkpoints;          //check points
-//	  bot_waypoint_t *patrolpoints;         //patrol points
-//	  bot_waypoint_t *curpatrolpoint;         //current patrol point the bot is going for
+  bot_waypoint_t *checkpoints;          //check points
+  bot_waypoint_t *patrolpoints;         //patrol points
+  bot_waypoint_t *curpatrolpoint;         //current patrol point the bot is going for
   int patrolflags;                //patrol flags
   
   float lastheardtime; // Time we last ''heard'' something
@@ -332,6 +357,7 @@ void BotFreeWaypoints(bot_waypoint_t *wp);
 void BotInitWaypoints(void);
 qboolean TeamPlayIsOn( void );
 void BotSetEntityNumForGoalWithModel(bot_goal_t *goal, int eType, char *modelname);
+int BotReachedGoal(bot_state_t *bs, bot_goal_t *goal);
 
 extern bot_waypoint_t botai_waypoints[MAX_WAYPOINTS];
 extern bot_waypoint_t *botai_freewaypoints;
@@ -340,8 +366,13 @@ extern bot_waypoint_t *botai_freewaypoints;
 void BotEntityInfo(int entnum, aas_entityinfo_t *info);
 void BotCheckDeath(int target, int attacker, int mod);
 void BotAIBlocked(bot_state_t *bs, bot_moveresult_t *moveresult, int activate);
+void BotRandomMove(bot_state_t *bs, bot_moveresult_t *moveresult);
 int BotAILoadMap( int restart );
 void  QDECL BotAI_Print(int type, char *fmt, ...);
+
+//returns the number of bots in the game
+int NumBots(void);
+extern int max_bspmodelindex;      //maximum BSP model index
 
 // ai_human.c
 void BotHumanAI(bot_state_t* bs, float thinktime);

@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //#include "../botlib/be_aas.h"
 //#include "../botlib/be_ea.h"
 //#include "../botlib/be_ai_char.h"
-#include "../botlib/be_ai_chat.h"
+//#include "../botlib/be_ai_chat.h"
 #include "../botlib/be_ai_gen.h"
 //#include "../botlib/be_ai_goal.h"
 //#include "../botlib/be_ai_move.h"
@@ -53,9 +53,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "match.h"				//string matching types and vars
 
 // for the voice chats
-#ifdef MISSIONPACK // bk001205
-#include "../../ui/menudef.h"
-#endif
+//#include "../../ui/menudef.h"
 
 #define TIME_BETWEENCHATTING	25
 

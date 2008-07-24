@@ -140,6 +140,10 @@ ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
 endif
 
+ifndef USE_NEURAL_NET
+USE_NEURAL_NET=0
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -832,6 +836,12 @@ else
   DEPEND_CFLAGS =
 endif
 
+Q3LCC_FLAGS =
+
+ifeq ($(USE_NEURAL_NET),1)
+  Q3LCC_FLAGS += -DUSE_NEURAL_NET
+endif
+
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
 
 ifeq ($(V),1)
@@ -869,19 +879,19 @@ endef
 
 define DO_GAME_CC
 $(echo_cmd) "GAME_CC $<"
-$(Q)$(CC) -DGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DGAME $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
 define DO_CGAME_CC
 $(echo_cmd) "CGAME_CC $<"
-$(Q)$(CC) -DCGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DCGAME $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
 define DO_UI_CC
 $(echo_cmd) "UI_CC $<"
-$(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
@@ -1095,22 +1105,22 @@ $(Q3LCC): $(Q3LCCOBJ) $(Q3RCC) $(Q3CPP)
 
 define DO_Q3LCC
 $(echo_cmd) "Q3LCC $<"
-$(Q)$(Q3LCC) -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -o $@ $<
 endef
 
 define DO_CGAME_Q3LCC
 $(echo_cmd) "CGAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
 endef
 
 define DO_GAME_Q3LCC
 $(echo_cmd) "GAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
 endef
 
 define DO_UI_Q3LCC
 $(echo_cmd) "UI_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
 endef
 
 
@@ -1609,6 +1619,12 @@ GOBJ_ = \
   \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o
+
+ifeq ($(USE_NEURAL_NET),1)
+GOBJ_ +=  \
+  $(B)/base/game/ai_humannet.o
+endif
+
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)

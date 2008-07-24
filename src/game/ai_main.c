@@ -958,3 +958,12 @@ void BotAIBlocked(bot_state_t *bs, bot_moveresult_t *moveresult, int activate) {
 		}
 	}
 }
+
+/*
+==============
+NumBots
+==============
+*/
+int NumBots(void) {
+  return numbots;
+}

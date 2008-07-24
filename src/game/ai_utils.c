@@ -1126,3 +1126,56 @@ void BotSetEntityNumForGoalWithModel(bot_goal_t *goal, int eType, char *modelnam
     }
   }
 }
+
+/*
+==================
+BotReachedGoal
+==================
+*/
+int BotReachedGoal(bot_state_t *bs, bot_goal_t *goal) {
+  if (goal->flags & GFL_ITEM) {
+    //if touching the goal
+    if (trap_BotTouchingGoal(bs->origin, goal)) {
+      if (!(goal->flags & GFL_DROPPED)) {
+        trap_BotSetAvoidGoalTime(bs->gs, goal->number, -1);
+      }
+      return qtrue;
+    }
+    //if the goal isn't there
+    if (trap_BotItemGoalInVisButNotVisible(bs->entitynum, bs->eye, bs->viewangles, goal)) {
+      /*
+      float avoidtime;
+      int t;
+
+      avoidtime = trap_BotAvoidGoalTime(bs->gs, goal->number);
+      if (avoidtime > 0) {
+        t = trap_AAS_AreaTravelTimeToGoalArea(bs->areanum, bs->origin, goal->areanum, bs->tfl);
+        if ((float) t * 0.009 < avoidtime)
+          return qtrue;
+      }
+      */
+      return qtrue;
+    }
+    //if in the goal area and below or above the goal and not swimming
+    if (bs->areanum == goal->areanum) {
+      if (bs->origin[0] > goal->origin[0] + goal->mins[0] && bs->origin[0] < goal->origin[0] + goal->maxs[0]) {
+        if (bs->origin[1] > goal->origin[1] + goal->mins[1] && bs->origin[1] < goal->origin[1] + goal->maxs[1]) {
+          if (!trap_AAS_Swimming(bs->origin)) {
+            return qtrue;
+          }
+        }
+      }
+    }
+  }
+  else if (goal->flags & GFL_AIR) {
+    //if touching the goal
+    if (trap_BotTouchingGoal(bs->origin, goal)) return qtrue;
+    //if the bot got air
+    if (bs->lastair_time > FloatTime() - 1) return qtrue;
+  }
+  else {
+    //if touching the goal
+    if (trap_BotTouchingGoal(bs->origin, goal)) return qtrue;
+  }
+  return qfalse;
+}

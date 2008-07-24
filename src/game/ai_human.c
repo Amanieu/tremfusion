@@ -1191,7 +1191,10 @@ BotHumanAI
 ==================
 */
 void BotHumanAI(bot_state_t *bs, float thinktime) {
-//  int i;
+#ifdef USE_NEURAL_NET
+  int  i;
+  char name[144];
+#endif
   if (bs->setupcount > 0) {
     bs->setupcount--;
     if (bs->setupcount > 0) return;
@@ -1203,7 +1206,7 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
     bs->setupcount = 0;
   }
   
-#if NEURAL_NET
+#ifdef USE_NEURAL_NET
   if (!bs->ainode) {
     AIHumanEnter_Seek_LTG(bs, "BotHumanAI: no ai node");
   }
@@ -1231,7 +1234,7 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
     ClientName(bs->client, name, sizeof(name));
     BotAI_Print(PRT_ERROR, "%s at %1.1f switched more than %d AI nodes\n", name, FloatTime(), MAX_NODESWITCHES);
   }
-#else /*NEURAL_NET*/
+#else /*USE_NEURAL_NET*/
 	//char buf[144];
 	
 	/*bot_goal_t goal;
@@ -1278,5 +1281,5 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
 		// copy config string
 		trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);
 	}
-#endif /*NEURAL_NET*/
+#endif /*USE_NEURAL_NET*/
 }
