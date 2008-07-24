@@ -655,7 +655,9 @@ void HBotShop(bot_state_t* bs){
 	int       maxAmmo, maxClips;
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
-	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS];
+	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->inventory[BI_CREDITS] - 400;
+	BotAddInfo(bs, "BG_GetValueOfPlayer", va("%d", BG_GetValueOfPlayer( &bs->cur_ps )) );
+	BotAddInfo(bs, "bs->inventory[BI_CREDITS]", va("%d", bs->inventory[BI_CREDITS]) );
 	BotAddInfo(bs, "totalcredit", va("%d", totalcredit) );
 	switch(g_humanStage.integer){
 		case 0:
