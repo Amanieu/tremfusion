@@ -305,30 +305,10 @@ void Cdelay_Frame( void ) {
 Cmd_Exec_f
 ===============
 */
-void Cmd_Exec_f( void ) {
-	char	*f;
-	int		len;
-	char	filename[MAX_QPATH];
+static void Cmd_ExecFile( char *f )
+{
 	int i;
-	qboolean alreadyRan = qfalse;
-	qboolean success = qfalse;
 
-	if (Cmd_Argc () < 2) {
-		Com_Printf ("exec <filename> (args) : execute a script file\n");
-		return;
-	}
-
-	Com_Printf ("execing %s\n",Cmd_Argv(1));
-
-	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" ); 
-	len = FS_ReadFile( filename, (void **)&f);
-	if (!f) {
-		goto exec_next;
-	}
-
-exec_again:
-	success = qtrue;
 	COM_Compress (f);
 	
 	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
@@ -341,28 +321,44 @@ exec_again:
 		Cvar_Get( va("arg_%i", i), Cmd_Argv( i + 1 ), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
 		Cvar_Set( va("arg_%i", i), Cmd_Argv( i + 1 ) );
 	}
-		
+
 	Cbuf_InsertText (f);
+}
+void Cmd_Exec_f( void ) {
+	char	*f;
+	int		len;
+	char	filename[MAX_QPATH];
+	fileHandle_t h;
+	qboolean success = qfalse;
 
-	if (!alreadyRan)
-	{
-		fileHandle_t h;
-		FS_FreeFile (f);
-
-exec_next:
-		alreadyRan = qtrue;
-		len = FS_SV_FOpenFileRead(filename, &h);
-		if (h)
-		{
-			f = Hunk_AllocateTempMemory(len + 1);
-			FS_Read(f, len, h);
-			f[len] = 0;
-			FS_FCloseFile(h);
-			goto exec_again;
-		}
+	if (Cmd_Argc () < 2) {
+		Com_Printf ("exec <filename> (args) : execute a script file\n");
+		return;
 	}
-	else
+
+	Com_Printf ("execing %s\n",Cmd_Argv(1));
+
+	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" ); 
+
+	len = FS_SV_FOpenFileRead(filename, &h);
+	if (h)
+	{
+		success = qtrue;
+		f = Hunk_AllocateTempMemory(len + 1);
+		FS_Read(f, len, h);
+		f[len] = 0;
+		FS_FCloseFile(h);
+		Cmd_ExecFile(f);
 		Hunk_FreeTempMemory(f);
+	}
+
+	FS_ReadFile( filename, (void **)&f);
+	if (f) {
+		success = qtrue;
+		Cmd_ExecFile(f);
+		FS_FreeFile (f);
+	}
 
 	if (!success)
 		Com_Printf ("couldn't exec %s\n",Cmd_Argv(1));
