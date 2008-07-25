@@ -1262,7 +1262,6 @@ Q3OBJ = \
   $(B)/client/sdl_input.o \
   $(B)/client/sdl_snd.o \
   \
-  $(B)/client/con_passive.o \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
 
@@ -1336,10 +1335,12 @@ endif
 ifeq ($(PLATFORM),mingw32)
   Q3OBJ += \
     $(B)/client/win_resource.o \
-    $(B)/client/sys_win32.o
+    $(B)/client/sys_win32.o \
+    $(B)/client/con_win32.o
 else
   Q3OBJ += \
-    $(B)/client/sys_unix.o
+    $(B)/client/sys_unix.o \
+    $(B)/client/con_tty.o
 endif
 
 ifeq ($(USE_MUMBLE),1)
