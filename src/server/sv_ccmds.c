@@ -171,6 +171,7 @@ static void SV_MapRestart_f( void ) {
 	int			i;
 	client_t	*client;
 	char		*denied;
+	qboolean	isBot;
 	int			delay;
 
 	// make sure we aren't restarting twice in the same frame
@@ -249,12 +250,18 @@ static void SV_MapRestart_f( void ) {
 		if ( client->state < CS_CONNECTED) {
 			continue;
 		}
+		
+		if ( client->netchan.remoteAddress.type == NA_BOT ) {
+			isBot = qtrue;
+		} else {
+			isBot = qfalse;
+		}
 
 		// add the map_restart command
 		SV_AddServerCommand( client, "map_restart\n" );
 
 		// connect the client again, without the firstTime flag
-		denied = VM_ExplicitArgPtr( gvm, VM_Call( gvm, GAME_CLIENT_CONNECT, i, qfalse ) );
+		denied = VM_ExplicitArgPtr( gvm, VM_Call( gvm, GAME_CLIENT_CONNECT, i, qfalse, isBot ) );
 		if ( denied ) {
 			// this generally shouldn't happen, because the client
 			// was connected before the level change
