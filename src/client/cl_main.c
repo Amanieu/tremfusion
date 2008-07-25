@@ -49,7 +49,6 @@ cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
 
 cvar_t	*cl_noprint;
-cvar_t	*cl_motd;
 
 cvar_t	*rcon_client_password;
 cvar_t	*rconAddress;
@@ -1320,16 +1319,13 @@ void CL_ForwardCommandToServer( const char *string ) {
 
 /*
 ===================
-CL_RequestMotd
+CL_GetMotd_f
 
 ===================
 */
-void CL_RequestMotd( void ) {
+void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
-	if ( !cl_motd->integer ) {
-		return;
-	}
 	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
 	if ( !NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
@@ -1478,9 +1474,6 @@ void CL_Connect_f( void ) {
 	}
 
 	Cvar_Set("ui_singlePlayerActive", "0");
-
-	// fire a message off to the motd server
-	CL_RequestMotd();
 
 	// clear any previous "server full" type messages
 	clc.serverMessage[0] = 0;
@@ -2730,6 +2723,8 @@ void CL_StartHunkUsers( qboolean rendererOnly ) {
 		cls.uiStarted = qtrue;
 		CL_InitUI();
 	}
+
+	Cbuf_AddText( "getmotd" );
 }
 
 /*
@@ -2972,7 +2967,6 @@ void CL_Init( void ) {
 	// register our variables
 	//
 	cl_noprint = Cvar_Get( "cl_noprint", "0", 0 );
-	cl_motd = Cvar_Get ("cl_motd", "1", 0);
 
 	cl_timeout = Cvar_Get ("cl_timeout", "200", 0);
 
@@ -3130,6 +3124,7 @@ void CL_Init( void ) {
 	Cmd_AddCommand ("setenv", CL_Setenv_f );
 	Cmd_AddCommand ("ping", CL_Ping_f );
 	Cmd_AddCommand ("serverstatus", CL_ServerStatus_f );
+	Cmd_AddCommand ("getmotd", CL_GetMotd_f );
 	Cmd_AddCommand ("showip", CL_ShowIP_f );
 	Cmd_AddCommand ("fs_openedList", CL_OpenedPK3List_f );
 	Cmd_AddCommand ("fs_referencedList", CL_ReferencedPK3List_f );
