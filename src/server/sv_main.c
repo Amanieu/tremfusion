@@ -414,6 +414,7 @@ void SVC_Info( netadr_t from ) {
 	Info_SetValueForKey( infostring, "sv_maxclients", 
 		va("%i", sv_maxclients->integer - sv_privateClients->integer ) );
 	Info_SetValueForKey( infostring, "pure", "0" );
+	Info_SetValueForKey( infostring, "unlagged", Cvar_VariableString( "g_unlagged" ) );
 
 #ifdef USE_VOIP
 	if (sv_voip->integer) {
