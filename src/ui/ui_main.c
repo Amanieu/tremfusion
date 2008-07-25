@@ -2989,6 +2989,16 @@ static void UI_RunMenuScript( char **args )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_team \"%s\"\n", buffer ) );
       else if( uiInfo.chatAdmins )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_admins \"%s\"\n", buffer ) );
+      else if( uiInfo.chatClan )
+      {
+        char clantagDecolored[ 32 ];
+        trap_Cvar_VariableStringBuffer( "cl_clantag", clantagDecolored, sizeof( clantagDecolored ) );
+        Q_CleanStr( clantagDecolored );
+        if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 )
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
+        else
+          Com_Printf( "^3Error:your clantag has to be Between 3 and 10 chars long. current value is:^7 %s^7\n", clantagDecolored );
+      }
       else if( uiInfo.chatPrompt )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
       else

@@ -282,6 +282,7 @@ typedef struct
 
   qboolean  chatTeam;
   qboolean  chatAdmins;
+  qboolean  chatClan;
   qboolean  chatPrompt;
   char      chatPromptCallback[ MAX_STRING_CHARS ];
   int       chatTargetClientNum;

@@ -411,6 +411,8 @@ extern  cvar_t  *cl_consoleColorG;
 extern  cvar_t  *cl_consoleColorB;
 extern  cvar_t  *cl_consoleColorA;
 
+extern  cvar_t  *cl_clantag;
+
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
 extern	cvar_t	*cl_mumbleScale;
