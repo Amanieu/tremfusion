@@ -55,12 +55,6 @@ static qboolean	winsockInitialized = qfalse;
 #	define _BSD_SOCKLEN_T_
 #endif
 
-#ifdef USE_EPOLL
-#include <sys/epoll.h>
-static int efd;
-static struct epoll_event *ev;
-#endif
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -1376,11 +1370,6 @@ void NET_OpenIP( void ) {
 		if(ip_socket == INVALID_SOCKET)
 			Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
 	}
-
-#ifdef USE_EPOLL
-	if (NET_Sleep_ctor())
-		Com_Error(ERR_FATAL, "ERROR: Couldn't initialize epoll\n");
-#endif
 }
 
 
@@ -1496,9 +1485,6 @@ void NET_Config( qboolean enableNetworking ) {
 	}
 
 	if( stop ) {
-#ifdef USE_EPOLL
-		close(efd);
-#endif
 
 		if ( ip_socket != INVALID_SOCKET ) {
 			closesocket( ip_socket );
@@ -1589,48 +1575,6 @@ Sleeps msec or until something happens on the network
 ====================
 */
 
-#ifdef USE_EPOLL
-
-#ifndef TR_EPOLL_QUEUE_LENGTH
-#define TR_EPOLL_QUEUE_LENGTH 1000
-#endif
-
-#ifndef TR_EPOLL_EVENTS
-#define TR_EPOLL_EVENTS 200
-#endif
-
-int
-NET_Sleep_ctor(void)
-{
-
-	efd = epoll_create(TR_EPOLL_QUEUE_LENGTH);
-	if (efd == -1)
-		return (-1);
-
-	ev = malloc(sizeof(struct epoll_event));
-	if (ev == NULL)
-		return (-1);
-
-	ev->events = EPOLLIN | EPOLLPRI | EPOLLHUP | EPOLLERR;
-	ev->data.fd = ip_socket;
-
-	if (epoll_ctl(efd, EPOLL_CTL_ADD, ip_socket, ev) == -1) {
-		free(ev);
-		return (-1);
-	}
-
-	return (0);
-}
-
-void NET_Sleep(int msec)
-{
-
-	if (msec >= 0)
-		epoll_wait(efd, ev, TR_EPOLL_EVENTS, msec);
-
-	return;
-}
-#else
 void NET_Sleep( int msec ) {
 	struct timeval timeout;
 	fd_set	fdset;
@@ -1666,7 +1610,6 @@ void NET_Sleep( int msec ) {
 	timeout.tv_usec = (msec%1000)*1000;
 	select(ip_socket+1, &fdset, NULL, NULL, &timeout);
 }
-#endif
 
 /*
 ====================
