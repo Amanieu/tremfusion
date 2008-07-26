@@ -110,6 +110,12 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace )
   qboolean    returnAfterDamage = qfalse;
   vec3_t      dir;
 
+  if( trace->surfaceFlags & SURF_NOIMPACT )
+  {
+    G_FreeEntity( ent );
+    return;
+  }
+
   other = &g_entities[ trace->entityNum ];
   attacker = &g_entities[ ent->r.ownerNum ];
 
@@ -312,46 +318,6 @@ void G_RunMissile( gentity_t *ent )
 
   // check think function after bouncing
   G_RunThink( ent );
-
-#if 0
-  // --------------------------------------------------------------------------
-  // trace a line from the previous position to the current position
-  trap_Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, origin, passent, ent->clipmask );
-
-  if( tr.startsolid || tr.allsolid )
-  {
-    // make sure the tr.entityNum is set to the entity we're stuck in
-    trap_Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, ent->r.currentOrigin, passent, ent->clipmask );
-    tr.fraction = 0;
-  }
-  else
-    VectorCopy( tr.endpos, ent->r.currentOrigin );
-
-  ent->r.contents = CONTENTS_SOLID; //trick trap_LinkEntity into...
-  trap_LinkEntity( ent );
-  ent->r.contents = 0; //...encoding bbox information
-
-  if( tr.fraction != 1 )
-  {
-    // never explode or bounce on sky
-    if( tr.surfaceFlags & SURF_NOIMPACT )
-    {
-      // If grapple, reset owner
-      if( ent->parent && ent->parent->client && ent->parent->client->hook == ent )
-        ent->parent->client->hook = NULL;
-
-      G_FreeEntity( ent );
-      return;
-    }
-
-    G_MissileImpact( ent, &tr );
-    if( ent->s.eType != ET_MISSILE )
-      return;   // exploded
-  }
-
-  // check think function after bouncing
-  G_RunThink( ent );
-#endif
 }
 
 
