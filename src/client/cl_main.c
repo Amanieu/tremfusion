@@ -110,6 +110,8 @@ cvar_t  *cl_consoleColorG;
 cvar_t  *cl_consoleColorB;
 cvar_t  *cl_consoleColorA;
 
+cvar_t  *cl_persistantConsole;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -3056,6 +3058,8 @@ void CL_Init( void ) {
 	cl_consoleColorG = Cvar_Get ("cl_consoleColorG", "0", CVAR_ARCHIVE);
 	cl_consoleColorB = Cvar_Get ("cl_consoleColorB", "0.1", CVAR_ARCHIVE);
 	cl_consoleColorA = Cvar_Get ("cl_consoleColorA", "0.75", CVAR_ARCHIVE);
+
+	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

@@ -413,6 +413,8 @@ extern  cvar_t  *cl_consoleColorA;
 
 extern  cvar_t  *cl_clantag;
 
+extern  cvar_t  *cl_persistantConsole;
+
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
 extern	cvar_t	*cl_mumbleScale;
