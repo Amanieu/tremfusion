@@ -422,6 +422,46 @@ static void SV_KillServer_f( void ) {
 	SV_Shutdown( "killserver" );
 }
 
+
+/*
+=================
+SV_RedirectClient
+
+Redirect console output to a client and run a command
+=================
+*/
+static client_t *redirect_client = NULL;
+static void SV_ClientRedirect( char *outputbuf ) {
+	SV_SendServerCommand( redirect_client, "%s", outputbuf );
+}
+static void SV_RedirectClient_f( void ) {
+#define SV_OUTPUTBUF_LENGTH (1024 - 16)
+	int clientNum;
+	char remaining[1024];
+	char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
+	char *cmd_aux;
+
+	clientNum = atoi( Cmd_Argv(1) );
+	if ( clientNum < -1 || clientNum >= sv_maxclients->integer )
+		return;
+	if ( clientNum == -1 )
+		redirect_client = NULL;
+	else
+		redirect_client = svs.clients + clientNum;
+	remaining[0] = 0;
+	cmd_aux = Cmd_Cmd() + 14;
+	while(cmd_aux[0] == ' ')
+		cmd_aux++;
+	while(cmd_aux[0] && cmd_aux[0] != ' ') // clientNum
+		cmd_aux++;
+	while(cmd_aux[0] == ' ')
+		cmd_aux++;
+	Q_strcat( remaining, sizeof(remaining), cmd_aux );
+	Com_BeginRedirect( sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_ClientRedirect );
+	Cmd_ExecuteString( remaining );
+	Com_EndRedirect( );
+}
+
 //===========================================================
 
 /*
@@ -447,5 +487,6 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("map", SV_Map_f);
 	Cmd_AddCommand ("devmap", SV_Map_f);
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
+	Cmd_AddCommand ("redirectClient", SV_RedirectClient_f);
 }
 
