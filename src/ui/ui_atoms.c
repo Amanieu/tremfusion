@@ -228,7 +228,8 @@ qboolean UI_ConsoleCommand( int realTime )
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
     Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_crosshair" );
+    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
+      Menus_ActivateByName( "say_crosshair" );
     return qtrue;
   }
 
@@ -252,7 +253,8 @@ qboolean UI_ConsoleCommand( int realTime )
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
     Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_attacker" );
+    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
+      Menus_ActivateByName( "say_attacker" );
     return qtrue;
   }
 
