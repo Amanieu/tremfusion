@@ -36,7 +36,7 @@ int			cvar_numIndexes;
 #define FILE_HASH_SIZE		256
 static	cvar_t*		hashTable[FILE_HASH_SIZE];
 
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force);
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm );
 
 /*
 ================
@@ -366,7 +366,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 			s = var->latchedString;
 			var->latchedString = NULL;	// otherwise cvar_set2 would free it
-			Cvar_Set2( var_name, s, qtrue );
+			Cvar_Set2( var_name, s, qtrue, qfalse );
 			Z_Free( s );
 		}
 
@@ -437,7 +437,7 @@ void Cvar_Print( cvar_t *v ) {
 Cvar_Set2
 ============
 */
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm ) {
 	cvar_t	*var;
 
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -465,6 +465,12 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 		} else {
 			return Cvar_Get (var_name, value, 0);
 		}
+	}
+
+	if (vm && (var->flags & CVAR_VM_PROTECT))
+	{
+		Com_Printf("QVM tried to modify protected %s cvar.\n", var_name );
+		return var;
 	}
 
 	if (!value ) {
@@ -555,7 +561,7 @@ Cvar_Set
 ============
 */
 void Cvar_Set( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qtrue);
+	Cvar_Set2 (var_name, value, qtrue, qfalse);
 }
 
 /*
@@ -564,7 +570,16 @@ Cvar_SetLatched
 ============
 */
 void Cvar_SetLatched( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qfalse);
+	Cvar_Set2 (var_name, value, qfalse, qfalse);
+}
+
+/*
+============
+Cvar_SetVM
+============
+*/
+void Cvar_SetVM( const char *var_name, const char *value) {
+	Cvar_Set2 (var_name, value, qtrue, qtrue);
 }
 
 /*
@@ -596,15 +611,32 @@ void Cvar_SetValueSafe( const char *var_name, float value) {
 	} else {
 		Com_sprintf (val, sizeof(val), "%f",value);
 	}
-	Cvar_Set2 (var_name, val,qfalse);
+	Cvar_Set2 (var_name, val, qfalse, qfalse);
 }
+
+/*
+============
+Cvar_SetValueVM
+============
+*/
+void Cvar_SetValueVM( const char *var_name, float value) {
+	char	val[32];
+
+	if ( value == (int)value ) {
+		Com_sprintf (val, sizeof(val), "%i",(int)value);
+	} else {
+		Com_sprintf (val, sizeof(val), "%f",value);
+	}
+	Cvar_SetVM (var_name, val);
+}
+
 /*
 ============
 Cvar_Reset
 ============
 */
 void Cvar_Reset( const char *var_name ) {
-	Cvar_Set2( var_name, NULL, qfalse );
+	Cvar_Set2( var_name, NULL, qfalse, qfalse );
 }
 
 /*
@@ -614,7 +646,7 @@ Cvar_ForceReset
 */
 void Cvar_ForceReset(const char *var_name)
 {
-	Cvar_Set2(var_name, NULL, qtrue);
+	Cvar_Set2(var_name, NULL, qtrue, qfalse);
 }
 
 /*
@@ -667,7 +699,7 @@ qboolean Cvar_Command( void ) {
 	}
 
 	// set the value if forcing isn't required
-	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse);
+	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse, qfalse);
 	return qtrue;
 }
 
@@ -719,7 +751,7 @@ void Cvar_Toggle_f( void ) {
 	v = Cvar_VariableValue( Cmd_Argv( 1 ) );
 	v = !v;
 
-	Cvar_Set2 (Cmd_Argv(1), va("%i", v), qfalse);
+	Cvar_Set2 (Cmd_Argv(1), va("%i", v), qfalse, qfalse);
 }
 
 /*
@@ -745,10 +777,10 @@ void Cvar_ToggleList_f( void ) {
 		if( !strcmp( Cmd_Argv(n), strval ) ) {
 			// found it, set it to the next (or wrapped to the first) one in the list
 			if( ++n < Cmd_Argc() ) {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(n), qfalse );
+				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(n), qfalse, qfalse );
 			}
 			else {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse );
+				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
 			}
 			break;
 		}
@@ -756,7 +788,7 @@ void Cvar_ToggleList_f( void ) {
 		++n;
 		if( n >= Cmd_Argc() ) {
 			// not found, set it to the first one in the list
-			Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse );
+			Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
 			break;
 		}
 	}
@@ -800,7 +832,7 @@ void Cvar_Set_f( void ) {
 		}
 		l += len;
 	}
-	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
+	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse, qfalse);
 	if( !v ) {
 		return;
 	}

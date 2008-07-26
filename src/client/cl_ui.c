@@ -739,7 +739,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_SET:
-		Cvar_Set( VMA(1), VMA(2) );
+		Cvar_SetVM( VMA(1), VMA(2) );
 		return 0;
 
 	case UI_CVAR_VARIABLEVALUE:
@@ -750,7 +750,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_SETVALUE:
-		Cvar_SetValue( VMA(1), VMF(2) );
+		Cvar_SetValueVM( VMA(1), VMF(2) );
 		return 0;
 
 	case UI_CVAR_RESET:
