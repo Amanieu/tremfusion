@@ -471,3 +471,13 @@ void trap_SetPbClStatus( int status )
 {
   syscall( UI_SET_PBCLSTATUS, status );
 }
+
+int trap_CrosshairPlayer( void )
+{
+  return syscall( UI_CROSSHAIR_PLAYER );
+}
+
+int trap_LastAttacker( void )
+{
+  return syscall( UI_LAST_ATTACKER );
+}

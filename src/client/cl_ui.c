@@ -980,6 +980,12 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 	case UI_SET_PBCLSTATUS:
 		return 0;	
 
+	case UI_CROSSHAIR_PLAYER:
+		return VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+
+	case UI_LAST_ATTACKER:
+		return VM_Call( cgvm, CG_LAST_ATTACKER );
+
 	case UI_R_REGISTERFONT:
 		re.RegisterFont( VMA(1), args[2], VMA(3));
 		return 0;
@@ -1090,6 +1096,8 @@ CL_InitUI
 
 void Con_MessageMode_f(void);
 void Con_MessageMode2_f(void);
+void Con_MessageMode3_f(void);
+void Con_MessageMode4_f(void);
 void Con_MessageMode5_f(void);
 void Con_MessageMode6_f(void);
 void Con_Prompt_f(void);
@@ -1131,11 +1139,15 @@ void CL_InitUI( void ) {
 		// client messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
+		Cmd_RemoveCommand( "messagemode3" );
+		Cmd_RemoveCommand( "messagemode4" );
 		Cmd_RemoveCommand( "messagemode5" );
 		Cmd_RemoveCommand( "messagemode6" );
 		Cmd_RemoveCommand( "prompt" );
 		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
 		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
+		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
+		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
 		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
 		Cmd_AddCommand( "messagemode6", Con_MessageMode6_f );
 		Cmd_AddCommand( "prompt", Con_Prompt_f );
@@ -1144,11 +1156,15 @@ void CL_InitUI( void ) {
 		// ui messagemode commands
 		Cmd_RemoveCommand( "messagemode" );
 		Cmd_RemoveCommand( "messagemode2" );
+		Cmd_RemoveCommand( "messagemode3" );
+		Cmd_RemoveCommand( "messagemode4" );
 		Cmd_RemoveCommand( "messagemode5" );
 		Cmd_RemoveCommand( "messagemode6" );
 		Cmd_RemoveCommand( "prompt" );
 		Cmd_AddCommand( "messagemode", NULL );
 		Cmd_AddCommand( "messagemode2", NULL );
+		Cmd_AddCommand( "messagemode3", NULL );
+		Cmd_AddCommand( "messagemode4", NULL );
 		Cmd_AddCommand( "messagemode5", NULL );
 		Cmd_AddCommand( "messagemode6", NULL );
 		Cmd_AddCommand( "prompt", NULL );

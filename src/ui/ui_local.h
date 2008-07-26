@@ -384,4 +384,7 @@ void      trap_R_RemapShader( const char *oldShader, const char *newShader, cons
 
 void      trap_SetPbClStatus( int status );
 
+int        trap_CrosshairPlayer( void );
+int        trap_LastAttacker( void );
+
 #endif
