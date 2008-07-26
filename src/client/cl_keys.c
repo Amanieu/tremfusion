@@ -754,7 +754,7 @@ void Message_Key( int key ) {
 					Com_sprintf( buffer, sizeof( buffer ), "m \"%s\" \"%s\"\n", clantagDecolored, chatField.buffer );
 				} else {
 					//string isnt long enough
-					Com_Printf ( "^3Error:your clantag has to be Between 3 and 10 chars long. current value is:^7 %s^7\n", clantagDecolored );
+					Com_Printf ( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
 					Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
 					Field_Clear( &chatField );
 					return;

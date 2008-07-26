@@ -2997,7 +2997,7 @@ static void UI_RunMenuScript( char **args )
         if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 )
           trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
         else
-          Com_Printf( "^3Error:your clantag has to be Between 3 and 10 chars long. current value is:^7 %s^7\n", clantagDecolored );
+          Com_Printf( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
       }
       else if( uiInfo.chatPrompt )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
