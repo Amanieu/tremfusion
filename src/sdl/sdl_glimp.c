@@ -253,13 +253,29 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	if( !failSafe )
 	{
 		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
-			Cvar_Set( "r_mode", "-1" );
+		{
+			for ( i = 0; i < numVidModes; i++ )
+			{
+				if ( r_width->integer == vidModes[ i ].width &&
+				     r_height->integer == vidModes[ i ].height &&
+				     r_pixelAspect->integer == vidModes[ i ].pixelAspect )
+				{
+					Cvar_SetValue( "r_mode", i );
+					break;
+				}
+			}
+			if ( i == numVidModes )
+				Cvar_Set( "r_mode", "-1" );
+		}
 		else if ( r_mode->integer >= 0 && r_mode->integer < numVidModes )
 		{
 			Cvar_SetValue( "r_width", vidModes[ r_mode->integer ].width );
 			Cvar_SetValue( "r_height", vidModes[ r_mode->integer ].height );
 			Cvar_SetValue( "r_pixelAspect", vidModes[ r_mode->integer ].pixelAspect );
 		}
+		r_width->modified = qfalse;
+		r_height->modified = qfalse;
+		r_pixelAspect->modified = qfalse;
 		glConfig.vidWidth = r_width->integer;
 		glConfig.vidHeight = r_height->integer;
 		glConfig.windowAspect = r_width->value /
