@@ -2727,7 +2727,7 @@ void CL_StartHunkUsers( qboolean rendererOnly ) {
 		CL_InitUI();
 	}
 
-	Cbuf_AddText( "getmotd" );
+	Cbuf_AddText( "getmotd\n" );
 }
 
 /*
