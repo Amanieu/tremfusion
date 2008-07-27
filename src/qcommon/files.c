@@ -3214,6 +3214,8 @@ void FS_Restart( int checksumFeed ) {
 		if ( !Com_SafeMode() ) {
 			Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
 		}
+
+		Cbuf_AddText ("exec autoexec.cfg\n");
 	}
 
 	Q_strncpyz(lastValidBase, fs_basepath->string, sizeof(lastValidBase));
