@@ -138,7 +138,7 @@ BUILD_MASTER_SERVER=0
 endif
 
 ifndef USE_SCM_VERSION
-USE_SCM_VERSION=1
+USE_SCM_VERSION=0
 endif
 
 #############################################################################
@@ -181,13 +181,13 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
 endif
 
 # version info
-VERSION=0.0.1
+VERSION_NUMBER=0.0.1b1
 
 ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .svn),.svn)
     SVN_REV=$(shell LANG=C svnversion .)
     ifneq ($(SVN_REV),)
-      VERSION:=$(VERSION)_R$(SVN_REV)
+      VERSION=$(VERSION_NUMBER)_R$(SVN_REV)
       USE_SVN=1
     endif
   endif
@@ -196,7 +196,7 @@ ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
     GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
     ifneq ($(GIT_REV),)
-      VERSION:=$(VERSION)_R$(GIT_REV)
+      VERSION=$(VERSION_NUMBER)_R$(GIT_REV)
       USE_GIT=1
     endif
   endif
@@ -204,7 +204,7 @@ ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .hg),.hg)
     HG_REV=$(shell LANG=C hg id -n)
     ifneq ($(HG_REV),)
-      VERSION:=$(VERSION)_R$(HG_REV)
+      VERSION=$(VERSION_NUMBER)_R$(HG_REV)
       USE_HG=1
     endif
   endif
@@ -907,14 +907,14 @@ debug:
 	@$(MAKE) targets B=$(BD) CFLAGS="$(CFLAGS) $(DEPEND_CFLAGS) \
 		$(DEBUG_CFLAGS)" V=$(V)
 ifeq ($(BUILD_MASTER_SERVER),1)
-	$(MAKE) -C $(MASTERDIR) debug
+	$(MAKE) -C $(MASTERDIR) debug VERSION=$(VERSION_NUMBER)
 endif
 
 release:
 	@$(MAKE) targets B=$(BR) CFLAGS="$(CFLAGS) $(DEPEND_CFLAGS) \
 		$(RELEASE_CFLAGS)" V=$(V)
 ifeq ($(BUILD_MASTER_SERVER),1)
-	$(MAKE) -C $(MASTERDIR) release
+	$(MAKE) -C $(MASTERDIR) release VERSION=$(VERSION_NUMBER)
 endif
 
 # Create the build directories, check libraries and print out
