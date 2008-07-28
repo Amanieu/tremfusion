@@ -67,7 +67,7 @@ cvar_t		*scr_conColorBlue;
 cvar_t		*scr_conColorGreen;
 
 // Color and alpha for bar under console
-cvar_t		*scr_conBarHeight;
+cvar_t		*scr_conBarSize;
 
 cvar_t		*scr_conBarColorAlpha;
 cvar_t		*scr_conBarColorRed;
@@ -449,7 +449,7 @@ void Con_Init (void) {
 	scr_conColorBlue = Cvar_Get ("scr_conColorBlue", "0.1", CVAR_ARCHIVE);
 	scr_conColorGreen = Cvar_Get ("scr_conColorGreen", "0", CVAR_ARCHIVE);
 	
-	scr_conBarHeight = Cvar_Get ("scr_conBarHeight", "2", CVAR_ARCHIVE);
+	scr_conBarSize = Cvar_Get ("scr_conBarSize", "2", CVAR_ARCHIVE);
 	
 	scr_conBarColorAlpha = Cvar_Get ("scr_conBarColorAlpha", "1", CVAR_ARCHIVE);
 	scr_conBarColorRed = Cvar_Get ("scr_conBarColorRed", "1", CVAR_ARCHIVE);
@@ -677,7 +677,7 @@ void Con_DrawSolidConsole( float frac ) {
 	color[2] = scr_conBarColorBlue->value;
 	color[3] = scr_conBarColorAlpha->value;
 	
-	SCR_FillRect( 0, y, SCREEN_WIDTH, scr_conBarHeight->value, color );
+	SCR_FillRect( 0, y, SCREEN_WIDTH, scr_conBarSize->value, color );
 
 
 	// draw the version number
