@@ -342,6 +342,7 @@ typedef struct {
 	glconfig_t	glconfig;
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
+	qhandle_t	consoleShader;
 } clientStatic_t;
 
 extern	clientStatic_t		cls;
@@ -405,11 +406,6 @@ extern	cvar_t	*cl_altTab;
 extern  cvar_t  *cl_dlURLOverride;
 
 extern  cvar_t  *cl_defaultUI;
-
-extern  cvar_t  *cl_consoleColorR;
-extern  cvar_t  *cl_consoleColorG;
-extern  cvar_t  *cl_consoleColorB;
-extern  cvar_t  *cl_consoleColorA;
 
 extern  cvar_t  *cl_clantag;
 

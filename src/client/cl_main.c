@@ -105,11 +105,6 @@ cvar_t  *cl_dlURLOverride;
 
 cvar_t  *cl_defaultUI;
 
-cvar_t  *cl_consoleColorR;
-cvar_t  *cl_consoleColorG;
-cvar_t  *cl_consoleColorB;
-cvar_t  *cl_consoleColorA;
-
 cvar_t  *cl_persistantConsole;
 
 clientActive_t		cl;
@@ -2678,6 +2673,7 @@ void CL_InitRenderer( void ) {
 	// load character sets
 	cls.charSetShader = re.RegisterShader( "gfx/2d/bigchars" );
 	cls.whiteShader = re.RegisterShader( "white" );
+	cls.consoleShader = re.RegisterShader( "console" );
 	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
 }
@@ -3053,11 +3049,6 @@ void CL_Init( void ) {
 	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	FS_ConditionalRestart (clc.checksumFeed);
-
-	cl_consoleColorR = Cvar_Get ("cl_consoleColorR", "0", CVAR_ARCHIVE);
-	cl_consoleColorG = Cvar_Get ("cl_consoleColorG", "0", CVAR_ARCHIVE);
-	cl_consoleColorB = Cvar_Get ("cl_consoleColorB", "0.1", CVAR_ARCHIVE);
-	cl_consoleColorA = Cvar_Get ("cl_consoleColorA", "0.75", CVAR_ARCHIVE);
 
 	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
 
