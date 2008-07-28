@@ -18,21 +18,22 @@ ifeq ($(COMPILE_PLATFORM),darwin)
 endif
 
 ifndef BUILD_CLIENT
-  BUILD_CLIENT     =
+  BUILD_CLIENT     = 1
 endif
 ifndef BUILD_CLIENT_SMP
-  BUILD_CLIENT_SMP =
+  BUILD_CLIENT_SMP = 1
 endif
 ifndef BUILD_SERVER
-  BUILD_SERVER     =
+  BUILD_SERVER     = 1
 endif
 ifndef BUILD_GAME_SO
-  BUILD_GAME_SO    =
+  BUILD_GAME_SO    = 1
 endif
 ifndef BUILD_GAME_QVM
-  BUILD_GAME_QVM   =
+  BUILD_GAME_QVM   = 1
 endif
 
+# SDL 1.2 is only thread-safe on Macs
 ifneq ($(PLATFORM),darwin)
   BUILD_CLIENT_SMP = 0
 endif
@@ -136,6 +137,10 @@ ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
 endif
 
+ifndef USE_SCM_VERSION
+USE_SCM_VERSION=1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -178,31 +183,30 @@ endif
 # version info
 VERSION=0.0.1
 
-USE_SVN=
-ifeq ($(wildcard .svn),.svn)
-  SVN_REV=$(shell LANG=C svnversion .)
-  ifneq ($(SVN_REV),)
-    VERSION:=$(VERSION)_SVN$(SVN_REV)
-    USE_SVN=1
+ifeq ($(USE_SCM_VERSION),1)
+  ifeq ($(wildcard .svn),.svn)
+    SVN_REV=$(shell LANG=C svnversion .)
+    ifneq ($(SVN_REV),)
+      VERSION:=$(VERSION)_R$(SVN_REV)
+      USE_SVN=1
+    endif
   endif
-endif
 
-# Wrapper for git-svn
-USE_GIT=
-ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
-  GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
-  ifneq ($(GIT_REV),)
-    VERSION:=$(VERSION)_SVN$(GIT_REV)
-    USE_GIT=1
+  # For git-svn
+  ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
+    GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+    ifneq ($(GIT_REV),)
+      VERSION:=$(VERSION)_R$(GIT_REV)
+      USE_GIT=1
+    endif
   endif
-endif
 
-USE_HG=
-ifeq ($(wildcard .hg),.hg)
-  HG_REV=$(shell LANG=C hg id -n)
-  ifneq ($(HG_REV),)
-    VERSION:=$(VERSION)_HG$(HG_REV)
-    USE_HG=1
+  ifeq ($(wildcard .hg),.hg)
+    HG_REV=$(shell LANG=C hg id -n)
+    ifneq ($(HG_REV),)
+      VERSION:=$(VERSION)_R$(HG_REV)
+      USE_HG=1
+    endif
   endif
 endif
 
