@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define PRODUCT_NAME            "tremfusion"
 
 #ifdef _MSC_VER
-# define PRODUCT_VERSION          "0.0.1"
+# define PRODUCT_VERSION          "0.0.1b2"
 #endif
 
 #define CLIENT_WINDOW_TITLE       "TremFusion " PRODUCT_VERSION
