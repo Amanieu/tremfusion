@@ -121,6 +121,20 @@ void UI_RemoveCaptureFunc( void )
 
 static char   UI_memoryPool[MEM_POOL_SIZE];
 static int    allocPoint, outOfMemory;
+// Hacked new memory pool for hud
+static char   UI_hudmemoryPool[MEM_POOL_SIZE];
+static int    hudallocPoint, hudoutOfMemory;
+
+/*
+===============
+UI_ResetHUDMemory
+===============
+*/
+void UI_ResetHUDMemory( void )
+{
+  hudallocPoint = 0;
+  hudoutOfMemory = qfalse;
+}
 
 /*
 ===============
@@ -137,7 +151,6 @@ void *UI_Alloc( int size )
 
     if( DC->Print )
       DC->Print( "UI_Alloc: Failure. Out of memory!\n" );
-
     //DC->trap_Print(S_COLOR_YELLOW"WARNING: UI Out of Memory!\n");
     return NULL;
   }
@@ -151,6 +164,29 @@ void *UI_Alloc( int size )
 
 /*
 ===============
+UI_HUDAlloc
+===============
+*/
+void *UI_HUDAlloc( int size )
+{
+  char  *p;
+
+  if( hudallocPoint + size > MEM_POOL_SIZE )
+  {
+  DC->Print( "UI_HUDAlloc: Out of memory! Reinititing hud Memory!!\n" );
+    hudoutOfMemory = qtrue;
+    UI_ResetHUDMemory();
+  }
+
+  p = &UI_hudmemoryPool[ hudallocPoint ];
+
+  hudallocPoint += ( size + 15 ) & ~15;
+
+  return p;
+}
+
+/*
+===============
 UI_InitMemory
 ===============
 */
@@ -158,6 +194,8 @@ void UI_InitMemory( void )
 {
   allocPoint = 0;
   outOfMemory = qfalse;
+  hudallocPoint = 0;
+  hudoutOfMemory = qfalse;
 }
 
 qboolean UI_OutOfMemory( )
@@ -8072,7 +8110,10 @@ qboolean MenuParse_itemDef( itemDef_t *item, int handle )
 
   if( menu->itemCount < MAX_MENUITEMS )
   {
-    menu->items[menu->itemCount] = UI_Alloc( sizeof( itemDef_t ) );
+    if(DC->hudloading)
+      menu->items[menu->itemCount] = UI_HUDAlloc(sizeof(itemDef_t));
+    else
+      menu->items[menu->itemCount] = UI_Alloc(sizeof(itemDef_t));
     Item_Init( menu->items[menu->itemCount] );
 
     if( !Item_Parse( handle, menu->items[menu->itemCount] ) )

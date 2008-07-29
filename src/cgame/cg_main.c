@@ -1659,7 +1659,7 @@ void CG_LoadHudMenu( void )
   cgDC.stopCinematic        = &CG_StopCinematic;
   cgDC.drawCinematic        = &CG_DrawCinematic;
   cgDC.runCinematicFrame    = &CG_RunCinematicFrame;
-
+  cgDC.hudloading           = qtrue;
   Init_Display( &cgDC );
 
   Menu_Reset( );
@@ -1671,6 +1671,7 @@ void CG_LoadHudMenu( void )
     hudSet = "ui/hud.txt";
 
   CG_LoadMenus( hudSet );
+  cgDC.hudloading = qfalse;
 }
 
 void CG_AssetCache( void )
