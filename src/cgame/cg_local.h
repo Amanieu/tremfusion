@@ -1562,7 +1562,7 @@ void        CG_BuildSpectatorString( void );
 qboolean    CG_FileExists( char *filename );
 void        CG_RemoveNotifyLine( void );
 void        CG_AddNotifyText( void );
-
+void        CG_LoadHudMenu( void );
 
 //
 // cg_view.c

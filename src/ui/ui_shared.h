@@ -423,6 +423,7 @@ typedef struct
   qhandle_t cursor;
   float FPS;
 
+  qboolean  hudloading;
 }
 displayContextDef_t;
 

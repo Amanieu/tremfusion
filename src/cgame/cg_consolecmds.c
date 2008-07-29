@@ -42,8 +42,6 @@ void CG_TargetCommand_f( void )
   trap_SendConsoleCommand( va( "gc %i %i", targetNum, atoi( test ) ) );
 }
 
-
-
 /*
 =================
 CG_SizeUp_f
@@ -219,6 +217,7 @@ static consoleCommand_t commands[ ] =
   { "destroyTestPS", CG_DestroyTestPS_f },
   { "testTS", CG_TestTS_f },
   { "destroyTestTS", CG_DestroyTestTS_f },
+  { "reloadhud", CG_LoadHudMenu },
 };
 
 
