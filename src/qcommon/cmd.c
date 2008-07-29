@@ -639,7 +639,7 @@ Delays a comand
 */
 void Cmd_Delay_f (void)
 {
-	int i, delay, type;
+	int i, delay, type, lastchar;
 	char *raw_delay;
 	qboolean availiable_cmd = qfalse;
 	
@@ -675,7 +675,7 @@ void Cmd_Delay_f (void)
 		return;
 	}
 
-	int lastchar = strlen( raw_delay ) - 1;
+	lastchar = strlen( raw_delay ) - 1;
 	
 	if(raw_delay[ lastchar ] == 'f' )
 	{

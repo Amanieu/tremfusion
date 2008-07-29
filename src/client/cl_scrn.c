@@ -321,6 +321,9 @@ int	SCR_GetBigStringWidth( const char *str ) {
 
 //===============================================================================
 
+
+
+#ifdef USE_VOIP
 /*
 =================
 SCR_DrawVoipMeter
@@ -357,11 +360,11 @@ void SCR_DrawVoipMeter( void ) {
 	sprintf( string, "VoIP: [%s]", buffer );
 	SCR_DrawStringExt( 320 - strlen( string ) * 4, 10, 8, string, g_color_table[7], qtrue, qfalse );
 }
+#endif
 
 
 
 
-#ifdef USE_VOIP
 /*
 ===============================================================================
 
@@ -390,7 +393,6 @@ void SCR_DebugGraph (float value, int color)
 	values[current&1023].color = color;
 	current++;
 }
-#endif
 
 /*
 ==============
