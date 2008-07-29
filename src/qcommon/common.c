@@ -2222,9 +2222,18 @@ int Com_EventLoop( void ) {
 			CL_JoystickEvent( ev.evValue, ev.evValue2, ev.evTime );
 			break;
 		case SE_CONSOLE:
-			Cbuf_AddText( (char *)ev.evPtr );
+		{
+			char *cmd = (char *)ev.evPtr;
+#ifndef DEDICATED
+			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
+				cmd++;
+			else
+				Cbuf_AddText( "say " );
+#endif
+			Cbuf_AddText( cmd );
 			Cbuf_AddText( "\n" );
 			break;
+		}
 		case SE_PACKET:
 			// this cvar allows simulation of connections that
 			// drop a lot of packets.  Note that loopback connections
