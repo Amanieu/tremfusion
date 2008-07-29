@@ -208,6 +208,8 @@ ifeq ($(USE_SCM_VERSION),1)
       USE_HG=1
     endif
   endif
+else
+  VERSION=$(VERSION_NUMBER)
 endif
 
 
