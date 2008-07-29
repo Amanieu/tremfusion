@@ -406,6 +406,5 @@ void RE_RenderScene( const refdef_t *fd ) {
 	r_firstSceneEntity = r_numentities;
 	r_firstSceneDlight = r_numdlights;
 	r_firstScenePoly = r_numpolys;
-
 	tr.frontEndMsec += ri.Milliseconds() - startTime;
 }

@@ -873,6 +873,9 @@ typedef struct {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
+	qboolean	doneBloom;		// done bloom this frame
+	qboolean	doneSurfaces;   // done any 3d surfaces already
+	
 } backEndState_t;
 
 /*
@@ -1327,6 +1330,7 @@ typedef struct shaderCommands_s
 
 extern	shaderCommands_t	tess;
 
+void RB_SetGL2D (void);
 void RB_BeginSurface(shader_t *shader, int fogNum );
 void RB_EndSurface(void);
 void RB_CheckOverflow( int verts, int indexes );
@@ -1706,6 +1710,10 @@ void RE_TakeVideoFrame( int width, int height,
 void R_InitFreeType( void );
 void R_DoneFreeType( void );
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
+
+//Bloom Stuff
+void R_BloomInit( void );
+void R_BloomScreen( void );
 
 
 #endif //TR_LOCAL_H
