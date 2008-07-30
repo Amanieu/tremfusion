@@ -123,8 +123,8 @@ static void R_Bloom_InitTextures( void )
 	byte	*data;
 
 	// find closer power of 2 to screen size 
-	for (bloom.screen.width = 1;bloom.screen.width< glConfig.vidWidth;bloom.screen.width *= 32);
-	for (bloom.screen.height = 1;bloom.screen.height < glConfig.vidHeight;bloom.screen.height *= 32);
+	for (bloom.screen.width = 1;bloom.screen.width< glConfig.vidWidth;bloom.screen.width *= 2);
+	for (bloom.screen.height = 1;bloom.screen.height < glConfig.vidHeight;bloom.screen.height *= 2);
 
 	bloom.screen.readW = glConfig.vidWidth / (float)bloom.screen.width;
 	bloom.screen.readH = glConfig.vidHeight / (float)bloom.screen.height;

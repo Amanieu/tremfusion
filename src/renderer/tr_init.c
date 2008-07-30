@@ -152,6 +152,11 @@ cvar_t	*r_debugSort;
 cvar_t	*r_printShaders;
 cvar_t	*r_saveFontData;
 
+// Next one added for cell shading algorithm selection
+cvar_t	*r_celshadalgo;
+//. next one for enable/disable cel bordering all together.
+cvar_t	*r_celoutline;
+
 cvar_t	*r_maxpolys;
 int		max_polys;
 cvar_t	*r_maxpolyverts;
@@ -1025,6 +1030,11 @@ void R_Register( void )
 
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
+	
+	// for cell shading algorithm selection
+	r_celshadalgo = ri.Cvar_Get ("r_celshadalgo", "0", CVAR_LATCH);
+	// cel outline option
+	r_celoutline = ri.Cvar_Get("r_celoutline","0", CVAR_ARCHIVE);
 
 	// make sure all the commands added here are also
 	// removed in R_Shutdown

@@ -1117,6 +1117,9 @@ extern	cvar_t	*r_saveFontData;
 
 extern	cvar_t	*r_GLlibCoolDownMsec;
 
+extern	cvar_t	*r_celshadalgo;					// Cell shading, chooses method: 0 = disabled, 1 = kuwahara, 2 = whiteTexture
+extern	cvar_t	*r_celoutline;						//. cel outline. 1 on, 0 off. (maybe other options later)
+
 //====================================================================
 
 float R_NoiseGet4f( float x, float y, float z, float t );
