@@ -223,6 +223,7 @@ scDataTypeHash_t* SC_HashNew( void );
 qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
 qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash);
+scDataTypeArray_t *SC_HashToArray(scDataTypeHash_t *hash);
 qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key);
 void SC_HashClear(scDataTypeHash_t *hash);
 void SC_HashGCInc(scDataTypeHash_t *hash);

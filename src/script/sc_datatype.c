@@ -462,6 +462,35 @@ scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
   return array;
 }
 
+scDataTypeArray_t *SC_HashToArray(scDataTypeHash_t *hash)
+{
+  int i,k;
+  const char *c;
+  scDataTypeArray_t *array = SC_ArrayNew();
+
+  for(i = 0; i < hash->buflen; i++)
+  {
+    if(SC_StringIsEmpty(&hash->data[i].key))
+      continue;
+
+    c = SC_StringToChar(&hash->data[i].key);
+    while(*c != '\0')
+    {
+      // If key contains a non-integer character, can't convert hash to array
+      if(*c < '0' || *c > '9')
+      {
+        arrayFree(array);
+        return NULL;
+      }
+    }
+
+    k = atoi(SC_StringToChar(&hash->data[i].key));
+    SC_ArraySet(array, k, &hash->data[i].value);
+  }
+
+  return array;
+}
+
 qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key)
 {
   unsigned int i,j, k;
