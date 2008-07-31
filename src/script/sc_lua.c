@@ -47,8 +47,8 @@ static scDataType_t luatype2sctype(int luatype)
     case LUA_TTABLE: return TYPE_HASH;
     case LUA_TFUNCTION: return TYPE_FUNCTION;
     case LUA_TUSERDATA:
+    case LUA_TLIGHTUSERDATA: return TYPE_USERDATA;
     case LUA_TTHREAD:
-    case LUA_TLIGHTUSERDATA:
     case LUA_TNIL:
     default: return TYPE_UNDEF;
   }
@@ -66,6 +66,7 @@ static int sctype2luatype(scDataType_t sctype)
     case TYPE_ARRAY:
     case TYPE_HASH:
     case TYPE_NAMESPACE: return LUA_TTABLE;
+    case TYPE_USERDATA: return LUA_TUSERDATA;
     case TYPE_UNDEF:
     default: return LUA_TNIL;
   }
@@ -424,6 +425,12 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
       lua_pop(L, 1);
       break;
 
+    case LUA_TUSERDATA:
+      value->type = TYPE_USERDATA;
+      value->data.userdata = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+      break;
+
     case LUA_TSTRING:
       value->type = TYPE_STRING;
       value->data.string = pop_string(L);
@@ -601,6 +608,9 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
       break;
     case TYPE_FLOAT:
       lua_pushnumber(L, value->data.floating);
+      break;
+    case TYPE_USERDATA:
+      lua_pushlightuserdata(L, value->data.userdata);
       break;
     case TYPE_STRING:
 	  push_string(L, value->data.string);

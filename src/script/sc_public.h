@@ -118,7 +118,7 @@ struct scDataTypeValue_s
     scNamespace_t          *namespace;
     scObjectInstance_t     *objectinstance;
     scObjectType_t         *objecttype;
-    scDataTypeUserdata_t   userdefine;
+    scDataTypeUserdata_t   userdata;
   } data;
 };
 
