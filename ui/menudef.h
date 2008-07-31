@@ -178,5 +178,6 @@
 #define CG_PLAYER_CHARGE_BAR              77
 
 #define CG_PLAYER_ATTACK_FEEDBACK         78
+#define CG_PLAYER_SPEED                   79
 
 #endif

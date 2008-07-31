@@ -114,6 +114,7 @@ vmCvar_t  cg_shadows;
 vmCvar_t  cg_drawTimer;
 vmCvar_t  cg_drawClock;
 vmCvar_t  cg_drawFPS;
+vmCvar_t  cg_drawSpeed;
 vmCvar_t  cg_drawDemoState;
 vmCvar_t  cg_drawSnapshot;
 vmCvar_t  cg_drawChargeBar;
@@ -239,8 +240,9 @@ static cvarTable_t cvarTable[ ] =
   { &cg_draw2D, "cg_draw2D", "1", CVAR_ARCHIVE  },
   { &cg_drawStatus, "cg_drawStatus", "1", CVAR_ARCHIVE  },
   { &cg_drawTimer, "cg_drawTimer", "1", CVAR_ARCHIVE  },
-  { &cg_drawClock, "cg_drawClock", "0", CVAR_ARCHIVE  },
+  { &cg_drawClock, "cg_drawClock", "1", CVAR_ARCHIVE  },
   { &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
+  { &cg_drawSpeed, "cg_drawSpeed", "1", CVAR_ARCHIVE  },
   { &cg_drawDemoState, "cg_drawDemoState", "1", CVAR_ARCHIVE  },
   { &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
   { &cg_drawChargeBar, "cg_drawChargeBar", "1", CVAR_ARCHIVE  },
@@ -251,7 +253,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_crosshairSize, "cg_crosshairSize", "1", CVAR_ARCHIVE },
   { &cg_brassTime, "cg_brassTime", "2500", CVAR_ARCHIVE },
   { &cg_addMarks, "cg_marks", "1", CVAR_ARCHIVE },
-  { &cg_lagometer, "cg_lagometer", "0", CVAR_ARCHIVE },
+  { &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
   { &cg_teslaTrailTime, "cg_teslaTrailTime", "250", CVAR_ARCHIVE  },
   { &cg_gun_x, "cg_gunX", "0", CVAR_CHEAT },
   { &cg_gun_y, "cg_gunY", "0", CVAR_CHEAT },
