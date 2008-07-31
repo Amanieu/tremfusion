@@ -287,6 +287,9 @@ void SV_Startup( void ) {
 	}
 
 	Cvar_Set( "sv_running", "1" );
+	
+	// Join the ipv6 multicast group now that a map is running so clients can scan for us on the local network.
+	NET_JoinMulticast6();
 }
 
 
@@ -534,8 +537,10 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 		SV_TouchCGame();
 	}
 
-	Cvar_Set( "sv_paks", "" );
-	Cvar_Set( "sv_pakNames", "" );
+	// the server sends these to the clients so they will only
+	// load pk3s also loaded at the server
+	Cvar_Set( "sv_paks", FS_LoadedPakChecksums() );
+	Cvar_Set( "sv_pakNames", FS_LoadedPakNames() );
 
 	// the server sends these to the clients so they can figure
 	// out which pk3s should be auto-downloaded
@@ -591,6 +596,10 @@ void SV_Init (void) {
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
+#ifdef USE_VOIP
+	sv_voip = Cvar_Get ("sv_voip", "1", CVAR_SYSTEMINFO | CVAR_LATCH);
+	Cvar_CheckRange( sv_voip, 0, 1, qtrue );
+#endif
 	Cvar_Get ("sv_paks", "", CVAR_SYSTEMINFO | CVAR_ROM );
 	Cvar_Get ("sv_pakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
 	Cvar_Get ("sv_referencedPaks", "", CVAR_SYSTEMINFO | CVAR_ROM );
@@ -668,6 +677,8 @@ void SV_Shutdown( char *finalmsg ) {
 	}
 
 	Com_Printf( "----- Server Shutdown (%s) -----\n", finalmsg );
+
+	NET_LeaveMulticast6();
 
 	if ( svs.clients && !com_errorEntered ) {
 		SV_FinalMessage( finalmsg );

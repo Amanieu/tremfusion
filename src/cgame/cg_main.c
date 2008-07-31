@@ -217,6 +217,7 @@ vmCvar_t  cg_suppressWAnimWarnings;
 
 vmCvar_t  cg_voice;
 vmCvar_t  cg_emoticons;
+vmCvar_t  cg_drawAlienFeedback;
 
 
 typedef struct
@@ -345,7 +346,8 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_voice, "voice", "default", CVAR_USERINFO|CVAR_ARCHIVE},
 
-  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE}
+  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE},
+  { &cg_drawAlienFeedback, "cg_drawAlienFeedback", "1", 0}
 };
 
 static int   cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -521,7 +523,7 @@ void QDECL CG_Printf( const char *msg, ... )
   char    text[ 1024 ];
 
   va_start( argptr, msg );
-  vsprintf( text, msg, argptr );
+  Q_vsnprintf( text, sizeof( text ), msg, argptr );
   va_end( argptr );
 
   trap_Print( text );
@@ -533,7 +535,7 @@ void QDECL CG_Error( const char *msg, ... )
   char    text[ 1024 ];
 
   va_start( argptr, msg );
-  vsprintf( text, msg, argptr );
+  Q_vsnprintf( text, sizeof( text ), msg, argptr );
   va_end( argptr );
 
   trap_Error( text );
@@ -545,7 +547,7 @@ void QDECL Com_Error( int level, const char *error, ... )
   char    text[1024];
 
   va_start( argptr, error );
-  vsprintf( text, error, argptr );
+  Q_vsnprintf( text, sizeof( text ), error, argptr );
   va_end( argptr );
 
   CG_Error( "%s", text );
@@ -555,9 +557,9 @@ void QDECL Com_Printf( const char *msg, ... ) {
   va_list   argptr;
   char    text[1024];
 
-  va_start (argptr, msg);
-  vsprintf (text, msg, argptr);
-  va_end (argptr);
+  va_start( argptr, msg );
+  Q_vsnprintf( text, sizeof( text ), msg, argptr );
+  va_end( argptr );
 
   CG_Printf ("%s", text);
 }
@@ -731,6 +733,20 @@ static void CG_RegisterGraphics( void )
     "ui/assets/neutral/10_5pie",
     "ui/assets/neutral/12_0pie",
   };
+   static char *alienAttackFeedbackShaders[ 11 ] =
+  {
+        "ui/assets/alien/feedback/scratch_00",
+        "ui/assets/alien/feedback/scratch_01",
+        "ui/assets/alien/feedback/scratch_02",
+        "ui/assets/alien/feedback/scratch_03",
+        "ui/assets/alien/feedback/scratch_04",
+        "ui/assets/alien/feedback/scratch_05",
+        "ui/assets/alien/feedback/scratch_06",
+        "ui/assets/alien/feedback/scratch_07",
+        "ui/assets/alien/feedback/scratch_08",
+        "ui/assets/alien/feedback/scratch_09",
+        "ui/assets/alien/feedback/scratch_10"
+  };
 
   // clear any references to old media
   memset( &cg.refdef, 0, sizeof( cg.refdef ) );
@@ -763,6 +779,8 @@ static void CG_RegisterGraphics( void )
 
   for( i = 0; i < 8; i++ )
     cgs.media.buildWeaponTimerPie[ i ] = trap_R_RegisterShader( buildWeaponTimerPieShaders[ i ] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienAttackFeedbackShaders[i] = trap_R_RegisterShader( alienAttackFeedbackShaders[i] );
 
   // player health cross shaders
   cgs.media.healthCross               = trap_R_RegisterShader( "ui/assets/neutral/cross.tga" );
@@ -796,6 +814,10 @@ static void CG_RegisterGraphics( void )
 
   cgs.media.humanBuildableDamagedPS   = CG_RegisterParticleSystem( "humanBuildableDamagedPS" );
   cgs.media.alienBuildableDamagedPS   = CG_RegisterParticleSystem( "alienBuildableDamagedPS" );
+  cgs.media.humanBuildableHitSmallPS   = CG_RegisterParticleSystem( "humanBuildableHitSmallPS" );
+  cgs.media.alienBuildableHitSmallPS   = CG_RegisterParticleSystem( "alienBuildableHitSmallPS" );
+  cgs.media.humanBuildableHitLargePS   = CG_RegisterParticleSystem( "humanBuildableHitLargePS" );
+  cgs.media.alienBuildableHitLargePS   = CG_RegisterParticleSystem( "alienBuildableHitLargePS" );
   cgs.media.humanBuildableDestroyedPS = CG_RegisterParticleSystem( "humanBuildableDestroyedPS" );
   cgs.media.alienBuildableDestroyedPS = CG_RegisterParticleSystem( "alienBuildableDestroyedPS" );
 
@@ -1752,6 +1774,8 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
 
   CG_AssetCache( );
   CG_LoadHudMenu( );
+  cg.feedbackAnimation = 0;
+  cg.feedbackAnimationType = 0;
 
   cg.weaponSelect = WP_NONE;
 

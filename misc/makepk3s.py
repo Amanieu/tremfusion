@@ -12,6 +12,9 @@ parser.add_option("-d", "--data",
 parser.add_option("-v", "--verbose",
                   action="store_true", dest="verbose", default=False,
                   help="print status messages to stdout")
+parser.add_option("-b", "--debug",
+                  action="store_true", dest="usedebug", default=False,
+                  help="use the debug build qvms")
 parser.add_option("--dir", "--directory",
                   dest="directory", default=".",
                   help="the directory to place the pk3's in")
@@ -55,7 +58,7 @@ else:
   symlink_dir = None
 
 if options.makedata:
-    pk3filename = join ( dir_path, "themerge-data-r%03d.pk3" % scm_rev_num )
+    pk3filename = join ( dir_path, "tremfusion-data-r%04d.pk3" % scm_rev_num )
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -67,7 +70,7 @@ if options.makedata:
 
     pk3.close()
     if symlink_dir:
-      symlink_path = join ( symlink_dir, "themerge-data-r%03d.pk3" % scm_rev_num )
+      symlink_path = join ( symlink_dir, "tremfusion-data-r%04d.pk3" % scm_rev_num )
       print "Linking %s to %s" % ( pk3filename , symlink_path )
       if exists( symlink_path ):
         print "Removing %s" % symlink_path
@@ -75,7 +78,7 @@ if options.makedata:
       os.symlink(pk3filename, symlink_path)
 
 
-pk3filename = join ( dir_path, "themerge-game-r%03d.pk3" % scm_rev_num )
+pk3filename = join ( dir_path, "tremfusion-game-r%04d.pk3" % scm_rev_num )
 print "Creating pk3 file at: %s" % pk3filename
 pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
@@ -83,7 +86,12 @@ add_dir_tree("../armour/*", "armour/")
 add_dir_tree("../configs/*", "configs/")
 add_dir_tree("../scripts/*", "scripts/")
 
-for fspath in glob.glob("../build/release*/base/vm/*.qvm"):
+if options.usedebug:
+  qvmglobstring = "../build/debug-*/base/vm/*.qvm"
+else:
+  qvmglobstring = "../build/release-*/base/vm/*.qvm"
+
+for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue
   pk3path = "vm/" + os.path.basename(fspath)
   if pk3path == "vm/game.qvm": # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
@@ -92,7 +100,7 @@ for fspath in glob.glob("../build/release*/base/vm/*.qvm"):
 
 pk3.close()
 if symlink_dir:
-  symlink_path = join ( symlink_dir, "themerge-game-r%03d.pk3" % scm_rev_num )
+  symlink_path = join ( symlink_dir, "tremfusion-game-r%04d.pk3" % scm_rev_num )
   if exists( symlink_path ):
     print "Removing %s" % symlink_path
     os.unlink(symlink_path)

@@ -325,7 +325,7 @@ void PC_SourceWarning( int handle, char *format, ... )
   static char string[4096];
 
   va_start( argptr, format );
-  vsprintf( string, format, argptr );
+  Q_vsnprintf( string, sizeof( string ), format, argptr );
   va_end( argptr );
 
   filename[0] = '\0';
@@ -348,7 +348,7 @@ void PC_SourceError( int handle, char *format, ... )
   static char string[4096];
 
   va_start( argptr, format );
-  vsprintf( string, format, argptr );
+  Q_vsnprintf( string, sizeof( string ), format, argptr );
   va_end( argptr );
 
   filename[0] = '\0';
@@ -4546,9 +4546,9 @@ void Item_TextColor( itemDef_t *item, vec4_t *newColor )
 
 static const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
-  static char   out[ 8192 ];
+  static char   out[ 8192 ] = "";
   char          *paint = out;
-  char          startcolour[ 3 ], endcolour[ 3 ];
+  char          c[ 3 ] = "^7";
   const char    *p = text;
   const char    *eol;
   const char    *q = NULL, *qMinus1 = NULL;
@@ -4564,17 +4564,14 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
   while( *p )
   {
-    Com_Memset( startcolour, 0, sizeof( startcolour ) );
-    Com_Memset( endcolour, 0, sizeof( endcolour ) );
-
     // Skip leading whitespace
 
     while( *p )
     {
       if( Q_IsColorString( p ) )
       {
-        startcolour[ 0 ] = p[ 0 ];
-        startcolour[ 1 ] = p[ 1 ];
+        c[ 0 ] = p[ 0 ];
+        c[ 1 ] = p[ 1 ];
         p += 2;
       }
       else if( *p != '\n' && isspace( *p ) )
@@ -4586,25 +4583,18 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( !*p )
       break;
 
+    Q_strcat( paint, out + sizeof( out ) - paint, c );
+
     testLength = 1;
 
     eol = p;
 
-    q = p;
+    q = p + 1;
 
     while( Q_IsColorString( q ) )
     {
-      startcolour[ 0 ] = q[ 0 ];
-      startcolour[ 1 ] = q[ 1 ];
-      q += 2;
-    }
-
-    q++;
-
-    while( Q_IsColorString( q ) )
-    {
-      startcolour[ 0 ] = q[ 0 ];
-      startcolour[ 1 ] = q[ 1 ];
+      c[ 0 ] = q[ 0 ];
+      c[ 1 ] = q[ 1 ];
       q += 2;
     }
 
@@ -4624,8 +4614,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
         // Skip color escapes
         while( Q_IsColorString( q ) )
         {
-          endcolour[ 0 ] = q[ 0 ];
-          endcolour[ 1 ] = q[ 1 ];
+          c[ 0 ] = q[ 0 ];
+          c[ 1 ] = q[ 1 ];
           q += 2;
         }
         while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4644,8 +4634,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
       // Some color escapes might still be present
       while( Q_IsColorString( q ) )
       {
-        endcolour[ 0 ] = q[ 0 ];
-        endcolour[ 1 ] = q[ 1 ];
+        c[ 0 ] = q[ 0 ];
+        c[ 1 ] = q[ 1 ];
         q += 2;
       }
       while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4673,9 +4663,6 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( eol == p )
       eol = q;
 
-    // Add colour code (might be empty)
-    Q_strcat( out, sizeof( out ), startcolour );
-
     paint = out + strlen( out );
 
     // Copy text
@@ -4687,8 +4674,10 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( out[ strlen( out ) - 1 ] != '\n' )
     {
       Q_strcat( out, sizeof( out ), "\n " );
-      Q_strcat( out, sizeof( out ), endcolour );
+      Q_strcat( out, sizeof( out ), c );
     }
+    else
+      c[ 0 ] = '\0';
 
     paint = out + strlen( out );
 

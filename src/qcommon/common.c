@@ -268,38 +268,31 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	com_errorEntered = qtrue;
 
 	va_start (argptr,fmt);
-	vsprintf (com_errorMessage,fmt,argptr);
+	Q_vsnprintf (com_errorMessage, sizeof(com_errorMessage),fmt,argptr);
 	va_end (argptr);
 
-	if (code != ERR_DISCONNECT && code != ERR_NEED_CD)
+	if (code != ERR_DISCONNECT)
 		Cvar_Set("com_errorMessage", com_errorMessage);
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
-		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
+		SV_Shutdown( "Server disconnected" );
 		// make sure we can get at our local stuff
 		FS_PureServerSetLoadedPaks("", "");
+		CL_Disconnect( qtrue );
+		VM_Forced_Unload_Start();
+		CL_FlushMemory( qtrue );
+		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if (code == ERR_DROP) {
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
+		FS_PureServerSetLoadedPaks("", "");
 		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
-		FS_PureServerSetLoadedPaks("", "");
+		VM_Forced_Unload_Start();
+		CL_FlushMemory( qtrue );
+		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
-		longjmp (abortframe, -1);
-	} else if ( code == ERR_NEED_CD ) {
-		SV_Shutdown( "Server didn't have CD" );
-		if ( com_cl_running && com_cl_running->integer ) {
-			CL_Disconnect( qtrue );
-			CL_FlushMemory( );
-			com_errorEntered = qfalse;
-			CL_CDDialog();
-		} else {
-			Com_Printf("Server didn't have CD\n" );
-		}
-		FS_PureServerSetLoadedPaks("", "");
 		longjmp (abortframe, -1);
 	} else {
 		CL_Shutdown ();
@@ -322,8 +315,9 @@ do the apropriate things.
 */
 void Com_Quit_f( void ) {
 	// don't try to shutdown if we are in a recursive error
+	char *p = Cmd_Args( );
 	if ( !com_errorEntered ) {
-		SV_Shutdown ("Server quit");
+		SV_Shutdown (p[0] ? p : "Server quit");
 		CL_Shutdown ();
 		Com_Shutdown ();
 		FS_Shutdown(qtrue);
@@ -463,10 +457,12 @@ qboolean Com_AddStartupCommands( void ) {
 			continue;
 		}
 
-		// set commands won't override menu startup
-		if ( Q_stricmpn( com_consoleLines[i], "set", 3 ) ) {
-			added = qtrue;
+		// set commands already added with Com_StartupVariable
+		if ( !Q_stricmpn( com_consoleLines[i], "set", 3 ) ) {
+			continue;
 		}
+
+		added = qtrue;
 		Cbuf_AddText( com_consoleLines[i] );
 		Cbuf_AddText( "\n" );
 	}
@@ -2429,9 +2425,11 @@ void Com_Init( char *commandLine ) {
 
   // get dedicated here for proper hunk megs initialization
 #ifdef DEDICATED
-	com_dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
+	com_dedicated = Cvar_Get ("dedicated", "1", CVAR_INIT);
+	Cvar_CheckRange( com_dedicated, 1, 2, qtrue );
 #else
 	com_dedicated = Cvar_Get ("dedicated", "0", CVAR_LATCH);
+	Cvar_CheckRange( com_dedicated, 0, 2, qtrue );
 #endif
 	// allocate the stack based hunk allocator
 	Com_InitHunkMemory();
@@ -2729,7 +2727,7 @@ void Com_Frame( void ) {
 		com_dedicated->modified = qfalse;
 		if ( !com_dedicated->integer ) {
 			SV_Shutdown( "dedicated set to 0" );
-			CL_FlushMemory();
+			CL_FlushMemory(qtrue);
 		}
 	}
 

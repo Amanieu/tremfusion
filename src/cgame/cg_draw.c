@@ -337,27 +337,6 @@ static void CG_DrawPlayerCreditsValue( rectDef_t *rect, vec4_t color, qboolean p
   }
 }
 
-static void CG_DrawPlayerBankValue( rectDef_t *rect, vec4_t color, qboolean padding )
-{
-  int           value;
-  playerState_t *ps;
-
-  ps = &cg.snap->ps;
-
-  value = ps->persistant[ PERS_BANK ];
-  if( value > -1 )
-  {
-    trap_R_SetColor( color );
-
-    if( padding )
-      CG_DrawFieldPadded( rect->x, rect->y, 4, rect->w / 4, rect->h, value );
-    else
-      CG_DrawField( rect->x, rect->y, 1, rect->w, rect->h, value );
-
-    trap_R_SetColor( NULL );
-  }
-}
-
 #define HH_MIN_ALPHA  0.2f
 #define HH_MAX_ALPHA  0.8f
 #define HH_ALPHA_DIFF (HH_MAX_ALPHA-HH_MIN_ALPHA)
@@ -365,6 +344,42 @@ static void CG_DrawPlayerBankValue( rectDef_t *rect, vec4_t color, qboolean padd
 #define AH_MIN_ALPHA  0.2f
 #define AH_MAX_ALPHA  0.8f
 #define AH_ALPHA_DIFF (AH_MAX_ALPHA-AH_MIN_ALPHA)
+
+static void CG_DrawAttackFeedback( rectDef_t *rect )
+{
+        int frame = cg.feedbackAnimation;
+        qhandle_t shader;
+        vec4_t hit_color = { 1, 0, 0, 0.5 };
+        vec4_t miss_color = { 0.3, 0.3, 0.3, 0.5 };
+        vec4_t teamhit_color = { 0.39, 0.80, 0.00, 0.5 };
+
+        //when a new feedback animation event is received, the fame number is set to 1 - so
+        //if it is zero, we don't need to draw anything
+        if ( frame == 0 || !cg_drawAlienFeedback.integer) { //drop out if we aren't currently needing to draw any feedback
+                //Com_Printf(".");
+                return;
+        }
+        else {
+                shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                cg.feedbackAnimation++;
+                if(cg.feedbackAnimation > 10)
+                        cg.feedbackAnimation = 0;
+
+                switch(cg.feedbackAnimationType) {
+                	case AFEEDBACK_HIT:
+                        	trap_R_SetColor( hit_color );
+                        	break;
+                	case AFEEDBACK_MISS:
+                        	trap_R_SetColor( miss_color );
+                        	break;
+                	case AFEEDBACK_TEAMHIT:
+                        	trap_R_SetColor( teamhit_color );
+                        	break;
+                }
+                CG_DrawPic( rect->x, rect->y, rect->w, rect->h, shader );
+                trap_R_SetColor( NULL );
+        }
+}
 
 /*
 ==============
@@ -2284,14 +2299,8 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
     case CG_PLAYER_CREDITS_VALUE:
       CG_DrawPlayerCreditsValue( &rect, color, qtrue );
       break;
-    case CG_PLAYER_BANK_VALUE:
-      CG_DrawPlayerBankValue( &rect, color, qtrue );
-      break;
     case CG_PLAYER_CREDITS_VALUE_NOPAD:
       CG_DrawPlayerCreditsValue( &rect, color, qfalse );
-      break;
-    case CG_PLAYER_BANK_VALUE_NOPAD:
-      CG_DrawPlayerBankValue( &rect, color, qfalse );
       break;
     case CG_PLAYER_STAMINA_1:
       CG_DrawPlayerStamina1( &rect, color, shader );
@@ -2364,6 +2373,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
       break;
     case CG_PLAYER_WEAPONICON:
       CG_DrawWeaponIcon( &rect, color );
+      break;
+    case CG_PLAYER_ATTACK_FEEDBACK:
+      CG_DrawAttackFeedback( &rect );
       break;
     case CG_PLAYER_SELECTTEXT:
       CG_DrawItemSelectText( &rect, scale, textStyle );
