@@ -759,6 +759,10 @@ static void print_value( scDataTypeValue_t *value, int tab )
       Com_Printf(va("function in %s\n", SC_LangageToString(value->data.function->langage)));
 	  break;
 
+    case TYPE_USERDATA:
+      print_tabs(tab);
+      Com_Printf(va("userdata\n"));
+
     default:
       print_tabs( tab );
       Com_Printf("unknow type\n");

@@ -66,6 +66,7 @@ typedef enum
   TYPE_NAMESPACE,
   TYPE_OBJECTINSTANCE,
   TYPE_OBJECTTYPE,
+  TYPE_USERDATA,
 } scDataType_t;
 
 typedef struct
@@ -76,6 +77,7 @@ typedef struct
 typedef char  scDataTypeBoolean_t;
 typedef long  scDataTypeInteger_t;
 typedef float scDataTypeFloat_t;
+typedef void* scDataTypeUserdata_t;
 typedef struct
 {
   scGC_t  gc;
@@ -116,7 +118,7 @@ struct scDataTypeValue_s
     scNamespace_t          *namespace;
     scObjectInstance_t     *objectinstance;
     scObjectType_t         *objecttype;
-    
+    scDataTypeUserdata_t   userdefine;
   } data;
 };
 
