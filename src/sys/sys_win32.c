@@ -90,6 +90,11 @@ char *Sys_DefaultHomePath( void )
 	return homePath;
 }
 
+char *Sys_ResolveLink( char *arg0 )
+{
+	return arg0;
+}
+
 /*
 ================
 Sys_Milliseconds

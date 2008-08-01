@@ -50,3 +50,4 @@ char *Sys_StripAppBundle( char *pwd );
 void Sys_SigHandler( int signal );
 void Sys_ErrorDialog( const char *error );
 void Sys_AnsiColorPrint( const char *msg );
+char *Sys_ResolveLink( char *arg0 );

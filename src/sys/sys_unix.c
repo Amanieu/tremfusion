@@ -72,6 +72,33 @@ char *Sys_DefaultHomePath(void)
 }
 
 /*
+=================
+Sys_ResolveLink
+
+This resolves any symlinks to the binary. It's disabled for debug
+builds because there are situations where you are likely to want
+to symlink to binaries and /not/ have the links resolved.
+=================
+*/
+char *Sys_ResolveLink( char *arg0 )
+{
+#if !NDEBUG && ( _BSD_SOURCE || _XOPEN_SOURCE >= 500 || _POSIX_C_SOURCE >= 200112L )
+	static char dst[ PATH_MAX ];
+	int n = readlink( arg0, dst, PATH_MAX - 1 );
+
+	if( n >= 0 && n < PATH_MAX )
+	{
+		dst[ n ] = '\0';
+		return dst;
+	}
+	else
+		return arg0;
+#else
+	return arg0;
+#endif
+}
+
+/*
 ================
 Sys_Milliseconds
 ================

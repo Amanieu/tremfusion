@@ -534,7 +534,7 @@ int main( int argc, char **argv )
 #endif
 
 	Sys_ParseArgs( argc, argv );
-	Sys_SetBinaryPath( Sys_Dirname( argv[ 0 ] ) );
+	Sys_SetBinaryPath( Sys_Dirname( Sys_ResolveLink( argv[ 0 ] ) ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
 
 	// Concatenate the command line for passing to Com_Init
