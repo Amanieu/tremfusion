@@ -28,8 +28,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-static scObjectDef_t vec3_object;
-static scObjectType_t *vec3_type;
+/*static scLibObjectDef *vec3_object;*/
+static scClass_t *vec3_class;
 
 typedef enum 
 {
@@ -38,97 +38,87 @@ typedef enum
   VEC3_Z,
 } vec3_closures;
 
-static void vec3_set ( scObjectInstance_t *self, scDataTypeValue_t *value, void *closure)
+static void vec3_set ( scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out)
 {
   int settype = (int)closure;
   vec3_t vec3;
     
-  memcpy( vec3, self->pointer, sizeof( vec3 ) );
+  memcpy( vec3, self->data.data.userdata, sizeof( vec3 ) );
   
   switch (settype)
   {
     case VEC3_X:
-      vec3[0] = value->data.floating ;
+      vec3[0] = in[0].data.floating ;
       break;
     case VEC3_Y:
-      vec3[1] = value->data.floating ;
+      vec3[1] = in[0].data.floating ;
       break;
     case VEC3_Z:
-      vec3[2] = value->data.floating ;
+      vec3[2] = in[0].data.floating ;
       break;
     default:
       return;
   }
-  memcpy( self->pointer, vec3, sizeof( vec3 ) );
+  memcpy( self->data.data.userdata, vec3, sizeof( vec3 ) );
 }
 
-static scDataTypeValue_t *vec3_get ( scObjectInstance_t *self, void *closure )
+static void vec3_get ( scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out )
 {
-  scDataTypeValue_t *value;
   int gettype = (int)closure;
   vec3_t vec3;
   
-  memcpy( vec3, self->pointer, sizeof( vec3 ) );
-  value = BG_Alloc(sizeof(scDataTypeValue_t));
-  value->type = TYPE_FLOAT;
+  memcpy( vec3, self->data.data.userdata, sizeof( vec3 ) );
+  out[0].type = TYPE_FLOAT;
   
   switch (gettype)
   {
     case VEC3_X:
-      value->data.floating = vec3[0];
+      out[0].data.floating = vec3[0];
       break;
     case VEC3_Y:
-      value->data.floating = vec3[1];
+      out[0].data.floating = vec3[1];
       break;
     case VEC3_Z:
-      value->data.floating = vec3[2];
+      out[0].data.floating = vec3[2];
       break;
     default:
-      value->type = TYPE_UNDEF;
+      out[0].type = TYPE_UNDEF;
       break;
       // Error
   }
-  SC_ValueGCInc( value );
-  return value;
 }
 
-static scObjectMember_t vec3_members[] = {
-    { "x", "", TYPE_FLOAT, vec3_set, vec3_get,
-        (void*)VEC3_X },
-    { "y", "", TYPE_FLOAT, vec3_set, vec3_get,
-        (void*)VEC3_Y },
-    { "z", "", TYPE_FLOAT, vec3_set, vec3_get,
-        (void*)VEC3_Z },
+static scLibObjectMember_t vec3_members[] = {
+    { "x", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_X },
+    { "y", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Y },
+    { "z", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Z },
     { NULL },
 };
 
-static scObjectMethod_t vec3_methods[] = {
+static scLibObjectMethod_t vec3_methods[] = {
     { NULL },
 };
 
-static scObjectDef_t vec3_object = { 
+static scLibObjectDef_t vec3_def = { 
   "Vec3", 
-  0, { TYPE_UNDEF }, 
+  { 0 },
+  { 0 },
   vec3_members, 
   vec3_methods, 
 };
 
-scObjectInstance_t *SC_Vec3FromVec3_t( float *vect )
+scObject_t *SC_Vec3FromVec3_t( float *vect )
 {
-  scObjectInstance_t *instance;
-  instance = BG_Alloc( sizeof( scObjectInstance_t ) );
-  
-  instance->pointer = (void*)vect;
-  
-  instance->type = vec3_type;
+  scObject_t *instance;
+  instance = SC_ObjectNew(vec3_class);
+  instance->data.type = TYPE_USERDATA;
+  instance->data.data.userdata = (void*)vect;
+
   return instance;
 }
 
 void SC_Common_Init( void )
 {
-  scDataTypeValue_t vec3typeobject;
-//  SC_AddLibrary( "game", game_lib );
-  SC_AddObjectType( "common", vec3_object);
-  SC_NamespaceGet( "common.Vec3", &vec3typeobject );
-  vec3_type = vec3typeobject.data.objecttype;
+  vec3_class = SC_AddObjectType( "common", &vec3_def);
 }
+

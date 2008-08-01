@@ -699,6 +699,36 @@ void SC_FunctionGCDec(scDataTypeFunction_t *function)
     functionFree(function);
 }
 
+// Object
+
+scObject_t *SC_ObjectNew(scClass_t *class)
+{
+  scObject_t *object = BG_Alloc(sizeof(scObject_t));
+  object->class = class;
+  object->data.type = TYPE_UNDEF;
+  object->gc.count = 0;
+
+  return object;
+}
+
+static void objectFree(scObject_t *object)
+{
+  SC_ValueGCDec(&object->data);
+  BG_Free(object);
+}
+
+void SC_ObjectGCInc(scObject_t *object)
+{
+  object->gc.count++;
+}
+
+void SC_ObjectGCDec(scObject_t *object)
+{
+  object->gc.count--;
+  if(object->gc.count == 0)
+    objectFree(object);
+}
+
 // Display data tree
 
 static void print_tabs( int tab )

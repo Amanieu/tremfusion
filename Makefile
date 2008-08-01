@@ -113,7 +113,7 @@ ifndef USE_CURL_DLOPEN
 endif
 
 ifndef USE_PYTHON
-  USE_PYTHON=1
+  USE_PYTHON=0
 endif
 
 ifndef USE_LUA

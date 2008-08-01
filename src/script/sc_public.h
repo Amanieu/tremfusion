@@ -64,8 +64,8 @@ typedef enum
   TYPE_ARRAY,
   TYPE_HASH,
   TYPE_NAMESPACE,
-  TYPE_OBJECTINSTANCE,
-  TYPE_OBJECTTYPE,
+  TYPE_OBJECT,
+  TYPE_CLASS,
   TYPE_USERDATA,
 } scDataType_t;
 
@@ -91,70 +91,12 @@ typedef struct scDataTypeArray_s scDataTypeArray_t;
 typedef struct scDataTypeHash_s scDataTypeHash_t;
 typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
 typedef struct scDataTypeFunction_s scDataTypeFunction_t;
+typedef struct scObject_s scObject_t;
+typedef struct scClass_s scClass_t;
 typedef scDataTypeHash_t scNamespace_t;
 
-typedef struct scDataTypeObjectType_s scDataTypeObjectType_t;
-typedef struct scDataTypeObject_s scDataTypeObject_t;
-
-typedef struct scObjectMember_s scObjectMember_t;
-typedef struct scObjectMethod_s scObjectMethod_t;
-typedef struct scObjectDef_s scObjectDef_t;
-typedef struct scObjectType_s scObjectType_t;
-typedef struct scObjectInstance_s scObjectInstance_t;
-
-struct scDataTypeValue_s
-{
-  scDataType_t    type;
-  scGC_t          gc;
-  union
-  {
-    scDataTypeBoolean_t    boolean;
-    scDataTypeInteger_t    integer;
-    scDataTypeFloat_t      floating;
-    scDataTypeString_t     *string;
-    scDataTypeFunction_t   *function;
-    scDataTypeArray_t      *array;
-    scDataTypeHash_t       *hash;
-    scNamespace_t          *namespace;
-    scObjectInstance_t     *objectinstance;
-    scObjectType_t         *objecttype;
-    scDataTypeUserdata_t   userdata;
-  } data;
-};
-
-struct scDataTypeObjectType_s
-{
-  scDataTypeString_t typename;
-};
-
-struct scDataTypeObject_s
-{
-  scDataTypeObjectType_t  *type;
-//  scDataTypeHash_t       *members;
-//  scDataTypeHash_t        *values;
-};
-
-struct scDataTypeArray_s
-{
-  scGC_t                gc;
-  int                   size;
-  int                   buflen;
-  scDataTypeValue_t     *data;
-};
-
-struct scDataTypeHash_s
-{
-  scGC_t                gc;
-  int                   size;
-  int                   buflen;
-  struct scDataTypeHashEntry_s
-  {
-    scDataTypeString_t  key;
-    scDataTypeValue_t   value;
-  } *data;
-};
-
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
+typedef void (*scCMethodRef_t)(scObject_t *self, void *closure, scDataTypeValue_t*, scDataTypeValue_t*);
 
 #ifdef USE_PYTHON
 typedef PyObject *scPYFunc_t;
@@ -174,6 +116,94 @@ struct scDataTypeFunction_s
     scPYFunc_t          pyfunc;
 #endif
   } data;
+};
+
+struct scDataTypeValue_s
+{
+  scDataType_t    type;
+  scGC_t          gc;
+  union
+  {
+    scDataTypeBoolean_t    boolean;
+    scDataTypeInteger_t    integer;
+    scDataTypeFloat_t      floating;
+    scDataTypeString_t     *string;
+    scDataTypeFunction_t   *function;
+    scDataTypeArray_t      *array;
+    scDataTypeHash_t       *hash;
+    scNamespace_t          *namespace;
+    scObject_t             *object;
+    scClass_t              *class;
+    scDataTypeUserdata_t   userdata;
+  } data;
+};
+
+typedef scDataTypeFunction_t scDataTypeMethod_t;
+
+typedef struct
+{
+  scDataType_t          type;
+  char                  *desc;
+  scDataTypeMethod_t    set;
+  scDataTypeMethod_t    get;
+  void                  *closure;
+} scObjectMember_t;
+
+typedef struct
+{
+  scDataType_t          type;
+  char                  *desc;
+  scDataTypeMethod_t    method;
+  void                  *closure;
+} scObjectMethod_t;
+
+struct scClass_s
+{
+  char                  *name;
+  char                  *desc;
+  scObjectMethod_t      *constructor;
+  scObjectMethod_t      *destructor;
+  scObjectMember_t      *members;
+  scObjectMethod_t      *methods;
+};
+
+struct scObject_s
+{
+  scGC_t                gc;
+  scClass_t             *class;
+  scDataTypeValue_t     data;
+};
+
+/*struct scDataTypeObjectType_s
+{
+  scDataTypeString_t typename;
+};
+
+struct scDataTypeObject_s
+{
+  scDataTypeObjectType_t  *type;
+//  scDataTypeHash_t       *members;
+//  scDataTypeHash_t        *values;
+};*/
+
+struct scDataTypeArray_s
+{
+  scGC_t                gc;
+  int                   size;
+  int                   buflen;
+  scDataTypeValue_t     *data;
+};
+
+struct scDataTypeHash_s
+{
+  scGC_t                gc;
+  int                   size;
+  int                   buflen;
+  struct scDataTypeHashEntry_s
+  {
+    scDataTypeString_t  key;
+    scDataTypeValue_t   value;
+  } *data;
 };
 
 // Events data structure
@@ -240,6 +270,10 @@ scDataTypeFunction_t* SC_FunctionNew(void);
 void SC_FunctionGCInc(scDataTypeFunction_t *function);
 void SC_FunctionGCDec(scDataTypeFunction_t *function);
 
+scObject_t *SC_ObjectNew(scClass_t *class);
+void SC_ObjectGCInc(scObject_t *object);
+void SC_ObjectGCDec(scObject_t *object);
+
 char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
 
@@ -252,8 +286,7 @@ void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, 
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);
-void SC_InitObjectType( scObjectType_t * type);
-
+void SC_InitObject( scObject_t * type);
 
 // sc_c.c
 
@@ -265,69 +298,47 @@ typedef struct
   scDataType_t          return_type;
 } scLib_t;
 
-typedef scObjectInstance_t* (*scObjectInit_t)(scObjectType_t*, scDataTypeValue_t*);
-typedef scDataTypeValue_t*  (*scObjectMethodFunc_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
-typedef void (*scObjectSet_t)(scObjectInstance_t*, scDataTypeValue_t*, void *);
-typedef scDataTypeValue_t* (*scObjectGet_t)(scObjectInstance_t*, void *);
-
-struct scObjectMember_s
+typedef struct
 {
   char                  *name;
   char                  *desc;
   scDataType_t          type;
-  scObjectSet_t         set;
-  scObjectGet_t         get;
+  scCMethodRef_t        set;
+  scCMethodRef_t        get;
   void                  *closure;
-};
+} scLibObjectMember_t;
 
-struct scObjectMethod_s
+typedef struct
 {
   char                  *name;
   char                  *desc;
+  scCMethodRef_t        method;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
-  scObjectMethodFunc_t  method;
   scDataType_t          return_type;
   void                  *closure;
-};
+} scLibObjectMethod_t;
 
-struct scObjectDef_s
+typedef struct
 {
-  const char            *name;
-  scObjectInit_t        init;
-  scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
-  scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
-  scObjectMethod_t      *methods;
-};
+  scCMethodRef_t        method;
+  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+} scLibObjectClassMethod_t;
 
-struct scObjectType_s
+typedef struct
 {
-  char                  *name;
-  char                  *namespace_path;
-  scObjectInit_t        init;
-  scDataType_t          initArguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
-  scObjectMember_t      *members/*[ MAX_OBJECT_MEMBERS + 1 ]*/;
-  int                   membercount;
-  scObjectMethod_t      *methods;
-  int                   methodcount;
-#ifdef USE_PYTHON
-  void                 *pythontype;
-#endif
-};
-
-struct scObjectInstance_s
-{
-  scObjectType_t        *type;
-  void                  *pointer;
-};
-
-
+  const char                *name;
+  scLibObjectClassMethod_t  constructor;
+  scLibObjectClassMethod_t  destructor;
+  scLibObjectMember_t       *members;
+  scLibObjectMethod_t       *methods;
+} scLibObjectDef_t;
 
 void SC_AddLibrary( const char *namespace, scLib_t lib[] );
 
-void SC_AddObjectType( const char *namespace_path, scObjectDef_t type );
+scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def );
 
 // sc_common.c
-scObjectInstance_t *SC_Vec3FromVec3_t( float *vect );
+scObject_t *SC_Vec3FromVec3_t( float *vect );
 void SC_Common_Init( void );
 
 #endif

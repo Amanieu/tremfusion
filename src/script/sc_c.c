@@ -48,9 +48,9 @@ void SC_AddLibrary( const char *namespace, scLib_t lib[] )
   }
 }
 
-void SC_AddObjectType( const char *namespace, scObjectDef_t def )
+scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 {
-  char name[ MAX_PATH_LENGTH + 1 ];
+  /*char name[ MAX_PATH_LENGTH + 1 ];
   scDataTypeValue_t var;
   scObjectType_t    *type;
   scObjectMember_t  *member;
@@ -91,5 +91,6 @@ void SC_AddObjectType( const char *namespace, scObjectDef_t def )
   var.data.objecttype = type;
   
   SC_NamespaceSet( name, &var );
-//  name[nslen] = '.';
+//  name[nslen] = '.';*/
+  return NULL;
 }
