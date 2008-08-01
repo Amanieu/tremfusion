@@ -38,36 +38,36 @@ typedef enum
   VEC3_Z,
 } vec3_closures;
 
-static void vec3_set ( scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out)
+static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int settype = (int)closure;
   vec3_t vec3;
     
-  memcpy( vec3, self->data.data.userdata, sizeof( vec3 ) );
+  memcpy( vec3, in[0].data.object->data.data.userdata, sizeof( vec3 ) );
   
   switch (settype)
   {
     case VEC3_X:
-      vec3[0] = in[0].data.floating ;
+      vec3[0] = in[1].data.floating ;
       break;
     case VEC3_Y:
-      vec3[1] = in[0].data.floating ;
+      vec3[1] = in[1].data.floating ;
       break;
     case VEC3_Z:
-      vec3[2] = in[0].data.floating ;
+      vec3[2] = in[1].data.floating ;
       break;
     default:
       return;
   }
-  memcpy( self->data.data.userdata, vec3, sizeof( vec3 ) );
+  memcpy( in[0].data.object->data.data.userdata, vec3, sizeof( vec3 ) );
 }
 
-static void vec3_get ( scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out )
+static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int gettype = (int)closure;
   vec3_t vec3;
   
-  memcpy( vec3, self->data.data.userdata, sizeof( vec3 ) );
+  memcpy( vec3, in[0].data.object->data.data.userdata, sizeof( vec3 ) );
   out[0].type = TYPE_FLOAT;
   
   switch (gettype)
@@ -100,7 +100,7 @@ static scLibObjectMethod_t vec3_methods[] = {
 };
 
 static scLibObjectDef_t vec3_def = { 
-  "Vec3", 
+  "Vec3", "",
   { 0 },
   { 0 },
   vec3_members, 

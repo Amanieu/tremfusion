@@ -22,9 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-void SC_AddLibrary( const char *namespace, scLib_t lib[] )
+void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] )
 {
-  scLib_t *l = lib;
+  scLibFunction_t *l = lib;
   scDataTypeValue_t var;
   char name[ MAX_PATH_LENGTH + 1 ];
   int nslen = strlen( namespace );
@@ -50,47 +50,84 @@ void SC_AddLibrary( const char *namespace, scLib_t lib[] )
 
 scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 {
-  /*char name[ MAX_PATH_LENGTH + 1 ];
+  char name[ MAX_PATH_LENGTH + 1 ];
   scDataTypeValue_t var;
-  scObjectType_t    *type;
-  scObjectMember_t  *member;
-  scObjectMethod_t  *method;
+  scClass_t    *class;
+  scLibObjectMember_t  *member;
+  scLibObjectMethod_t  *method;
   int nslen = strlen( namespace );
-  int i;
+  int i, cnt;
   
-  type = BG_Alloc( sizeof(scObjectType_t) );
+  class = BG_Alloc( sizeof(scClass_t) );
+  strcpy(class->name, def->name);
+  strcpy(class->desc, def->desc);
+
+  class->constructor.gc.count = 0;
+  class->constructor.langage = LANGAGE_C;
+  memcpy(class->constructor.argument, def->constructor.argument, ( MAX_FUNCTION_ARGUMENTS + 1 ) * sizeof(scDataType_t));
+  class->constructor.return_type = def->constructor.return_type;
+  class->constructor.data.ref = def->constructor.method;
+
+  class->destructor.gc.count = 0;
+  class->destructor.langage = LANGAGE_C;
+  memcpy(class->destructor.argument, def->destructor.argument, ( MAX_FUNCTION_ARGUMENTS + 1 ) * sizeof(scDataType_t));
+  class->destructor.return_type = def->destructor.return_type;
+  class->destructor.data.ref = def->destructor.method;
+
+  cnt = 0;
+  member = def->members;
+  for(member = def->members; member->name != NULL; member++)
+    cnt++;
+
+  class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
+  for(i = 0; i < cnt; i++)
+  {
+    strcpy(class->members[i].name, def->members[i].name);
+    strcpy(class->members[i].desc, def->members[i].desc);
+    class->members[i].type = def->members[i].type;
+
+    class->members[i].set.gc.count = 0;
+    class->members[i].set.langage = LANGAGE_C;
+    class->members[i].set.argument[0] = class->members[i].type;
+    class->members[i].set.argument[1] = TYPE_UNDEF;
+    class->members[i].set.return_type = TYPE_UNDEF;
+    class->members[i].set.closure = def->members[i].closure;
+
+    class->members[i].get.gc.count = 0;
+    class->members[i].get.langage = LANGAGE_C;
+    class->members[i].get.argument[0] = TYPE_UNDEF;
+    class->members[i].get.return_type = class->members[i].type;
+    class->members[i].get.closure = def->members[i].closure;
+  }
   
-  type->membercount = 0;
-  type->name    = (char*)def.name;
-  type->init    = def.init;
-  type->members = def.members;
-  type->methods = def.methods;
-//  memcpy( type->members, def.members, sizeof( type->members ) );
-  memcpy( type->initArguments, def.initArguments, sizeof( type->initArguments ) );
-#if USE_PYTHON
-  type->pythontype = NULL;
-#endif
+
+  cnt = 0;
+  for(method = def->methods; method->name != NULL; method++)
+    cnt++;
+
+  class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
+  for(i = 0; i < cnt; i++)
+  {
+    strcpy(class->methods[i].name, def->methods[i].name);
+    strcpy(class->methods[i].desc, def->methods[i].desc);
+
+    class->methods[i].method.gc.count = 0;
+    class->methods[i].method.langage = LANGAGE_C;
+    memcpy( class->methods[i].method.argument, def->methods[i].argument,
+            sizeof(scDataType_t) * (MAX_FUNCTION_ARGUMENTS + 1));
+    class->methods[i].method.return_type = def->methods[i].return_type;
+    class->methods[i].method.closure = def->methods[i].closure;
+  }
+
+  var.type = TYPE_CLASS;
+  var.data.class = class;
+  SC_ValueGCInc(&var);
+
   Q_strncpyz( name, namespace, sizeof( name ) );
   name[nslen] = '.';
-  Q_strncpyz( name + nslen + 1, def.name, strlen( def.name ) + 1);
-  type->namespace_path = name;
-  
-  member = type->members;
-  for (; member->name != NULL; member++) {
-    type->membercount++;
-    
-  }
-  method = type->methods;
-  for (; method->name != NULL; method++) {
-    type->methodcount++;
-  }
-  
-  SC_InitObjectType( type );
-  
-  var.type = TYPE_OBJECTTYPE;
-  var.data.objecttype = type;
-  
-  SC_NamespaceSet( name, &var );
-//  name[nslen] = '.';*/
-  return NULL;
+  Q_strncpyz( name + nslen + 1, def->name, strlen( def->name ) + 1);
+  SC_NamespaceSet(name, &var);
+
+  return class;
 }
+

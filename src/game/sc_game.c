@@ -21,30 +21,30 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "g_local.h"
-static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret )
+static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
   G_Printf(SC_StringToChar(args[0].data.string));
   ret->type = TYPE_UNDEF;
 }
 
-static void game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret )
+static void game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, void* closure )
 {
   trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(args[0].data.string));
   ret->type = TYPE_UNDEF;
 }
 
-static scLib_t game_lib[] = {
-  { "Print", game_Print, { TYPE_STRING , TYPE_UNDEF }, TYPE_UNDEF },
-  { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
+static scLibFunction_t game_lib[] = {
+  { "Print", "", game_Print, { TYPE_STRING , TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "Command", "", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
 static scLibObjectDef_t entity_object;
 
-static void entity_init ( scObject_t *self, void *closure , scDataTypeValue_t *in, scDataTypeValue_t *out)
+static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  self->data.type = TYPE_USERDATA;
-  self->data.data.userdata = (void*)&g_entities[ in[0].data.integer ];
+  in[0].type = TYPE_USERDATA;
+  in[0].data.userdata = (void*)&g_entities[ in[0].data.integer ];
   out[0].type = TYPE_UNDEF;
 }
 
@@ -60,29 +60,29 @@ typedef enum
   ENTITY_ORIGIN,
 } ent_closures;
 
-static void entity_set( scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out)
+static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int settype = (int)closure;
   gentity_t *entity;
     
-  entity = (gentity_t*)self->data.data.userdata;
+  entity = (gentity_t*)in[0].data.userdata;
   
   switch (settype)
   {
     case ENTITY_CLASSNAME:
-      if (in->type != TYPE_STRING) return; // FIXME: Type checking should be 
+      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
                                            // preformed by the language specific code
-      strcpy(entity->classname, SC_StringToChar(in->data.string));
+      strcpy(entity->classname, SC_StringToChar(in[1].data.string));
       break;
     case ENTITY_MODEL:
-      if (in->type != TYPE_STRING) return; // FIXME: Type checking should be 
+      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
                                               // preformed by the language specific code
-      strcpy(entity->model, SC_StringToChar(in->data.string));
+      strcpy(entity->model, SC_StringToChar(in[1].data.string));
       break;
     case ENTITY_MODEL2:
-      if (in->type != TYPE_STRING) return; // FIXME: Type checking should be 
+      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
                                               // preformed by the language specific code
-      strcpy(entity->model2, SC_StringToChar(in->data.string));
+      strcpy(entity->model2, SC_StringToChar(in[1].data.string));
       break;
     default:
       // Error
@@ -92,13 +92,13 @@ static void entity_set( scObject_t *self, void *closure, scDataTypeValue_t *in, 
   out->type = TYPE_UNDEF;
 }
 
-static void entity_get(scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out)
+static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int gettype = (int)closure;
   scObject_t *instance;
   gentity_t *entity;
   
-  entity = (gentity_t*)self->data.data.userdata;
+  entity = (gentity_t*)in[0].data.userdata;
   
   switch (gettype)
   {
@@ -128,7 +128,7 @@ static void entity_get(scObject_t *self, void *closure, scDataTypeValue_t *in, s
   out[1].type = TYPE_UNDEF;
 }
 
-static void entity_method(scObject_t *self, void *closure, scDataTypeValue_t *in, scDataTypeValue_t *out)
+static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int methodnum;
   methodnum = (int)closure;
@@ -136,7 +136,7 @@ static void entity_method(scObject_t *self, void *closure, scDataTypeValue_t *in
   switch (methodnum)
   {
     case ENTITY_LINK:
-      trap_LinkEntity( (gentity_t*)self->data.data.userdata );
+      trap_LinkEntity( (gentity_t*)in[0].data.object->data.data.userdata );
       break;
     default:
       break;
@@ -145,12 +145,9 @@ static void entity_method(scObject_t *self, void *closure, scDataTypeValue_t *in
 }
 
 static scLibObjectMember_t entity_members[] = {
-    { "classname", "", TYPE_STRING, entity_set, entity_get,
-        (void*)ENTITY_CLASSNAME },
-    { "model", "", TYPE_STRING, entity_set, entity_get,
-            (void*)ENTITY_MODEL },
-    { "model2", "", TYPE_STRING, entity_set, entity_get,
-            (void*)ENTITY_MODEL2 },
+    { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
+    { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
+    { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
 //    { "origin", "", TYPE_OBJECTINSTANCE, entity_set, entity_get,
 //            (void*)ENTITY_ORIGIN },   
     { NULL },
@@ -162,8 +159,8 @@ static scLibObjectMethod_t entity_methods[] = {
 };
 
 static scLibObjectDef_t entity_object = { 
-  "Entity", 
-  { entity_init, { TYPE_INTEGER, TYPE_UNDEF } },
+  "Entity", "",
+  { entity_init, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF },
   { NULL },
   entity_members, 
   entity_methods, 

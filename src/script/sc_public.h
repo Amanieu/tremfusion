@@ -29,8 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_NAMESPACE_DEPTH     8
 #define MAX_NAMESPACE_LENGTH    16
 #define MAX_PATH_LENGTH         64
-#define MAX_OBJECT_DESCRIPTION  1024
-#define MAX_MEMBER_DESCRIPTION  1024
+#define MAX_DESC_LENGTH         1024
 
 #ifdef USE_PYTHON
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
@@ -95,8 +94,7 @@ typedef struct scObject_s scObject_t;
 typedef struct scClass_s scClass_t;
 typedef scDataTypeHash_t scNamespace_t;
 
-typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*);
-typedef void (*scCMethodRef_t)(scObject_t *self, void *closure, scDataTypeValue_t*, scDataTypeValue_t*);
+typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
 
 #ifdef USE_PYTHON
 typedef PyObject *scPYFunc_t;
@@ -108,6 +106,7 @@ struct scDataTypeFunction_s
   scLangage_t           langage;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scDataType_t          return_type;
+  void*                 closure;
   union
   {
     char                path[ MAX_PATH_LENGTH + 1 ];
@@ -142,27 +141,27 @@ typedef scDataTypeFunction_t scDataTypeMethod_t;
 
 typedef struct
 {
-  scDataType_t          type;
-  char                  *desc;
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
+  scDataType_t          type; // useless ? (definded in set/get type)
   scDataTypeMethod_t    set;
   scDataTypeMethod_t    get;
-  void                  *closure;
+  void                  *closure; // useless ?
 } scObjectMember_t;
 
 typedef struct
 {
-  scDataType_t          type;
-  char                  *desc;
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
   scDataTypeMethod_t    method;
-  void                  *closure;
 } scObjectMethod_t;
 
 struct scClass_s
 {
   char                  *name;
   char                  *desc;
-  scObjectMethod_t      *constructor;
-  scObjectMethod_t      *destructor;
+  scDataTypeMethod_t    constructor;
+  scDataTypeMethod_t    destructor;
   scObjectMember_t      *members;
   scObjectMethod_t      *methods;
 };
@@ -173,18 +172,6 @@ struct scObject_s
   scClass_t             *class;
   scDataTypeValue_t     data;
 };
-
-/*struct scDataTypeObjectType_s
-{
-  scDataTypeString_t typename;
-};
-
-struct scDataTypeObject_s
-{
-  scDataTypeObjectType_t  *type;
-//  scDataTypeHash_t       *members;
-//  scDataTypeHash_t        *values;
-};*/
 
 struct scDataTypeArray_s
 {
@@ -282,7 +269,7 @@ void SC_PrintData( void );
 void SC_Init( void );
 void SC_AutoLoad( void );
 void SC_Shutdown( void );
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
+void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure );
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);
@@ -292,19 +279,38 @@ void SC_InitObject( scObject_t * type);
 
 typedef struct
 {
-  char                  name[ MAX_PATH_LENGTH + 1];
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
   scCRef_t              ref;
-  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scDataType_t          argument[MAX_FUNCTION_ARGUMENTS+1];
   scDataType_t          return_type;
-} scLib_t;
+  void                  *closure;
+} scLibFunction_t;
+
+typedef struct
+{
+  scCRef_t              ref;
+  scDataType_t          argument[MAX_FUNCTION_ARGUMENTS+1];
+  scDataType_t          return_type;
+} scLibAnonymousFunction_t;
+
+typedef struct
+{
+  char                  name[ MAX_PATH_LENGTH+1];
+  char                  desc[ MAX_DESC_LENGTH+1];
+  scCRef_t              ref;
+  scDataType_t          argument[MAX_FUNCTION_ARGUMENTS+1];
+  scDataType_t          return_type;
+  void                  *closure;
+} scLibVariable_t;
 
 typedef struct
 {
   char                  *name;
   char                  *desc;
   scDataType_t          type;
-  scCMethodRef_t        set;
-  scCMethodRef_t        get;
+  scCRef_t              set;
+  scCRef_t              get;
   void                  *closure;
 } scLibObjectMember_t;
 
@@ -312,7 +318,7 @@ typedef struct
 {
   char                  *name;
   char                  *desc;
-  scCMethodRef_t        method;
+  scCRef_t              method;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scDataType_t          return_type;
   void                  *closure;
@@ -320,20 +326,22 @@ typedef struct
 
 typedef struct
 {
-  scCMethodRef_t        method;
+  scCRef_t              method;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
+  scDataType_t          return_type;
 } scLibObjectClassMethod_t;
 
 typedef struct
 {
-  const char                *name;
+  char                      *name;
+  char                      *desc;
   scLibObjectClassMethod_t  constructor;
   scLibObjectClassMethod_t  destructor;
   scLibObjectMember_t       *members;
   scLibObjectMethod_t       *methods;
 } scLibObjectDef_t;
 
-void SC_AddLibrary( const char *namespace, scLib_t lib[] );
+void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );
 
 scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def );
 

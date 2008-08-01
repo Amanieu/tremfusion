@@ -128,12 +128,12 @@ void SC_Shutdown( void )
 #endif
 }
 
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
+void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
   switch( func->langage )
   {
     case LANGAGE_C:
-      func->data.ref(args, ret);
+      func->data.ref(args, ret, closure);
       break;
 #ifdef USE_LUA
     case LANGAGE_LUA:
@@ -210,14 +210,14 @@ void SC_InitObject( scObject_t *object)
 #endif
 }
 
-static void script_NameSpaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret )
+static void script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
   SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );
   ret->type = TYPE_UNDEF;
 }
 
-static scLib_t script_lib[] = {
-  { "NameSpaceAdd", script_NameSpaceAdd, { TYPE_STRING , TYPE_ANY, TYPE_UNDEF }, TYPE_UNDEF },
+static scLibFunction_t script_lib[] = {
+  { "NamespaceAdd", "", script_NamespaceAdd, { TYPE_STRING , TYPE_ANY, TYPE_UNDEF }, TYPE_UNDEF, NULL },
 //  { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
   { "" }
 };

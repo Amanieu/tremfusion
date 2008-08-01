@@ -249,7 +249,8 @@ static int call_metamethod( lua_State *L )
   }
   args[top].type = TYPE_UNDEF;
 
-  SC_RunFunction(function, args, &ret);
+  // TODO: use closure
+  SC_RunFunction(function, args, &ret, NULL);
 
   i--;
   while(i >= 0)
