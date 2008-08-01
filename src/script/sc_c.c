@@ -99,7 +99,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
     class->members[i].get.return_type = class->members[i].type;
     class->members[i].get.closure = def->members[i].closure;
   }
-  
+
 
   cnt = 0;
   for(method = def->methods; method->name != NULL; method++)

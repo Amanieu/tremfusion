@@ -161,7 +161,7 @@ static scLibObjectMethod_t entity_methods[] = {
 static scLibObjectDef_t entity_object = { 
   "Entity", "",
   { entity_init, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF },
-  { NULL },
+  { 0 },
   entity_members, 
   entity_methods, 
 };

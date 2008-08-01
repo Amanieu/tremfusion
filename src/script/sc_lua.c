@@ -37,6 +37,8 @@ static void push_value(lua_State *L, scDataTypeValue_t *value);
 static void pop_value(lua_State *L, scDataTypeValue_t *value);
 static scDataTypeString_t* pop_string(lua_State *L);
 
+static void push_function( lua_State *L, scDataTypeFunction_t *function );
+
 static scDataType_t luatype2sctype(int luatype)
 {
   switch(luatype)
@@ -250,7 +252,7 @@ static int call_metamethod( lua_State *L )
   args[top].type = TYPE_UNDEF;
 
   // TODO: use closure
-  SC_RunFunction(function, args, &ret, NULL);
+  SC_RunFunction(function, args, &ret);
 
   i--;
   while(i >= 0)
@@ -265,6 +267,71 @@ static int call_metamethod( lua_State *L )
   {
     push_value(L, &ret);
     return 1;
+  }
+
+  return 0;
+}
+
+static int object_index_metamethod(lua_State *L)
+{
+  scObject_t *object;
+  scObjectMethod_t *method;
+  scObjectMember_t *member;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t out;
+
+  lua_getfield(L, -2, "_ref");
+  object = lua_touserdata(L, -1);
+  lua_pop(L, 1);
+
+  method = SC_ClassGetMethod(object->class, lua_tostring(L, -1));
+  if(method)
+  {
+    push_function(L, &method->method);
+    return 1;
+  }
+
+  member = SC_ClassGetMember(object->class, lua_tostring(L, -1));
+  if(member)
+  {
+    // Call 'get' method, push result
+    in[0].type = TYPE_OBJECT;
+    in[0].data.object = object;
+    in[1].type = TYPE_UNDEF;
+    SC_RunFunction(&member->get, in, &out);
+
+    push_value(L, &out);
+  }
+
+  // TODO: Error: unknow value
+  return 0;
+}
+
+static int object_newindex_metamethod(lua_State *L)
+{
+  scObject_t *object;
+  scObjectMember_t *member;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t out;
+
+  lua_getfield(L, -3, "_ref");
+  object = lua_touserdata(L, -1);
+  lua_pop(L, 1);
+
+  member = SC_ClassGetMember(object->class, lua_tostring(L, -2));
+  if(member)
+  {
+    // Call 'set' method with popped value
+    pop_value(L, &in[1]);
+
+    in[0].type = TYPE_OBJECT;
+    in[0].data.object = object;
+    in[2].type = TYPE_UNDEF;
+    SC_RunFunction(&member->set, in, &out);
+  }
+  else
+  {
+    // TODO: Error: unknow value
   }
 
   return 0;
@@ -309,6 +376,38 @@ static scDataTypeString_t* pop_string(lua_State *L)
   lua_pop(L, 1);
 
   return string;
+}
+
+static scObject_t* pop_object(lua_State *L)
+{
+  // TODO: error: objects always have a _ref entry
+
+  /*luaL_checktype(L, -1, LUA_TTABLE);
+  lua_pop(L, 1);
+  lua_getfield(L, -1, "_data");
+  lua_remove(L, -2);
+  luaL_checktype(L, -1, LUA_TTABLE);
+
+  scDataTypeArray_t *array = SC_ArrayNew();
+
+  lua_pushnil(L);
+  while(lua_next(L, -1) != 0)
+  {
+    pop_value(L, &val);
+    SC_ArraySet(array, lua_tonumber(L, -1), &val);
+  }
+*/
+  lua_pop(L, 1);
+
+  return NULL;
+}
+
+static scClass_t* pop_class(lua_State *L)
+{
+  // TODO: is it really usefull ?
+  lua_pop(L, 1);
+
+  return NULL;
 }
 
 static scDataTypeArray_t* pop_array(lua_State *L)
@@ -406,18 +505,9 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
       break;
 
     case LUA_TNUMBER:
-      /*if(type == TYPE_FLOAT)
-      {*/
-        value->type = TYPE_FLOAT;
-        value->data.floating = lua_tonumber(L, -1);
-        lua_pop(L, 1);
-      /*}
-      else
-      {
-        value->type = TYPE_INTEGER;
-        value->data.integer = lua_tointeger(L, -1);
-        lua_pop(L, 1);
-      }*/
+      value->type = TYPE_FLOAT;
+      value->data.floating = lua_tonumber(L, -1);
+      lua_pop(L, 1);
       break;
 
     case LUA_TBOOLEAN:
@@ -438,25 +528,110 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
       break;
 
     case LUA_TTABLE:
-      luaL_checktype(L, -1, LUA_TTABLE);
-      lua_getfield(L, -1, "_type");
-      luaL_checktype(L, -1, LUA_TNUMBER);
-      type = lua_tointeger(L, -1);
-      lua_pop(L, 2);
+      if(lua_getmetatable(L, -1))
+      {
+        // Metatable, could be any type
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "_type");
+        type = lua_tointeger(L, -1);
+        lua_pop(L, 1);
 
-      if(type == TYPE_ARRAY)
-      {
-        value->type = TYPE_ARRAY;
-        value->data.array = pop_array(L);
-      }
-      else if(type == TYPE_HASH)
-      {
-        value->type = TYPE_HASH;
-        value->data.hash = pop_hash(L);
+        lua_getfield(L, -1, "_ref");
+        if(!lua_isnil(L, -1))
+        {
+          value->type = type;
+          memcpy(value->data.hash, lua_touserdata(L, -1), sizeof(void*));
+        }
+        else
+        {
+          switch(type)
+          {
+            case TYPE_UNDEF:
+              value->type = TYPE_UNDEF;
+              lua_pop(L, 1);
+              break;
+            case TYPE_BOOLEAN:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_BOOLEAN;
+              value->data.boolean = lua_toboolean(L, -1);
+              lua_pop(L, 1);
+              break;
+            case TYPE_INTEGER:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_INTEGER;
+              value->data.integer = lua_tointeger(L, -1);
+              lua_pop(L, 1);
+              break;
+            case TYPE_FLOAT:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_INTEGER;
+              value->data.floating = lua_tonumber(L, -1);
+              lua_pop(L, 1);
+              break;
+            case TYPE_STRING:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_STRING;
+              value->data.string = pop_string(L);
+              break;
+            case TYPE_FUNCTION:
+              lua_getfield(L, -1, "_ref");
+              lua_remove(L, -2);
+              value->type = TYPE_FUNCTION;
+              value->data.function = pop_function(L);
+              break;
+            case TYPE_ARRAY:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_ARRAY;
+              value->data.array = pop_array(L);
+              break;
+            case TYPE_HASH:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_HASH;
+              value->data.hash = pop_hash(L);
+              break;
+            case TYPE_NAMESPACE:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_NAMESPACE;
+              value->data.namespace = pop_hash(L);
+              break;
+            case TYPE_OBJECT:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_OBJECT;
+              value->data.object = pop_object(L);
+              break;
+            case TYPE_CLASS:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_CLASS;
+              value->data.class = pop_class(L);
+              break;
+            case TYPE_USERDATA:
+              lua_getfield(L, -1, "_data");
+              lua_remove(L, -2);
+              value->type = TYPE_USERDATA;
+              value->data.userdata = lua_touserdata(L, -1);
+              lua_pop(L, 1);
+              break;
+            default:
+              // TODO: error case
+              break;
+          }
+        }
+        lua_pop(L, 1);
       }
       else
       {
-        //TODO: Error
+        // TODO: Should check : if there is only integers, it's a TYPE_ARRAY
+        value->type = TYPE_HASH;
+        value->data.hash = pop_hash(L);
       }
       break;
 
@@ -594,6 +769,26 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_setmetatable(L, -2);
 }
 
+static void push_object(lua_State *L, scObject_t *object)
+{
+  // main table
+  lua_newtable(L);
+
+  lua_pushlightuserdata(L, object);
+  lua_setfield(L, -2, "_ref");
+
+  lua_pushinteger(L, TYPE_OBJECT);
+  lua_setfield(L, -2, "_type");
+
+  // object metatable
+  lua_newtable(L);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, object_index_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, object_newindex_metamethod);
+  lua_setmetatable(L, -2);
+}
+
 static void push_value( lua_State *L, scDataTypeValue_t *value )
 {
   switch(value->type)
@@ -628,6 +823,8 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
     case TYPE_FUNCTION:
       push_function(L, value->data.function);
       break;
+    case TYPE_OBJECT:
+      push_object(L, value->data.object);
     default:
       // TODO: Error here
       break;

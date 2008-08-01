@@ -699,6 +699,36 @@ void SC_FunctionGCDec(scDataTypeFunction_t *function)
     functionFree(function);
 }
 
+// Class
+
+scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
+{
+  scObjectMethod_t *method = class->methods;
+  while(method->name != NULL)
+  {
+    if(strcmp(method->name, name) == 0)
+      return method;
+
+    method++;
+  }
+
+  return NULL;
+}
+
+scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
+{
+  scObjectMember_t *member = class->members;
+  while(member->name != NULL)
+  {
+    if(strcmp(member->name, name) == 0)
+      return member;
+
+    member++;
+  }
+
+  return NULL;
+}
+
 // Object
 
 scObject_t *SC_ObjectNew(scClass_t *class)

@@ -261,6 +261,9 @@ scObject_t *SC_ObjectNew(scClass_t *class);
 void SC_ObjectGCInc(scObject_t *object);
 void SC_ObjectGCDec(scObject_t *object);
 
+scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
+scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
+
 char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
 
@@ -269,7 +272,7 @@ void SC_PrintData( void );
 void SC_Init( void );
 void SC_AutoLoad( void );
 void SC_Shutdown( void );
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure );
+void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);

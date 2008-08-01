@@ -128,12 +128,12 @@ void SC_Shutdown( void )
 #endif
 }
 
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
+void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret)
 {
   switch( func->langage )
   {
     case LANGAGE_C:
-      func->data.ref(args, ret, closure);
+      func->data.ref(args, ret, func->closure);
       break;
 #ifdef USE_LUA
     case LANGAGE_LUA:
