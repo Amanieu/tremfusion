@@ -88,21 +88,37 @@ static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   }
 }
 
+static void vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *instance = SC_ObjectNew(vec3_class);
+  instance->data.type = TYPE_USERDATA;
+  instance->data.data.userdata = BG_Alloc(sizeof(float) * 3);
+  memset(instance->data.data.userdata, 0x00, sizeof(float) * 3);
+
+  out->type = TYPE_OBJECT;
+  out->data.object = instance;
+}
+
+static void vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  BG_Free(in[0].data.object->data.data.userdata);
+}
+
 static scLibObjectMember_t vec3_members[] = {
     { "x", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_X },
     { "y", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Y },
     { "z", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Z },
-    { NULL },
+    { "" },
 };
 
 static scLibObjectMethod_t vec3_methods[] = {
-    { NULL },
+    { "" },
 };
 
 static scLibObjectDef_t vec3_def = { 
   "Vec3", "",
-  { 0 },
-  { 0 },
+  vec3_constructor, { TYPE_UNDEF },
+  vec3_destructor,
   vec3_members, 
   vec3_methods, 
 };

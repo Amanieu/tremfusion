@@ -67,6 +67,8 @@ static int sctype2luatype(scDataType_t sctype)
     case TYPE_FUNCTION: return LUA_TFUNCTION;
     case TYPE_ARRAY:
     case TYPE_HASH:
+    case TYPE_CLASS:
+    case TYPE_OBJECT:
     case TYPE_NAMESPACE: return LUA_TTABLE;
     case TYPE_USERDATA: return LUA_TUSERDATA;
     case TYPE_UNDEF:
@@ -142,6 +144,7 @@ static int pairs_method(lua_State *L)
 static int null_metamethod(lua_State *L)
 {
   // TODO: error message
+  Com_Printf("*** Warning: null_metamethod called\n");
  
   return 0;
 }
@@ -227,18 +230,35 @@ static int newindex_metamethod(lua_State *L)
 
 static int call_metamethod( lua_State *L )
 {
-  scDataTypeFunction_t *function;
+  scDataTypeFunction_t *function = NULL;
   int top = lua_gettop(L);
   int i;
+  int type;
+  scClass_t *class;
   scDataTypeValue_t ret;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   
   luaL_checktype(L, -top, LUA_TTABLE);
 
+  lua_getfield(L, -top, "_type");
+  type = lua_tointeger(L, -1);
+  lua_pop(L, 1);
   lua_getfield(L, -top, "_ref");
-  luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
   // FIXME: can userdata be modified under lua ? Maybe security issue...
-  function = lua_touserdata(L, -1);
+  if(type == TYPE_FUNCTION)
+  {
+    function = lua_touserdata(L, -1);
+  }
+  else if(type == TYPE_CLASS)
+  {
+    class = lua_touserdata(L, -1);
+    function = &class->constructor;
+  }
+  else
+  {
+    // TODO: raise error
+  }
+
   lua_pop(L, 1);
   lua_remove(L, -2);
 
@@ -251,7 +271,6 @@ static int call_metamethod( lua_State *L )
   }
   args[top].type = TYPE_UNDEF;
 
-  // TODO: use closure
   SC_RunFunction(function, args, &ret);
 
   i--;
@@ -301,6 +320,7 @@ static int object_index_metamethod(lua_State *L)
     SC_RunFunction(&member->get, in, &out);
 
     push_value(L, &out);
+    return 1;
   }
 
   // TODO: Error: unknow value
@@ -769,6 +789,31 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_setmetatable(L, -2);
 }
 
+static void push_class(lua_State *L, scClass_t *class)
+{
+  // main table
+  lua_newtable(L);
+
+  lua_pushlightuserdata(L, class);
+  lua_setfield(L, -2, "_ref");
+
+  lua_pushinteger(L, TYPE_CLASS);
+  lua_setfield(L, -2, "_type");
+
+  // object metatable
+  lua_newtable(L);
+  lua_pushcfunction(L, call_metamethod);
+  lua_setfield(L, -2, "__call");
+  lua_pushcfunction(L, null_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, null_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, null_metamethod);
+  lua_setfield(L, -2, "__len");
+
+  lua_setmetatable(L, -2);
+}
+
 static void push_object(lua_State *L, scObject_t *object)
 {
   // main table
@@ -782,10 +827,11 @@ static void push_object(lua_State *L, scObject_t *object)
 
   // object metatable
   lua_newtable(L);
-  lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, object_index_metamethod);
-  lua_setfield(L, -2, "__newindex");
+  lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, object_newindex_metamethod);
+  lua_setfield(L, -2, "__newindex");
+
   lua_setmetatable(L, -2);
 }
 
@@ -825,6 +871,10 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
       break;
     case TYPE_OBJECT:
       push_object(L, value->data.object);
+      break;
+    case TYPE_CLASS:
+      push_class(L, value->data.class);
+      break;
     default:
       // TODO: Error here
       break;

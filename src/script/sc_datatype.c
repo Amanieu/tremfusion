@@ -704,7 +704,7 @@ void SC_FunctionGCDec(scDataTypeFunction_t *function)
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 {
   scObjectMethod_t *method = class->methods;
-  while(method->name != NULL)
+  while(method->name[0] != '\0')
   {
     if(strcmp(method->name, name) == 0)
       return method;
@@ -718,7 +718,7 @@ scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
 {
   scObjectMember_t *member = class->members;
-  while(member->name != NULL)
+  while(member->name[0] != '\0')
   {
     if(strcmp(member->name, name) == 0)
       return member;

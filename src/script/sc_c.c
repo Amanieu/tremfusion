@@ -64,19 +64,21 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 
   class->constructor.gc.count = 0;
   class->constructor.langage = LANGAGE_C;
-  memcpy(class->constructor.argument, def->constructor.argument, ( MAX_FUNCTION_ARGUMENTS + 1 ) * sizeof(scDataType_t));
-  class->constructor.return_type = def->constructor.return_type;
-  class->constructor.data.ref = def->constructor.method;
+  class->constructor.argument[0] = TYPE_CLASS;
+  memcpy(class->constructor.argument+1, def->constructor_arguments, ( MAX_FUNCTION_ARGUMENTS ) * sizeof(scDataType_t));
+  class->constructor.return_type = TYPE_OBJECT;
+  class->constructor.data.ref = def->constructor;
 
   class->destructor.gc.count = 0;
   class->destructor.langage = LANGAGE_C;
-  memcpy(class->destructor.argument, def->destructor.argument, ( MAX_FUNCTION_ARGUMENTS + 1 ) * sizeof(scDataType_t));
-  class->destructor.return_type = def->destructor.return_type;
-  class->destructor.data.ref = def->destructor.method;
+  class->constructor.argument[0] = TYPE_CLASS;
+  class->constructor.argument[1] = TYPE_UNDEF;
+  class->destructor.return_type = TYPE_UNDEF;
+  class->destructor.data.ref = def->destructor;
 
   cnt = 0;
   member = def->members;
-  for(member = def->members; member->name != NULL; member++)
+  for(member = def->members; member->name[0] != '\0'; member++)
     cnt++;
 
   class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
@@ -88,6 +90,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 
     class->members[i].set.gc.count = 0;
     class->members[i].set.langage = LANGAGE_C;
+    class->members[i].set.data.ref = def->members[i].set;
     class->members[i].set.argument[0] = class->members[i].type;
     class->members[i].set.argument[1] = TYPE_UNDEF;
     class->members[i].set.return_type = TYPE_UNDEF;
@@ -95,14 +98,16 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 
     class->members[i].get.gc.count = 0;
     class->members[i].get.langage = LANGAGE_C;
+    class->members[i].get.data.ref = def->members[i].get;
     class->members[i].get.argument[0] = TYPE_UNDEF;
     class->members[i].get.return_type = class->members[i].type;
     class->members[i].get.closure = def->members[i].closure;
   }
+  class->members[i].name[0] = '\0';
 
 
   cnt = 0;
-  for(method = def->methods; method->name != NULL; method++)
+  for(method = def->methods; method->name[0] != '\0'; method++)
     cnt++;
 
   class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
@@ -118,6 +123,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
     class->methods[i].method.return_type = def->methods[i].return_type;
     class->methods[i].method.closure = def->methods[i].closure;
   }
+  class->methods[i].name[0] = '\0';
 
   var.type = TYPE_CLASS;
   var.data.class = class;

@@ -158,8 +158,8 @@ typedef struct
 
 struct scClass_s
 {
-  char                  *name;
-  char                  *desc;
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
   scDataTypeMethod_t    constructor;
   scDataTypeMethod_t    destructor;
   scObjectMember_t      *members;
@@ -309,8 +309,8 @@ typedef struct
 
 typedef struct
 {
-  char                  *name;
-  char                  *desc;
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
   scDataType_t          type;
   scCRef_t              set;
   scCRef_t              get;
@@ -319,8 +319,8 @@ typedef struct
 
 typedef struct
 {
-  char                  *name;
-  char                  *desc;
+  char                  name[MAX_PATH_LENGTH+1];
+  char                  desc[MAX_DESC_LENGTH+1];
   scCRef_t              method;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scDataType_t          return_type;
@@ -329,17 +329,11 @@ typedef struct
 
 typedef struct
 {
-  scCRef_t              method;
-  scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
-  scDataType_t          return_type;
-} scLibObjectClassMethod_t;
-
-typedef struct
-{
-  char                      *name;
-  char                      *desc;
-  scLibObjectClassMethod_t  constructor;
-  scLibObjectClassMethod_t  destructor;
+  char                      name[MAX_PATH_LENGTH+1];
+  char                      desc[MAX_DESC_LENGTH+1];
+  scCRef_t                  constructor;
+  scDataType_t              constructor_arguments[MAX_FUNCTION_ARGUMENTS];
+  scCRef_t                  destructor;
   scLibObjectMember_t       *members;
   scLibObjectMethod_t       *methods;
 } scLibObjectDef_t;

@@ -148,20 +148,19 @@ static scLibObjectMember_t entity_members[] = {
     { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
     { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
     { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
-//    { "origin", "", TYPE_OBJECTINSTANCE, entity_set, entity_get,
-//            (void*)ENTITY_ORIGIN },   
-    { NULL },
+//  { "origin", "", TYPE_OBJECTINSTANCE, entity_set, entity_get, (void*)ENTITY_ORIGIN },   
+    { "" },
 };
 
 static scLibObjectMethod_t entity_methods[] = {
-  { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, (void*)ENTITY_LINK },
-    { NULL },
+    { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, (void*)ENTITY_LINK },
+    { "" },
 };
 
 static scLibObjectDef_t entity_object = { 
   "Entity", "",
-  { entity_init, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF },
-  { 0 },
+  entity_init, { TYPE_INTEGER, TYPE_UNDEF },
+  0,
   entity_members, 
   entity_methods, 
 };
