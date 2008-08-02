@@ -82,7 +82,7 @@ to symlink to binaries and /not/ have the links resolved.
 */
 char *Sys_ResolveLink( char *arg0 )
 {
-#if !NDEBUG && ( _BSD_SOURCE || _XOPEN_SOURCE >= 500 || _POSIX_C_SOURCE >= 200112L )
+#if NDEBUG && ( _BSD_SOURCE || _XOPEN_SOURCE >= 500 || _POSIX_C_SOURCE >= 200112L )
 	static char dst[ PATH_MAX ];
 	int n = readlink( arg0, dst, PATH_MAX - 1 );
 
