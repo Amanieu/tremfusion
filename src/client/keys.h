@@ -56,7 +56,6 @@ typedef struct {
 	qboolean	active;
 	char		question[1024];
 	char		callback[1024];
-	char		store[1024];
 } cmdPrompt_t;
 
 extern	cmdPrompt_t	prompt;

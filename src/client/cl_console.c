@@ -227,12 +227,9 @@ Con_Prompt_f
 ================
 */
 void Con_Prompt_f (void) {
-	int c = Cmd_Argc();
-	int i;
-
-	if (c < 3)
+	if (Cmd_Argc() < 3)
 	{
-		Com_Printf ("prompt <callback> <store> [prompt]: Opens the chatbox, store the text in store and then vstr callback\n");
+		Com_Printf ("prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n");
 		return;
 	}
 
@@ -242,21 +239,12 @@ void Con_Prompt_f (void) {
 	prompt.active = qtrue;
 
 	strcpy(prompt.callback, Cmd_Argv(1));
-	strcpy(prompt.store, Cmd_Argv(2));
 
 	// copy the rest of the command line
-	// start out with a null string
-
-	prompt.question[0] = 0;
-	for (i = 3 ; i< c ; i++)
-	{
-		strcat (prompt.question, Cmd_Argv(i));
-		if (i != (c-1))
-			strcat (prompt.question, " ");
-	}
+	Q_strncpyz(prompt.question, Cmd_ArgsFrom(2), sizeof(prompt.question));
 	
 	Field_Clear( &chatField );
-	chatField.widthInChars = 30;
+	chatField.widthInChars = 34 - strlen(prompt.question);
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }

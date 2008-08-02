@@ -42,7 +42,7 @@ qboolean	chat_clans;
 
 int			chat_playerNum;
 
-cmdPrompt_t prompt = {qfalse, "\0", "\0", "\0"};
+cmdPrompt_t prompt = {qfalse, "\0", "\0"};
 
 qboolean	key_overstrikeMode;
 
@@ -762,7 +762,7 @@ void Message_Key( int key ) {
 
 			} else if (prompt.active) {
 
-				Cvar_SetLatched( prompt.store, chatField.buffer );
+				Cvar_SetLatched( "ui_sayBuffer", chatField.buffer );
 				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
 				Cbuf_ExecuteText( EXEC_NOW, buffer);
 
