@@ -308,14 +308,15 @@ qboolean UI_ConsoleCommand( int realTime )
 
   if( Q_stricmp( cmd, "prompt" ) == 0 )
   {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    if ( trap_Argc( ) < 2 )
+    static char buffer[ MAX_SAY_TEXT ];
+    itemDef_t *item;
+    if ( trap_Argc( ) < 3 )
+    {
+      Com_Printf( "prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n" );
       return qfalse;
-    for ( i = 2; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
+    }
     trap_Argv( 1, uiInfo.chatPromptCallback, sizeof( uiInfo.chatPromptCallback ) );
+    trap_Argv( 2, buffer, sizeof( buffer ) );
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qfalse;
     uiInfo.chatAdmins = qfalse;
@@ -329,7 +330,12 @@ qboolean UI_ConsoleCommand( int realTime )
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
     Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_prompt" );
+    item = Menu_FindItemByName( Menus_ActivateByName( "say_prompt" ), "say_field" );
+    if ( item )
+    {
+      trap_Argv( 2, buffer, sizeof( buffer ) );
+      item->text = buffer;
+    }
     return qtrue;
   }
 

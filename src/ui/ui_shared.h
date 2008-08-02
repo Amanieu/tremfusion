@@ -465,6 +465,7 @@ qboolean Display_MouseMove( void *p, float x, float y );
 int Display_CursorType( int x, int y );
 qboolean Display_KeyBindPending( void );
 menuDef_t *Menus_FindByName( const char *p );
+itemDef_t *Menu_FindItemByName( menuDef_t *menu, const char *p );
 void Menus_CloseByName( const char *p );
 void Display_HandleKey( int key, qboolean down, int x, int y );
 void LerpColor( vec4_t a, vec4_t b, vec4_t c, float t );

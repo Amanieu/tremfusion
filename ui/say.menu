@@ -264,7 +264,7 @@
       name say_field
       type ITEM_TYPE_EDITFIELD
       style WINDOW_STYLE_EMPTY
-      text "Say:"
+      text "" // Automatically filled in by the code
       cvar "ui_sayBuffer"
       maxchars 128
       rect 0 0 W H
