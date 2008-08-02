@@ -21,6 +21,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "g_local.h"
+
+static scClass_t *entity_class;
+
 static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
   G_Printf(SC_StringToChar(args[0].data.string));
@@ -39,13 +42,15 @@ static scLibFunction_t game_lib[] = {
   { "" }
 };
 
-static scLibObjectDef_t entity_object;
-
 static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  in[0].type = TYPE_USERDATA;
-  in[0].data.userdata = (void*)&g_entities[ in[0].data.integer ];
-  out[0].type = TYPE_UNDEF;
+  scObject_t *instance = SC_ObjectNew(entity_class);
+  instance->data.type = TYPE_USERDATA;
+  instance->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
+
+  out[0].type = TYPE_OBJECT;
+  out[0].data.object = instance;
+  out[1].type = TYPE_UNDEF;
 }
 
 typedef enum 
@@ -65,24 +70,22 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   int settype = (int)closure;
   gentity_t *entity;
     
-  entity = (gentity_t*)in[0].data.userdata;
+  entity = (gentity_t*)in[0].data.object->data.data.userdata;
   
   switch (settype)
   {
     case ENTITY_CLASSNAME:
-      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
-                                           // preformed by the language specific code
-      strcpy(entity->classname, SC_StringToChar(in[1].data.string));
+      // FIXME: *very* crappy: segfault when free string
+      entity->classname = (char*) SC_StringToChar(in[1].data.string);
       break;
     case ENTITY_MODEL:
-      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
-                                              // preformed by the language specific code
-      strcpy(entity->model, SC_StringToChar(in[1].data.string));
+      entity->model = (char*) SC_StringToChar(in[1].data.string);
       break;
     case ENTITY_MODEL2:
-      if (in[1].type != TYPE_STRING) return; // FIXME: Type checking should be 
-                                              // preformed by the language specific code
-      strcpy(entity->model2, SC_StringToChar(in[1].data.string));
+      entity->model2 = (char*) SC_StringToChar(in[1].data.string);
+      break;
+    case ENTITY_ORIGIN:
+      // TODO: Error : read only value
       break;
     default:
       // Error
@@ -98,21 +101,30 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   scObject_t *instance;
   gentity_t *entity;
   
-  entity = (gentity_t*)in[0].data.userdata;
+  entity = (gentity_t*)in[0].data.object->data.data.userdata;
   
   switch (gettype)
   {
     case ENTITY_CLASSNAME:
       out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(entity->classname);
+      if(entity->classname)
+        out[0].data.string = SC_StringNewFromChar(entity->classname);
+      else
+        out[0].data.string = SC_StringNewFromChar("");
       break;
     case ENTITY_MODEL:
       out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(entity->model);
+      if(entity->model)
+        out[0].data.string = SC_StringNewFromChar(entity->model);
+      else
+        out[0].data.string = SC_StringNewFromChar("");
       break;
     case ENTITY_MODEL2:
       out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(entity->model2);
+      if(entity->model2)
+        out[0].data.string = SC_StringNewFromChar(entity->model2);
+      else
+        out[0].data.string = SC_StringNewFromChar("");
       break;
     case ENTITY_ORIGIN:
       instance = SC_Vec3FromVec3_t( entity->r.currentOrigin);
@@ -145,19 +157,19 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 
 static scLibObjectMember_t entity_members[] = {
-    { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
-    { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
-    { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
-//  { "origin", "", TYPE_OBJECTINSTANCE, entity_set, entity_get, (void*)ENTITY_ORIGIN },   
-    { "" },
+  { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
+  { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
+  { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
+  { "origin", "", TYPE_OBJECT, entity_set, entity_get, (void*)ENTITY_ORIGIN },   
+  { "" },
 };
 
 static scLibObjectMethod_t entity_methods[] = {
-    { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, (void*)ENTITY_LINK },
-    { "" },
+  { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, (void*)ENTITY_LINK },
+  { "" },
 };
 
-static scLibObjectDef_t entity_object = { 
+static scLibObjectDef_t entity_lib = { 
   "Entity", "",
   entity_init, { TYPE_INTEGER, TYPE_UNDEF },
   0,
@@ -169,6 +181,6 @@ static scLibObjectDef_t entity_object = {
 void SC_game_init( void )
 {
   SC_AddLibrary( "game", game_lib );
-  SC_AddObjectType( "game", &entity_object);
+  entity_class = SC_AddObjectType( "game", &entity_lib);
 }
 
