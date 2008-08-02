@@ -200,8 +200,16 @@ static int len_metamethod(lua_State *L)
 
 static int concat_metamethod(lua_State *L)
 {
-  lua_getfield(L, -2, "_data");
-  lua_getfield(L, -2, "_data");
+  if(lua_istable(L, -2))
+    lua_getfield(L, -2, "_data");
+  else
+    lua_pushvalue(L, -2);
+
+  if(lua_istable(L, -2))
+    lua_getfield(L, -2, "_data");
+  else
+    lua_pushvalue(L, -2);
+
   lua_concat(L, 2);
   lua_remove(L, -2);
   lua_remove(L, -2);
@@ -359,8 +367,12 @@ static int object_newindex_metamethod(lua_State *L)
 
 static void map_luamethod(lua_State *L, const char *name, lua_CFunction func)
 {
+  char newname[MAX_PATH_LENGTH+1];
+  newname[0] = '_';
+  strcpy(newname+1, name);
+
   lua_getglobal(L, name);
-  lua_setfield(L, LUA_REGISTRYINDEX, name);
+  lua_setglobal(L, newname);
   lua_pushcfunction(L, func);
   lua_setglobal(L, name);
 }
@@ -560,7 +572,7 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
         if(!lua_isnil(L, -1))
         {
           value->type = type;
-          memcpy(value->data.hash, lua_touserdata(L, -1), sizeof(void*));
+          memcpy(&value->data.hash, lua_touserdata(L, -1), sizeof(void*));
         }
         else
         {
@@ -693,6 +705,8 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__lt");
   lua_pushcfunction(L, le_metamethod);
   lua_setfield(L, -2, "__le");
+
+  lua_setmetatable(L, -2);
 }
 
 static void push_array( lua_State *L, scDataTypeArray_t *array )

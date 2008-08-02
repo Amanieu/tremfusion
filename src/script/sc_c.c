@@ -71,8 +71,8 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 
   class->destructor.gc.count = 0;
   class->destructor.langage = LANGAGE_C;
-  class->constructor.argument[0] = TYPE_CLASS;
-  class->constructor.argument[1] = TYPE_UNDEF;
+  class->destructor.argument[0] = TYPE_CLASS;
+  class->destructor.argument[1] = TYPE_UNDEF;
   class->destructor.return_type = TYPE_UNDEF;
   class->destructor.data.ref = def->destructor;
 
@@ -118,6 +118,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
 
     class->methods[i].method.gc.count = 0;
     class->methods[i].method.langage = LANGAGE_C;
+    class->methods[i].method.data.ref = def->methods[i].method;
     memcpy( class->methods[i].method.argument, def->methods[i].argument,
             sizeof(scDataType_t) * (MAX_FUNCTION_ARGUMENTS + 1));
     class->methods[i].method.return_type = def->methods[i].return_type;
