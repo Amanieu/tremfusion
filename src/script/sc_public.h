@@ -163,7 +163,12 @@ struct scClass_s
   scDataTypeMethod_t    constructor;
   scDataTypeMethod_t    destructor;
   scObjectMember_t      *members;
+  int                   memcount;
   scObjectMethod_t      *methods;
+  int                   methcount;
+#ifdef USE_PYTHON
+  PyObject              *python_type;
+#endif
 };
 
 struct scObject_s
@@ -276,7 +281,7 @@ void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, 
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);
-void SC_InitObject( scObject_t * type);
+void SC_InitClass( scClass_t *class );
 
 // sc_c.c
 

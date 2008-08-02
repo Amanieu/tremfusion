@@ -200,13 +200,14 @@ scLangage_t SC_LangageFromFilename(const char* filename)
   return LANGAGE_INVALID;
 }
 
-void SC_InitObject( scObject_t *object)
+void SC_InitClass( scClass_t *class )
 {
+  Com_Printf("SC_InitClass called\n");
 #ifdef USE_LUA
-//  SC_Lua_InitObject( object );
+//  SC_Lua_InitClass( class );
 #endif
 #ifdef USE_PYTHON
-  SC_Python_InitObject( object );
+  SC_Python_InitClass( class );
 #endif
 }
 

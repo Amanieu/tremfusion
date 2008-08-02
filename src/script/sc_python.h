@@ -96,7 +96,7 @@ typedef struct _scpytypeobject {
   struct _typeobject *tp_prev;
   struct _typeobject *tp_next;
 #endif
-  scObjectType_t *tp_scobjtype;
+  scClass_t *tp_scclass;
 } ScPyTypeObject;
 
 typedef struct {
@@ -111,8 +111,8 @@ int PyFunction_init(PyFunction *self, scDataTypeFunction_t *function);
 
 typedef struct {
   PyObject_HEAD
-  scObjectInstance_t *instance;
-  scObjectType_t     *type;
+  scObject_t *sc_object;
+  scClass_t  *sc_class;
 } PyScObject; 
 ScPyTypeObject PyScObject_Type;
 PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds);
@@ -120,14 +120,14 @@ int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs);
 
 typedef struct {
   PyObject_HEAD
-  scObjectInstance_t *instance;
-  scObjectMethod_t   *method;
-  PyObject           *parent;
+  scObject_t         *sc_object;
+  scObjectMethod_t   *sc_method;
+  PyObject           *py_parent;
 } PyScMethod;
 
 PyTypeObject PyScMethod_Type;
 PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
-int PyScMethod_init(PyScMethod *self, PyObject *parent, scObjectInstance_t* instance, scObjectMethod_t* method);
+int PyScMethod_init(PyScMethod *self, PyObject *parent, scObject_t* instance, scObjectMethod_t* method);
 
 extern PyObject *vec3d;
 PyObject *convert_from_value( scDataTypeValue_t *value );
@@ -137,6 +137,6 @@ void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );
 qboolean            SC_Python_RunScript( const char *filename );
 void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
-void                SC_Python_InitObectType( scObjectType_t * type );
+void                SC_Python_InitClass( scClass_t *class );
 
 #endif

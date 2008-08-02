@@ -208,19 +208,19 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 #endif
 }
 
-static PyObject *convert_from_objectinstance( scObjectInstance_t *instance )
+static PyObject *convert_from_object( scObject_t *sc_object )
 {
-  PyScObject *pyobjectinstance;
-  pyobjectinstance = (PyScObject*)PyScObject_new( (ScPyTypeObject*)instance->type->pythontype, NULL, NULL);
+  PyScObject *py_object;
+  py_object = (PyScObject*)PyScObject_new( (ScPyTypeObject*)sc_object->class->python_type, NULL, NULL);
   
-  pyobjectinstance->instance = instance;
+  py_object->sc_object = sc_object;
   
-  return (PyObject*)pyobjectinstance;
+  return (PyObject*)py_object;
 }
 
-static PyObject *convert_from_objecttype( scObjectType_t *type )
+static PyObject *convert_from_class( scClass_t *class )
 {
-  return (PyObject*)type->pythontype;
+  return class->python_type;
 }
 
 /* Convert a script data value to a python object */
@@ -245,10 +245,10 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
 //      break;
     case TYPE_FUNCTION:
       return convert_from_function( value->data.function );
-    case TYPE_OBJECTINSTANCE:
-      return convert_from_objectinstance( value->data.objectinstance );
-    case TYPE_OBJECTTYPE:
-      return convert_from_objecttype( value->data.objecttype );
+    case TYPE_OBJECT:
+      return convert_from_object( value->data.object );
+    case TYPE_CLASS:
+      return convert_from_class( value->data.class );
     default:
 #ifdef UNITTEST
       printf("convert_from_value type fallthrough %d \n", value->type);

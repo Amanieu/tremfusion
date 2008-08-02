@@ -45,11 +45,11 @@ PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
   return (PyObject *)self;
 }
 
-int PyScMethod_init(PyScMethod *self, PyObject *parent, scObjectInstance_t* instance, scObjectMethod_t* method)
+int PyScMethod_init(PyScMethod *self, PyObject *parent, scObject_t* object, scObjectMethod_t* method)
 {
-  self->parent   = parent;
-  self->instance = instance;
-  self->method   = method;
+  self->py_parent   = parent;
+  self->sc_object  = object;
+  self->sc_method   = method;
   return 0;
 }
 
@@ -61,10 +61,13 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
   PyObject          *pyret;
   int               i, argcount;
   
-  memcpy( arguments, self->method->argument, sizeof( arguments ) );
+  memcpy( arguments, self->sc_method->method.argument, sizeof( arguments ) );
   argcount = PyTuple_Size( pArgs );
   
-  for( i=0; i < argcount; i++)
+  args[0].type = TYPE_OBJECT;
+  args[0].data.object = self->sc_object;
+  
+  for( i=1; i < argcount; i++)
   {
     convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], arguments[i] );
     if (arguments[i] !=  TYPE_ANY && args[i].type != arguments[i])
@@ -73,9 +76,10 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
       return NULL;
     }
   }
-  args[argcount].type = TYPE_UNDEF;
+  args[argcount+1].type = TYPE_UNDEF;
   
-  ret = self->method->method( self->instance, args, self->method->closure);
+  SC_RunFunction( (scDataTypeFunction_t*)&self->sc_method->method, args, ret);
+//  ret = self->method->method( self->instance, args, self->method->closure);
   
   pyret = convert_from_value( ret );
   BG_Free( ret );
@@ -85,9 +89,9 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
 static PyObject *PyScMethod_repr( PyScMethod *self )
 {
   return PyString_FromFormat("<built-in method %s of %s object at %p>",
-             self->method->name,
-             self->parent->ob_type->tp_name,
-             self->parent);
+             self->sc_method->name,
+             self->py_parent->ob_type->tp_name,
+             self->py_parent);
 }
 
 PyTypeObject PyScMethod_Type = {
@@ -133,11 +137,11 @@ PyTypeObject PyScMethod_Type = {
     0,                         /*tp_scobjtype*/
 };
 
-static PyObject *New_PyMethod( PyObject *parent, scObjectInstance_t* instance, scObjectMethod_t* method )
+static PyObject *New_PyMethod( PyObject *parent, scObject_t* object, scObjectMethod_t* method )
 {
   PyObject *pymethod;
   pymethod = PyScMethod_new( &PyScMethod_Type, NULL, NULL );
-  PyScMethod_init( (PyScMethod*)pymethod, parent, instance, method );
+  PyScMethod_init( (PyScMethod*)pymethod, parent, object, method );
   if ( pymethod == NULL )
   {
     Com_Printf("Error creating method \"%s\"\n", method->name);
@@ -162,7 +166,7 @@ PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds)
 
   self = (PyScObject *)type->tp_alloc((PyTypeObject*)type, 0);
   
-  self->type = type->tp_scobjtype;
+  self->sc_class = type->tp_scclass;
   
   return (PyObject *)self;
 }
@@ -172,8 +176,9 @@ int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   int               i, argcount;
+  scDataTypeValue_t ret;
   
-  memcpy( arguments, self->type->initArguments, sizeof( arguments ) );
+  memcpy( arguments, self->sc_class->constructor.argument, sizeof( arguments ) );
   argcount = PyTuple_Size( pArgs );
   
   for( i=0; i < argcount; i++)
@@ -187,7 +192,11 @@ int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
   }
   args[argcount].type = TYPE_UNDEF;
   
-  self->instance = self->type->init( self->type, args);
+  SC_RunFunction( (scDataTypeFunction_t*)&self->sc_class->constructor, args, &ret);
+  
+  assert(ret.type == TYPE_OBJECT);
+  self->sc_object = ret.data.object;
+//  self->instance = self->type->init( self->type, args);
   
   return 0;
 }
@@ -245,31 +254,44 @@ ScPyTypeObject PyScObject_Type = {
 
 static PyObject *get_wrapper(PyScObject *self, void *closure)
 {
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scObjectMember_t *member;
   scDataTypeValue_t *value;
+  scDataTypeValue_t ret;
   
   member = (scObjectMember_t*)closure;
   
-  value = member->get( self->instance, member->closure );
-  return convert_from_value( value );
+  args[0].type = TYPE_OBJECT;
+  args[0].data.object = self->sc_object;
+  
+  SC_RunFunction( (scDataTypeFunction_t*)&member->get, args, &ret);
+  
+//  value = member->get( self->instance, member->closure );
+  return convert_from_value( &ret );
 }
 
 static int set_wrapper(PyScObject *self, PyObject *pyvalue, void *closure)
 {
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scObjectMember_t *member;
-  scDataTypeValue_t value;
+  scDataTypeValue_t ret;
+//  scDataTypeValue_t value;
   
   member = (scObjectMember_t*)closure;
   
-  convert_to_value( pyvalue, &value, member->type );
+  convert_to_value( pyvalue, &args[1], member->type );
   
-  if( member->type !=  TYPE_ANY && member->type != value.type )
+  if( member->type !=  TYPE_ANY && member->type != args[1].type )
   {
     PyErr_SetNone(PyExc_TypeError);
     return -1;
   }
+  args[0].type = TYPE_OBJECT;
+  args[0].data.object = self->sc_object;
   
-  member->set( self->instance, &value, member->closure );
+  SC_RunFunction( (scDataTypeFunction_t*)&member->set, args, &ret);
+  
+//  member->set( self->instance, &value, member->closure );
   return 0;
 }
 
@@ -280,8 +302,8 @@ static PyObject *get_method(PyScObject *self, void *closure)
   
   method = (scObjectMethod_t*)closure;
   
-  Com_Printf("Creating PyMethod \"%s\" for object type \"%s\"\n", method->name, self->type->name);
-  pymethod = New_PyMethod( (PyObject*)self, self->instance, method);
+  Com_Printf("Creating PyMethod \"%s\" for object type \"%s\"\n", method->name, self->sc_class->name);
+  pymethod = New_PyMethod( (PyObject*)self, self->sc_object, method);
 //  Py_INCREF( pymethod );
   return pymethod;
 }
@@ -292,24 +314,28 @@ static int set_method(PyScObject *self, PyObject *pyvalue, void *closure)
   
   method = (scObjectMethod_t*)closure;
   
-  PyErr_Format(PyExc_AttributeError, "'%s' object attribute '%s' is read-only", self->type->name, method->name);
+  PyErr_Format(PyExc_AttributeError, "'%s' object attribute '%s' is read-only", self->sc_class->name, method->name);
   return -1;
 }
 
 /* Create a copy of PyScObjectType and make it work somehow */
-void SC_Python_InitObectType( scObjectType_t * type )
+void SC_Python_InitClass( scClass_t *class )
 {
   ScPyTypeObject   *newtype;
   scObjectMember_t *member;
   scObjectMethod_t *method;
   PyGetSetDef      *getsetdef;
   int              i;
-  
+  int              membercount, methodcount;
+//  membercount = methodcount = 0;
+    
+//  Com_Printf("sizeof( ScPyTypeObject )= %d\n", sizeof( ScPyTypeObject ));
+    Com_Printf("membercount = %d methodcount = %d\n",  class->memcount, class->methcount);
   newtype   = BG_Alloc( sizeof( ScPyTypeObject ) );
-  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * (type->membercount + type->methodcount + 1) );
+  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * ( class->memcount, class->methcount + 1) );
   
-  member    = type->members;
-  for (i=0; member->name != NULL; member++, i++) {
+  member    = class->members;
+  for (i=0; i < class->memcount; member++, i++) {
     getsetdef[i].name    = member->name;
     getsetdef[i].doc     = member->desc;
     getsetdef[i].get     = (getter)get_wrapper;
@@ -317,8 +343,8 @@ void SC_Python_InitObectType( scObjectType_t * type )
     getsetdef[i].closure = (void*)member;
   }
   
-  method = type->methods;
-  for (; method->name != NULL; method++, i++) {
+  method = class->methods;
+  for (i=0; i < class->memcount; method++, i++) {
     getsetdef[i].name    = method->name;
     getsetdef[i].doc     = method->desc;
     getsetdef[i].get     = (getter)get_method;
@@ -329,14 +355,14 @@ void SC_Python_InitObectType( scObjectType_t * type )
   
   memcpy( newtype, &PyScObject_Type, sizeof( PyScObject_Type ) );
   
-  newtype->tp_name      = type->name;
+  newtype->tp_name      = class->name;
   newtype->tp_getset    = getsetdef;
-  newtype->tp_scobjtype = type;
+  newtype->tp_scclass   = class;
   
   if (PyType_Ready((PyTypeObject*)newtype) < 0)
     return;
   Py_INCREF(newtype);
-  type->pythontype = (void*)newtype;
+  class->python_type = (PyObject*)newtype;
   
 }
 

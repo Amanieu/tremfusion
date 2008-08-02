@@ -80,7 +80,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
   member = def->members;
   for(member = def->members; member->name[0] != '\0'; member++)
     cnt++;
-
+  class->memcount = cnt;
   class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
   {
@@ -133,7 +133,8 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
   name[nslen] = '.';
   Q_strncpyz( name + nslen + 1, def->name, strlen( def->name ) + 1);
   SC_NamespaceSet(name, &var);
-
+  
+  SC_InitClass(class);
   return class;
 }
 
