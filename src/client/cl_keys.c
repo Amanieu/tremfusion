@@ -1082,11 +1082,11 @@ void Key_Bind_f (void)
 	if ( keyName[0]=='-' && keyName[1]) {
 		mode = KEY_RELEASE;
 		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
+		keyName++;
 	} else if (keyName[0]=='+' && keyName[1]) {
 		mode = KEY_PUSH;
 		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
+		keyName++;
 	}
 
 	b = Key_StringToKeynum (keyName);
@@ -1114,7 +1114,27 @@ void Key_Bind_f (void)
 		return;
 	}
 
-	Key_SetBindingByMode (b, Cmd_ArgsFrom(2), mode);
+	if( detailed )
+		Key_SetBindingByMode (b, Cmd_ArgsFrom(2), mode);
+	else {
+		char *kb = Cmd_ArgsFrom(2);
+		char *p = kb;
+
+		Key_SetBindingByMode (b, kb, KEY_PUSH);
+		
+		// replace +commands with -commands
+		for(;;) {
+			if( *p == '+' ) {
+				*p = '-';
+				p++;
+			}
+			while( *p && *p != ';' ) p++;
+			if( !*p ) break;
+			else p++;
+		}
+
+		Key_SetBindingByMode (b, kb, KEY_RELEASE);
+	}
 }
 
 /*
@@ -1186,58 +1206,16 @@ void CL_InitKeyCommands( void ) {
 
 /*
 ===================
-CL_AddKeyUpCommands
-===================
-*/
-void CL_AddKeyUpCommands( int key, char *kb, unsigned time) {
-	int i;
-	char button[1024], *buttonPtr;
-	char	cmd[1024];
-	qboolean keyevent;
-
-	if ( !kb ) {
-		return;
-	}
-	keyevent = qfalse;
-	buttonPtr = button;
-	for ( i = 0; ; i++ ) {
-		if ( kb[i] == ';' || !kb[i] ) {
-			*buttonPtr = '\0';
-			if ( button[0] == '+') {
-				// button commands add keynum and time as parms so that multiple
-				// sources can be discriminated and subframe corrected
-				Com_sprintf (cmd, sizeof(cmd), "-%s %i %i\n", button+1, key, time);
-				Cbuf_AddText (cmd);
-				keyevent = qtrue;
-			} else {
-				if (keyevent) {
-					// down-only command
-					Cbuf_AddText (button);
-					Cbuf_AddText ("\n");
-				}
-			}
-			buttonPtr = button;
-			while ( (kb[i] <= ' ' || kb[i] == ';') && kb[i] != 0 ) {
-				i++;
-			}
-		}
-		*buttonPtr++ = kb[i];
-		if ( !kb[i] ) {
-			break;
-		}
-	}
-}
-
-/*
-===================
 CL_KeyEvent
 
 Called by the system for both key up and key down events
 ===================
 */
 void CL_KeyEvent (int key, qboolean down, unsigned time) {
-	char	*kb;
-	char	cmd[1024];
+	int i;
+	char *kb;
+	char cmd[1024];
+	char button[1024], *buttonPtr;
 
 	// update auto-repeat status and BUTTON_ANY status
 	keys[key].down = down;
@@ -1336,11 +1314,34 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 	// console mode and menu mode, to keep the character from continuing
 	// an action started before a mode switch.
 	//
-	if (!down ) {
-		if ( cls.state != CA_DISCONNECTED ) {
-			kb = keys[key].pushBinding;
-
-			CL_AddKeyUpCommands( key, kb, time );
+	if ( !down ) {
+		kb = keys[key].releaseBinding;
+		if( kb && kb[0] && cls.state != CA_DISCONNECTED && !Key_GetCatcher() ) {
+			buttonPtr = button;
+			for ( i = 0; ; i++ ) {
+				if ( kb[i] == ';' || !kb[i] ) {
+					*buttonPtr = '\0';
+					if ( button[0] == '-') {
+						// button commands add keynum and time as parms so that multiple
+						// sources can be discriminated and subframe corrected
+						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
+						Cbuf_AddText (cmd);
+						Com_Printf( "^5%s", cmd ); //h4x
+					} else {
+						// down-only command
+						Cbuf_AddText (button);
+						Cbuf_AddText ("\n");
+					}
+					buttonPtr = button;
+					while ( (kb[i] <= ' ' || kb[i] == ';') && kb[i] != 0 ) {
+						i++;
+					}
+				}
+				*buttonPtr++ = kb[i];
+				if ( !kb[i] ) {
+					break;
+				}
+			}
 		}
 
 		if ( Key_GetCatcher( ) & KEYCATCH_UI && uivm ) {
@@ -1371,26 +1372,19 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 		Console_Key( key );
 	} else if ( !( (Key_GetCatcher( ) & (KEYCATCH_CONSOLE|KEYCATCH_UI|KEYCATCH_CGAME|KEYCATCH_MESSAGE) ) || cls.state == CA_DISCONNECTED) ) {
 		// send the bound action
-		kb = ( down == KEY_PUSH ) ? keys[key].pushBinding : keys[key].releaseBinding;
-		if ( !kb ) {
-			if (key >= 200) {
-				Com_Printf ("%s is unbound, use controls menu to set.\n"
-					, Key_KeynumToString( key ) );
-			}
-		} else {
-			int i;
-			char button[1024], *buttonPtr;
+		kb = keys[key].pushBinding;
+		if( kb && kb[0] ) {
 			buttonPtr = button;
 			for ( i = 0; ; i++ ) {
 				if ( kb[i] == ';' || !kb[i] ) {
 					*buttonPtr = '\0';
-					// drop +something commands if it is a release event
-					if ( button[0] == '+' && down == KEY_PUSH) {
+					if ( button[0] == '+') {
 						// button commands add keynum and time as parms so that multiple
 						// sources can be discriminated and subframe corrected
 						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
 						Cbuf_AddText (cmd);
-					} else if ( button[0] != '+' ) {
+						Com_Printf( "^5%s", cmd ); //h4x
+					} else {
 						// down-only command
 						Cbuf_AddText (button);
 						Cbuf_AddText ("\n");
