@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-static scClass_t *entity_class;
+static scLibObjectDef_t entity_def;
 
 static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
@@ -44,13 +44,15 @@ static scLibFunction_t game_lib[] = {
 
 static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  scObject_t *instance = SC_ObjectNew(entity_class);
-  instance->data.type = TYPE_USERDATA;
-  instance->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
-
-  out[0].type = TYPE_OBJECT;
-  out[0].data.object = instance;
-  out[1].type = TYPE_UNDEF;
+  scObject_t *self;
+  assert(in[0].type == TYPE_CLASS);
+  self = SC_ObjectNew(in[0].data.class);
+  self->data.type = TYPE_USERDATA;
+  assert(in[1].type == TYPE_INTEGER);
+  self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
+  Com_Printf("entity_init: self = %p self->data.data.userdata = %p\n", self, self->data.data.userdata);
+  out->type = TYPE_OBJECT;
+  out->data.object = self;
 }
 
 typedef enum 
@@ -69,8 +71,9 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
 {
   int settype = (int)closure;
   gentity_t *entity;
+  scObject_t *self = in[0].data.object;
     
-  entity = (gentity_t*)in[0].data.object->data.data.userdata;
+  entity = (gentity_t*)self->data.data.userdata;
   
   switch (settype)
   {
@@ -85,8 +88,7 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
       entity->model2 = (char*) SC_StringToChar(in[1].data.string);
       break;
     case ENTITY_ORIGIN:
-      // TODO: Error : read only value
-      break;
+      // TODO: Error : read only value Champion: Have read only values have a NULL setter?
     default:
       // Error
       break;
@@ -100,8 +102,8 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   int gettype = (int)closure;
   scObject_t *instance;
   gentity_t *entity;
-  
-  entity = (gentity_t*)in[0].data.object->data.data.userdata;
+  scObject_t *self = in[0].data.object;
+  entity = (gentity_t*)self->data.data.userdata;
   
   switch (gettype)
   {
@@ -142,13 +144,16 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 
 static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  int methodnum;
-  methodnum = (int)closure;
+  int methodnum = (int)closure;
+  gentity_t *entity;
+  scObject_t *self = in[0].data.object;
+  entity = (gentity_t*)self->data.data.userdata;
 
   switch (methodnum)
   {
     case ENTITY_LINK:
-      trap_LinkEntity( (gentity_t*)in[0].data.object->data.data.userdata );
+//      Com_Printf("Entity.link called\n");
+      trap_LinkEntity( entity );
       break;
     default:
       break;
@@ -160,7 +165,7 @@ static scLibObjectMember_t entity_members[] = {
   { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
   { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
   { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
-  { "origin", "", TYPE_OBJECT, entity_set, entity_get, (void*)ENTITY_ORIGIN },   
+  { "origin", "", TYPE_OBJECT, entity_set, entity_get, (void*)ENTITY_ORIGIN },
   { "" },
 };
 
@@ -169,7 +174,7 @@ static scLibObjectMethod_t entity_methods[] = {
   { "" },
 };
 
-static scLibObjectDef_t entity_lib = { 
+static scLibObjectDef_t entity_def = { 
   "Entity", "",
   entity_init, { TYPE_INTEGER, TYPE_UNDEF },
   0,
@@ -181,6 +186,6 @@ static scLibObjectDef_t entity_lib = {
 void SC_game_init( void )
 {
   SC_AddLibrary( "game", game_lib );
-  entity_class = SC_AddObjectType( "game", &entity_lib);
+  SC_AddObjectType( "game", &entity_def );
 }
 

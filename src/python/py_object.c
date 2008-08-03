@@ -57,7 +57,7 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
 {
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
-  scDataTypeValue_t *ret;
+  scDataTypeValue_t ret;
   PyObject          *pyret;
   int               i, argcount;
   
@@ -67,22 +67,21 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
   args[0].type = TYPE_OBJECT;
   args[0].data.object = self->sc_object;
   
-  for( i=1; i < argcount; i++)
+  for( i=0; i < argcount; i++)
   {
-    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], arguments[i] );
-    if (arguments[i] !=  TYPE_ANY && args[i].type != arguments[i])
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i+1], arguments[i] );
+    if (arguments[i] !=  TYPE_ANY && args[i+1].type != arguments[i])
     {
-      PyErr_SetNone(PyExc_TypeError);
+      PyErr_SetNone(PyExc_TypeError); //TODO: proper error message like: argument 1 must be string, not float
       return NULL;
     }
   }
   args[argcount+1].type = TYPE_UNDEF;
   
-  SC_RunFunction( (scDataTypeFunction_t*)&self->sc_method->method, args, ret);
+  SC_RunFunction( (scDataTypeFunction_t*)&self->sc_method->method, args, &ret);
 //  ret = self->method->method( self->instance, args, self->method->closure);
   
-  pyret = convert_from_value( ret );
-  BG_Free( ret );
+  pyret = convert_from_value( &ret );
   return pyret;
 }
 
@@ -173,27 +172,27 @@ PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds)
 
 int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
 {
-  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS];
   scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
   int               i, argcount;
   scDataTypeValue_t ret;
   
-  memcpy( arguments, self->sc_class->constructor.argument, sizeof( arguments ) );
+  memcpy( arguments, self->sc_class->constructor.argument+1, sizeof( arguments ) );
   argcount = PyTuple_Size( pArgs );
-  
+  args[0].type = TYPE_CLASS;
+  args[0].data.class = self->sc_class;
   for( i=0; i < argcount; i++)
   {
-    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], arguments[i] );
-    if (arguments[i] !=  TYPE_ANY && args[i].type != arguments[i])
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i+1], arguments[i] );
+    if (arguments[i] !=  TYPE_ANY && args[i+1].type != arguments[i])
     {
-      PyErr_SetNone(PyExc_TypeError);
+      PyErr_SetNone(PyExc_TypeError); //TODO: proper error message like: argument 1 must be string, not float
       return -1;
     }
   }
-  args[argcount].type = TYPE_UNDEF;
-  
+  args[argcount+1].type = TYPE_UNDEF;
+ 
   SC_RunFunction( (scDataTypeFunction_t*)&self->sc_class->constructor, args, &ret);
-  
   assert(ret.type == TYPE_OBJECT);
   self->sc_object = ret.data.object;
 //  self->instance = self->type->init( self->type, args);
@@ -261,6 +260,8 @@ static PyObject *get_wrapper(PyScObject *self, void *closure)
   
   member = (scObjectMember_t*)closure;
   
+  memset(args, 0, sizeof(args) );
+  
   args[0].type = TYPE_OBJECT;
   args[0].data.object = self->sc_object;
   
@@ -302,7 +303,7 @@ static PyObject *get_method(PyScObject *self, void *closure)
   
   method = (scObjectMethod_t*)closure;
   
-  Com_Printf("Creating PyMethod \"%s\" for object type \"%s\"\n", method->name, self->sc_class->name);
+//  Com_Printf("Creating PyMethod \"%s\" for object type \"%s\"\n", method->name, self->sc_class->name);
   pymethod = New_PyMethod( (PyObject*)self, self->sc_object, method);
 //  Py_INCREF( pymethod );
   return pymethod;
@@ -326,13 +327,9 @@ void SC_Python_InitClass( scClass_t *class )
   scObjectMethod_t *method;
   PyGetSetDef      *getsetdef;
   int              i;
-  int              membercount, methodcount;
-//  membercount = methodcount = 0;
     
-//  Com_Printf("sizeof( ScPyTypeObject )= %d\n", sizeof( ScPyTypeObject ));
-    Com_Printf("membercount = %d methodcount = %d\n",  class->memcount, class->methcount);
   newtype   = BG_Alloc( sizeof( ScPyTypeObject ) );
-  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * ( class->memcount, class->methcount + 1) );
+  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * ( class->memcount + class->methcount + 1) );
   
   member    = class->members;
   for (i=0; i < class->memcount; member++, i++) {
@@ -344,7 +341,7 @@ void SC_Python_InitClass( scClass_t *class )
   }
   
   method = class->methods;
-  for (i=0; i < class->memcount; method++, i++) {
+  for (; i - class->memcount < class->methcount; method++, i++) {
     getsetdef[i].name    = method->name;
     getsetdef[i].doc     = method->desc;
     getsetdef[i].get     = (getter)get_method;

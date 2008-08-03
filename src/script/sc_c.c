@@ -109,7 +109,7 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
   cnt = 0;
   for(method = def->methods; method->name[0] != '\0'; method++)
     cnt++;
-
+  class->methcount = cnt;
   class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
   {
