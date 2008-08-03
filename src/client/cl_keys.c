@@ -1326,7 +1326,6 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 						// sources can be discriminated and subframe corrected
 						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
 						Cbuf_AddText (cmd);
-						Com_Printf( "^5%s", cmd ); //h4x
 					} else {
 						// down-only command
 						Cbuf_AddText (button);
@@ -1383,7 +1382,6 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 						// sources can be discriminated and subframe corrected
 						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
 						Cbuf_AddText (cmd);
-						Com_Printf( "^5%s", cmd ); //h4x
 					} else {
 						// down-only command
 						Cbuf_AddText (button);
