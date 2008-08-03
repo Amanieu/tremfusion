@@ -117,6 +117,14 @@ ifndef USE_CODEC_VORBIS
 USE_CODEC_VORBIS=0
 endif
 
+ifndef USE_CURSES
+  ifeq ($(PLATFORM),linux)
+    USE_CURSES=1
+  else
+    USE_CURSES=0
+  endif
+endif
+
 ifndef USE_MUMBLE
 USE_MUMBLE=1
 endif
@@ -311,6 +319,10 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     NOTSHLIBLDFLAGS = -lcurses
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -1356,12 +1368,12 @@ Q3POBJ_SMP += \
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LDFLAGS) \
-		$(LDFLAGS) $(LIBSDLMAIN)
+		$(LDFLAGS) $(NOTSHLIBLDFLAGS) $(LIBSDLMAIN)
 
 $(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LDFLAGS) \
-		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN)
+		$(THREAD_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) $(LIBSDLMAIN)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
@@ -1442,14 +1454,17 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/ded/sys_win32.o \
     $(B)/ded/con_win32.o
 else
-  Q3DOBJ += \
-    $(B)/ded/sys_unix.o \
-    $(B)/ded/con_tty.o
+  Q3DOBJ += $(B)/ded/sys_unix.o
+  ifeq ($(USE_CURSES),1)
+    Q3DOBJ += $(B)/ded/con_curses.o
+  else
+    Q3DOBJ += $(B)/ded/con_tty.o
+  endif
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) -o $@ $(Q3DOBJ) $(LDFLAGS)
+	$(Q)$(CC) -o $@ $(Q3DOBJ) $(LDFLAGS) $(NOTSHLIBLDFLAGS)
 
 
 

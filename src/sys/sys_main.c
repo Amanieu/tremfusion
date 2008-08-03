@@ -544,10 +544,15 @@ int main( int argc, char **argv )
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
+	/*
+ 	 * moved CON_Init() to the top coz...
+ 	 * 1) we were loosing lines from Com_Init() and NET_Init()
+ 	 * 2) shouldnt the console be turned on first anyways?
+	 */
+	CON_Init();
+
 	Com_Init( commandLine );
 	NET_Init( );
-
-	CON_Init( );
 
 #ifndef _WIN32
 	// Windows doesn't have these signals
