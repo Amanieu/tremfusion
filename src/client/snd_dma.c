@@ -101,24 +101,24 @@ portable_samplepair_t s_rawsamples[MAX_RAW_STREAMS][MAX_RAW_SAMPLES];
 
 
 void S_Base_SoundInfo(void) {	
-	Com_DPrintf("----- Sound Info -----\n" );
+	Com_Printf("----- Sound Info -----\n" );
 	if (!s_soundStarted) {
-		Com_DPrintf ("sound system not started\n");
+		Com_Printf ("sound system not started\n");
 	} else {
-		Com_DPrintf("%5d stereo\n", dma.channels - 1);
-		Com_DPrintf("%5d samples\n", dma.samples);
-		Com_DPrintf("%5d samplebits\n", dma.samplebits);
-		Com_DPrintf("%5d submission_chunk\n", dma.submission_chunk);
-		Com_DPrintf("%5d speed\n", dma.speed);
-		Com_DPrintf("%p dma buffer\n", dma.buffer);
+		Com_Printf("%5d stereo\n", dma.channels - 1);
+		Com_Printf("%5d samples\n", dma.samples);
+		Com_Printf("%5d samplebits\n", dma.samplebits);
+		Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
+		Com_Printf("%5d speed\n", dma.speed);
+		Com_Printf("%p dma buffer\n", dma.buffer);
 		if ( s_backgroundStream ) {
-			Com_DPrintf("Background file: %s\n", s_backgroundLoop );
+			Com_Printf("Background file: %s\n", s_backgroundLoop );
 		} else {
-			Com_DPrintf("No background file.\n" );
+			Com_Printf("No background file.\n" );
 		}
 
 	}
-	Com_DPrintf("----------------------\n" );
+	Com_Printf("----------------------\n" );
 }
 
 

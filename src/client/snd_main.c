@@ -497,14 +497,14 @@ void S_Init( void )
 				Com_Error( ERR_FATAL, "Sound interface invalid." );
 			}
 
-			S_SoundInfo( );
-			Com_Printf( "Sound initialization successful.\n" );
+			//S_SoundInfo( );
+			Com_DPrintf( "Sound initialization successful.\n" );
 		} else {
-			Com_Printf( "Sound initialization failed.\n" );
+			Com_DPrintf( "Sound initialization failed.\n" );
 		}
 	}
 
-	Com_Printf( "--------------------------------\n");
+	Com_DPrintf( "--------------------------------\n");
 }
 
 /*

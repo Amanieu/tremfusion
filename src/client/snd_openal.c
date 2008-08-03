@@ -647,7 +647,7 @@ qboolean S_AL_SrcInit( void )
 	}
 
 	// All done. Print this for informational purposes
-	Com_Printf( "Allocated %d sources.\n", srcCount);
+	Com_DPrintf( "Allocated %d sources.\n", srcCount);
 	alSourcesInitialised = qtrue;
 	return qtrue;
 }
@@ -1953,7 +1953,7 @@ void S_AL_Shutdown( void )
 		qalcCaptureStop(alCaptureDevice);
 		qalcCaptureCloseDevice(alCaptureDevice);
 		alCaptureDevice = NULL;
-		Com_Printf( "OpenAL capture device closed.\n" );
+		Com_DPrintf( "OpenAL capture device closed.\n" );
 	}
 #endif
 
