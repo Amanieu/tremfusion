@@ -36,7 +36,7 @@ static int PyScMethod_clear(PyScMethod *self) {
 // Deallocation
 static void PyScMethod_dealloc(PyScMethod* self) {
   PyScMethod_clear(self);
-  Com_Printf("PyScMethod_dealloc called for method %s\n", self->sc_method->name);
+//  Com_Printf("PyScMethod_dealloc called for method %s\n", self->sc_method->name);
   self->ob_type->tp_free((PyObject*)self);
 }
 // 

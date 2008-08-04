@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_DESC_LENGTH         1024
 
 // Define SC_GC_DEBUG to 1 to get debug info about reference count increases and decreases
-#define SC_GC_DEBUG 1
+#define SC_GC_DEBUG 0
 
 #ifdef USE_PYTHON
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
