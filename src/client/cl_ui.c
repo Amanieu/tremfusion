@@ -778,7 +778,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		|| !strncmp(VMA(2), "vid_restart", 11)
 		|| !strncmp(VMA(2), "quit", 5)))
 		{
-			Com_Printf (S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n", (const char*)VMA(2));
+			Com_DPrintf (S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n", (const char*)VMA(2));
 			args[1] = EXEC_INSERT;
 		}
 		Cbuf_ExecuteText( args[1], VMA(2) );
