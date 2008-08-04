@@ -352,29 +352,49 @@ void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );
 scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def );
 
 // sc_common.c
+void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);
+
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 void SC_Common_Init( void );
 
 // sc_event.c
 
 #define MAX_TAG_SIZE 32
-typedef char scEventTag_t[MAX_TAG_SIZE+1];
 typedef struct scEventNode_s scEventNode_t;
+typedef struct scHook_s scHook_t;
 typedef struct scEvent_s scEvent_t;
+
+typedef enum
+{
+  SC_EVENT_NODE_TYPE_UNDEF=0,
+  SC_EVENT_NODE_TYPE_NODE,
+  SC_EVENT_NODE_TYPE_HOOK,
+} scEventNodeType_t;
 
 struct scEventNode_s
 {
-  int             run_id; // used for temporary events. 0 to permanent node
-  scEventTag_t    tag;
-  scEventNode_t   *before;
+  //int             run_id; // used for temporary events. 0 to permanent node
+  char            tag[MAX_TAG_SIZE+1];
+
+  scEventNode_t   *parent; // Parent node in tree. TODO: Maybe useless ?
+  scEventNode_t   *next; // Next node in linked list
+
+  scEventNode_t   *before; // Childs in "before" branch
+  scEventNode_t   *after; // Childs in "after" branch
+
+  scEventNodeType_t type;
   union {
-    scEventNode_t *node;
-    scEvent_t     *event;
-  } in;
-  scEventNode_t   *after;
+    scEventNode_t *node; // Childs in "inside" branch
+    scHook_t      *hook; // Hook
+  } inside;
 };
 
 struct scEvent_s
+{
+  scEventNode_t   *root;
+};
+
+struct scHook_s
 {
   scDataTypeFunction_t function;
 };

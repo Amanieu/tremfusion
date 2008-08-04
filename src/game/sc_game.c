@@ -45,12 +45,12 @@ static scLibFunction_t game_lib[] = {
 static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
   scObject_t *self;
-  self = SC_ObjectNew(in[0].data.class);
+
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+
   self->data.type = TYPE_USERDATA;
   self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
-//  Com_Printf("entity_init: self = %p self->data.data.userdata = %p\n", self, self->data.data.userdata);
-  out->type = TYPE_OBJECT;
-  out->data.object = self;
 }
 
 static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )

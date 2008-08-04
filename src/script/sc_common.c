@@ -28,7 +28,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-/*static scLibObjectDef *vec3_object;*/
 static scClass_t *vec3_class;
 
 typedef enum 
@@ -37,6 +36,14 @@ typedef enum
   VEC3_Y,
   VEC3_Z,
 } vec3_closures;
+
+void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self = SC_ObjectNew(in[0].data.class);
+
+  out->type = TYPE_OBJECT;
+  out->data.object = self;
+}
 
 static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
@@ -90,13 +97,14 @@ static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 
 static void vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scObject_t *instance = SC_ObjectNew(vec3_class);
-  instance->data.type = TYPE_USERDATA;
-  instance->data.data.userdata = BG_Alloc(sizeof(float) * 3);
-  memset(instance->data.data.userdata, 0x00, sizeof(float) * 3);
+  scObject_t *self;
 
-  out->type = TYPE_OBJECT;
-  out->data.object = instance;
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+
+  self->data.type = TYPE_USERDATA;
+  self->data.data.userdata = BG_Alloc(sizeof(float) * 3);
+  memset(self->data.data.userdata, 0x00, sizeof(float) * 3);
 }
 
 static void vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
