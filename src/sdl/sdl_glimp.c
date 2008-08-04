@@ -476,13 +476,16 @@ static qboolean GLimp_StartDriverAndSetMode( qboolean failSafe, qboolean fullscr
 
 	if (!SDL_WasInit(SDL_INIT_VIDEO))
 	{
-		ri.Printf( PRINT_ALL, "SDL_Init( SDL_INIT_VIDEO )... ");
+		char driverName[ 64 ];
+
 		if (SDL_Init(SDL_INIT_VIDEO) == -1)
 		{
-			ri.Printf( PRINT_ALL, "FAILED (%s)\n", SDL_GetError());
+			ri.Printf( PRINT_ALL, "SDL_Init FAILED (%s)\n", SDL_GetError());
 			return qfalse;
 		}
-		ri.Printf( PRINT_ALL, "OK\n");
+
+		SDL_VideoDriverName( driverName, sizeof( driverName ) - 1 );
+		ri.Printf( PRINT_DEVELOPER, "SDL using driver \"%s\"\n", driverName );
 	}
 
 	if (fullscreen && Cvar_VariableIntegerValue( "in_nograb" ) )
