@@ -45,10 +45,8 @@ static scLibFunction_t game_lib[] = {
 static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
   scObject_t *self;
-  assert(in[0].type == TYPE_CLASS);
   self = SC_ObjectNew(in[0].data.class);
   self->data.type = TYPE_USERDATA;
-  assert(in[1].type == TYPE_INTEGER);
   self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
 //  Com_Printf("entity_init: self = %p self->data.data.userdata = %p\n", self, self->data.data.userdata);
   out->type = TYPE_OBJECT;
