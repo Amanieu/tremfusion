@@ -355,5 +355,29 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def );
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 void SC_Common_Init( void );
 
+// sc_event.c
+
+#define MAX_TAG_SIZE 32
+typedef char scEventTag_t[MAX_TAG_SIZE+1];
+typedef struct scEventNode_s scEventNode_t;
+typedef struct scEvent_s scEvent_t;
+
+struct scEventNode_s
+{
+  int             run_id; // used for temporary events. 0 to permanent node
+  scEventTag_t    tag;
+  scEventNode_t   *before;
+  union {
+    scEventNode_t *node;
+    scEvent_t     *event;
+  } in;
+  scEventNode_t   *after;
+};
+
+struct scEvent_s
+{
+  scDataTypeFunction_t function;
+};
+
 #endif
 
