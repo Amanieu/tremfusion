@@ -169,6 +169,10 @@ void SC_ValueGCInc(scDataTypeValue_t *value)
     case TYPE_NAMESPACE:
       SC_HashGCInc((scNamespace_t*) value->data.namespace);
       break;
+      
+    case TYPE_OBJECT:
+      SC_ObjectGCInc( value->data.object );
+      break;
 
     default:
       break;
@@ -197,6 +201,10 @@ void SC_ValueGCDec(scDataTypeValue_t *value)
 
     case TYPE_NAMESPACE:
       SC_HashGCDec((scNamespace_t*) value->data.namespace);
+      break;
+      
+    case TYPE_OBJECT:
+      SC_ObjectGCDec( value->data.object );
       break;
 
     default:
@@ -737,7 +745,9 @@ scObject_t *SC_ObjectNew(scClass_t *class)
   object->class = class;
   object->data.type = TYPE_UNDEF;
   object->gc.count = 0;
-
+#if SC_GC_DEBUG
+  Com_Printf("SC_ObjectNew: created new object of class %s at %p\n", class->name, object);
+#endif
   return object;
 }
 
@@ -750,15 +760,35 @@ static void objectFree(scObject_t *object)
 void SC_ObjectGCInc(scObject_t *object)
 {
   object->gc.count++;
+#if SC_GC_DEBUG
+  Com_Printf("SC_ObjectGCInc called on object of class %s count now = %d\n", object->class->name, object->gc.count);
+#endif
 }
 
 void SC_ObjectGCDec(scObject_t *object)
 {
   object->gc.count--;
+#if SC_GC_DEBUG
+  Com_Printf("SC_ObjectGCDec called on object of class %s count now = %d\n", object->class->name, object->gc.count);
+#endif
   if(object->gc.count == 0)
+  {
+    SC_ObjectDestroy(object);
     objectFree(object);
+  }
 }
 
+void SC_ObjectDestroy( scObject_t *object )
+{
+#if SC_GC_DEBUG
+  Com_Printf("SC_ObjectDestroy called on object of class %s at %p\n", object->class->name, object);
+#endif
+  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS];
+  args[0].type = TYPE_OBJECT;
+  args[0].data.object = object;
+  if (object->class->destructor.data.ref)
+    SC_RunFunction( (scDataTypeFunction_t*)&object->class->destructor, args, NULL);
+}
 // Display data tree
 
 static void print_tabs( int tab )

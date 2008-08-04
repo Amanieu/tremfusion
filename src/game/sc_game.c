@@ -50,9 +50,13 @@ static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   self->data.type = TYPE_USERDATA;
   assert(in[1].type == TYPE_INTEGER);
   self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
-  Com_Printf("entity_init: self = %p self->data.data.userdata = %p\n", self, self->data.data.userdata);
+//  Com_Printf("entity_init: self = %p self->data.data.userdata = %p\n", self, self->data.data.userdata);
   out->type = TYPE_OBJECT;
   out->data.object = self;
+}
+
+static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+{
 }
 
 typedef enum 
@@ -177,7 +181,7 @@ static scLibObjectMethod_t entity_methods[] = {
 static scLibObjectDef_t entity_def = { 
   "Entity", "",
   entity_init, { TYPE_INTEGER, TYPE_UNDEF },
-  0,
+  entity_destroy,
   entity_members, 
   entity_methods, 
 };

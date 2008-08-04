@@ -31,6 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_PATH_LENGTH         64
 #define MAX_DESC_LENGTH         1024
 
+// Define SC_GC_DEBUG to 1 to get debug info about reference count increases and decreases
+#define SC_GC_DEBUG 1
+
 #ifdef USE_PYTHON
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
 #include <Python.h>
@@ -265,6 +268,7 @@ void SC_FunctionGCDec(scDataTypeFunction_t *function);
 scObject_t *SC_ObjectNew(scClass_t *class);
 void SC_ObjectGCInc(scObject_t *object);
 void SC_ObjectGCDec(scObject_t *object);
+void SC_ObjectDestroy( scObject_t *object );
 
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);

@@ -28,11 +28,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Deletion
 static int PyScMethod_clear(PyScMethod *self) {
+  SC_ObjectGCDec( self->sc_object );
+  self->sc_object = NULL;
+  Py_CLEAR( self->py_parent ); 
   return 0;
 }
 // Deallocation
 static void PyScMethod_dealloc(PyScMethod* self) {
   PyScMethod_clear(self);
+  Com_Printf("PyScMethod_dealloc called for method %s\n", self->sc_method->name);
   self->ob_type->tp_free((PyObject*)self);
 }
 // 
@@ -48,7 +52,9 @@ PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 int PyScMethod_init(PyScMethod *self, PyObject *parent, scObject_t* object, scObjectMethod_t* method)
 {
   self->py_parent   = parent;
+  Py_XINCREF( self->py_parent );
   self->sc_object  = object;
+  SC_ObjectGCInc( self->sc_object );
   self->sc_method   = method;
   return 0;
 }
@@ -151,6 +157,9 @@ static PyObject *New_PyMethod( PyObject *parent, scObject_t* object, scObjectMet
 
 // Deletion
 static int PyScObject_clear(PyScObject *self) {
+  SC_ObjectGCDec( self->sc_object );
+  self->sc_object = NULL;
+  self->sc_class  = NULL;
   return 0;
 }
 // Deallocation
@@ -195,6 +204,7 @@ int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
   SC_RunFunction( (scDataTypeFunction_t*)&self->sc_class->constructor, args, &ret);
   assert(ret.type == TYPE_OBJECT);
   self->sc_object = ret.data.object;
+  SC_ObjectGCInc(self->sc_object);
 //  self->instance = self->type->init( self->type, args);
   
   return 0;
@@ -264,10 +274,10 @@ static PyObject *get_wrapper(PyScObject *self, void *closure)
   
   args[0].type = TYPE_OBJECT;
   args[0].data.object = self->sc_object;
+  SC_ObjectGCInc(args[0].data.object);
   
   SC_RunFunction( (scDataTypeFunction_t*)&member->get, args, &ret);
-  
-//  value = member->get( self->instance, member->closure );
+  SC_ObjectGCDec(args[0].data.object);
   return convert_from_value( &ret );
 }
 
@@ -292,7 +302,6 @@ static int set_wrapper(PyScObject *self, PyObject *pyvalue, void *closure)
   
   SC_RunFunction( (scDataTypeFunction_t*)&member->set, args, &ret);
   
-//  member->set( self->instance, &value, member->closure );
   return 0;
 }
 
