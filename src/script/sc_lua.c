@@ -1,4 +1,3 @@
-
 /*
 ===========================================================================
 Copyright (C) 2006 Robert Beckebans <trebor_7@users.sourceforge.net>

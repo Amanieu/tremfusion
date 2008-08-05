@@ -385,7 +385,7 @@ struct scEventNode_s
   scEventNodeType_t type;
   union {
     scEventNode_t *node; // Childs in "inside" branch
-    scHook_t      *hook; // Hook
+    scDataTypeFunction_t  *hook; // Hook
   } inside;
 };
 

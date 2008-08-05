@@ -36,7 +36,35 @@ typedef enum
   EVENT_BEFORE,
   EVENT_AFTER,
   EVENT_TAG,
-} loc_closures;
+} loc_closure_t;
+
+void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
+{
+  scEventNode_t *i;
+  scDataTypeValue_t args[2];
+  scDataTypeValue_t ret;
+
+  args[0].type = TYPE_HASH;
+  args[0].data.hash = params;
+  args[1].type = TYPE_UNDEF;
+
+  if(node == NULL)
+    return;
+
+  for(i = node->before; i != NULL; i = i->next)
+    SC_Event_Call(i, params);
+
+  if(node->type == SC_EVENT_NODE_TYPE_NODE)
+  {
+    for(i = node->inside.node; i != NULL; i = i->next)
+      SC_Event_Call(i, params);
+  }
+  else
+    SC_RunFunction(node->inside.hook, args, &ret);
+
+  for(i = node->after; i != NULL; i = i->next)
+    SC_Event_Call(i, params);
+}
 
 void SC_Event_AddNode(scEventNode_t **list, scEventNode_t *node)
 {
@@ -118,19 +146,22 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 
 static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  scEventNode_t *node = in[0].data.object->data.data.userdata;
+
+  SC_Event_Call(node, in[1].data.hash);
 }
 
-static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+/*static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // Nothing to do ?
-}
+  SC_Common_Constructor(in, out, closure);
+}*/
 
-static void new_node( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
   scDataTypeValue_t value;
-  scEventNode_t *node = SC_Event_NewNode(SC_StringToChar(in[1].data.string));
   scEventNode_t *parent;
+  scEventNode_t *node = in[1].data.object->data.data.userdata;
   int type;
 
   // closure have info about node type (node or leaf)
@@ -160,6 +191,25 @@ static void new_node( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   node->parent = parent;
 }
 
+static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  int type = (int) closure;
+  scObject_t *self;
+  scEventNode_t *node;
+
+  SC_Common_Constructor(in, out, closure);
+
+  self = out->data.object;
+  node = SC_Event_NewNode(SC_StringToChar(in[1].data.string));
+
+  node->type = type;
+  if(type == SC_EVENT_NODE_TYPE_HOOK)
+    node->inside.hook = in[2].data.function;
+
+  self->data.type = TYPE_USERDATA;
+  self->data.data.userdata = node;
+}
+
 static void node_destructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
 }
@@ -176,7 +226,7 @@ static scLibObjectMethod_t event_methods[] = {
 
 static scLibObjectDef_t event_def = {
   "Event", "",
-  event_constructor, { TYPE_UNDEF },
+  SC_Common_Constructor, { TYPE_UNDEF },
   0, // An event should never be destroyed
   event_members,
   event_methods
@@ -184,10 +234,10 @@ static scLibObjectDef_t event_def = {
 
 static scLibObjectDef_t tag_def = {
   "Tag", "",
-  0, { TYPE_UNDEF },
+  node_constructor, { TYPE_UNDEF },
   node_destructor,
   NULL,
-  NULL
+  (void*) SC_EVENT_NODE_TYPE_NODE,
 };
 
 static scLibObjectDef_t hook_def = {
@@ -195,15 +245,14 @@ static scLibObjectDef_t hook_def = {
   0, { TYPE_UNDEF },
   node_destructor,
   NULL,
-  NULL
+  (void*) SC_EVENT_NODE_TYPE_HOOK,
 };
 
 static scLibObjectMethod_t loc_methods[] = {
   { "inside", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_INSIDE },
   { "after", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_AFTER },
   { "before", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_BEFORE },
-  { "newTag", "", new_node, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "newHook", "", new_node, { TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "add", "", add, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
