@@ -350,9 +350,9 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
 
 void SC_Event_Init(void)
 {
-  event_class = SC_AddObjectType("common", &event_def);
-  hook_class = SC_AddObjectType("common", &hook_def);
-  tag_class = SC_AddObjectType("common", &tag_def);
-  loc_class = SC_AddObjectType("common", &loc_def);
+  event_class = SC_AddClass("common", &event_def);
+  hook_class = SC_AddClass("common", &hook_def);
+  tag_class = SC_AddClass("common", &tag_def);
+  loc_class = SC_AddClass("common", &loc_def);
 }
 

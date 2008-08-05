@@ -350,7 +350,7 @@ typedef struct
 
 void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );
 
-scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def );
+scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def );
 
 // sc_common.c
 void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);

@@ -48,7 +48,7 @@ void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] )
   }
 }
 
-scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
+scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
 {
   char name[ MAX_PATH_LENGTH + 1 ];
   scDataTypeValue_t var;
@@ -77,10 +77,9 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
   class->destructor.data.ref = def->destructor;
 
   cnt = 0;
-  if(def->members != NULL)
-    for(member = def->members; member->name[0] != '\0'; member++)
-      cnt++;
-
+  member = def->members;
+  for(member = def->members; member->name[0] != '\0'; member++)
+    cnt++;
   class->memcount = cnt;
   class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
@@ -106,11 +105,10 @@ scClass_t *SC_AddObjectType( const char *namespace, scLibObjectDef_t *def )
   }
   class->members[i].name[0] = '\0';
 
-  cnt = 0;
-  if(def->methods != NULL)
-    for(method = def->methods; method->name[0] != '\0'; method++)
-      cnt++;
 
+  cnt = 0;
+  for(method = def->methods; method->name[0] != '\0'; method++)
+    cnt++;
   class->methcount = cnt;
   class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
   for(i = 0; i < cnt; i++)

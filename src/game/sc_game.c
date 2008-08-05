@@ -154,6 +154,7 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   switch (methodnum)
   {
     case ENTITY_LINK:
+//      Com_Printf("Entity.link called\n");
       trap_LinkEntity( entity );
       break;
     default:
@@ -181,13 +182,12 @@ static scLibObjectDef_t entity_def = {
   entity_destroy,
   entity_members, 
   entity_methods, 
-  NULL
 };
 
 
 void SC_game_init( void )
 {
   SC_AddLibrary( "game", game_lib );
-  SC_AddObjectType( "game", &entity_def );
+  SC_AddClass( "game", &entity_def );
 }
 

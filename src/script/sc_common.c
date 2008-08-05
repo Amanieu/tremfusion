@@ -178,6 +178,6 @@ scObject_t *SC_Vec3FromVec3_t( float *vect )
 
 void SC_Common_Init( void )
 {
-  vec3_class = SC_AddObjectType( "common", &vec3_def);
+  vec3_class = SC_AddClass( "common", &vec3_def);
 }
 
