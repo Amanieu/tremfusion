@@ -139,7 +139,7 @@ PyTypeObject PyScMethod_Type = {
     (initproc)PyScMethod_init, /* tp_init */
     0,                         /* tp_alloc */
     (newfunc)PyScMethod_new,   /* tp_new */
-    0,                         /*tp_scobjtype*/
+    0,                         /*tp_scclass*/
 };
 
 static PyObject *New_PyMethod( PyObject *parent, scObject_t* object, scObjectMethod_t* method )
@@ -258,7 +258,7 @@ ScPyTypeObject PyScObject_Type = {
     (initproc)PyScObject_init, /* tp_init */
     0,                         /* tp_alloc */
     (newfunc)PyScObject_new,   /* tp_new */
-    0,                         /*tp_scobjtype*/
+    0,                         /*tp_scclass*/
 };
 
 static PyObject *get_wrapper(PyScObject *self, void *closure)
