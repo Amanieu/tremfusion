@@ -122,11 +122,11 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
     value->type = TYPE_FLOAT;
     value->data.floating = PyFloat_AsDouble( pyvalue );
   }
-//  else if (  PyBool_Check(pyvalue) )
-//  {
-//    value->type = TYPE_BOOLEAN;
-//    value->data.boolean = ( pyvalue == Py_True) ? 1 : 0;
-//  }
+  else if (  PyBool_Check(pyvalue) )
+  {
+    value->type = TYPE_BOOLEAN;
+    value->data.boolean = ( pyvalue == Py_True) ? qtrue : qfalse;
+  }
   else if (  PyString_Check(pyvalue) )
   {
     value->type = TYPE_STRING;
@@ -159,7 +159,7 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
   else
   {
 #ifdef UNITTEST
-    printf("convert_to_value type fallthrough");
+    printf("convert_to_value type fallthrough\n");
     print_pyobject( pyvalue->ob_type );
 #endif
     value->type = TYPE_UNDEF;
@@ -230,6 +230,11 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
   {
     case TYPE_UNDEF:
       return Py_BuildValue(""); // Python None object
+    case TYPE_BOOLEAN:
+      if (value->data.boolean)
+        Py_RETURN_TRUE;
+      else  // Py_RETURN_TRUE and Py_RETURN_FALSE are 
+        Py_RETURN_FALSE;//  Macros for returning Py_True or Py_False, respectively
     case TYPE_INTEGER:
       return Py_BuildValue("i", value->data.integer ); // Python int or long type
     case TYPE_FLOAT:
