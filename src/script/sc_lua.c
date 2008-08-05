@@ -38,7 +38,7 @@ static scDataTypeString_t* pop_string(lua_State *L);
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function );
 
-static scDataType_t luatype2sctype(int luatype)
+/*static scDataType_t luatype2sctype(int luatype)
 {
   switch(luatype)
   {
@@ -53,7 +53,7 @@ static scDataType_t luatype2sctype(int luatype)
     case LUA_TNIL:
     default: return TYPE_UNDEF;
   }
-}
+}*/
 
 static int sctype2luatype(scDataType_t sctype)
 {
@@ -271,15 +271,17 @@ static int call_metamethod( lua_State *L )
   }
 
   lua_pop(L, 1);
-  lua_remove(L, -2);
+  lua_remove(L, -top);
 
   top = lua_gettop(L);
+
   for(i = top-1; i >= 0; i--)
   {
     luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
     pop_value(L, &args[i+mod]);
     SC_ValueGCInc(&args[i+mod]);
   }
+
   args[top+mod].type = TYPE_UNDEF;
 
   SC_RunFunction(function, args, &ret);
@@ -575,7 +577,7 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
         if(!lua_isnil(L, -1))
         {
           value->type = type;
-          memcpy(&value->data.hash, lua_touserdata(L, -1), sizeof(void*));
+          value->data.any = lua_touserdata(L, -1);
         }
         else
         {
@@ -660,7 +662,7 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
               break;
           }
         }
-        lua_pop(L, 1);
+        lua_pop(L, 2);
       }
       else
       {

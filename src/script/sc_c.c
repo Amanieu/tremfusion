@@ -77,9 +77,9 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   class->destructor.data.ref = def->destructor;
 
   cnt = 0;
-  member = def->members;
-  for(member = def->members; member->name[0] != '\0'; member++)
-    cnt++;
+  if(def->members != NULL)
+    for(member = def->members; member->name[0] != '\0'; member++)
+      cnt++;
   class->memcount = cnt;
   class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
@@ -105,10 +105,10 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   }
   class->members[i].name[0] = '\0';
 
-
   cnt = 0;
-  for(method = def->methods; method->name[0] != '\0'; method++)
-    cnt++;
+  if(def->methods != NULL)
+    for(method = def->methods; method->name[0] != '\0'; method++)
+      cnt++;
   class->methcount = cnt;
   class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
@@ -119,8 +119,9 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
     class->methods[i].method.gc.count = 0;
     class->methods[i].method.langage = LANGAGE_C;
     class->methods[i].method.data.ref = def->methods[i].method;
-    memcpy( class->methods[i].method.argument, def->methods[i].argument,
-            sizeof(scDataType_t) * (MAX_FUNCTION_ARGUMENTS + 1));
+    class->methods[i].method.argument[0] = TYPE_OBJECT;
+    memcpy( class->methods[i].method.argument+1, def->methods[i].argument,
+            sizeof(scDataType_t) * MAX_FUNCTION_ARGUMENTS);
     class->methods[i].method.return_type = def->methods[i].return_type;
     class->methods[i].method.closure = def->methods[i].closure;
   }

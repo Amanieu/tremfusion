@@ -126,6 +126,7 @@ struct scDataTypeValue_s
   scGC_t          gc;
   union
   {
+    void                   *any;
     scDataTypeBoolean_t    boolean;
     scDataTypeInteger_t    integer;
     scDataTypeFloat_t      floating;
@@ -363,7 +364,6 @@ void SC_Common_Init( void );
 #define MAX_TAG_SIZE 32
 typedef struct scEventNode_s scEventNode_t;
 typedef struct scHook_s scHook_t;
-typedef struct scEvent_s scEvent_t;
 
 typedef enum
 {
@@ -388,11 +388,6 @@ struct scEventNode_s
     scEventNode_t *node; // Childs in "inside" branch
     scDataTypeFunction_t  *hook; // Hook
   } inside;
-};
-
-struct scEvent_s
-{
-  scEventNode_t   *root;
 };
 
 struct scHook_s

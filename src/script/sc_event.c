@@ -43,10 +43,16 @@ typedef enum
   EVENT_TAG,
 } loc_closure_t;
 
-/*static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  scEventNode_t *root;
+
   SC_Common_Constructor(in, out, closure);
-}*/
+
+  root = SC_Event_NewNode("all");
+  out[0].data.object->data.data.userdata = root;
+  Com_Printf("event object: %p\n", out[0].data.object);
+}
 
 static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
@@ -59,8 +65,14 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 {
   int type = (int)closure;
   scDataTypeValue_t value;
-  scEventNode_t *node = (scEventNode_t*) in[0].data.object->data.data.userdata;
-  scObject_t *object = SC_ObjectNew(loc_class);
+  scEventNode_t *node;
+  scObject_t *object;
+
+  node = (scEventNode_t*) in[0].data.object->data.data.userdata;
+  object = SC_ObjectNew(loc_class);
+
+  object->data.type = TYPE_HASH;
+  object->data.data.hash = SC_HashNew();
 
   if(type == EVENT_TAG)
     node = SC_Event_FindChild(node, SC_StringToChar(in[1].data.string));
@@ -78,14 +90,14 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 }
 
 static scLibObjectMethod_t event_methods[] = {
-  { "tag", "", event_loc_method, { TYPE_STRING }, TYPE_OBJECT, (void*) EVENT_TAG },
-  { "call", "", event_call, { TYPE_HASH }, TYPE_UNDEF, NULL },
+  { "tag", "", event_loc_method, { TYPE_STRING, TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_TAG },
+  { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
 static scLibObjectDef_t event_def = {
   "Event", "",
-  SC_Common_Constructor, { TYPE_UNDEF },
+  event_constructor, { TYPE_UNDEF },
   0, // An event should never be destroyed
   NULL,
   event_methods,
