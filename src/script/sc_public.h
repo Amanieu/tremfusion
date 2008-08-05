@@ -399,5 +399,17 @@ struct scHook_s
   scDataTypeFunction_t function;
 };
 
+extern scClass_t *event_class;
+extern scClass_t *loc_class;
+extern scClass_t *hook_class;
+extern scClass_t *tag_class;
+
+void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params);
+void SC_Event_AddNode(scEventNode_t **list, scEventNode_t *node);
+void SC_Event_DeleteNode(scEventNode_t **list);
+scEventNode_t *SC_Event_NewNode(const char *tag);
+scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
+void SC_Event_Init(void);
+
 #endif
 

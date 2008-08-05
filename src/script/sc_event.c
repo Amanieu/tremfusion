@@ -25,10 +25,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-static scClass_t *event_class;
-static scClass_t *hook_class;
-static scClass_t *tag_class;
-static scClass_t *loc_class;
+/*
+======================================================================
+
+Event
+
+======================================================================
+*/
+
+scClass_t *event_class;
 
 typedef enum
 {
@@ -37,6 +42,204 @@ typedef enum
   EVENT_AFTER,
   EVENT_TAG,
 } loc_closure_t;
+
+/*static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  SC_Common_Constructor(in, out, closure);
+}*/
+
+static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scEventNode_t *node = in[0].data.object->data.data.userdata;
+
+  SC_Event_Call(node, in[1].data.hash);
+}
+
+static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  int type = (int)closure;
+  scDataTypeValue_t value;
+  scEventNode_t *node = (scEventNode_t*) in[0].data.object->data.data.userdata;
+  scObject_t *object = SC_ObjectNew(loc_class);
+
+  if(type == EVENT_TAG)
+    node = SC_Event_FindChild(node, SC_StringToChar(in[1].data.string));
+
+  value.type = TYPE_USERDATA;
+  value.data.userdata = node;
+  SC_HashSet(object->data.data.hash, "node", &value);
+
+  value.type = TYPE_INTEGER;
+  value.data.integer = type;
+  SC_HashSet(object->data.data.hash, "type", &value);
+
+  out[0].type = TYPE_OBJECT;
+  out[0].data.object = object;
+}
+
+static scLibObjectMethod_t event_methods[] = {
+  { "tag", "", event_loc_method, { TYPE_STRING }, TYPE_OBJECT, (void*) EVENT_TAG },
+  { "call", "", event_call, { TYPE_HASH }, TYPE_UNDEF, NULL },
+  { "" }
+};
+
+static scLibObjectDef_t event_def = {
+  "Event", "",
+  SC_Common_Constructor, { TYPE_UNDEF },
+  0, // An event should never be destroyed
+  NULL,
+  event_methods
+};
+
+/*
+======================================================================
+
+Location
+
+======================================================================
+*/
+
+scClass_t *loc_class;
+
+static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
+  scDataTypeValue_t value;
+  scEventNode_t *parent;
+  int type;
+
+  // get parent node from location object
+  SC_HashGet(args, "node", &value);
+  parent = (scEventNode_t*) value.data.userdata;
+
+  // get location type (after, before, inside or simple tag : implicit inside)
+  SC_HashGet(args, "type", &value);
+  type = value.data.integer;
+
+  switch(type)
+  {
+    case EVENT_TAG:
+    case EVENT_INSIDE:
+      SC_Event_DeleteNode(&parent->inside.node);
+      break;
+    case EVENT_BEFORE:
+      SC_Event_DeleteNode(&parent->before);
+      break;
+    case EVENT_AFTER:
+      SC_Event_DeleteNode(&parent->after);
+      break;
+  }
+}
+
+static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
+  scDataTypeValue_t value;
+  scEventNode_t *parent;
+  scEventNode_t *node = in[1].data.object->data.data.userdata;
+  int type;
+
+  // closure have info about node type (node or leaf)
+  node->type = (scEventNodeType_t) closure;
+  
+  // get parent node from location object
+  SC_HashGet(args, "node", &value);
+  parent = (scEventNode_t*) value.data.userdata;
+
+  // get location type (after, before, inside or simple tag : implicit inside)
+  SC_HashGet(args, "type", &value);
+  type = value.data.integer;
+
+  switch(type)
+  {
+    case EVENT_TAG:
+    case EVENT_INSIDE:
+      SC_Event_AddNode(&parent->inside.node, node);
+      break;
+    case EVENT_BEFORE:
+      SC_Event_AddNode(&parent->before, node);
+      break;
+    case EVENT_AFTER:
+      SC_Event_AddNode(&parent->after, node);
+      break;
+  }
+  node->parent = parent;
+}
+
+static scLibObjectMethod_t loc_methods[] = {
+  { "inside", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_INSIDE },
+  { "after", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_AFTER },
+  { "before", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_BEFORE },
+  { "add", "", add, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "delete", "", delete, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "" }
+};
+
+static scLibObjectDef_t loc_def = {
+  "Location", "",
+  0, { TYPE_UNDEF },
+  0,
+  NULL,
+  loc_methods
+};
+
+/*
+======================================================================
+
+Node
+
+======================================================================
+*/
+
+scClass_t *hook_class;
+scClass_t *tag_class;
+
+static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  int type = (int) closure;
+  scObject_t *self;
+  scEventNode_t *node;
+
+  SC_Common_Constructor(in, out, closure);
+
+  self = out->data.object;
+  node = SC_Event_NewNode(SC_StringToChar(in[1].data.string));
+
+  node->type = type;
+  if(type == SC_EVENT_NODE_TYPE_HOOK)
+    node->inside.hook = in[2].data.function;
+
+  self->data.type = TYPE_USERDATA;
+  self->data.data.userdata = node;
+}
+
+static void node_destructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+}
+
+static scLibObjectDef_t tag_def = {
+  "Tag", "",
+  node_constructor, { TYPE_STRING, TYPE_UNDEF },
+  node_destructor,
+  NULL,
+  (void*) SC_EVENT_NODE_TYPE_NODE,
+};
+
+static scLibObjectDef_t hook_def = {
+  "Hook", "",
+  node_constructor, { TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
+  node_destructor,
+  NULL,
+  (void*) SC_EVENT_NODE_TYPE_HOOK,
+};
+
+/*
+======================================================================
+
+Global functions
+
+======================================================================
+*/
 
 void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
 {
@@ -141,176 +344,7 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
   return NULL;
 }
 
-static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  int type = (int)closure;
-  scDataTypeValue_t value;
-  scEventNode_t *node = (scEventNode_t*) in[0].data.object->data.data.userdata;
-  scObject_t *object = SC_ObjectNew(loc_class);
-
-  if(type == EVENT_TAG)
-    node = SC_Event_FindChild(node, SC_StringToChar(in[1].data.string));
-
-  value.type = TYPE_USERDATA;
-  value.data.userdata = node;
-  SC_HashSet(object->data.data.hash, "node", &value);
-
-  value.type = TYPE_INTEGER;
-  value.data.integer = type;
-  SC_HashSet(object->data.data.hash, "type", &value);
-
-  out[0].type = TYPE_OBJECT;
-  out[0].data.object = object;
-}
-
-static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  scEventNode_t *node = in[0].data.object->data.data.userdata;
-
-  SC_Event_Call(node, in[1].data.hash);
-}
-
-/*static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  SC_Common_Constructor(in, out, closure);
-}*/
-
-static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
-  scDataTypeValue_t value;
-  scEventNode_t *parent;
-  int type;
-
-  // get parent node from location object
-  SC_HashGet(args, "node", &value);
-  parent = (scEventNode_t*) value.data.userdata;
-
-  // get location type (after, before, inside or simple tag : implicit inside)
-  SC_HashGet(args, "type", &value);
-  type = value.data.integer;
-
-  switch(type)
-  {
-    case EVENT_TAG:
-    case EVENT_INSIDE:
-      SC_Event_DeleteNode(&parent->inside.node);
-      break;
-    case EVENT_BEFORE:
-      SC_Event_DeleteNode(&parent->before);
-      break;
-    case EVENT_AFTER:
-      SC_Event_DeleteNode(&parent->after);
-      break;
-  }
-}
-
-static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
-  scDataTypeValue_t value;
-  scEventNode_t *parent;
-  scEventNode_t *node = in[1].data.object->data.data.userdata;
-  int type;
-
-  // closure have info about node type (node or leaf)
-  node->type = (scEventNodeType_t) closure;
-  
-  // get parent node from location object
-  SC_HashGet(args, "node", &value);
-  parent = (scEventNode_t*) value.data.userdata;
-
-  // get location type (after, before, inside or simple tag : implicit inside)
-  SC_HashGet(args, "type", &value);
-  type = value.data.integer;
-
-  switch(type)
-  {
-    case EVENT_TAG:
-    case EVENT_INSIDE:
-      SC_Event_AddNode(&parent->inside.node, node);
-      break;
-    case EVENT_BEFORE:
-      SC_Event_AddNode(&parent->before, node);
-      break;
-    case EVENT_AFTER:
-      SC_Event_AddNode(&parent->after, node);
-      break;
-  }
-  node->parent = parent;
-}
-
-static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-  int type = (int) closure;
-  scObject_t *self;
-  scEventNode_t *node;
-
-  SC_Common_Constructor(in, out, closure);
-
-  self = out->data.object;
-  node = SC_Event_NewNode(SC_StringToChar(in[1].data.string));
-
-  node->type = type;
-  if(type == SC_EVENT_NODE_TYPE_HOOK)
-    node->inside.hook = in[2].data.function;
-
-  self->data.type = TYPE_USERDATA;
-  self->data.data.userdata = node;
-}
-
-static void node_destructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
-{
-}
-
-static scLibObjectMethod_t event_methods[] = {
-  { "tag", "", event_loc_method, { TYPE_STRING }, TYPE_OBJECT, (void*) EVENT_TAG },
-  { "call", "", event_call, { TYPE_HASH }, TYPE_UNDEF, NULL },
-  { "" }
-};
-
-static scLibObjectDef_t event_def = {
-  "Event", "",
-  SC_Common_Constructor, { TYPE_UNDEF },
-  0, // An event should never be destroyed
-  NULL,
-  event_methods
-};
-
-static scLibObjectDef_t tag_def = {
-  "Tag", "",
-  node_constructor, { TYPE_UNDEF },
-  node_destructor,
-  NULL,
-  (void*) SC_EVENT_NODE_TYPE_NODE,
-};
-
-static scLibObjectDef_t hook_def = {
-  "Hook", "",
-  0, { TYPE_UNDEF },
-  node_destructor,
-  NULL,
-  (void*) SC_EVENT_NODE_TYPE_HOOK,
-};
-
-static scLibObjectMethod_t loc_methods[] = {
-  { "inside", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_INSIDE },
-  { "after", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_AFTER },
-  { "before", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_BEFORE },
-  { "add", "", add, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "delete", "", delete, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "" }
-};
-
-static scLibObjectDef_t loc_def = {
-  "Location", "",
-  0, { TYPE_UNDEF },
-  0,
-  NULL,
-  loc_methods
-};
-
-void SC_Event_Init( void )
+void SC_Event_Init(void)
 {
   event_class = SC_AddObjectType("common", &event_def);
   hook_class = SC_AddObjectType("common", &hook_def);
