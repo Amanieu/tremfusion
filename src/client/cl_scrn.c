@@ -360,6 +360,35 @@ void SCR_DrawVoipMeter( void ) {
 	sprintf( string, "VoIP: [%s]", buffer );
 	SCR_DrawStringExt( 320 - strlen( string ) * 4, 10, 8, string, g_color_table[7], qtrue, qfalse );
 }
+
+/*
+=================
+SCR_DrawVoipSender
+=================
+*/
+void SCR_DrawVoipSender( void ) {
+	char	string[256];
+	
+	// Little bit of a hack here, but its the only thing i could come up with :|
+	if( cls.voipTime > cls.realtime )
+	{
+	
+	if (!cl_voipShowSender->integer)
+		return; // They don't want this on :(
+	else if (cls.state != CA_ACTIVE)
+		return;  // not connected to a server.
+	else if (!cl_connectedToVoipServer)
+		return;  // server doesn't support VoIP.
+	else if (clc.demoplaying)
+		return;  // playing back a demo.
+	else if (!cl_voip->integer)
+		return;  // client has VoIP support disabled.
+
+	sprintf( string, "Talker's number: %i", cls.voipSender );
+	SCR_DrawStringExt( 320 - strlen( string ) * -7, 430, 8, string, g_color_table[7], qtrue, qfalse );
+	
+	}
+}
 #endif
 
 
@@ -503,6 +532,8 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 			CL_CGameRendering(stereoFrame);
 #ifdef USE_VOIP
 			SCR_DrawVoipMeter();
+			SCR_DrawVoipSender();
+			
 #endif
 			break;
 		}
