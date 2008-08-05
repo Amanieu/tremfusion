@@ -49,6 +49,7 @@ void SNDDMA_Submit(void)
 {
 }
 
+#ifdef DEDICATED
 sfxHandle_t S_RegisterSound( const char *name, qboolean compressed ) 
 {
 	return 0;
@@ -59,3 +60,4 @@ void S_StartLocalSound( sfxHandle_t sfxHandle, int channelNum ) {
 
 void S_ClearSoundBuffer( void ) {
 }
+#endif

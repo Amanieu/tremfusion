@@ -129,6 +129,10 @@ ifndef USE_INTERNAL_SPEEX
 USE_INTERNAL_SPEEX=1
 endif
 
+ifndef USE_TTY_CLIENT
+USE_TTY_CLIENT=0
+endif
+
 ifndef USE_LOCAL_HEADERS
 USE_LOCAL_HEADERS=1
 endif
@@ -242,7 +246,13 @@ ifeq ($(PLATFORM),linux)
   endif
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-    -pipe -DUSE_ICON $(shell sdl-config --cflags)
+    -pipe
+
+  ifneq ($(USE_TTY_CLIENT),1)
+    BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
+  else
+    BASE_CFLAGS += -DUSE_TTY_CLIENT
+  endif
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
@@ -295,7 +305,11 @@ ifeq ($(PLATFORM),linux)
   THREAD_LDFLAGS=-lpthread
   LDFLAGS=-ldl -lm
 
-  CLIENT_LDFLAGS=$(shell sdl-config --libs) -lGL
+  CLIENT_LDFLAGS=
+
+  ifneq ($(USE_TTY_CLIENT),1)
+    CLIENT_LDFLAGS += $(shell sdl-config --libs) -lGL
+  endif
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -1197,6 +1211,11 @@ Q3OBJ = \
   $(B)/client/vm.o \
   $(B)/client/vm_interpreted.o \
   \
+  $(B)/client/con_log.o \
+  $(B)/client/sys_main.o
+
+ifneq ($(USE_TTY_CLIENT),1)
+Q3OBJ += \
   $(B)/client/jcapimin.o \
   $(B)/client/jcapistd.o \
   $(B)/client/jchuff.o   \
@@ -1265,10 +1284,13 @@ Q3OBJ = \
   \
   $(B)/client/sdl_gamma.o \
   $(B)/client/sdl_input.o \
-  $(B)/client/sdl_snd.o \
-  \
-  $(B)/client/con_log.o \
-  $(B)/client/sys_main.o
+  $(B)/client/sdl_snd.o
+else
+Q3OBJ += \
+  $(B)/client/null_input.o \
+  $(B)/client/null_snddma.o \
+  $(B)/client/null_renderer.o  
+endif
 
 ifeq ($(ARCH),x86)
   Q3OBJ += \
@@ -1353,11 +1375,13 @@ ifeq ($(USE_MUMBLE),1)
     $(B)/client/libmumblelink.o
 endif
 
-Q3POBJ += \
-  $(B)/client/sdl_glimp.o
+ifneq ($(USE_TTY_CLIENT),1)
+  Q3POBJ = \
+    $(B)/client/sdl_glimp.o
 
-Q3POBJ_SMP += \
-  $(B)/clientsmp/sdl_glimp.o
+  Q3POBJ_SMP = \
+    $(B)/clientsmp/sdl_glimp.o
+endif
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
@@ -1627,6 +1651,9 @@ $(B)/client/%.o: $(SYSDIR)/%.c
 
 $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
+
+$(B)/client/%.o: $(NDIR)/%.c
+	$(DO_CC)
 
 
 $(B)/ded/%.o: $(ASMDIR)/%.s

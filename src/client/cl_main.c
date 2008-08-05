@@ -2838,6 +2838,7 @@ video [filename]
 */
 void CL_Video_f( void )
 {
+#ifndef USE_CLIENT_TTY
   char  filename[ MAX_OSPATH ];
   int   i, last;
 
@@ -2884,6 +2885,7 @@ void CL_Video_f( void )
   }
 
   CL_OpenAVIForWriting( filename );
+#endif
 }
 
 /*
