@@ -141,8 +141,9 @@ ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
 endif
 
+# Disable this on release builds
 ifndef USE_SCM_VERSION
-USE_SCM_VERSION=0
+USE_SCM_VERSION=1
 endif
 
 #############################################################################
