@@ -72,6 +72,25 @@ void SC_Event_AddNode(scEventNode_t **list, scEventNode_t *node)
   *list = node;
 }
 
+void SC_Event_DeleteNode(scEventNode_t **list)
+{
+  scEventNode_t *node;
+  while(*list)
+  {
+    node = *list;
+    *list = (*list)->next;
+
+    SC_Event_DeleteNode(&node->after);
+    SC_Event_DeleteNode(&node->before);
+    if(node->type == SC_EVENT_NODE_TYPE_NODE)
+      SC_Event_DeleteNode(&node->inside.node);
+    else
+      SC_FunctionGCDec(node->inside.hook);
+
+    BG_Free(node);
+  }
+}
+
 scEventNode_t *SC_Event_NewNode(const char *tag)
 {
   scEventNode_t *node = BG_Alloc(sizeof(scEventNode_t));
@@ -156,6 +175,36 @@ static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   SC_Common_Constructor(in, out, closure);
 }*/
 
+static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
+  scDataTypeValue_t value;
+  scEventNode_t *parent;
+  int type;
+
+  // get parent node from location object
+  SC_HashGet(args, "node", &value);
+  parent = (scEventNode_t*) value.data.userdata;
+
+  // get location type (after, before, inside or simple tag : implicit inside)
+  SC_HashGet(args, "type", &value);
+  type = value.data.integer;
+
+  switch(type)
+  {
+    case EVENT_TAG:
+    case EVENT_INSIDE:
+      SC_Event_DeleteNode(&parent->inside.node);
+      break;
+    case EVENT_BEFORE:
+      SC_Event_DeleteNode(&parent->before);
+      break;
+    case EVENT_AFTER:
+      SC_Event_DeleteNode(&parent->after);
+      break;
+  }
+}
+
 static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
@@ -214,10 +263,6 @@ static void node_destructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void
 {
 }
 
-static scLibObjectMember_t event_members[] = {
-  { "" }
-};
-
 static scLibObjectMethod_t event_methods[] = {
   { "tag", "", event_loc_method, { TYPE_STRING }, TYPE_OBJECT, (void*) EVENT_TAG },
   { "call", "", event_call, { TYPE_HASH }, TYPE_UNDEF, NULL },
@@ -228,7 +273,7 @@ static scLibObjectDef_t event_def = {
   "Event", "",
   SC_Common_Constructor, { TYPE_UNDEF },
   0, // An event should never be destroyed
-  event_members,
+  NULL,
   event_methods
 };
 
@@ -253,6 +298,7 @@ static scLibObjectMethod_t loc_methods[] = {
   { "after", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_AFTER },
   { "before", "", event_loc_method, { TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_BEFORE },
   { "add", "", add, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "delete", "", delete, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
