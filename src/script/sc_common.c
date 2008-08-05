@@ -30,6 +30,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static scClass_t *vec3_class;
 
+typedef struct
+{
+  qboolean sc_created; // qtrue if created from python or lua, false if created by SC_Vec3FromVec3_t
+                       // Prevents call of BG_Free on a vec3_t 
+  float   *vect;       
+}sc_vec3_t;
+
 typedef enum 
 {
   VEC3_X,
@@ -47,10 +54,15 @@ void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 
 static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  scObject_t *self;
   int settype = (int)closure;
+  sc_vec3_t *data;
   vec3_t vec3;
+  
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
     
-  memcpy( vec3, in[0].data.object->data.data.userdata, sizeof( vec3 ) );
+  memcpy( vec3, data->vect, sizeof( vec3 ) );
   
   switch (settype)
   {
@@ -66,15 +78,20 @@ static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
     default:
       return;
   }
-  memcpy( in[0].data.object->data.data.userdata, vec3, sizeof( vec3 ) );
+  memcpy( data->vect, vec3, sizeof( vec3 ) );
 }
 
 static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  scObject_t *self;
   int gettype = (int)closure;
+  sc_vec3_t *data;
   vec3_t vec3;
   
-  memcpy( vec3, in[0].data.object->data.data.userdata, sizeof( vec3 ) );
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
+  
+  memcpy( vec3, data->vect, sizeof( vec3 ) );
   out[0].type = TYPE_FLOAT;
   
   switch (gettype)
@@ -98,18 +115,30 @@ static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 static void vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   scObject_t *self;
-
+  sc_vec3_t *data;
   SC_Common_Constructor(in, out, closure);
   self = out[0].data.object;
 
   self->data.type = TYPE_USERDATA;
-  self->data.data.userdata = BG_Alloc(sizeof(float) * 3);
-  memset(self->data.data.userdata, 0x00, sizeof(float) * 3);
+  data = BG_Alloc(sizeof(sc_vec3_t));
+  data->sc_created = qtrue;
+  data->vect = BG_Alloc(sizeof(float) * 3);
+  memset(data->vect, 0x00, sizeof(float) * 3);
+  self->data.data.userdata = data;
 }
 
 static void vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  BG_Free(in[0].data.object->data.data.userdata);
+  scObject_t *self;
+  sc_vec3_t *data;
+  
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
+
+  if(data->sc_created)
+    BG_Free(data->vect);
+  
+  BG_Free(data);
 }
 
 static scLibObjectMember_t vec3_members[] = {
@@ -135,9 +164,14 @@ static scLibObjectDef_t vec3_def = {
 scObject_t *SC_Vec3FromVec3_t( float *vect )
 {
   scObject_t *instance;
+  sc_vec3_t *data;
   instance = SC_ObjectNew(vec3_class);
+
   instance->data.type = TYPE_USERDATA;
-  instance->data.data.userdata = (void*)vect;
+  data = BG_Alloc(sizeof(sc_vec3_t));
+  data->sc_created = qfalse;
+  data->vect = vect;
+  instance->data.data.userdata = data;
 
   return instance;
 }
