@@ -345,6 +345,7 @@ typedef struct
   scCRef_t                  destructor;
   scLibObjectMember_t       *members;
   scLibObjectMethod_t       *methods;
+  void                      *closure;
 } scLibObjectDef_t;
 
 void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );

@@ -129,6 +129,7 @@ static scLibObjectDef_t vec3_def = {
   vec3_destructor,
   vec3_members, 
   vec3_methods, 
+  NULL
 };
 
 scObject_t *SC_Vec3FromVec3_t( float *vect )

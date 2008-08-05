@@ -241,6 +241,7 @@ static int call_metamethod( lua_State *L )
   int top = lua_gettop(L);
   int i;
   int type;
+  int mod = 0;
   scClass_t *class;
   scDataTypeValue_t ret;
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
@@ -260,6 +261,9 @@ static int call_metamethod( lua_State *L )
   {
     class = lua_touserdata(L, -1);
     function = &class->constructor;
+    args[0].type = TYPE_CLASS;
+    args[0].data.class = class;
+    mod = 1;
   }
   else
   {
@@ -272,11 +276,11 @@ static int call_metamethod( lua_State *L )
   top = lua_gettop(L);
   for(i = top-1; i >= 0; i--)
   {
-    luaL_checktype(L, -1, sctype2luatype(function->argument[i]));
-    pop_value(L, &args[i]);
-    SC_ValueGCInc(&args[i]);
+    luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
+    pop_value(L, &args[i+mod]);
+    SC_ValueGCInc(&args[i+mod]);
   }
-  args[top].type = TYPE_UNDEF;
+  args[top+mod].type = TYPE_UNDEF;
 
   SC_RunFunction(function, args, &ret);
 

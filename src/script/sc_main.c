@@ -45,6 +45,7 @@ void SC_Init( void )
 #endif 
   SC_script_module_init();
   SC_Common_Init();
+  SC_Event_Init();
 }
 
 static void autoload_global(void)
@@ -202,7 +203,6 @@ scLangage_t SC_LangageFromFilename(const char* filename)
 
 void SC_InitClass( scClass_t *class )
 {
-  Com_Printf("SC_InitClass called\n");
 #ifdef USE_LUA
 //  SC_Lua_InitClass( class );
 #endif
