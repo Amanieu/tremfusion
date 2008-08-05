@@ -1443,7 +1443,8 @@ static void Assemble( void ) {
 		for ( i = 0 ; i < NUM_SEGMENTS ; i++ ) {
 			segment[i].imageUsed = 0;
 		}
-		segment[DATASEG].imageUsed = 4;		// skip the 0 byte, so NULL pointers are fixed up properly
+		segment[DATASEG].imageUsed = 4096;	// skip the first page, so NULL pointers get caught
+		segment[DATASEG].image[0] = 1;		// tell the qvm loader the first page is free so it can be unmapped
 		instructionCount = 0;
 
 		for ( i = 0 ; i < numAsmFiles ; i++ ) {

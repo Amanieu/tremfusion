@@ -35,6 +35,12 @@ and one exported function: Perform
 */
 
 #include "vm_local.h"
+#include <sys/types.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#endif
 
 
 vm_t	*currentVM = NULL;
@@ -424,7 +430,12 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	if( alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
-		vm->dataBase = Hunk_Alloc( dataLength, h_high );
+#ifdef _WIN32
+		DWORD _unused;
+		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
+#else
+		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+#endif
 		vm->dataMask = dataLength - 1;
 	} else {
 		// clear the data
@@ -437,6 +448,16 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	// byte swap the longs
 	for ( i = 0 ; i < header->dataLength ; i += 4 ) {
 		*(int *)(vm->dataBase + i) = LittleLong( *(int *)(vm->dataBase + i ) );
+	}
+
+	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
+	if ( vm->dataBase[0] == 1 ) {
+#ifdef _WIN32
+		DWORD _unused;
+		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
+#else
+		mmap( vm->dataBase, 4096, PROT_NONE, MAP_ANONYMOUS | MAP_FIXED | MAP_SHARED, -1, 0 );
+#endif
 	}
 
 	if( header->vmMagic == VM_MAGIC_VER2 ) {
@@ -632,12 +653,16 @@ void VM_Free( vm_t *vm ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
 	}
+	if ( vm->dataBase ) {
+#ifdef _WIN32
+		VirtualFree( vm->dataBase, vm->dataMask + 1, MEM_RELEASE );
+#else
+		munmap( vm->dataBase, vm->dataMask + 1 );
+#endif
+	}
 #if 0	// now automatically freed by hunk
 	if ( vm->codeBase ) {
 		Z_Free( vm->codeBase );
-	}
-	if ( vm->dataBase ) {
-		Z_Free( vm->dataBase );
 	}
 	if ( vm->instructionPointers ) {
 		Z_Free( vm->instructionPointers );
