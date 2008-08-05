@@ -1114,26 +1114,43 @@ void Key_Bind_f (void)
 		return;
 	}
 
-	if( detailed )
-		Key_SetBindingByMode (b, Cmd_ArgsFrom(2), mode);
+	if( mode == KEY_RELEASE )
+		Key_SetBindingByMode (b, Cmd_ArgsFrom(2), KEY_RELEASE);
 	else {
+		char upcmd[ BIG_INFO_STRING ];
+		char *up = upcmd;
 		char *kb = Cmd_ArgsFrom(2);
-		char *p = kb;
+		qboolean gotone = qfalse;
 
 		Key_SetBindingByMode (b, kb, KEY_PUSH);
 		
-		// replace +commands with -commands
+		// compensate +commands with -commands
 		for(;;) {
-			if( *p == '+' ) {
-				*p = '-';
-				p++;
+			if( !*kb ) {
+				break;
 			}
-			while( *p && *p != ';' ) p++;
-			if( !*p ) break;
-			else p++;
+			else if( *kb == ';' ) {
+				kb++;
+			}
+			else if( *kb == '+' ) {
+				if( gotone )
+					*up++ = ';';
+				else
+					gotone = qtrue;
+				*up++ = '-';
+				kb++;
+				while( *kb && *kb != ';' )
+					*up++ = *kb++;
+			}
+			else {
+				do {
+					kb++;
+				} while( *kb && *kb != ';' );
+			}
 		}
+		*up = '\0';
 
-		Key_SetBindingByMode (b, kb, KEY_RELEASE);
+		Key_SetBindingByMode (b, upcmd, KEY_RELEASE);
 	}
 }
 
