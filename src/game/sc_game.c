@@ -67,6 +67,7 @@ typedef enum
   ENTITY_TARGETNAME,
   ENTITY_TEAM,
   ENTITY_ORIGIN,
+  ENTITY_INUSE,
 } ent_closures;
 
 static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
@@ -99,6 +100,13 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   out->type = TYPE_UNDEF;
 }
 
+#define ENT_STR(x) \
+  out[0].type = TYPE_STRING; \
+  if (x) \
+    out[0].data.string = SC_StringNewFromChar(x); \
+  else \
+    out[0].data.string = SC_StringNewFromChar("");
+
 static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int gettype = (int)closure;
@@ -110,25 +118,13 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   switch (gettype)
   {
     case ENTITY_CLASSNAME:
-      out[0].type = TYPE_STRING;
-      if(entity->classname)
-        out[0].data.string = SC_StringNewFromChar(entity->classname);
-      else
-        out[0].data.string = SC_StringNewFromChar("");
+      ENT_STR(entity->classname);
       break;
     case ENTITY_MODEL:
-      out[0].type = TYPE_STRING;
-      if(entity->model)
-        out[0].data.string = SC_StringNewFromChar(entity->model);
-      else
-        out[0].data.string = SC_StringNewFromChar("");
+      ENT_STR(entity->model);
       break;
     case ENTITY_MODEL2:
-      out[0].type = TYPE_STRING;
-      if(entity->model2)
-        out[0].data.string = SC_StringNewFromChar(entity->model2);
-      else
-        out[0].data.string = SC_StringNewFromChar("");
+      ENT_STR(entity->model2);
       break;
     case ENTITY_ORIGIN:
       instance = SC_Vec3FromVec3_t( entity->r.currentOrigin);
@@ -136,6 +132,12 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
       out[0].data.object = instance;
       break;
       //SC_Vec3FromVec3_t
+    case ENTITY_TARGET:
+      ENT_STR( entity->target );
+    case ENTITY_INUSE:
+      out[0].type = TYPE_BOOLEAN;
+      out[0].data.boolean = (char)entity->inuse;
+      break;
     default:
       out[0].type = TYPE_UNDEF;
       break;
@@ -163,10 +165,11 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 
 static scLibObjectMember_t entity_members[] = {
-  { "classname", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_CLASSNAME },
-  { "model", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL },
-  { "model2", "", TYPE_STRING, entity_set, entity_get, (void*)ENTITY_MODEL2 },
-  { "origin", "", TYPE_OBJECT, entity_set, entity_get, (void*)ENTITY_ORIGIN },
+  { "classname", "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_CLASSNAME },
+  { "model",     "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL },
+  { "model2",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL2 },
+  { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, (void*)ENTITY_ORIGIN },
+  { "inuse",     "", TYPE_BOOLEAN, entity_set, entity_get, (void*)ENTITY_INUSE },
   { "" },
 };
 
