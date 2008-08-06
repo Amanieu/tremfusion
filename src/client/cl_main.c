@@ -43,6 +43,7 @@ cvar_t	*cl_voipGainDuringCapture;
 cvar_t	*cl_voipCaptureMult;
 cvar_t	*cl_voipShowMeter;
 cvar_t	*cl_voipShowSender;
+cvar_t	*cl_voipSenderPos;
 cvar_t	*cl_voip;
 #endif
 
@@ -3080,6 +3081,7 @@ void CL_Init( void ) {
 	cl_voipUseVAD = Cvar_Get ("cl_voipUseVAD", "0", CVAR_ARCHIVE);
 	cl_voipVADThreshold = Cvar_Get ("cl_voipVADThreshold", "0.25", CVAR_ARCHIVE);
 	cl_voipShowMeter = Cvar_Get ("cl_voipShowMeter", "1", CVAR_ARCHIVE);
+	cl_voipSenderPos = Cvar_Get ("cl_voipSenderPos", "0", CVAR_ARCHIVE);
 	cl_voipShowSender = Cvar_Get ("cl_voipShowSender", "1", CVAR_ARCHIVE);
 
 	// This is a protocol version number.

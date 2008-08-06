@@ -370,8 +370,8 @@ void SCR_DrawVoipSender( void ) {
 	char	string[256];
 	
 	// Little bit of a hack here, but its the only thing i could come up with :|
-	if( cls.voipTime > cls.realtime )
-	{
+       if( cls.voipTime > cls.realtime )
+       {
 	
 	if (!cl_voipShowSender->integer)
 		return; // They don't want this on :(
@@ -385,9 +385,21 @@ void SCR_DrawVoipSender( void ) {
 		return;  // client has VoIP support disabled.
 
 	sprintf( string, "Talker's number: %i", cls.voipSender );
-	SCR_DrawStringExt( 320 - strlen( string ) * -7, 430, 8, string, g_color_table[7], qtrue, qfalse );
 	
-	}
+	if( cl_voipSenderPos->integer == 0 ) // Lower right-hand corner, above HUD
+		SCR_DrawStringExt( 320 - strlen( string ) * -8, 365, 8, string, g_color_table[7], qtrue, qfalse );
+	else if( cl_voipSenderPos->integer == 1 ) // Lower left-hand corner, above HUD
+		SCR_DrawStringExt( 320 - strlen( string ) * 17, 365, 8, string, g_color_table[7], qtrue, qfalse );
+	else if( cl_voipSenderPos->integer == 2 ) // Top right-hand corner, below lag-o-meter/time
+		SCR_DrawStringExt( 320 - strlen( string ) * -9, 100, 8, string, g_color_table[7], qtrue, qfalse );
+	else if( cl_voipSenderPos->integer == 3 ) // Top center, below VOIP bar when its displayed
+		SCR_DrawStringExt( 320 - strlen( string ) * 4, 30, 8, string, g_color_table[7], qtrue, qfalse );
+	else if( cl_voipSenderPos->integer == 4 ) // Bottom center, above HUD
+		SCR_DrawStringExt( 320 - strlen( string ) * 4, 400, 8, string, g_color_table[7], qtrue, qfalse );
+	else
+		SCR_DrawStringExt( 320 - strlen( string ) * -8, 380, 8, string, g_color_table[7], qtrue, qfalse );
+	
+       }
 }
 #endif
 
