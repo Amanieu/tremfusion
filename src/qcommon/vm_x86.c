@@ -1080,7 +1080,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	// copy to an exact size buffer on the hunk
 	vm->codeLength = compiledOfs;
 #ifdef VM_X86_MMAP
-	vm->codeBase = mmap(NULL, compiledOfs, PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	vm->codeBase = mmap(NULL, compiledOfs, PROT_WRITE | PROT_EXEC, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	if(vm->codeBase == (void*)-1)
 		Com_Error(ERR_DROP, "VM_CompileX86: can't mmap memory");
 #elif _WIN32

@@ -434,7 +434,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		DWORD _unused;
 		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
 #else
-		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
 #endif
 		vm->dataMask = dataLength - 1;
 	} else {
@@ -655,7 +655,7 @@ void VM_Free( vm_t *vm ) {
 	}
 	if ( vm->dataBase ) {
 #ifdef _WIN32
-		VirtualFree( vm->dataBase, vm->dataMask + 1, MEM_RELEASE );
+		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
 #else
 		munmap( vm->dataBase, vm->dataMask + 1 );
 #endif
