@@ -50,8 +50,8 @@ static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, vo
   SC_Common_Constructor(in, out, closure);
 
   root = SC_Event_NewNode("all");
+  root->type = SC_EVENT_NODE_TYPE_NODE;
   out[0].data.object->data.data.userdata = root;
-  Com_Printf("event object: %p\n", out[0].data.object);
 }
 
 static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
@@ -89,9 +89,19 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   out[0].data.object = object;
 }
 
+static void event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scEventNode_t *node = in[0].data.object->data.data.userdata;
+
+  SC_Event_Dump(node);
+
+  out->type = TYPE_UNDEF;
+}
+
 static scLibObjectMethod_t event_methods[] = {
   { "tag", "", event_loc_method, { TYPE_STRING, TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_TAG },
   { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "dump", "", event_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
@@ -152,9 +162,6 @@ static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
   scEventNode_t *node = in[1].data.object->data.data.userdata;
   int type;
 
-  // closure have info about node type (node or leaf)
-  node->type = (scEventNodeType_t) closure;
-  
   // get parent node from location object
   SC_HashGet(args, "node", &value);
   parent = (scEventNode_t*) value.data.userdata;
@@ -366,5 +373,57 @@ void SC_Event_Init(void)
   hook_class = SC_AddClass("common", &hook_def);
   tag_class = SC_AddClass("common", &tag_def);
   loc_class = SC_AddClass("common", &loc_def);
+}
+
+static void dump_rec(scEventNode_t *node, char *name)
+{
+  char n[256];
+  int len;
+  scEventNode_t *tmpn;
+
+  strcpy(n, name);
+  strcat(n, ".");
+  strcat(n, node->tag);
+
+  len = strlen(n);
+
+  tmpn = node->before;
+  strcat(n, "[before]");
+  while(tmpn)
+  {
+    dump_rec(tmpn, n);
+    tmpn = tmpn->next;
+  }
+  n[len] = '\0';
+
+  if(node->type == SC_EVENT_NODE_TYPE_NODE)
+  {
+    Com_Printf("%s[]\n", n);
+    tmpn = node->inside.node;
+    strcat(n, "[inside]");
+    while(tmpn)
+    {
+      dump_rec(tmpn, n);
+      tmpn = tmpn->next;
+    }
+    n[len] = '\0';
+  }
+  else
+    Com_Printf("%s\n", n);
+
+  tmpn = node->after;
+  strcat(n, "[after]");
+  while(tmpn)
+  {
+    dump_rec(tmpn, n);
+    tmpn = tmpn->next;
+  }
+}
+
+void SC_Event_Dump(scEventNode_t *node)
+{
+  Com_Printf("--------- SC_Event_Dump ----------\n");
+  dump_rec(node, "");
+  Com_Printf("----------------------------------\n");
 }
 

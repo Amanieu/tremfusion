@@ -406,6 +406,7 @@ void SC_Event_DeleteNode(scEventNode_t **list);
 scEventNode_t *SC_Event_NewNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
+void SC_Event_Dump(scEventNode_t *node);
 
 #endif
 

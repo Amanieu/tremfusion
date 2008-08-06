@@ -68,6 +68,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   memcpy(class->constructor.argument+1, def->constructor_arguments, ( MAX_FUNCTION_ARGUMENTS ) * sizeof(scDataType_t));
   class->constructor.return_type = TYPE_OBJECT;
   class->constructor.data.ref = def->constructor;
+  class->constructor.closure = def->closure;
 
   class->destructor.gc.count = 0;
   class->destructor.langage = LANGAGE_C;
@@ -75,6 +76,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   class->destructor.argument[1] = TYPE_UNDEF;
   class->destructor.return_type = TYPE_UNDEF;
   class->destructor.data.ref = def->destructor;
+  class->destructor.closure = def->closure;
 
   cnt = 0;
   if(def->members != NULL)
