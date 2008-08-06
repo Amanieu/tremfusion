@@ -431,10 +431,13 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	if( alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
 #ifdef _WIN32
-		DWORD _unused;
 		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
+		if(!vm->codeBase)
+			Com_Error(ERR_DROP, "VM_LoadQVM: VirtualAlloc failed");
 #else
 		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+		if(vm->dataBase == (void*)-1)
+			Com_Error(ERR_DROP, "VM_LoadQVM: can't mmap memory");
 #endif
 		vm->dataMask = dataLength - 1;
 	} else {
@@ -451,12 +454,13 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	}
 
 	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
+	// Fail silently
 	if ( vm->dataBase[0] == 1 ) {
 #ifdef _WIN32
-		DWORD _unused;
+		DWORD _unused = 0;
 		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
 #else
-		mmap( vm->dataBase, 4096, PROT_NONE, MAP_ANONYMOUS | MAP_FIXED | MAP_SHARED, -1, 0 );
+		mprotect( vm->dataBase, 4096, PROT_NONE );
 #endif
 	}
 
