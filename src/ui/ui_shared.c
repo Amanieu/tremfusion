@@ -2387,6 +2387,13 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
 
       yadj = useScale * glyph->top;
 
+      if( Q_IsColorString( s ) )
+      {
+        memcpy( newColor, g_color_table[ColorIndex( *( s+1 ) )], sizeof( newColor ) );
+        newColor[3] = color[3];
+        DC->setColor( newColor );
+      }
+
       if( style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE )
       {
         int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
