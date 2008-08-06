@@ -277,7 +277,8 @@ static int call_metamethod( lua_State *L )
 
   for(i = top-1; i >= 0; i--)
   {
-    luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
+    // FIXME: have to consider metatables to check type
+    //luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
     pop_value(L, &args[i+mod]);
     SC_ValueGCInc(&args[i+mod]);
   }
@@ -486,19 +487,6 @@ static scDataTypeHash_t* pop_hash(lua_State *L)
   const char *lstr;
 
   luaL_checktype(L, -1, LUA_TTABLE);
-
-  // Hash is an object with a metatable
-  if(!lua_getmetatable(L, -1))
-  {
-    // TODO: Error
-  }
-
-  luaL_checktype(L, -1, LUA_TTABLE);
-  lua_pop(L, 1);
-  lua_getfield(L, -1, "_data");
-  lua_remove(L, -2);
-  luaL_checktype(L, -1, LUA_TTABLE);
-
   scDataTypeHash_t *hash = SC_HashNew();
 
   lua_pushnil(L);
@@ -510,6 +498,8 @@ static scDataTypeHash_t* pop_hash(lua_State *L)
     SC_HashSet(hash, SC_StringToChar(key), &val);
   }
 
+  lua_pop(L, 1);
+
   return hash;
 }
 
@@ -517,14 +507,27 @@ static scDataTypeFunction_t* pop_function(lua_State *L)
 {
   scDataTypeFunction_t *function;
 
-  luaL_checktype(L, -1, LUA_TTABLE);
-  lua_getmetatable(L, -1);
-  luaL_checktype(L, -1, LUA_TTABLE);
-  lua_pop(L, 1);
-  lua_getfield(L, -1, "_ref");
-  luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
-  function = lua_touserdata(L, -1);
-  lua_pop(L, 3);
+  if(lua_istable(L, -1))
+  {
+    lua_getmetatable(L, -1);
+    luaL_checktype(L, -1, LUA_TTABLE);
+    lua_pop(L, 1);
+    lua_getfield(L, -1, "_ref");
+    luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
+    function = lua_touserdata(L, -1);
+    lua_pop(L, 3);
+  }
+  else
+  {
+    function = SC_FunctionNew();
+    function->langage = LANGAGE_LUA;
+    // TODO: What are arguments and return type ?
+    function->argument[0] = TYPE_ANY;
+    function->argument[1] = TYPE_UNDEF;
+    function->return_type = TYPE_ANY;
+    function->closure = NULL;
+    SC_Lua_Fregister(function);
+  }
 
   return function;
 }
@@ -1059,7 +1062,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 
   update_context(L);
 
-  lua_getglobal( L, func->data.path );		// get function
+  lua_getfield(L, LUA_REGISTRYINDEX, va("func_%d", func->data.luafunc));
 
   while( *dt != TYPE_UNDEF )
   {
@@ -1072,9 +1075,24 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 
   // do the call
   if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
-    Com_Printf("G_RunLuaFunction: error running function `%s': %s\n", func->data.path, lua_tostring(L, -1));
+    Com_Printf("G_RunLuaFunction: error running function : %s\n", lua_tostring(L, -1));
 
   pop_value(L, ret);
+}
+
+/*
+=================
+SC_Lua_Fregister
+=================
+*/
+static scLuaFunc_t luaFunc_id = 0;
+
+void SC_Lua_Fregister(scDataTypeFunction_t *function)
+{
+  lua_setfield(g_luaState, LUA_REGISTRYINDEX, va("func_%d", luaFunc_id));
+  function->data.luafunc = luaFunc_id;
+
+  luaFunc_id++;
 }
 
 /*

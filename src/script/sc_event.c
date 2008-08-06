@@ -67,15 +67,24 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   scDataTypeValue_t value;
   scEventNode_t *node;
   scObject_t *object;
+  scDataTypeHash_t *hash;
 
-  node = (scEventNode_t*) in[0].data.object->data.data.userdata;
   object = SC_ObjectNew(loc_class);
 
   object->data.type = TYPE_HASH;
   object->data.data.hash = SC_HashNew();
 
   if(type == EVENT_TAG)
+  {
+    node = (scEventNode_t*) in[0].data.object->data.data.userdata;
     node = SC_Event_FindChild(node, SC_StringToChar(in[1].data.string));
+  }
+  else
+  {
+    hash = in[0].data.object->data.data.hash;
+    SC_HashGet(hash, "node", &value);
+    node = value.data.userdata;
+  }
 
   value.type = TYPE_USERDATA;
   value.data.userdata = node;
@@ -228,7 +237,12 @@ static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 
   node->type = type;
   if(type == SC_EVENT_NODE_TYPE_HOOK)
+  {
     node->inside.hook = in[2].data.function;
+    node->inside.hook->argument[0] = TYPE_HASH;
+    node->inside.hook->argument[1] = TYPE_UNDEF;
+    node->inside.hook->return_type = TYPE_UNDEF;
+  }
 
   self->data.type = TYPE_USERDATA;
   self->data.data.userdata = node;
@@ -286,7 +300,9 @@ void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
       SC_Event_Call(i, params);
   }
   else
+  {
     SC_RunFunction(node->inside.hook, args, &ret);
+  }
 
   for(i = node->after; i != NULL; i = i->next)
     SC_Event_Call(i, params);
@@ -396,9 +412,9 @@ static void dump_rec(scEventNode_t *node, char *name)
   }
   n[len] = '\0';
 
+  Com_Printf("%s\n", n);
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
-    Com_Printf("%s[]\n", n);
     tmpn = node->inside.node;
     strcat(n, "[inside]");
     while(tmpn)
@@ -408,8 +424,6 @@ static void dump_rec(scEventNode_t *node, char *name)
     }
     n[len] = '\0';
   }
-  else
-    Com_Printf("%s\n", n);
 
   tmpn = node->after;
   strcat(n, "[after]");

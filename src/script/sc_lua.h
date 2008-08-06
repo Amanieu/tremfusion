@@ -42,6 +42,8 @@ qboolean            SC_Lua_RunScript( const char *filename );
 void                SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 void                SC_Lua_DumpStack( void );
 
+void                SC_Lua_Fregister(scDataTypeFunction_t *function);
+
 #endif
 
 #endif
