@@ -99,6 +99,10 @@ typedef scDataTypeHash_t scNamespace_t;
 
 typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
 
+#ifdef USE_LUA
+typedef unsigned int scLuaFunc_t;
+#endif
+
 #ifdef USE_PYTHON
 typedef PyObject *scPYFunc_t;
 #endif
@@ -112,8 +116,10 @@ struct scDataTypeFunction_s
   void*                 closure;
   union
   {
-    char                path[ MAX_PATH_LENGTH + 1 ];
     scCRef_t            ref;
+#ifdef USE_LUA
+    scLuaFunc_t         luafunc;
+#endif
 #ifdef USE_PYTHON
     scPYFunc_t          pyfunc;
 #endif
