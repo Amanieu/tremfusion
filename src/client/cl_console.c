@@ -607,7 +607,7 @@ void Con_DrawInput (void) {
 	SCR_DrawSmallChar( con.xadjust + 1 * SMALLCHAR_WIDTH, y, ']' );
 
 	Field_Draw( &g_consoleField, con.xadjust + 2 * SMALLCHAR_WIDTH, y,
-		SCREEN_WIDTH - 3 * SMALLCHAR_WIDTH, qtrue, qtrue );
+		SCREEN_WIDTH - 3 * SMALLCHAR_WIDTH, qtrue, qfalse );
 }
 
 /*
@@ -796,7 +796,7 @@ void Con_DrawConsole( void ) {
 		}
 
 		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232,
-				SCREEN_WIDTH - ( skip + 1 ) * BIGCHAR_WIDTH, qtrue, qtrue );
+				SCREEN_WIDTH - ( skip + 1 ) * BIGCHAR_WIDTH, qtrue, qfalse );
 	}
 }
 
