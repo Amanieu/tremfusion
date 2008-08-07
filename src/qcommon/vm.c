@@ -435,7 +435,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
 #ifdef _WIN32
 		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
-		if(!vm->codeBase)
+		if(!vm->dataBase)
 			Com_Error(ERR_DROP, "VM_LoadQVM: VirtualAlloc failed");
 #else
 		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
