@@ -1061,6 +1061,10 @@ void G_RemoveQueuedBotBegin( int clientNum );
 void G_CheckBotSpawn( void );
 int BotAIShutdownClient( int client, qboolean restart );
 
+//ai_main.c
+//
+void BotBeginIntermission( void );
+
 //some maxs
 #define MAX_FILEPATH      144
 

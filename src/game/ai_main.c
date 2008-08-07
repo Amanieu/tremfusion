@@ -967,3 +967,20 @@ NumBots
 int NumBots(void) {
   return numbots;
 }
+
+void BotBeginIntermission( void )
+{
+  int i;
+  for (i = 0; i < MAX_CLIENTS; i++) {
+    if (botstates[i] && botstates[i]->inuse) {
+      if (botstates[i]->team == TEAM_HUMANS)
+      {
+        BotChat_EndLevel(botstates[i]);
+        trap_BotEnterChat(botstates[i]->cs, 0, botstates[i]->chatto);
+        ClientDisconnect( i );
+        //this needs to be done to free up the client slot - I think - Ender Feb 18 2008
+        trap_DropClient( i, "disconnected");
+      }
+    }
+  }
+}

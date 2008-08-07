@@ -1134,6 +1134,8 @@ qboolean HBotSpawn(bot_state_t* bs){
 	return qtrue;
 }
 void HBotEnterChat(bot_state_t *bs) {
+  if (bs->team != TEAM_HUMANS)
+    return;
 //	Bot_Print(BPMSG, "HBotEnterChat Called\n");
 	//bs->standfindenemy_time = FloatTime() + 1;
 	bs->stand_time = FloatTime() + BotChatTime(bs);

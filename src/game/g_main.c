@@ -1569,7 +1569,7 @@ void BeginIntermission( void )
 
     MoveClientToIntermission( client );
   }
-
+  BotBeginIntermission();
   // send the current scoring to all clients
   SendScoreboardMessageToAllClients( );
 }
