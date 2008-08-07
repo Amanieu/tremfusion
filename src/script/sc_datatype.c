@@ -737,6 +737,20 @@ scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
   return NULL;
 }
 
+scField_t *SC_ClassGetField(scClass_t *class, const char *name)
+{
+  scField_t *field = class->fields;
+  while(field->name[0] != '\0')
+  {
+    if(strcmp(field->name, name) == 0)
+      return field;
+
+    field++;
+  }
+
+  return NULL;
+}
+
 // Object
 
 scObject_t *SC_ObjectNew(scClass_t *class)

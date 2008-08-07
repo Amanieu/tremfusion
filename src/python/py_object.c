@@ -319,6 +319,40 @@ static int set_wrapper(PyScBaseObject *self, PyObject *pyvalue, void *closure)
   return 0;
 }
 
+static PyObject *get_field(PyScBaseObject *self, void *closure)
+{
+  scField_t         *field;
+  scDataTypeValue_t value;
+  
+  field = (scField_t*)closure;
+  SC_ObjectGCInc(self->sc_object);
+  SC_Field_Get(self->sc_object, field, &value);
+  SC_ObjectGCDec(self->sc_object);
+  
+  return convert_from_value( &value );
+}
+
+static int set_field(PyScBaseObject *self, PyObject *pyvalue, void *closure)
+{
+  scField_t         *field;
+  scDataTypeValue_t value;
+  
+  field = (scField_t*)closure;
+  
+  convert_to_value( pyvalue, &value, field->type );
+  
+  if( /*field->type !=  TYPE_ANY &&*/ field->type != value.type )
+  {
+    PyErr_SetNone(PyExc_TypeError);
+    return -1;
+  }
+  SC_ObjectGCInc(self->sc_object);
+  SC_Field_Set(self->sc_object, field, &value);
+  SC_ObjectGCDec(self->sc_object);
+  
+  return 0;
+}
+
 static PyObject *get_method(PyScBaseObject *self, void *closure)
 {
   scObjectMethod_t *method;
@@ -348,30 +382,41 @@ void SC_Python_InitClass( scClass_t *class )
   ScPyTypeObject   *newtype;
   scObjectMember_t *member;
   scObjectMethod_t *method;
+  scField_t        *field;
   PyGetSetDef      *getsetdef;
-  int              i;
-    
+  int              getsetnum;
+  int              i, index;
+  
+  getsetnum = class->memcount + class->methcount + class->fieldcount;
   newtype   = BG_Alloc( sizeof( ScPyTypeObject ) );
-  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * ( class->memcount + class->methcount + 1) );
+  getsetdef = BG_Alloc( sizeof( PyGetSetDef ) * ( getsetnum + 1) );
   
-  member    = class->members;
-  for (i=0; i < class->memcount; member++, i++) {
-    getsetdef[i].name    = member->name;
-    getsetdef[i].doc     = member->desc;
-    getsetdef[i].get     = (getter)get_wrapper;
-    getsetdef[i].set     = (setter)set_wrapper;
-    getsetdef[i].closure = (void*)member;
+  index  = 0;
+  member = class->members;
+  for (i=0; i < class->memcount; member++, i++, index++) {
+    getsetdef[index].name    = member->name;
+    getsetdef[index].doc     = member->desc;
+    getsetdef[index].get     = (getter)get_wrapper;
+    getsetdef[index].set     = (setter)set_wrapper;
+    getsetdef[index].closure = (void*)member;
   }
-  
   method = class->methods;
-  for (; i - class->memcount < class->methcount; method++, i++) {
-    getsetdef[i].name    = method->name;
-    getsetdef[i].doc     = method->desc;
-    getsetdef[i].get     = (getter)get_method;
-    getsetdef[i].set     = (setter)set_method;
-    getsetdef[i].closure = (void*)method;
+  for (i=0; i < class->methcount; method++, i++, index++) {
+    getsetdef[index].name    = method->name;
+    getsetdef[index].doc     = method->desc;
+    getsetdef[index].get     = (getter)get_method;
+    getsetdef[index].set     = (setter)set_method;
+    getsetdef[index].closure = (void*)method;
   }
-  getsetdef[i+1].name = NULL;
+  field = class->fields;
+  for (i=0; i < class->fieldcount; field++, i++, index++) {
+    getsetdef[index].name    = field->name;
+    getsetdef[index].doc     = field->desc;
+    getsetdef[index].get     = (getter)get_field;
+    getsetdef[index].set     = (setter)set_field;
+    getsetdef[index].closure = (void*)field;
+  }
+  getsetdef[index+1].name = NULL;
   
 //  memcpy( newtype, &PyScObject_Type, sizeof( PyScObject_Type ) );
   memset(newtype, 0, sizeof(ScPyTypeObject));
@@ -387,7 +432,6 @@ void SC_Python_InitClass( scClass_t *class )
   newtype->tp_init      = (initproc)PyScObject_init;
   newtype->tp_new       = (newfunc)PyScObject_new;
   newtype->tp_scclass   = class;
-  
 //  PyScObject_new;
   
   

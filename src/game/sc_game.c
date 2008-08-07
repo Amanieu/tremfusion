@@ -48,9 +48,13 @@ static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 
   SC_Common_Constructor(in, out, closure);
   self = out[0].data.object;
+  
 
   self->data.type = TYPE_USERDATA;
-  self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
+  if(in[1].type == TYPE_INTEGER)
+    self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
+  else if (in[1].type == TYPE_FLOAT) // damm you lua!!
+    self->data.data.userdata = (void*)&g_entities[ atoi( va("%.0f",in[1].data.floating) ) ]; // Hax
 }
 
 static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
@@ -166,7 +170,8 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 
 static scLibObjectMember_t entity_members[] = {
   // String
-  { "classname", "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_CLASSNAME },
+//  { "classname", "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_CLASSNAME },
+//  { "classname", "", TYPE_STRING,  SC_Field_Set, SC_Field_Get, (void*)FOFS(classname) },
   { "model",     "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL },
   { "model2",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL2 },
   { "target",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TARGET },
@@ -175,12 +180,18 @@ static scLibObjectMember_t entity_members[] = {
   // Vectors
   { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, (void*)ENTITY_ORIGIN },
   // Booleans
-  { "inuse",     "", TYPE_BOOLEAN, entity_set, entity_get, (void*)ENTITY_INUSE },
+//  { "inuse",     "", TYPE_BOOLEAN, entity_set, entity_get, (void*)ENTITY_INUSE },
   { "" },
 };
 
 static scLibObjectMethod_t entity_methods[] = {
   { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, (void*)ENTITY_LINK },
+  { "" },
+};
+
+static scField_t entity_fields[] = {
+  { "classname", "", TYPE_STRING, FOFS(classname) },
+  { "inuse",     "", TYPE_BOOLEAN, FOFS(inuse) },
   { "" },
 };
 
@@ -190,6 +201,7 @@ static scLibObjectDef_t entity_def = {
   entity_destroy,
   entity_members, 
   entity_methods, 
+  entity_fields,
   NULL
 };
 

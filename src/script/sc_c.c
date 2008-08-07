@@ -55,6 +55,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   scClass_t    *class;
   scLibObjectMember_t  *member;
   scLibObjectMethod_t  *method;
+  scField_t            *field;
   int nslen = strlen( namespace );
   int i, cnt;
   
@@ -129,6 +130,21 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   }
   class->methods[i].name[0] = '\0';
 
+  cnt = 0;
+  if(def->fields != NULL)
+    for(field = def->fields; field->name[0] != '\0'; field++)
+      cnt++;
+  class->fieldcount = cnt;
+  class->fields = BG_Alloc(sizeof(scField_t) * (cnt+1));
+  for(i = 0; i < cnt; i++)
+  {
+    strcpy(class->fields[i].name, def->fields[i].name);
+    strcpy(class->fields[i].desc, def->fields[i].desc);
+    class->fields[i].type = def->fields[i].type;
+    class->fields[i].ofs  = def->fields[i].ofs;
+  }
+  class->fields[i].name[0] = '\0';
+  
   var.type = TYPE_CLASS;
   var.data.class = class;
   SC_ValueGCInc(&var);
@@ -141,4 +157,58 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   SC_InitClass(class);
   return class;
 }
-
+int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value)
+{
+  byte    *b;
+  
+  b = (byte*)object->data.data.userdata;
+  
+  switch( field->type )
+  {
+    case TYPE_BOOLEAN:
+      *(qboolean *)( b + field->ofs ) = (value->data.boolean) ? qtrue : qfalse;
+//    case TYPE_INTEGER: // Disabled because value->data.integer is type long which could cause us to write too much data
+//      *(int *)( b + field->ofs ) = value->data.integer;
+//      break;
+    case TYPE_FLOAT:
+      *(float *)( b + field->ofs ) = value->data.floating;
+      break;
+    case TYPE_STRING:
+      *(char **)( b + field->ofs ) = (char*) SC_StringToChar(value->data.string);
+      break;
+    default:
+      // Field type invalid
+      return -1;
+  }
+  return 1;
+}
+int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value)
+{
+  byte    *b;
+    
+  b = (byte*)object->data.data.userdata;
+  
+  switch( field->type )
+  {
+    case TYPE_BOOLEAN:
+      value->type = TYPE_BOOLEAN;
+      value->data.boolean = *(qboolean *)( b + field->ofs );
+      break;
+//    case TYPE_INTEGER: // Disabled because value->data.integer is type long which could cause us to write too much data
+//      value->type = TYPE_INTEGER;
+//      value->data.integer = *(int *)( b + field->ofs );
+//      break;
+    case TYPE_FLOAT:
+      value->type = TYPE_FLOAT;
+      value->data.floating = *(float *)( b + field->ofs );
+      break;
+    case TYPE_STRING:
+      value->type = TYPE_STRING;
+      value->data.string = SC_StringNewFromChar(*(char **)( b + field->ofs ) );
+      break;
+    default:
+      // Field type invalid
+      return -1;
+  }
+  return 1;
+}

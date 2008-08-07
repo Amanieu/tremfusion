@@ -120,6 +120,7 @@ static scLibObjectDef_t event_def = {
   0, // An event should never be destroyed
   NULL,
   event_methods,
+  NULL,
   NULL
 };
 
@@ -213,6 +214,7 @@ static scLibObjectDef_t loc_def = {
   0,
   NULL,
   loc_methods,
+  NULL,
   NULL
 };
 
@@ -261,6 +263,7 @@ static scLibObjectDef_t tag_def = {
   node_destructor,
   NULL,
   NULL,
+  NULL,
   (void*) SC_EVENT_NODE_TYPE_NODE,
 };
 
@@ -268,6 +271,7 @@ static scLibObjectDef_t hook_def = {
   "Hook", "",
   node_constructor, { TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
   node_destructor,
+  NULL,
   NULL,
   NULL,
   (void*) SC_EVENT_NODE_TYPE_HOOK,

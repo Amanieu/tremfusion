@@ -166,6 +166,14 @@ typedef struct
   scDataTypeMethod_t    method;
 } scObjectMethod_t;
 
+typedef struct
+{
+  char         name[MAX_PATH_LENGTH+1];
+  char         desc[MAX_DESC_LENGTH+1];
+  scDataType_t type;
+  int          ofs;
+} scField_t;
+
 struct scClass_s
 {
   char                  name[MAX_PATH_LENGTH+1];
@@ -176,6 +184,8 @@ struct scClass_s
   int                   memcount;
   scObjectMethod_t      *methods;
   int                   methcount;
+  scField_t             *fields;
+  int                   fieldcount;
 #ifdef USE_PYTHON
   PyObject              *python_type;
 #endif
@@ -279,6 +289,7 @@ void SC_ObjectDestroy( scObject_t *object );
 
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
+scField_t *SC_ClassGetField(scClass_t *class, const char *name);
 
 char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
@@ -353,12 +364,16 @@ typedef struct
   scCRef_t                  destructor;
   scLibObjectMember_t       *members;
   scLibObjectMethod_t       *methods;
+  scField_t                 *fields;
   void                      *closure;
 } scLibObjectDef_t;
 
 void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );
 
 scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def );
+
+int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value);
+int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value);
 
 // sc_common.c
 void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);

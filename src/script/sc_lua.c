@@ -387,6 +387,7 @@ static int object_index_metamethod(lua_State *L)
   scObject_t *object;
   scObjectMethod_t *method;
   scObjectMember_t *member;
+  scField_t        *field;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
   scDataTypeValue_t out;
 
@@ -413,7 +414,15 @@ static int object_index_metamethod(lua_State *L)
     push_value(L, &out);
     return 1;
   }
-
+  field = SC_ClassGetField(object->class, lua_tostring(L, -1));
+  if(field)
+  {
+    // Call SC_Field_Get, push results
+    SC_Field_Get(object, field, &out);
+    
+    push_value(L, &out);
+    return 1;
+  }
   // TODO: Error: unknow value
   return 0;
 }
@@ -422,6 +431,7 @@ static int object_newindex_metamethod(lua_State *L)
 {
   scObject_t *object;
   scObjectMember_t *member;
+  scField_t        *field;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
   scDataTypeValue_t out;
 
@@ -430,6 +440,7 @@ static int object_newindex_metamethod(lua_State *L)
   lua_pop(L, 1);
 
   member = SC_ClassGetMember(object->class, lua_tostring(L, -2));
+  field  = SC_ClassGetField(object->class, lua_tostring(L, -2));
   if(member)
   {
     // Call 'set' method with popped value
@@ -439,6 +450,13 @@ static int object_newindex_metamethod(lua_State *L)
     in[0].data.object = object;
     in[2].type = TYPE_UNDEF;
     SC_RunFunction(&member->set, in, &out);
+  }
+  else if(field)
+  {
+    // Call SC_Field_Set with popped value
+    pop_value(L, &in[1]);
+    
+    SC_Field_Set( object, field, &in[1] );
   }
   else
   {
