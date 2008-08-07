@@ -328,11 +328,12 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	
 	/* err i steal info from snapshots for these cvars >.>'' */
 
-        ps = &cl.snap.ps;
+	ps = &cl.snap.ps;
 
-        Cvar_SetValue( "p_hp", ps->stats[ STAT_HEALTH ] );
-        Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
+	Cvar_SetValue( "p_hp", ps->stats[ STAT_HEALTH ] );
+	Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
 	Cvar_SetValue( "p_class", ps->stats[ STAT_CLASS ] );
+	Cvar_SetValue( "p_credits", ps->persistant[ PERS_CREDIT ] );
 }
 
 
