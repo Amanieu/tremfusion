@@ -145,6 +145,7 @@ vmCvar_t  bot_thinktime;
 vmCvar_t  bot_minaliens;
 vmCvar_t  bot_minhumans;
 vmCvar_t  bot_nochat;
+vmCvar_t  bot_fastchat;
 //End Champ bot cvars
 
 static cvarTable_t   gameCvarTable[ ] =
@@ -276,8 +277,8 @@ static cvarTable_t   gameCvarTable[ ] =
   { &bot_minhumans, "bot_minhumans", "0", CVAR_SERVERINFO, 0, qfalse  },
   { &bot_developer, "bot_developer", "0", CVAR_SERVERINFO, 0, qfalse  },
   { &bot_challenge, "bot_challenge", "0", CVAR_SERVERINFO, 0, qfalse  },
-  { &bot_nochat,    "bot_nochat",    "0", CVAR_SERVERINFO, 0, qfalse  },
-  
+  { &bot_nochat,    "bot_nochat",    "0", CVAR_TEMP, 0, qfalse  },
+  { &bot_fastchat,  "bot_fastchat",  "0", CVAR_TEMP, 0, qfalse  },
   //End Champ bot cvars
   
   { &g_rankings, "g_rankings", "0", 0, 0, qfalse}

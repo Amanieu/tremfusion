@@ -1017,6 +1017,21 @@ qboolean HBotHeal(bot_state_t* bs){
 	}*/
 	
 	if( G_BuildableRange( bs->cur_ps.origin, 30 , BA_H_MEDISTAT ) ){
+    if (bs->stand_time == 0)
+    {
+      if (BotChat_Random(bs)) {
+        bs->stand_time = FloatTime() + BotChatTime(bs);
+      }
+    }
+    else
+    {
+      // put up chat icon
+      trap_EA_Talk(bs->client);
+      if (bs->stand_time < FloatTime()) {
+        trap_BotEnterChat(bs->cs, 0, bs->chatto);
+        bs->stand_time = 0;
+      }
+    }
 		// healing
 		BotAddInfo(bs, "task", "heal!");
 		//check if healt  is full, 
@@ -1158,7 +1173,10 @@ qboolean HBotChat(bot_state_t *bs) {
 		if(bs->prevstate == HS_TALK)
 			bs->state = HS_ATTACK;
 		else
+    {
 			bs->state = bs->prevstate;
+      bs->stand_time = 0;
+    }
 		return qfalse;
 	}
 	//
