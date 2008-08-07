@@ -59,16 +59,23 @@ static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void
 
 typedef enum 
 {
+  // Strings
   ENTITY_CLASSNAME,
-  ENTITY_LINK,
   ENTITY_MODEL,
   ENTITY_MODEL2,
   ENTITY_TARGET,
   ENTITY_TARGETNAME,
   ENTITY_TEAM,
+  // Vectors
   ENTITY_ORIGIN,
+  // Booleans
   ENTITY_INUSE,
+  // Methods
+  ENTITY_LINK,
 } ent_closures;
+
+#define ENT_SET_STR(x) x = (char*) SC_StringToChar(in[1].data.string); \
+  break
 
 static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
@@ -80,16 +87,13 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   
   switch (settype)
   {
-    case ENTITY_CLASSNAME:
-      // FIXME: *very* crappy: segfault when free string
-      entity->classname = (char*) SC_StringToChar(in[1].data.string);
-      break;
-    case ENTITY_MODEL:
-      entity->model = (char*) SC_StringToChar(in[1].data.string);
-      break;
-    case ENTITY_MODEL2:
-      entity->model2 = (char*) SC_StringToChar(in[1].data.string);
-      break;
+    // FIXME: *very* crappy: segfault when free string
+    case ENTITY_CLASSNAME: ENT_SET_STR(entity->classname);
+    case ENTITY_MODEL:  ENT_SET_STR(entity->model);
+    case ENTITY_MODEL2: ENT_SET_STR(entity->model2);
+    case ENTITY_TARGET: ENT_SET_STR(entity->target);
+    case ENTITY_TARGETNAME: ENT_SET_STR(entity->targetname);
+    case ENTITY_TEAM: ENT_SET_STR(entity->team);
     case ENTITY_ORIGIN:
       // TODO: Error : read only value Champion: Have read only values have a NULL setter?
     default:
@@ -100,12 +104,13 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   out->type = TYPE_UNDEF;
 }
 
-#define ENT_STR(x) \
+#define ENT_GET_STR(x) \
   out[0].type = TYPE_STRING; \
   if (x) \
     out[0].data.string = SC_StringNewFromChar(x); \
   else \
-    out[0].data.string = SC_StringNewFromChar("");
+    out[0].data.string = SC_StringNewFromChar(""); \
+  break
 
 static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
@@ -117,23 +122,18 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   
   switch (gettype)
   {
-    case ENTITY_CLASSNAME:
-      ENT_STR(entity->classname);
-      break;
-    case ENTITY_MODEL:
-      ENT_STR(entity->model);
-      break;
-    case ENTITY_MODEL2:
-      ENT_STR(entity->model2);
-      break;
+    case ENTITY_CLASSNAME: ENT_GET_STR(entity->classname);
+    case ENTITY_MODEL: ENT_GET_STR(entity->model);
+    case ENTITY_MODEL2: ENT_GET_STR(entity->model2);
+    case ENTITY_TARGET: ENT_GET_STR(entity->target);
+    case ENTITY_TARGETNAME: ENT_GET_STR(entity->targetname);
+    case ENTITY_TEAM: ENT_GET_STR(entity->team);
     case ENTITY_ORIGIN:
       instance = SC_Vec3FromVec3_t( entity->r.currentOrigin);
       out[0].type = TYPE_OBJECT;
       out[0].data.object = instance;
       break;
       //SC_Vec3FromVec3_t
-    case ENTITY_TARGET:
-      ENT_STR( entity->target );
     case ENTITY_INUSE:
       out[0].type = TYPE_BOOLEAN;
       out[0].data.boolean = (char)entity->inuse;
@@ -165,10 +165,16 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 
 static scLibObjectMember_t entity_members[] = {
+  // String
   { "classname", "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_CLASSNAME },
   { "model",     "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL },
   { "model2",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL2 },
+  { "target",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TARGET },
+  { "targetname","", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TARGETNAME },
+  { "team",      "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TEAM },
+  // Vectors
   { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, (void*)ENTITY_ORIGIN },
+  // Booleans
   { "inuse",     "", TYPE_BOOLEAN, entity_set, entity_get, (void*)ENTITY_INUSE },
   { "" },
 };
