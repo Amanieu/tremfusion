@@ -75,8 +75,8 @@ static PyObject *PyScMethod_call( PyScMethod *self, PyObject* pArgs, PyObject* k
   
   for( i=0; i < argcount; i++)
   {
-    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i+1], arguments[i] );
-    if (arguments[i] !=  TYPE_ANY && args[i+1].type != arguments[i])
+    convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i+1], arguments[i+1] );
+    if (arguments[i+1] !=  TYPE_ANY && args[i+1].type != arguments[i+1])
     {
       PyErr_SetNone(PyExc_TypeError); //TODO: proper error message like: argument 1 must be string, not float
       return NULL;
@@ -156,30 +156,53 @@ static PyObject *New_PyMethod( PyObject *parent, scObject_t* object, scObjectMet
 }
 
 // Deletion
-static int PyScObject_clear(PyScObject *self) {
+static int PyScBaseObject_clear(PyScBaseObject *self) {
+  return 0;
+}
+
+// Deletion
+static int PyScObject_clear(PyScBaseObject *self) {
   SC_ObjectGCDec( self->sc_object );
   self->sc_object = NULL;
   self->sc_class  = NULL;
   return 0;
 }
 // Deallocation
-static void PyScObject_dealloc(PyScObject* self) {
+static void PyScBaseObject_dealloc(PyScBaseObject* self) {
+  PyScBaseObject_clear(self);
+  self->ob_type->tp_free((PyObject*)self);
+}
+// Deallocation
+static void PyScObject_dealloc(PyScBaseObject* self) {
   PyScObject_clear(self);
   self->ob_type->tp_free((PyObject*)self);
 }
-// 
+//
+PyObject *PyScBaseObject_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+  PyScBaseObject *self;
+
+  self = (PyScBaseObject *)type->tp_alloc(type, 0);
+  
+  return (PyObject *)self;
+} 
 PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  PyScObject *self;
+  PyScBaseObject *self;
 
-  self = (PyScObject *)type->tp_alloc((PyTypeObject*)type, 0);
+  self = (PyScBaseObject *)type->tp_alloc((PyTypeObject*)type, 0);
   
   self->sc_class = type->tp_scclass;
   
   return (PyObject *)self;
 }
 
-int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
+int PyScBaseObject_init(PyScBaseObject *self, PyObject* pArgs, PyObject* kArgs)
+{
+  return 0;
+}
+
+int PyScObject_init(PyScBaseObject *self, PyObject* pArgs, PyObject* kArgs)
 {
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS];
   scDataType_t      arguments[ MAX_FUNCTION_ARGUMENTS + 1 ];
@@ -210,21 +233,13 @@ int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs)
   return 0;
 }
 
-static PyMemberDef PyScObject_members[] = {
-  {NULL}  /* Sentinel */
-};
-
-static PyMethodDef PyScObject_methods[] = {
-    {NULL}  /* Sentinel */
-};
-
-ScPyTypeObject PyScObject_Type = {
+PyTypeObject PyScBaseObject_Type = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "script.PyScObject",             /*tp_name*/
+    "script.PyScBaseObject",             /*tp_name*/
     sizeof(PyScObject),            /*tp_basicsize*/
     0,                         /*tp_itemsize*/
-    (destructor)PyScObject_dealloc, /*tp_dealloc*/
+    (destructor)PyScBaseObject_dealloc, /*tp_dealloc*/
     0,                         /*tp_print*/
     0,                         /*tp_getattr*/
     0,                         /*tp_setattr*/
@@ -247,25 +262,24 @@ ScPyTypeObject PyScObject_Type = {
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
     0,                         /* tp_iternext */
-    PyScObject_methods,        /* tp_methods */
-    PyScObject_members,        /* tp_members */
+    0, //PyScObject_methods,        /* tp_methods */
+    0,  //PyScObject_members,        /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
     0,                         /* tp_dict */
     0,                         /* tp_descr_get */
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
-    (initproc)PyScObject_init, /* tp_init */
+    (initproc)PyScBaseObject_init, /* tp_init */
     0,                         /* tp_alloc */
-    (newfunc)PyScObject_new,   /* tp_new */
-    0,                         /*tp_scclass*/
+    (newfunc)PyScBaseObject_new,   /* tp_new */
+//    0,                         /*tp_scclass*/
 };
 
-static PyObject *get_wrapper(PyScObject *self, void *closure)
+static PyObject *get_wrapper(PyScBaseObject *self, void *closure)
 {
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scObjectMember_t *member;
-  scDataTypeValue_t *value;
   scDataTypeValue_t ret;
   
   member = (scObjectMember_t*)closure;
@@ -281,7 +295,7 @@ static PyObject *get_wrapper(PyScObject *self, void *closure)
   return convert_from_value( &ret );
 }
 
-static int set_wrapper(PyScObject *self, PyObject *pyvalue, void *closure)
+static int set_wrapper(PyScBaseObject *self, PyObject *pyvalue, void *closure)
 {
   scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
   scObjectMember_t *member;
@@ -305,7 +319,7 @@ static int set_wrapper(PyScObject *self, PyObject *pyvalue, void *closure)
   return 0;
 }
 
-static PyObject *get_method(PyScObject *self, void *closure)
+static PyObject *get_method(PyScBaseObject *self, void *closure)
 {
   scObjectMethod_t *method;
   PyObject         *pymethod;
@@ -318,7 +332,7 @@ static PyObject *get_method(PyScObject *self, void *closure)
   return pymethod;
 }
 
-static int set_method(PyScObject *self, PyObject *pyvalue, void *closure)
+static int set_method(PyScBaseObject *self, PyObject *pyvalue, void *closure)
 {
   scObjectMethod_t *method;
   
@@ -359,11 +373,23 @@ void SC_Python_InitClass( scClass_t *class )
   }
   getsetdef[i+1].name = NULL;
   
-  memcpy( newtype, &PyScObject_Type, sizeof( PyScObject_Type ) );
+//  memcpy( newtype, &PyScObject_Type, sizeof( PyScObject_Type ) );
+  memset(newtype, 0, sizeof(ScPyTypeObject));
   
+  newtype->ob_refcnt    = 1;
   newtype->tp_name      = class->name;
+  newtype->tp_basicsize = sizeof(PyScObject);
+  newtype->tp_dealloc   = (destructor)PyScObject_dealloc;
+  newtype->tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
   newtype->tp_getset    = getsetdef;
+  newtype->tp_doc       = class->desc;
+  newtype->tp_base      = &PyScBaseObject_Type;
+  newtype->tp_init      = (initproc)PyScObject_init;
+  newtype->tp_new       = (newfunc)PyScObject_new;
   newtype->tp_scclass   = class;
+  
+//  PyScObject_new;
+  
   
   if (PyType_Ready((PyTypeObject*)newtype) < 0)
     return;

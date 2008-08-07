@@ -109,6 +109,7 @@ static scDataTypeFunction_t* convert_to_function( PyObject *function_obj  )
 /* Convert a python object into a script data value */
 void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
 {
+  value->gc.count = 0;
   if (pyvalue == Py_None){
     value->type = TYPE_UNDEF;
   }
@@ -146,6 +147,14 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
   {
     value->type = TYPE_FUNCTION;
     value->data.function = convert_to_function( pyvalue );
+  }
+  else if ( PyType_IsSubtype(pyvalue->ob_type, &PyScBaseObject_Type) )
+  {
+    PyScBaseObject *py_scobject;
+    py_scobject = (PyScBaseObject*)pyvalue;
+    value->type = TYPE_OBJECT;
+    value->data.object = py_scobject->sc_object;
+//    value->data.function = convert_to_function( pyvalue );
   }
 //    case LUA_TFUNCTION:
 //      value->type = TYPE_FUNCTION;
@@ -210,8 +219,8 @@ static PyObject *convert_from_function( scDataTypeFunction_t *function )
 
 static PyObject *convert_from_object( scObject_t *sc_object )
 {
-  PyScObject *py_object;
-  py_object = (PyScObject*)PyScObject_new( (ScPyTypeObject*)sc_object->class->python_type, NULL, NULL);
+  PyScBaseObject *py_object;
+  py_object = (PyScBaseObject*)PyScObject_new( (ScPyTypeObject*)sc_object->class->python_type, NULL, NULL);
   
   py_object->sc_object = sc_object;
   

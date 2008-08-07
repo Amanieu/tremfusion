@@ -113,10 +113,15 @@ typedef struct {
   PyObject_HEAD
   scObject_t *sc_object;
   scClass_t  *sc_class;
+} PyScBaseObject; 
+
+typedef struct {
+  PyScBaseObject object;
 } PyScObject; 
-ScPyTypeObject PyScObject_Type;
+
+PyTypeObject PyScBaseObject_Type;
 PyObject *PyScObject_new(ScPyTypeObject *type, PyObject *args, PyObject *kwds);
-int PyScObject_init(PyScObject *self, PyObject* pArgs, PyObject* kArgs);
+int PyScObject_init(PyScBaseObject *self, PyObject* pArgs, PyObject* kArgs);
 
 typedef struct {
   PyObject_HEAD
