@@ -599,15 +599,15 @@ KILL_GAUNTLET1 = {
 	"GAUNTLET KILL!";
 }
 
-DEATH_GAUNTLET0 = {
-	"Don't touch me there!";
-	"Eeww, I better get checked out for ", disease, " now.";
-	"Unsanitary";
+DEATH_PAINSAW0 = {
+//	"Don't touch me there!";
+//	"Eeww, I better get checked out for ", disease, " now.";
+//	"Unsanitary";
 	"LOL!";
 	"So much for bluster";
 }
 
-DEATH_GAUNTLET1 = {
+DEATH_PAINSAW1 = {
 	"How humiliating";
 	"I have been shamed.";
 	"I suck";
@@ -697,16 +697,15 @@ language = {
 }
 
 weapon = {
-	"gauntlet";
-	"rocket launcher";
+	"painsaw";
+	"lasgun";
 	"shotgun";
 	"machine gun";
-	"grenade launcher";
-	"railgun";
-	"plasmagun";
-	"BFG";
-	"BFG10K";
-	"lightning gun";
+	"pulse rifle";
+	"luci";
+	"blaster";
+	"chaingun";
+	"flammer";
 }
 
 ponder = {
@@ -931,7 +930,7 @@ peeps = {
 	"dmn_clown";
 	"Asvarox";
 	"The Medistation";
-	
+	"Champion"
 }
 
 immaturity01 = {

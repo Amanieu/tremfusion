@@ -172,11 +172,11 @@ chat "Major"
 		
 		// 0 = random opponent
 	} //end type
-	type "death_gauntlet" //initiated when the bot is killed by a gauntlet attack
+	type "death_painsaw" //initiated when the bot is killed by a painsaw attack
 	{
-		"Unsanitary.";
-		"What part of '~Don't touch me there' do you not understand?";
-		DEATH_GAUNTLET1;
+//		"Unsanitary.";
+//		"What part of '~Don't touch me there' do you not understand?";
+		DEATH_PAINSAW1;
 		// 0 = enemy name
 		// 1 = weapon used by enemy (NOTE: always set to Gauntlet)
 	} //end type

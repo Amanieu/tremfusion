@@ -111,7 +111,7 @@ chat "default"
 	{
 		// 0 = random opponent
 	} //end type
-	type "death_gauntlet" //initiated when the bot is killed by a gauntlet attack
+	type "death_painsaw" //initiated when the bot is killed by a gauntlet attack
 	{
 		// 0 = enemy name
 		// 1 = weapon used by enemy (NOTE: always set to Gauntlet)

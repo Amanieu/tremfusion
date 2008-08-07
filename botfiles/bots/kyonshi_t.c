@@ -111,13 +111,13 @@ chat "kyonshi"
 		DEATH_SUICIDE0;
 	}
 
-	type "death_gauntlet"
+	type "death_painsaw"
 	{
 		"I did not see that coming.";
 		"The shame...";
 		DEATH_FEM_INSULT0;
-		DEATH_GAUNTLET0;
-		DEATH_GAUNTLET1;
+		DEATH_PAINSAW0;
+		DEATH_PAINSAW1;
 		
 	}
 

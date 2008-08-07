@@ -111,11 +111,11 @@ chat "gargoyle"
 		DEATH_SUICIDE2;
 	}
 
-	type "death_gauntlet"
+	type "death_painsaw"
 	{
-		DEATH_GAUNTLET0;
-		DEATH_GAUNTLET1;
-		DEATH_GAUNTLET1;
+		DEATH_PAINSAW0;
+		DEATH_PAINSAW1;
+		DEATH_PAINSAW1;
 	}
 
 	type "death_rail"

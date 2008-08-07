@@ -46,7 +46,7 @@ chat "grism"
 
 	type "level_end"
 	{
-		"nice place ", 4, ", much less dangerous than d3dm2.";
+		"nice place ", 4, ", much less dangerous than uncreation.";
 	}
 
 	type "level_end_victory"
@@ -116,11 +116,11 @@ chat "grism"
 		DEATH_SUICIDE1;
 	}
 
-	type "death_gauntlet"
+	type "death_painsaw"
 	{
-		DEATH_GAUNTLET0;
-		DEATH_GAUNTLET1;
-		DEATH_GAUNTLET1;
+		DEATH_PAINSAW0;
+		DEATH_PAINSAW1;
+		DEATH_PAINSAW1;
 	}
 
 	type "death_rail"

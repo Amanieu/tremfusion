@@ -629,7 +629,7 @@ int BotChat_Death(bot_state_t *bs) {
 			
 
 				if (bs->botdeathtype == MOD_GAUNTLET)
-					BotAI_BotInitialChat(bs, "death_gauntlet",
+					BotAI_BotInitialChat(bs, "death_painsaw",
 							name,												// 0
 							BotWeaponNameForMeansOfDeath(bs->botdeathtype),		// 1
 							NULL);
@@ -1069,10 +1069,10 @@ void BotChatTest(bot_state_t *bs) {
 		BotAI_BotInitialChat(bs, "death_telefrag", name, NULL);
 		trap_BotEnterChat(bs->cs, 0, CHAT_ALL);
 	}
-	num = trap_BotNumInitialChats(bs->cs, "death_gauntlet");
+	num = trap_BotNumInitialChats(bs->cs, "death_painsaw");
 	for (i = 0; i < num; i++)
 	{
-		BotAI_BotInitialChat(bs, "death_gauntlet",
+		BotAI_BotInitialChat(bs, "death_painsaw",
 				name,												// 0
 				BotWeaponNameForMeansOfDeath(bs->botdeathtype),		// 1
 				NULL);
