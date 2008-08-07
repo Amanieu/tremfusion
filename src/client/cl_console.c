@@ -354,6 +354,7 @@ void Con_Grep_f (void)
 	int		l, x, i;
 	short	*line;
 	char	buffer[1024];
+	char	buffer2[1024];
 	char	printbuf[CON_TEXTSIZE];
 	char	*search;
 
@@ -378,11 +379,20 @@ void Con_Grep_f (void)
 	buffer[con.linewidth] = 0;
 	search = Cmd_Argv( 1 );
 	printbuf[0] = '\0';
+	char lastcolor = 7;
 	for ( ; l <= con.current ; l++)
 	{
 		line = con.text + (l%con.totallines)*con.linewidth;
-		for(i=0; i<con.linewidth; i++)
-			buffer[i] = line[i] & 0xff;
+		for(i=0,x=0; i<con.linewidth; i++)
+		{
+			if (line[i] >> 8 != lastcolor)
+			{
+				lastcolor = line[i] >> 8;
+				buffer[x++] = Q_COLOR_ESCAPE;
+				buffer[x++] = lastcolor + '0';
+			}
+			buffer[x++] = line[i] & 0xff;
+		}
 		for (x=con.linewidth-1 ; x>=0 ; x--)
 		{
 			if (buffer[x] == ' ')
@@ -390,7 +400,9 @@ void Con_Grep_f (void)
 			else
 				break;
 		}
-		if (strstr(buffer, search))
+		strcpy(buffer2, buffer);
+		Q_CleanStr(buffer2);
+		if (Q_stristr(buffer2, search))
 		{
 			strcat( printbuf, buffer );
 			strcat( printbuf, "\n" );
