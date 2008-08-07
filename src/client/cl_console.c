@@ -342,6 +342,63 @@ void Con_Dump_f (void)
 	FS_FCloseFile( f );
 }
 
+/*
+================
+Con_Grep_f
+
+Find all console lines containing a string
+================
+*/
+void Con_Grep_f (void)
+{
+	int		l, x, i;
+	short	*line;
+	char	buffer[1024];
+	char	printbuf[CON_TEXTSIZE];
+	char	*search;
+
+	if (Cmd_Argc() != 2)
+	{
+		Com_Printf ("usage: grep <string>\n");
+		return;
+	}
+
+	// skip empty lines
+	for (l = con.current - con.totallines + 1 ; l <= con.current ; l++)
+	{
+		line = con.text + (l%con.totallines)*con.linewidth;
+		for (x=0 ; x<con.linewidth ; x++)
+			if ((line[x] & 0xff) != ' ')
+				break;
+		if (x != con.linewidth)
+			break;
+	}
+
+	// check the remaining lines
+	buffer[con.linewidth] = 0;
+	search = Cmd_Argv( 1 );
+	printbuf[0] = '\0';
+	for ( ; l <= con.current ; l++)
+	{
+		line = con.text + (l%con.totallines)*con.linewidth;
+		for(i=0; i<con.linewidth; i++)
+			buffer[i] = line[i] & 0xff;
+		for (x=con.linewidth-1 ; x>=0 ; x--)
+		{
+			if (buffer[x] == ' ')
+				buffer[x] = 0;
+			else
+				break;
+		}
+		if (strstr(buffer, search))
+		{
+			strcat( printbuf, buffer );
+			strcat( printbuf, "\n" );
+		}
+	}
+	if ( printbuf[0] )
+		Com_Printf( "%s", printbuf );
+}
 						
 /*
 ================
@@ -463,6 +520,7 @@ void Con_Init (void) {
 	Cmd_AddCommand ("prompt", Con_Prompt_f);
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
+	Cmd_AddCommand ("grep", Con_Grep_f);
 }
 
 
