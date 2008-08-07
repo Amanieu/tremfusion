@@ -205,6 +205,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	int			len;
 	clSnapshot_t	*old;
 	clSnapshot_t	newSnap;
+	playerState_t *ps;
 	int			deltaNum;
 	int			oldMessageNum;
 	int			i, packetNum;
@@ -323,6 +324,15 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	}
 
 	cl.newSnapshots = qtrue;
+	
+	
+	/* err i steal info from snapshots for these cvars >.>'' */
+
+        ps = &cl.snap.ps;
+
+        Cvar_SetValue( "p_hp", ps->stats[ STAT_HEALTH ] );
+        Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
+	Cvar_SetValue( "p_class", ps->stats[ STAT_CLASS ] );
 }
 
 
