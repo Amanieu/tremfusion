@@ -122,8 +122,10 @@ static int type_method(lua_State *L)
 
 static int pairs_method(lua_State *L)
 {
+  // TODO: OUT TO DATE, have to rewrite it !
+
   // If table has a metatable, get defined type
-  if(lua_istable(L, -1) && lua_getmetatable(L, -1))
+  /*if(lua_istable(L, -1) && lua_getmetatable(L, -1))
   {
     lua_pop(L, 1);
 
@@ -137,7 +139,8 @@ static int pairs_method(lua_State *L)
   lua_call(L, 1, 2);
   lua_remove(L, -3);
 
-  return 2;
+  return 2;*/
+  return 0;
 }
 
 static int null_metamethod(lua_State *L)
@@ -150,56 +153,64 @@ static int null_metamethod(lua_State *L)
 
 static int le_metamethod(lua_State *L)
 {
-  int result;
+  // TODO: OUT TO DATE, have to rewrite it !
+  /*int result;
   lua_getfield(L, -2, "_data");
   lua_getfield(L, -2, "_data");
   result = lua_lessthan(L, -1, -2) || lua_equal(L, -1, -2);
   lua_pop(L, 4);
 
-  lua_pushboolean(L, result);
+  lua_pushboolean(L, result);*/
 
   return 1;
 }
 
 static int lt_metamethod(lua_State *L)
 {
-  int result;
+  // TODO: OUT TO DATE, have to rewrite it !
+  /*int result;
   lua_getfield(L, -2, "_data");
   lua_getfield(L, -2, "_data");
   result = lua_lessthan(L, -1, -2);
   lua_pop(L, 4);
 
-  lua_pushboolean(L, result);
+  lua_pushboolean(L, result);*/
 
+  lua_pushboolean(L, qfalse);
   return 1;
 }
 
 static int eq_metamethod(lua_State *L)
 {
-  int result;
+  // TODO: OUT TO DATE, have to rewrite it !
+  /*int result;
   lua_getfield(L, -2, "_data");
   lua_getfield(L, -2, "_data");
   result = lua_equal(L, -1, -2);
   lua_pop(L, 4);
 
-  lua_pushboolean(L, result);
+  lua_pushboolean(L, result);*/
 
+  lua_pushboolean(L, qfalse);
   return 1;
 }
 
 static int len_metamethod(lua_State *L)
 {
-  lua_getfield(L, -1, "_data");
+  // TODO: OUT TO DATE, have to rewrite it !
+  /*lua_getfield(L, -1, "_data");
   lua_pushinteger(L, lua_objlen(L, -1));
   lua_remove(L, -2);
-  lua_remove(L, -2);
+  lua_remove(L, -2);*/
 
+  lua_pushinteger(L, 0);
   return 1;
 }
 
 static int concat_metamethod(lua_State *L)
 {
-  if(lua_istable(L, -2))
+  // TODO: OUT TO DATE, have to rewrite it !
+  /*if(lua_istable(L, -2))
     lua_getfield(L, -2, "_data");
   else
     lua_pushvalue(L, -2);
@@ -211,26 +222,92 @@ static int concat_metamethod(lua_State *L)
 
   lua_concat(L, 2);
   lua_remove(L, -2);
-  lua_remove(L, -2);
+  lua_remove(L, -2);*/
 
   return 1;
 }
 
 static int index_metamethod(lua_State *L)
 {
-  lua_getfield(L, -2, "_data");
-  lua_replace(L, -3);
-  lua_rawget(L, -2);
-  lua_remove(L, -2);
+  int type;
+  scDataTypeHash_t *hash;
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+  int i;
 
+  lua_getfield(L, -2, "_type");
+  type = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+
+  switch(type)
+  {
+    case TYPE_HASH:
+    case TYPE_NAMESPACE:
+      lua_getfield(L, -2, "_ref");
+      hash = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+
+      value.type = TYPE_HASH;
+      value.data.hash = hash;
+
+      SC_HashGet(hash, lua_tostring(L, -1), &value);
+      break;
+
+    case TYPE_ARRAY:
+      lua_getfield(L, -2, "_ref");
+      array = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+
+      SC_ArrayGet(array, lua_tointeger(L, -1), &value);
+      break;
+    default:
+      // ERROR
+      break;
+  }
+
+  lua_pop(L, 2);
+
+  push_value(L, &value);
   return 1;
 }
 
 static int newindex_metamethod(lua_State *L)
 {
-  lua_getfield(L, -3, "_data");
-  lua_replace(L, -4);
-  lua_rawset(L, -3);
+  int type;
+  scDataTypeHash_t *hash;
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+
+  lua_getfield(L, -3, "_type");
+  type = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+
+  pop_value(L, &value);
+
+  switch(type)
+  {
+    case TYPE_HASH:
+    case TYPE_NAMESPACE:
+      lua_getfield(L, -2, "_ref");
+      hash = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+
+      SC_HashSet(hash, lua_tostring(L, -1), &value);
+      break;
+
+    case TYPE_ARRAY:
+      lua_getfield(L, -2, "_ref");
+      array = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+
+      SC_ArraySet(array, lua_tointeger(L, -1), &value);
+      break;
+    default:
+      // ERROR
+      break;
+  }
+
+  lua_pop(L, 2);
 
   return 0;
 }
@@ -490,9 +567,9 @@ static scDataTypeHash_t* pop_hash(lua_State *L)
   scDataTypeHash_t *hash = SC_HashNew();
 
   lua_pushnil(L);
-  while(lua_next(L, -1) != 0)
+  while(lua_next(L, -2) != 0)
   {
-    lstr = lua_tostring(L, -1);
+    lstr = lua_tostring(L, -2);
     key = SC_StringNewFromChar(lstr);
     pop_value(L, &val);
     SC_HashSet(hash, SC_StringToChar(key), &val);
@@ -719,8 +796,6 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
 
 static void push_array( lua_State *L, scDataTypeArray_t *array )
 {
-  int i;
-
   // global table
   lua_newtable(L);
 
@@ -729,15 +804,6 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
 
   lua_pushinteger(L, TYPE_ARRAY);
   lua_setfield(L, -2, "_type");
-
-  // data table
-  lua_newtable( L );
-  for( i = 0; i < array->size; i++ )
-  {
-    push_value( L, &array->data[i] );
-    lua_rawseti( L, -1, i );
-  }
-  lua_setfield(L, -2, "_data");
 
   // metatable
   lua_newtable(L);
@@ -752,8 +818,6 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
 
 static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
 {
-  int i;
-
   // global table
   lua_newtable( L );
 
@@ -762,19 +826,6 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
 
   lua_pushinteger(L, TYPE_HASH);
   lua_setfield(L, -2, "_type");
-
-  // data table
-  lua_newtable(L);
-  for( i = 0; i < hash->buflen; i++ )
-  {
-    if(SC_StringIsEmpty(&hash->data[i].key))
-      continue;
-    if ( hash->data[i].value.type == TYPE_OBJECT ) //Prevent error caused by indexing a nil value TODO: Fix this....
-      continue;
-    push_value( L, &hash->data[i].value);
-    lua_setfield( L, -2, SC_StringToChar(&hash->data[i].key));
-  }
-  lua_setfield(L, -2, "_data");
 
   // metatable
   lua_newtable(L);
@@ -1057,8 +1108,11 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 {
   int narg = 0;
   lua_State *L = g_luaState;
-  scDataType_t *dt = (scDataType_t*) func->argument;
-  scDataTypeValue_t *value = args;
+  scDataType_t *dt;
+  scDataTypeValue_t *value;
+
+  value = args;
+  dt = (scDataType_t*) func->argument;
 
   update_context(L);
 

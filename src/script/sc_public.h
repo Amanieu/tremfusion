@@ -282,6 +282,7 @@ scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
 
 char* SC_LangageToString(scLangage_t langage);
 void SC_PrintData( void );
+void SC_PrintValue(scDataTypeValue_t *value);
 
 // sc_main.c
 

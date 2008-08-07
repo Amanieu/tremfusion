@@ -165,11 +165,14 @@ static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 
 static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
+  scDataTypeHash_t *args;
   scDataTypeValue_t value;
   scEventNode_t *parent;
-  scEventNode_t *node = in[1].data.object->data.data.userdata;
+  scEventNode_t *node;
   int type;
+
+  args = in[0].data.object->data.data.userdata;
+  node = in[1].data.object->data.data.userdata;
 
   // get parent node from location object
   SC_HashGet(args, "node", &value);

@@ -799,7 +799,7 @@ static void print_tabs( int tab )
 
 static void print_string( scDataTypeString_t *string )
 {
-  Com_Printf(string->data);
+  Com_Printf(SC_StringToChar(string));
 }
 
 static void print_value( scDataTypeValue_t *value, int tab )
@@ -879,12 +879,15 @@ static void print_hash( scDataTypeHash_t *hash, int tab )
 
   print_tabs(tab);
   Com_Printf("Hash [\n");
-  for( i = 0; i < hash->size; i++)
+  for( i = 0; i < hash->buflen; i++)
   {
-    print_tabs( tab );
-    print_string( &hash->data[i].key );
-    Com_Printf(" =>\n");
-    print_value( &hash->data[i].value, tab + 1 );
+    if( ! SC_StringIsEmpty(&hash->data[i].key))
+    {
+      print_tabs( tab );
+      print_string( &hash->data[i].key );
+      Com_Printf(" =>\n");
+      print_value( &hash->data[i].value, tab + 1 );
+    }
   }
 
   print_tabs(tab);
@@ -907,6 +910,13 @@ static void print_namespace( scNamespace_t *hash, int tab )
 
   print_tabs(tab);
   Com_Printf("]\n");
+}
+
+void SC_PrintValue(scDataTypeValue_t *value)
+{
+  Com_Printf("----- SC_PrintValue -----\n");
+  print_value(value, 0);
+  Com_Printf("-------------------------\n");
 }
 
 void SC_PrintData( void )
