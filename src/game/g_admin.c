@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "g_local.h"
-
+#include "ai_main.h"
 // big ugly global buffer for use with buffered printing of long outputs
 static char g_bfb[ 32000 ];
 
@@ -176,7 +176,18 @@ g_admin_cmd_t g_admin_cmds[ ] =
     {"unmute", G_admin_mute, "m",
       "unmute a muted player",
       "[^3name|slot#^7]"
-    }
+    },
+    
+    {"bot", G_admin_bot, "v",
+      "Controls bots in the game. Warning, this is highly experimental, and only works on some maps"
+      ", so be careful with it.",
+      "<add/del> <name> [team] (charactor) (skill)"
+    },
+    
+    {"listchars", G_ListChars, "v",
+       "display bot characters available to you or info on a specific character",
+       "(charactor)",
+     },
   };
 
 static int adminNumCmds = sizeof( g_admin_cmds ) / sizeof( g_admin_cmds[ 0 ] );
@@ -2928,6 +2939,149 @@ qboolean G_admin_unlock( gentity_t *ent, int skiparg )
     ( team == TEAM_ALIENS ) ? "Alien" : "Human",
     ( ent ) ? ent->client->pers.netname : "console" ) );
   return qtrue;
+}
+
+qboolean G_admin_bot( gentity_t *ent, int skiparg ){
+    // add [name] (team) (skill)
+    // del [name]
+    gentity_t *bot;
+    int minargc, matches, team_int;
+    int pids[ MAX_CLIENTS ];
+    char command[10];
+    char charname[ MAX_NAME_LENGTH ];
+    char      *botinfo;
+    char name[ MAX_NAME_LENGTH ];
+    char team[10];
+    char skill[4];
+    float skill_float=2.0;
+    qboolean success = qfalse;
+    int i;
+    
+    //char s2[ MAX_NAME_LENGTH ];
+    //char n2[ MAX_NAME_LENGTH ];
+    //int logmatch = -1, logmatches = 0;
+    //int i, j;
+    //qboolean exactmatch = qfalse;
+    
+    minargc = 3 + skiparg;
+    if( G_SayArgc() < skiparg + 1 ) {
+      ADMP( "^7Incorrect number of arguments. Use 'bot removeall' to remove all bots, 'bot add [name] [team]' to add a bot, 'bot del [name]' to remove a bot\n" );
+      //ADMP( "^3!bot: ^7usage: !bot [add/del] [name] (team) (skill)\n" );
+      ADMP( "^3!bot: ^7usage: !bot add [name] [h/a] (character) (skill)\n" );
+      return qfalse;
+    }
+  
+    G_SayArgv( 1 + skiparg, command, sizeof( command ) );
+    G_SayArgv( 2 + skiparg, name, sizeof( name ) );
+    
+    if(!Q_stricmp(command,"add")) {
+      // add [name] [team]
+      //check if we have already hit our limit for bots
+      minargc = 4 + skiparg;
+      if( G_SayArgc() < minargc ) {
+        ADMP( "^7Please have at least name and team.\n" );
+        //ADMP( "^3!bot: ^7usage: !bot [add/del] [name] [humans/aliens] \n" );
+        ADMP( "^3!bot: ^7usage: !bot add [name] [h/a] (character) (skill)\n" );
+        return qfalse;
+      }
+      
+      G_SayArgv( 3 + skiparg, team, sizeof( team ) );
+      
+      if(!Q_stricmp(team,"humans")||!Q_stricmp(team,"h")||!Q_stricmp(team,"human")) {
+        team_int = TEAM_HUMANS;
+      } else if(!Q_stricmp(team,"aliens")||!Q_stricmp(team,"a")||!Q_stricmp(team,"alien")) {
+        team_int = TEAM_ALIENS;
+      } else {
+        ADMP( "^7Invalid bot team.\n" );
+        ADMP( "^3!bot: ^7usage: !bot add [name] [h/a] (character) (skill)\n" );
+        return qfalse;
+      }
+      ADMP( va( "%d - %d = %d\n" , G_SayArgc(), skiparg, G_SayArgc() - skiparg) );
+      //if( team_int == TEAM_HUMANS){
+      switch(G_SayArgc() - skiparg)
+      {
+        case 4: //no skill or charactor name
+          ADMP( "^3!bot add: ^7bot charater not specified using random\n" );
+          skill_float = 2;
+          G_AddRandomBot(ent, team_int, name , &skill_float);
+          return qtrue;
+        case 5: // either charactor name or skill level
+          G_SayArgv( 4 + skiparg, charname, sizeof( charname ) );
+          G_SayArgv( 4 + skiparg, skill, sizeof( skill ) );
+          botinfo = G_GetBotInfoByName( charname );
+          skill_float = atof(skill);
+          if (botinfo)
+          {
+            skill_float = -1;
+            G_BotAdd(ent, name, team_int, &skill_float, botinfo);
+            return qtrue;
+          } 
+          else if (skill_float <= 5.0 && skill_float >= 1.0) 
+          {
+            G_AddRandomBot(ent, team_int, name, &skill_float );
+            return qtrue;
+          }
+          else {
+            ADMP( "^3!bot add: ^1ERROR:^7 Invalid charactor or skill specifed\n" );
+            ADMP( "^3!bot add: ^1See !listchars for bot characters and skill level must be between 1.0-5.0\n" );
+            return qfalse;
+          }
+          break;
+        case 6:
+          G_SayArgv( 4 + skiparg, charname, sizeof( charname ) );
+          G_SayArgv( 5 + skiparg, skill, sizeof( skill ) );
+          botinfo = G_GetBotInfoByName( charname );
+          skill_float = atof(skill);
+          if(skill_float > 5.0 || skill_float < 1.0){
+            ADMP( "^3!bot add: ^7bot skill level must be between 1 and 5\n" );
+            return qfalse;
+          }
+          if ( !botinfo ) {
+            ADMP( va( S_COLOR_RED "Error: Bot character '%s' not defined\n", charname ) );
+            return qfalse;
+          }
+          G_BotAdd(ent, name, team_int, &skill_float, botinfo);
+          return qtrue;
+        }
+        return qfalse;
+    } else if(!Q_stricmp(command,"del")) {
+      minargc = 3 + skiparg;
+      if( G_SayArgc() < minargc ) {
+        ADMP( "^7Please have at least name\n" );
+        ADMP( "^3!bot: ^7usage: !bot del [name] (team)\n" );
+        return qfalse;
+      }
+      
+      G_SayArgv( 3 + skiparg, team, sizeof( team ) );
+      // del [name]
+      if(!Q_stricmp(team,"humans")||!Q_stricmp(team,"h")||!Q_stricmp(team,"human")) {
+        team_int = TEAM_HUMANS;
+      } else if(!Q_stricmp(team,"aliens")||!Q_stricmp(team,"a")||!Q_stricmp(team,"alien")) {
+        team_int = TEAM_ALIENS;
+      } else {
+        team_int = TEAM_NONE;
+      }
+      success = qfalse;
+      matches = G_ClientNumbersFromString( name, pids, MAX_CLIENTS );
+      for( i = 0; i < matches;i++ ) {            
+        bot = &g_entities[ pids[ i ] ];
+        if( team_int != TEAM_NONE){
+          if (team_int != bot->client->pers.teamSelection){
+              continue;
+          }
+        }
+        G_BotDel(ent, pids[ i ]);
+        success = qtrue;        
+      }
+      
+      return success;
+  
+    } else if( !Q_stricmp( command,"removeall" ) ) {
+      G_BotRemoveAll(ent);
+      return qtrue;
+    }
+    ADMP( "^3!bot: ^7usage: !bot [add/del] [name] (team) (charactor) (skill)\n" );
+    return qfalse;
 }
 
 /*
