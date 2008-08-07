@@ -362,9 +362,9 @@ void SCR_DrawVoipSender( void ) {
 	char	string[256];
 	
 	// Little bit of a hack here, but its the only thing i could come up with :|
-       if( cls.voipTime > cls.realtime )
-       {
-	
+	if( cls.voipTime < cls.realtime )
+		return;
+
 	if (!cl_voipShowSender->integer)
 		return; // They don't want this on :(
 	else if (cls.state != CA_ACTIVE)
@@ -376,7 +376,8 @@ void SCR_DrawVoipSender( void ) {
 	else if (!cl_voip->integer)
 		return;  // client has VoIP support disabled.
 
-	sprintf( string, "Talker's number: %i", cls.voipSender );
+	sprintf(string, "Talker: %s", Info_ValueForKey(cl.gameState.stringData +
+	        cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "n"));
 	
 	if( cl_voipSenderPos->integer == 0 ) // Lower right-hand corner, above HUD
 		SCR_DrawStringExt( 320 - strlen( string ) * -8, 365, 8, string, g_color_table[7], qtrue, qfalse );
@@ -390,8 +391,6 @@ void SCR_DrawVoipSender( void ) {
 		SCR_DrawStringExt( 320 - strlen( string ) * 4, 400, 8, string, g_color_table[7], qtrue, qfalse );
 	else
 		SCR_DrawStringExt( 320 - strlen( string ) * -8, 380, 8, string, g_color_table[7], qtrue, qfalse );
-	
-       }
 }
 #endif
 
