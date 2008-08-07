@@ -40,6 +40,9 @@ and one exported function: Perform
 #include <windows.h>
 #else
 #include <sys/mman.h>
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 #endif
 
 
