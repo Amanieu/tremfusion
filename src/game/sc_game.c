@@ -63,17 +63,8 @@ static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void
 
 typedef enum 
 {
-  // Strings
-  ENTITY_CLASSNAME,
-  ENTITY_MODEL,
-  ENTITY_MODEL2,
-  ENTITY_TARGET,
-  ENTITY_TARGETNAME,
-  ENTITY_TEAM,
   // Vectors
   ENTITY_ORIGIN,
-  // Booleans
-  ENTITY_INUSE,
   // Methods
   ENTITY_LINK,
 } ent_closures;
@@ -91,13 +82,6 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   
   switch (settype)
   {
-    // FIXME: *very* crappy: segfault when free string
-    case ENTITY_CLASSNAME: ENT_SET_STR(entity->classname);
-    case ENTITY_MODEL:  ENT_SET_STR(entity->model);
-    case ENTITY_MODEL2: ENT_SET_STR(entity->model2);
-    case ENTITY_TARGET: ENT_SET_STR(entity->target);
-    case ENTITY_TARGETNAME: ENT_SET_STR(entity->targetname);
-    case ENTITY_TEAM: ENT_SET_STR(entity->team);
     case ENTITY_ORIGIN:
       // TODO: Error : read only value Champion: Have read only values have a NULL setter?
     default:
@@ -126,21 +110,10 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   
   switch (gettype)
   {
-    case ENTITY_CLASSNAME: ENT_GET_STR(entity->classname);
-    case ENTITY_MODEL: ENT_GET_STR(entity->model);
-    case ENTITY_MODEL2: ENT_GET_STR(entity->model2);
-    case ENTITY_TARGET: ENT_GET_STR(entity->target);
-    case ENTITY_TARGETNAME: ENT_GET_STR(entity->targetname);
-    case ENTITY_TEAM: ENT_GET_STR(entity->team);
     case ENTITY_ORIGIN:
       instance = SC_Vec3FromVec3_t( entity->r.currentOrigin);
       out[0].type = TYPE_OBJECT;
       out[0].data.object = instance;
-      break;
-      //SC_Vec3FromVec3_t
-    case ENTITY_INUSE:
-      out[0].type = TYPE_BOOLEAN;
-      out[0].data.boolean = (char)entity->inuse;
       break;
     default:
       out[0].type = TYPE_UNDEF;
@@ -169,14 +142,6 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 
 static scLibObjectMember_t entity_members[] = {
-  // String
-//  { "classname", "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_CLASSNAME },
-//  { "classname", "", TYPE_STRING,  SC_Field_Set, SC_Field_Get, (void*)FOFS(classname) },
-  { "model",     "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL },
-  { "model2",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_MODEL2 },
-  { "target",    "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TARGET },
-  { "targetname","", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TARGETNAME },
-  { "team",      "", TYPE_STRING,  entity_set, entity_get, (void*)ENTITY_TEAM },
   // Vectors
   { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, (void*)ENTITY_ORIGIN },
   // Booleans
@@ -190,8 +155,13 @@ static scLibObjectMethod_t entity_methods[] = {
 };
 
 static scField_t entity_fields[] = {
-  { "classname", "", TYPE_STRING, FOFS(classname) },
-  { "inuse",     "", TYPE_BOOLEAN, FOFS(inuse) },
+  { "classname",  "", TYPE_STRING,  FOFS(classname)  },
+  { "model",      "", TYPE_STRING,  FOFS(model)      },
+  { "model2",     "", TYPE_STRING,  FOFS(model2)     },
+  { "target",     "", TYPE_STRING,  FOFS(target)     },
+  { "targetname", "", TYPE_STRING,  FOFS(targetname) },
+  { "team",       "", TYPE_STRING,  FOFS(team)       },
+  { "inuse",      "", TYPE_BOOLEAN, FOFS(inuse)      },
   { "" },
 };
 

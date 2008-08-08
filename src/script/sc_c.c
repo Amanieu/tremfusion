@@ -204,7 +204,10 @@ int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value
       break;
     case TYPE_STRING:
       value->type = TYPE_STRING;
-      value->data.string = SC_StringNewFromChar(*(char **)( b + field->ofs ) );
+      if( *(char **)( b + field->ofs ) )
+        value->data.string = SC_StringNewFromChar(*(char **)( b + field->ofs ) );
+      else
+        value->data.string = SC_StringNewFromChar("");
       break;
     default:
       // Field type invalid
