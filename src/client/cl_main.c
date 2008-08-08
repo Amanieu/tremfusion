@@ -43,7 +43,6 @@ cvar_t	*cl_voipGainDuringCapture;
 cvar_t	*cl_voipCaptureMult;
 cvar_t	*cl_voipShowMeter;
 cvar_t	*cl_voipShowSender;
-cvar_t	*cl_voipSenderPos;
 cvar_t	*cl_voip;
 #endif
 
@@ -226,7 +225,47 @@ void CL_Voip_f( void )
 		Com_Printf("VoIP: command ignored: %s\n", reason);
 		return;
 	}
-
+	
+	if (!*cmd )
+	{
+		Com_Printf("Invalid VoIP command, please use one listed below:\n\n"
+		
+		"^3help: ^1Display a menu for the usage of following commands.\n\n"
+		
+		"^3ignore: ^1Disable the client from speaking.\n\n"
+		
+		"^3unignore: ^1Enable the client to speak again.\n\n"
+		
+		"^3muteall: ^1Stop all incoming voice chat from all clients.\n\n"
+		
+		"^3unmuteall: ^1Allow all incoming voice chat from all clients.\n\n"
+		
+		"^3gain: ^1Modify how loud a client is.\n");
+	}
+	if ( !strcmp(cmd, "help") )
+	{
+		Com_Printf("^6Help menu:\n\n"
+		
+		"^3help: ^1Display this menu.\n"
+		"^5Usage: /voip help\n\n"
+		
+		"^3ignore: ^1Disable the client from speaking.\n"
+		"^5Usage: /voip ignore <client number>\n\n"
+		
+		"^3unignore: ^1Enable the client to speak again.\n"
+		"^5Usage: /voip unignore <client number>\n\n"
+		
+		"^3muteall: ^1Stop all incoming voice chat from all clients.\n"
+		"^5Usage: /voip muteall\n\n"
+		
+		"^3unmuteall: ^1Allow all incoming voice chat from all clients.\n"
+		"^5Usage: /voip unmuteall\n\n"
+		
+		"^3gain: ^1Modify how loud a client is\n"
+		"^5Usage: /voip gain <client number> <gain>\n\n"
+		
+		"^7If you do not know the clients number, it should be displayed in the lower right-hand corner when the client speaks.\n");
+	}
 	if (strcmp(cmd, "ignore") == 0) {
 		CL_UpdateVoipIgnore(Cmd_Argv(2), qtrue);
 	} else if (strcmp(cmd, "unignore") == 0) {
@@ -3115,7 +3154,6 @@ void CL_Init( void ) {
 	cl_voipUseVAD = Cvar_Get ("cl_voipUseVAD", "0", CVAR_ARCHIVE);
 	cl_voipVADThreshold = Cvar_Get ("cl_voipVADThreshold", "0.25", CVAR_ARCHIVE);
 	cl_voipShowMeter = Cvar_Get ("cl_voipShowMeter", "1", CVAR_ARCHIVE);
-	cl_voipSenderPos = Cvar_Get ("cl_voipSenderPos", "0", CVAR_ARCHIVE);
 	cl_voipShowSender = Cvar_Get ("cl_voipShowSender", "1", CVAR_ARCHIVE);
 
 	// This is a protocol version number.

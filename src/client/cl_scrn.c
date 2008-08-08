@@ -376,21 +376,9 @@ void SCR_DrawVoipSender( void ) {
 	else if (!cl_voip->integer)
 		return;  // client has VoIP support disabled.
 
-	sprintf(string, "Talker: %s", Info_ValueForKey(cl.gameState.stringData +
+	sprintf(string, "Client speaking: %s", Info_ValueForKey(cl.gameState.stringData +
 	        cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "n"));
-	
-	if( cl_voipSenderPos->integer == 0 ) // Lower right-hand corner, above HUD
-		SCR_DrawStringExt( 320 - strlen( string ) * -8, 365, 8, string, g_color_table[7], qtrue, qfalse );
-	else if( cl_voipSenderPos->integer == 1 ) // Lower left-hand corner, above HUD
-		SCR_DrawStringExt( 320 - strlen( string ) * 17, 365, 8, string, g_color_table[7], qtrue, qfalse );
-	else if( cl_voipSenderPos->integer == 2 ) // Top right-hand corner, below lag-o-meter/time
-		SCR_DrawStringExt( 320 - strlen( string ) * -9, 100, 8, string, g_color_table[7], qtrue, qfalse );
-	else if( cl_voipSenderPos->integer == 3 ) // Top center, below VOIP bar when its displayed
-		SCR_DrawStringExt( 320 - strlen( string ) * 4, 30, 8, string, g_color_table[7], qtrue, qfalse );
-	else if( cl_voipSenderPos->integer == 4 ) // Bottom center, above HUD
-		SCR_DrawStringExt( 320 - strlen( string ) * 4, 400, 8, string, g_color_table[7], qtrue, qfalse );
-	else
-		SCR_DrawStringExt( 320 - strlen( string ) * -8, 380, 8, string, g_color_table[7], qtrue, qfalse );
+	SCR_DrawStringExt( 320 - strlen( string ) * -6, 340, 9, string, g_color_table[7], qtrue, qfalse );
 }
 #endif
 

@@ -430,7 +430,6 @@ extern	cvar_t	*cl_voipGainDuringCapture;
 extern	cvar_t	*cl_voipCaptureMult;
 extern	cvar_t	*cl_voipShowMeter;
 extern	cvar_t	*cl_voipShowSender;
-extern	cvar_t	*cl_voipSenderPos;
 extern	cvar_t	*cl_voip;
 #endif
 
