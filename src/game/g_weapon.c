@@ -1380,6 +1380,9 @@ FireWeapon3
 */
 void FireWeapon3( gentity_t *ent )
 {
+  if( ! SC_CallHooks("player.on_third_attack", ent) )
+    return;
+
   if( ent->client )
   {
     // set aiming directions
@@ -1415,6 +1418,9 @@ FireWeapon2
 */
 void FireWeapon2( gentity_t *ent )
 {
+  if( ! SC_CallHooks("player.on_secondary_attack", ent) )
+    return;
+
   if( ent->client )
   {
     // set aiming directions
@@ -1455,6 +1461,9 @@ FireWeapon
 */
 void FireWeapon( gentity_t *ent )
 {
+  if( ! SC_CallHooks("player.on_primary_attack", ent) )
+    return;
+
   if( ent->client )
   {
     // set aiming directions

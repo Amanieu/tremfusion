@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_local.h -- local definitions for game module
 
+#ifndef _GAME_G_LOCAL_H_
+#define _GAME_G_LOCAL_H_
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
@@ -30,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
+#include "../script/sc_public.h"
 #include "g_admin.h"
 
 //==================================================================
@@ -893,6 +897,8 @@ qboolean  SpotWouldTelefrag( gentity_t *spot );
 // g_svcmds.c
 //
 qboolean  ConsoleCommand( void );
+void G_SVCommandsInit( void );
+void G_SVCommandsShutdown( void );
 
 //
 // g_weapon.c
@@ -924,6 +930,7 @@ void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
 int  G_TimeTilSuddenDeath( void );
+void G_InitScript( void );
 
 //
 // g_client.c
@@ -1049,6 +1056,12 @@ connectionRecord_t  *G_GenerateNewConnection( gclient_t *client );
 void                G_ResetPTRConnections( void );
 connectionRecord_t  *G_FindConnectionForCode( int code );
 
+//
+// py_game.c
+//
+void G_InitPython( void );
+void G_ShutdownPython( void );
+
 
 //some maxs
 #define MAX_FILEPATH      144
@@ -1148,6 +1161,11 @@ extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
 
+extern  vmCvar_t  sc_python;
+extern  vmCvar_t  py_initialized;
+extern  vmCvar_t  sc_lua;
+extern  vmCvar_t  lua_initialized;
+
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );
 int       trap_Milliseconds( void );
@@ -1196,3 +1214,10 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+#ifndef Q3_VM
+void trap_AddCommand( const char *cmd_name, void (*function) (void));
+void trap_RemoveCommand( const char *cmd_name);
+#endif
+
+#endif

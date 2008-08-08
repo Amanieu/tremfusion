@@ -1160,4 +1160,7 @@ void Cvar_Init (void) {
 	Cmd_AddCommand ("reset", Cvar_Reset_f);
 	Cmd_AddCommand ("cvarlist", Cvar_List_f);
 	Cmd_AddCommand ("cvar_restart", Cvar_Restart_f);
+#if defined USE_PYTHON && defined DEDICATED
+	PY_CvarInit();
+#endif /*defined USE_PYTHON && defined DEDICATED*/
 }

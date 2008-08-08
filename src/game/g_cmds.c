@@ -583,6 +583,9 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
   if( oldTeam == newTeam )
     return;
 
+  if( ! SC_CallHooks("player.on_change_team", ent) )
+    return;
+
   G_LeaveTeam( ent );
   ent->client->pers.teamSelection = newTeam;
 
@@ -1787,6 +1790,10 @@ void Cmd_Class_f( gentity_t *ent )
         if( cost >= 0 )
         {
           int oldBoostTime = -1;
+
+          if( ! SC_CallHooks("player.on_evolve", ent))
+            return;
+
           ent->client->pers.evolveHealthFraction = (float)ent->client->ps.stats[ STAT_HEALTH ] /
             (float)BG_Class( currentClass )->health;
 
@@ -1924,6 +1931,10 @@ void Cmd_Destroy_f( gentity_t *ent )
         G_AddEvent( ent, EV_BUILD_DELAY, ent->client->ps.clientNum );
         return;
       }
+
+      // Call scripts hooks
+      if( ! SC_CallHooks("buildable.on_decon", traceEnt) )
+        return;
 
       if( g_markDeconstruct.integer )
       {
@@ -2143,6 +2154,9 @@ void Cmd_Buy_f( gentity_t *ent )
     if( !BG_PlayerCanChangeWeapon( &ent->client->ps ) )
       return;
 
+    if( ! SC_CallHooks("player.on_inventory_changed", ent) )
+      return;
+
     //add to inventory
     BG_AddWeaponToInventory( weapon, ent->client->ps.stats );
     ent->client->ps.ammo[0] = BG_Weapon( weapon )->maxAmmo;
@@ -2224,7 +2238,8 @@ void Cmd_Buy_f( gentity_t *ent )
       }
 
       //add to inventory
-      BG_AddUpgradeToInventory( upgrade, ent->client->ps.stats );
+      if( SC_CallHooks("player.on_inventory_changed", ent) )
+        BG_AddUpgradeToInventory( upgrade, ent->client->ps.stats );
     }
 
     if( upgrade == UP_BATTPACK )
@@ -2288,7 +2303,8 @@ void Cmd_Sell_f( gentity_t *ent )
         return;
       }
 
-      BG_RemoveWeaponFromInventory( weapon, ent->client->ps.stats );
+      if( SC_CallHooks("player.on_inventory_changed", ent) )
+        BG_RemoveWeaponFromInventory( weapon, ent->client->ps.stats );
 
       //add to funds
       G_AddCreditToClient( ent->client, (short)BG_Weapon( weapon )->price, qfalse );
@@ -2326,7 +2342,8 @@ void Cmd_Sell_f( gentity_t *ent )
       }
 
       //add to inventory
-      BG_RemoveUpgradeFromInventory( upgrade, ent->client->ps.stats );
+      if( SC_CallHooks("player.on_inventory_changed", ent) )
+        BG_RemoveUpgradeFromInventory( upgrade, ent->client->ps.stats );
 
       if( upgrade == UP_BATTPACK )
         G_GiveClientMaxAmmo( ent, qtrue );
@@ -2354,7 +2371,8 @@ void Cmd_Sell_f( gentity_t *ent )
       if( BG_InventoryContainsWeapon( i, ent->client->ps.stats ) &&
           BG_Weapon( i )->purchasable )
       {
-        BG_RemoveWeaponFromInventory( i, ent->client->ps.stats );
+        if( SC_CallHooks("player.on_inventory_changed", ent) )
+          BG_RemoveWeaponFromInventory( i, ent->client->ps.stats );
 
         //add to funds
         G_AddCreditToClient( ent->client, (short)BG_Weapon( i )->price, qfalse );
@@ -2390,7 +2408,10 @@ void Cmd_Sell_f( gentity_t *ent )
           ent->client->ps.eFlags ^= EF_TELEPORT_BIT;
         }
 
-        BG_RemoveUpgradeFromInventory( i, ent->client->ps.stats );
+        if( SC_CallHooks("player.on_inventory_changed", ent) )
+        {
+          BG_RemoveUpgradeFromInventory( i, ent->client->ps.stats );
+        }
 
         if( i == UP_BATTPACK )
           G_GiveClientMaxAmmo( ent, qtrue );

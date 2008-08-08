@@ -2383,6 +2383,10 @@ void Com_Init( char *commandLine ) {
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Init();
+#endif
+	
 	if ( setjmp (abortframe) ) {
 		Sys_Error ("Error during initialization");
 	}
@@ -2489,6 +2493,10 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
+#if defined USE_PYTHON && defined DEDICATED
+	Cmd_AddCommand ("pyexec", PY_ExecScript_f);
+#endif
+	
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
 
@@ -2800,7 +2808,9 @@ void Com_Frame( void ) {
 		timeAfter = Sys_Milliseconds ();
 	}
 #endif
-
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Frame();
+#endif
 	//
 	// report timing information
 	//
@@ -2855,6 +2865,9 @@ void Com_Shutdown (void) {
 		FS_FCloseFile( com_journalFile );
 		com_journalFile = 0;
 	}
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Shutdown();
+#endif
 
 }
 
@@ -3027,13 +3040,13 @@ static void Field_CompleteKeyname( void )
 Field_CompleteFilename
 ===============
 */
-static void Field_CompleteFilename( const char *dir,
-		const char *ext, qboolean stripExt )
+static void Field_CompleteFilenameMuiltipleExtensions( const char *dir,
+		extensions_t *exts, qboolean stripExt )
 {
 	matchCount = 0;
 	shortestMatch[ 0 ] = 0;
 
-	FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+	FS_FilenameCompletion2( dir, exts, stripExt, FindMatches );
 
 	if( matchCount == 0 )
 		return;
@@ -3052,7 +3065,40 @@ static void Field_CompleteFilename( const char *dir,
 
 	Com_Printf( "]%s\n", completionField->buffer );
 	
-	FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
+	FS_FilenameCompletion2( dir, exts, stripExt, PrintMatches );
+}
+
+/*
+===============
+Field_CompleteFilename
+===============
+*/
+static void Field_CompleteFilename( const char *dir,
+    const char *ext, qboolean stripExt )
+{
+  matchCount = 0;
+  shortestMatch[ 0 ] = 0;
+
+  FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+
+  if( matchCount == 0 )
+    return;
+
+  Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
+    strlen( completionString ) ], shortestMatch,
+    sizeof( completionField->buffer ) );
+  completionField->cursor = strlen( completionField->buffer );
+
+  if( matchCount == 1 )
+  {
+    Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+    completionField->cursor++;
+    return;
+  }
+
+  Com_Printf( "]%s\n", completionField->buffer );
+  
+  FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
 }
 
 /*
@@ -3136,6 +3182,19 @@ static void Field_CompleteCommand( char *cmd,
 			{
 				Field_CompleteFilename( "", "cfg", qfalse );
 			}
+			else if( ( !Q_stricmp( baseCmd, "script" ) ) &&
+			  completionArgument == 2 )
+      {
+			  extensions_t exts;
+			  exts.num_extensions = 0;
+			  #ifdef USE_LUA
+			  exts.extensions[exts.num_extensions++] = "lua";
+			  #endif
+			  #ifdef USE_PYTHON
+			  exts.extensions[exts.num_extensions++] = "py";
+			  #endif
+			  Field_CompleteFilenameMuiltipleExtensions( "scripts", &exts, qfalse );
+      }
 			else if( !Q_stricmp( baseCmd, "condump" ) &&
 					completionArgument == 2 )
 			{

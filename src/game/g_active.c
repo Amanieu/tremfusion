@@ -25,6 +25,35 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 ===============
+G_Use
+
+Called to make object use another object
+===============
+*/
+void G_Use( gentity_t *ent, gentity_t *other, gentity_t *activator )
+{
+  if( ! ent->use )
+    return;
+
+  if( ! SC_CallHooks("entity.on_use", ent))
+    return;
+
+  if( ent->s.eType == ET_BUILDABLE )
+  {
+    if( ! SC_CallHooks("buildable.on_use", ent))
+      return;
+  }
+  else if( ent->s.eType == ET_PLAYER )
+  {
+    if( ! SC_CallHooks("player.on_use", ent))
+      return;
+  }
+    
+  ent->use( ent, other, activator ); //other and activator are the same in this context
+}
+
+/*
+===============
 G_DamageFeedback
 
 Called just before a snapshot is sent to the given player.
@@ -1440,7 +1469,12 @@ void ClientThink_real( gentity_t *ent )
     {
       //remove anti toxin
       BG_DeactivateUpgrade( UP_MEDKIT, client->ps.stats );
-      BG_RemoveUpgradeFromInventory( UP_MEDKIT, client->ps.stats );
+
+      if( SC_CallHooks("player.on_inventory_changed", ent) )
+      {
+
+        BG_RemoveUpgradeFromInventory( UP_MEDKIT, client->ps.stats );
+      }
 
       client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
       client->poisonImmunityTime = level.time + MEDKIT_POISON_IMMUNITY_TIME;
@@ -1463,7 +1497,9 @@ void ClientThink_real( gentity_t *ent )
 
     //remove grenade
     BG_DeactivateUpgrade( UP_GRENADE, client->ps.stats );
-    BG_RemoveUpgradeFromInventory( UP_GRENADE, client->ps.stats );
+
+    if( SC_CallHooks("player.on_inventory_changed", ent) )
+      BG_RemoveUpgradeFromInventory( UP_GRENADE, client->ps.stats );
 
     //M-M-M-M-MONSTER HACK
     ent->s.weapon = WP_GRENADE;

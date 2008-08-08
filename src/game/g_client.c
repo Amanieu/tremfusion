@@ -1253,6 +1253,10 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   // count current clients and rank for scoreboard
   CalculateRanks( );
   G_admin_namelog_update( client, qfalse );
+
+  if( ! SC_CallHooks( "game.on_player_connect", NULL ) )
+    return "Game refused by server";
+
   return NULL;
 }
 
@@ -1290,6 +1294,9 @@ void ClientBegin( int clientNum )
     trap_UnlinkEntity( ent );
 
   G_InitGentity( ent );
+
+  SC_CallHooks("player.on_init", ent);
+
   ent->touch = 0;
   ent->pain = 0;
   ent->client = client;
@@ -1324,6 +1331,8 @@ void ClientBegin( int clientNum )
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
+
+  SC_CallHooks( "game.on_player_begin", NULL );
 }
 
 /*
@@ -1354,6 +1363,9 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   int                 maxAmmo, maxClips;
   weapon_t            weapon;
 
+
+  if( ! SC_CallHooks("player.on_spawn", ent) )
+    return;
 
   index = ent - g_entities;
   client = ent->client;
@@ -1702,4 +1714,6 @@ void ClientDisconnect( int clientNum )
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
 
   CalculateRanks( );
+
+  SC_CallHooks( "game.on_player_disconnect", NULL );
 }

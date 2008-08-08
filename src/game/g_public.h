@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_public.h -- game module information visible to server
 
+#ifndef _GAME_G_PUBLIC_H_
+#define _GAME_G_PUBLIC_H_
+
 #define GAME_API_VERSION  9
 
 // entity->svFlags
@@ -220,7 +223,10 @@ typedef enum {
   G_PARSE_READ_TOKEN,
   G_PARSE_SOURCE_FILE_AND_LINE,
 
-  G_SEND_GAMESTAT
+  G_SEND_GAMESTAT,
+  
+  G_ADD_COMMAND,
+  G_REMOVE_COMMAND,
 } gameImport_t;
 
 
@@ -257,4 +263,6 @@ typedef enum {
   // The game can issue trap_argc() / trap_argv() commands to get the command
   // and parameters.  Return qfalse if the game doesn't recognize it as a command.
 } gameExport_t;
+
+#endif
 

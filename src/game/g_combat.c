@@ -1100,11 +1100,40 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         targ->health = -999;
 
       targ->enemy = attacker;
+	  if( SC_CallHooks( "entity.on_die", targ ) == 0 )
+        return;
+
+      if( targ->s.eType == ET_BUILDABLE )
+      {
+          if( SC_CallHooks("entity.on_die", targ) == 0 )
+              return;
+      }
+      else if( targ->s.eType == ET_PLAYER )
+      {
+          if( SC_CallHooks("player.on_die", targ) == 0 )
+              return;
+      }
       targ->die( targ, inflictor, attacker, take, mod );
       return;
     }
     else if( targ->pain )
+	{
+      if( SC_CallHooks("entity.on_pain", targ) == 0)
+        return;
+
+      if( targ->s.eType == ET_BUILDABLE )
+      {
+          if( SC_CallHooks("buildable.on_die", targ) == 0 )
+              return;
+      }
+      else if( targ->s.eType == ET_PLAYER )
+      {
+          if( SC_CallHooks("player.on_die", targ) == 0 )
+              return;
+      }
+
       targ->pain( targ, attacker, take );
+    }
   }
 }
 
