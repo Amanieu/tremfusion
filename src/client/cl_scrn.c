@@ -378,7 +378,9 @@ void SCR_DrawVoipSender( void ) {
 
 	sprintf(string, "Client speaking: %s", Info_ValueForKey(cl.gameState.stringData +
 	        cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "n"));
-	SCR_DrawStringExt( 320 - strlen( string ) * -6, 340, 9, string, g_color_table[7], qtrue, qfalse );
+
+	// Display below the VoIP meter
+	SCR_DrawStringExt( 320 - strlen( string ) * 4, 30, 9, string, g_color_table[7], qfalse, qfalse );
 }
 #endif
 
