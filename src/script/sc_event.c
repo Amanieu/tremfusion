@@ -49,10 +49,8 @@ static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, vo
 
   SC_Common_Constructor(in, out, closure);
 
-  event = BG_Alloc(sizeof(scEventNode_t));
-  strcpy(event->skip_tag, "");
-  event->root = SC_Event_NewNode("all");
-  event->root->type = SC_EVENT_NODE_TYPE_NODE;
+  event = SC_Event_New();
+
   out[0].data.object->data.data.userdata = event;
 }
 
@@ -209,7 +207,6 @@ static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
       SC_Event_AddNode(parent->parent, parent, node);
       break;
   }
-  node->parent = parent;
 }
 
 static scLibObjectMethod_t loc_methods[] = {
@@ -240,6 +237,7 @@ Node
 */
 
 scClass_t *hook_class;
+scClass_t *tmphook_class;
 scClass_t *tag_class;
 
 static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
@@ -254,7 +252,10 @@ static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   node = SC_Event_NewNode(SC_StringToChar(in[1].data.string));
 
   node->type = type;
-  if(type == SC_EVENT_NODE_TYPE_HOOK)
+  if(type == SC_EVENT_NODE_TYPE_TEMPORARY_HOOK)
+    type = SC_EVENT_NODE_TYPE_HOOK;
+
+  if(type == SC_EVENT_NODE_TYPE_HOOK )
   {
     node->hook = in[2].data.function;
     node->hook->argument[0] = TYPE_HASH;
@@ -290,6 +291,16 @@ static scLibObjectDef_t hook_def = {
   (void*) SC_EVENT_NODE_TYPE_HOOK,
 };
 
+static scLibObjectDef_t tmphook_def = {
+  "TemporaryHook", "",
+  node_constructor, { TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
+  node_destructor,
+  NULL,
+  NULL,
+  NULL,
+  (void*) SC_EVENT_NODE_TYPE_TEMPORARY_HOOK,
+};
+
 /*
 ======================================================================
 
@@ -297,6 +308,20 @@ Global functions
 
 ======================================================================
 */
+
+scEvent_t *SC_Event_New(void)
+{
+  scEvent_t *event;
+
+  event = BG_Alloc(sizeof(scEvent_t));
+  event->skip = 0;
+  event->root = SC_Event_NewNode("all");
+  event->root->type = SC_EVENT_NODE_TYPE_NODE;
+  event->run_id = 0;
+  event->current_node = NULL;
+
+  return event;
+}
 
 void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *params)
 {
@@ -311,16 +336,27 @@ void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *par
   if(node == NULL)
     return;
 
+  if(node->skip)
+  {
+    node->skip = qfalse;
+    return;
+  }
+
+  event->current_node = node;
+
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
     for(i = node->first; i != NULL; i = i->next)
     {
       event_call_rec(event, i, params);
 
-      if(event->skip_tag[0] != '\0')
+      if(event->skip)
       {
-        if(strcmp(node->tag, event->skip_tag) == 0)
-          strcpy(event->skip_tag, "");
+        if(node->skip)
+        {
+          node->skip = qfalse;
+          event->skip = qfalse;
+        }
         break;
       }
     }
@@ -333,7 +369,9 @@ void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *par
 
 void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params)
 {
+  event->run_id++;
   event_call_rec(event, event->root, params);
+  event->current_node = NULL;
 }
 
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new)
@@ -383,15 +421,8 @@ scEventNode_t *SC_Event_NewNode(const char *tag)
   scEventNode_t *node = BG_Alloc(sizeof(scEventNode_t));
   memset(node, 0x00, sizeof(scEventNode_t));
 
+  node->skip = qfalse;
   strcpy(node->tag, tag);
-
-  return node;
-}
-
-scEventNode_t *SC_Event_NewTemporaryNode(const char *tag)
-{
-  scEventNode_t *node = SC_Event_NewNode(tag);
-  node->ttl = 1;
 
   return node;
 }
@@ -424,13 +455,30 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
 
 void SC_Event_Skip(scEvent_t *event, const char *tag)
 {
-  strcpy(event->skip_tag, tag);
+  scEventNode_t *node;
+
+  node = event->current_node;
+  while(node)
+  {
+    if(strcmp(node->tag, tag) == 0)
+    {
+      event->skip = qtrue;
+      break;
+    }
+
+    node = node->parent;
+  }
+
+  node = SC_Event_FindChild(event->root, tag);
+  if(node)
+    node->skip = qtrue;
 }
 
 void SC_Event_Init(void)
 {
   event_class = SC_AddClass("common", &event_def);
   hook_class = SC_AddClass("common", &hook_def);
+  tmphook_class = SC_AddClass("common", &tmphook_def);
   tag_class = SC_AddClass("common", &tag_def);
   loc_class = SC_AddClass("common", &loc_def);
 }

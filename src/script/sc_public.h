@@ -394,6 +394,7 @@ typedef enum
   SC_EVENT_NODE_TYPE_UNDEF=0,
   SC_EVENT_NODE_TYPE_NODE,
   SC_EVENT_NODE_TYPE_HOOK,
+  SC_EVENT_NODE_TYPE_TEMPORARY_HOOK,
 } scEventNodeType_t;
 
 struct scEventNode_s
@@ -412,13 +413,15 @@ struct scEventNode_s
 
   scDataTypeFunction_t  *hook; // Hook
 
-  int                   ttl;
+  qboolean              skip;
 };
 
 struct scEvent_s
 {
   scEventNode_t         *root;
-  char                  skip_tag[MAX_TAG_SIZE+1];
+  scEventNode_t         *current_node;
+  qboolean              skip;
+  int                   run_id;
 };
 
 struct scHook_s
@@ -431,12 +434,12 @@ extern scClass_t *loc_class;
 extern scClass_t *hook_class;
 extern scClass_t *tag_class;
 
+scEvent_t *SC_Event_New(void);
 void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params);
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new);
 void SC_Event_DeleteNode(scEventNode_t *node);
 void SC_Event_Skip(scEvent_t *event, const char *tag);
 scEventNode_t *SC_Event_NewNode(const char *tag);
-scEventNode_t *SC_Event_NewTemporaryNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
 void SC_Event_Dump(scEvent_t *event);
