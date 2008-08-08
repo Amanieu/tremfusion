@@ -233,7 +233,6 @@ static int index_metamethod(lua_State *L)
   scDataTypeHash_t *hash;
   scDataTypeArray_t *array;
   scDataTypeValue_t value;
-  int i;
 
   lua_getfield(L, -2, "_type");
   type = lua_tointeger(L, -1);

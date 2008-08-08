@@ -31,7 +31,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 scNamespace_t *namespace_root;
 
 static void stringFree(scDataTypeString_t *string);
-static void valueFree(scDataTypeValue_t *value);
 static void arrayFree(scDataTypeArray_t *array);
 static void hashFree( scDataTypeHash_t *hash );
 static void functionFree(scDataTypeFunction_t *function);
@@ -211,8 +210,6 @@ void SC_ValueGCDec(scDataTypeValue_t *value)
       break;
   }
   value->gc.count--;
-  if(value->gc.count == 0)
-    valueFree(value);
 }
 
 scDataTypeValue_t *SC_ValueStringFromChar( const char* str )
@@ -222,11 +219,6 @@ scDataTypeValue_t *SC_ValueStringFromChar( const char* str )
   value->type = TYPE_STRING;
   value->data.string = SC_StringNewFromChar( str );
   return value;
-}
-
-static void valueFree(scDataTypeValue_t *value)
-{
-  BG_Free(value);
 }
 
 // Array
@@ -566,6 +558,11 @@ void SC_HashGCDec(scDataTypeHash_t *hash)
   hash->gc.count--;
   if(hash->gc.count == 0)
     hashFree(hash);
+}
+
+void SC_HashDump(scDataTypeHash_t *hash)
+{
+  print_hash(hash, 0);
 }
 
 // namespace
@@ -926,22 +923,22 @@ static void print_namespace( scNamespace_t *hash, int tab )
   Com_Printf("]\n");
 }
 
-void SC_PrintValue(scDataTypeValue_t *value)
+void SC_ValueDump(scDataTypeValue_t *value)
 {
-  Com_Printf("----- SC_PrintValue -----\n");
+  Com_Printf("----- SC_ValueDump -----\n");
   print_value(value, 0);
   Com_Printf("-------------------------\n");
 }
 
-void SC_PrintData( void )
+void SC_DataDump( void )
 {
   scDataTypeValue_t value;
 
   SC_NamespaceGet( "", & value );
 
-  Com_Printf("----- Scripting data tree -----\n");
+  Com_Printf("----- SC_DumpData -----\n");
   print_namespace((scDataTypeHash_t*)value.data.namespace, 0);
-  Com_Printf("-------------------------------\n");
+  Com_Printf("------------------------\n");
 }
 
 char* SC_LangageToString(scLangage_t langage)
@@ -956,3 +953,4 @@ char* SC_LangageToString(scLangage_t langage)
 
   return "unknow";
 }
+

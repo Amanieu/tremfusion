@@ -292,8 +292,9 @@ scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
 scField_t *SC_ClassGetField(scClass_t *class, const char *name);
 
 char* SC_LangageToString(scLangage_t langage);
-void SC_PrintData( void );
-void SC_PrintValue(scDataTypeValue_t *value);
+void SC_DataDump( void );
+void SC_HashDump(scDataTypeHash_t *hash);
+void SC_ValueDump(scDataTypeValue_t *value);
 
 // sc_main.c
 
