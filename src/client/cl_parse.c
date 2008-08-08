@@ -369,11 +369,6 @@ void CL_SystemInfoChanged( void ) {
 	// in some cases, outdated cp commands might get sent with this news serverId
 	cl.serverId = atoi( Info_ValueForKey( systemInfo, "sv_serverid" ) );
 
-	// don't set any vars when playing a demo
-	if ( clc.demoplaying ) {
-		return;
-	}
-
 #ifdef USE_VOIP
 	// in the future, (val) will be a protocol version string, so only
 	//  accept explicitly 1, not generally non-zero.
@@ -382,9 +377,11 @@ void CL_SystemInfoChanged( void ) {
 #endif
 
 	s = Info_ValueForKey( systemInfo, "sv_cheats" );
-	cl_connectedToCheatServer = atoi( s );
-	if ( !cl_connectedToCheatServer ) {
-		Cvar_SetCheatState();
+	if ( !clc.demoplaying ) {
+		cl_connectedToCheatServer = atoi( s );
+		if ( !cl_connectedToCheatServer ) {
+			Cvar_SetCheatState();
+		}
 	}
 
 	// check pure server string
@@ -437,7 +434,8 @@ void CL_SystemInfoChanged( void ) {
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
 		Cvar_Set( "fs_game", "" );
 	}
-	cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
+	if ( !clc.demoplaying )
+		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
 }
 
 /*
