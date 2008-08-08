@@ -210,6 +210,10 @@ void SCR_DrawStringExt( int x, int y, float size, const char *string, float *set
 	s = string;
 	xx = x;
 	while ( *s ) {
+		if ( !noColorEscape && Q_IsColorString( s ) ) {
+			s += 2;
+			continue;
+		}
 		SCR_DrawChar( xx+2, y+2, size, *s );
 		xx += size;
 		s++;
@@ -221,11 +225,15 @@ void SCR_DrawStringExt( int x, int y, float size, const char *string, float *set
 	xx = x;
 	re.SetColor( setColor );
 	while ( *s ) {
-		if ( !noColorEscape && Q_IsColorString( s ) ) {
+		if ( Q_IsColorString( s ) ) {
 			if ( !forceColor ) {
 				Com_Memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
 				color[3] = setColor[3];
 				re.SetColor( color );
+			}
+			if ( !noColorEscape ) {
+				s += 2;
+				continue;
 			}
 		}
 		SCR_DrawChar( xx, y, size, *s );
@@ -273,6 +281,10 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 				Com_Memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
 				color[3] = setColor[3];
 				re.SetColor( color );
+			}
+			if ( !noColorEscape ) {
+				s += 2;
+				continue;
 			}
 		}
 		SCR_DrawSmallChar( xx, y, *s );
