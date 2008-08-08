@@ -786,7 +786,7 @@ void CL_ParseVoip ( msg_t *msg ) {
 			Com_DPrintf("VoIP: playback %d bytes, %d samples, %d frames\n",
 			            written * 2, written, i);
 			S_RawSamples(sender + 1, written, clc.speexSampleRate, 2, 1,
-			             (const byte *) decoded, clc.voipGain[sender]);
+			             (const byte *) decoded, ( clc.voipGain[sender] + cl_voipDefaultGain->value ) );
 			written = 0;
 		}
 
@@ -811,7 +811,7 @@ void CL_ParseVoip ( msg_t *msg ) {
 
 	if (written > 0) {
 		S_RawSamples(sender + 1, written, clc.speexSampleRate, 2, 1,
-		             (const byte *) decoded, clc.voipGain[sender]);
+		             (const byte *) decoded, ( clc.voipGain[sender] + cl_voipDefaultGain->value ) );
 	}
 
 	clc.voipIncomingSequence[sender] = sequence + frames;
