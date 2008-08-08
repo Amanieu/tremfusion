@@ -27,6 +27,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define TIME_BETWEENFINDINGENEMY 5
 
+int numstateswitches;
+char stateswitch[MAX_STATESWITCHES+1][144];
+
 typedef enum{
     HS_SPAWN,
     HS_GEAR,
@@ -43,6 +46,55 @@ static char *stateNames[ ] =
 "HS_ATTACK",
 "HS_TALK"
 };
+
+void HBotEnterSpawn(bot_state_t* bs, char *s );
+void HBotEnterGear(bot_state_t* bs, char *s );
+void HBotEnterHeal( bot_state_t* bs, char *s );
+
+/*
+==================
+BotResetStateSwitches
+==================
+*/
+void BotResetStateSwitches(void) {
+  numstateswitches = 0;
+}
+
+/*
+==================
+HBotDumpStateSwitches
+==================
+*/
+void HBotDumpStateSwitches(bot_state_t *bs) {
+  int i;
+  char netname[MAX_NETNAME];
+
+  ClientName(bs->client, netname, sizeof(netname));
+  BotAI_Print(PRT_MESSAGE, "%s at %1.1f switched more than %d AI nodes\n", netname, FloatTime(), MAX_STATESWITCHES);
+  for (i = 0; i < numstateswitches; i++) {
+    BotAI_Print(PRT_MESSAGE, stateswitch[i]);
+  }
+  BotAI_Print(PRT_FATAL, "");
+}
+
+/*
+==================
+HBotRecordStateSwitch
+==================
+*/
+void HBotRecordStateSwitch(bot_state_t *bs, char *node, char *str, char *s) {
+  char netname[MAX_NETNAME];
+
+  ClientName(bs->client, netname, sizeof(netname));
+  Com_sprintf(stateswitch[numstateswitches], 144, "%s at %2.1f entered %s: %s from %s\n", netname, FloatTime(), node, str, s);
+#ifdef DEBUG
+  if (0) {
+    BotAI_Print(PRT_MESSAGE, stateswitch[numnodeswitches]);
+  }
+#endif //DEBUG
+  numstateswitches++;
+}
+
 /*
 ==================
 BotAimAtEnemy
@@ -650,6 +702,7 @@ void BuyAmmo(bot_state_t* bs){
 	trap_EA_Command(bs->client, "buy ammo" );
 	bs->buyammo_time = level.time;
 }
+
 // armoury AI: buy stuff depending on credits (stage, situation)
 void HBotShop(bot_state_t* bs){
 	int       totalcredit;
@@ -894,6 +947,11 @@ void HBotStrafe(bot_state_t *bs){
 	return;
 }
 
+void HBotEnterAttack(bot_state_t* bs, char *s)
+{
+  HBotRecordStateSwitch(bs, "attack", "" , s);
+  bs->state = HS_ATTACK;
+}
 
 qboolean HBotAttack(bot_state_t* bs){
 	bot_moveresult_t moveresult;
@@ -903,18 +961,18 @@ qboolean HBotAttack(bot_state_t* bs){
 	//state transitions
 	// dead -> spawn
 	if( !BotIsAlive(bs) ){
-		bs->state = HS_SPAWN;
+    HBotEnterSpawn(bs, "attack: bot is not alive");
 		return qfalse;
 	}
 	
 	// not satisfied with current equip? -> got get equipment!
 	if( !HBotEquipOK(bs) ){
-		bs->state = HS_GEAR;
+	  HBotEnterGear(bs, "attack: equipment is not ok");
 		return qfalse;
 	}
 	
 	if( !HBotHealthOK(bs) ){
-		bs->state = HS_HEAL;
+	  HBotEnterHeal(bs, "attack: health is not ok");
 		return qfalse;
 	}
 	// report
@@ -981,6 +1039,12 @@ qboolean CheckMedi(bot_state_t* bs, int entnum, float dist ){
   return qtrue;
 }
 
+void HBotEnterHeal( bot_state_t* bs, char *s )
+{
+  HBotRecordStateSwitch(bs, "heal", "" , s);
+  bs->state = HS_HEAL;
+}
+
 // go for medi and heal
 qboolean HBotHeal(bot_state_t* bs){
 	bot_goal_t goal;
@@ -991,13 +1055,13 @@ qboolean HBotHeal(bot_state_t* bs){
 	
 	// dead -> spawn
 	if( !BotIsAlive(bs) ){
-		bs->state = HS_SPAWN;
+	  HBotEnterSpawn(bs, "heal: bot is not alive");
 		return qfalse;
 	}
 	
 	// satisfied with current equip? -> attack!
 	if( HBotHealthOK(bs) ){
-		bs->state = HS_ATTACK;
+	  HBotEnterAttack(bs, "heal: health is ok");
 		return qfalse;
 	} else {
 		
@@ -1036,7 +1100,7 @@ qboolean HBotHeal(bot_state_t* bs){
 		BotAddInfo(bs, "task", "heal!");
 		//check if healt  is full, 
 		if(bs->inventory[BI_HEALTH] >= bs->cur_ps.stats[STAT_MAX_HEALTH]){
-			bs->state = HS_ATTACK;
+		  HBotEnterAttack(bs, "heal: health is full");
 			return qfalse;
 		}
 	}
@@ -1071,6 +1135,12 @@ qboolean HBotHeal(bot_state_t* bs){
 	return qtrue;
 }
 
+void HBotEnterGear(bot_state_t* bs, char *s)
+{
+  HBotRecordStateSwitch(bs, "gear", "" , s);
+  bs->state = HS_GEAR;
+}
+
 // go for arm and gear up
 qboolean HBotGear(bot_state_t* bs){
 	bot_goal_t goal;
@@ -1081,13 +1151,13 @@ qboolean HBotGear(bot_state_t* bs){
 	
 	// dead -> spawn
 	if( !BotIsAlive(bs) ){
-		bs->state = HS_SPAWN;
+	  HBotEnterSpawn(bs, "gear: not in not alive");
 		return qfalse;
 	}
 	
 	// satisfied with current equip? -> attack!
 	if( HBotEquipOK(bs) ){
-		bs->state = HS_ATTACK;
+	  HBotEnterAttack(bs, "gear: equipment is ok");
 		return qfalse;
 	} else {
 		
@@ -1111,7 +1181,7 @@ qboolean HBotGear(bot_state_t* bs){
 		HBotShop(bs);
 		BotAddInfo(bs, "task", "shopping!");
 		//now that we've bought ammo, move to the next state
-		bs->state = HS_ATTACK;
+		HBotEnterAttack(bs, "gear: equipment bought");
 		return qfalse;
 	}
 	else{   // move
@@ -1137,17 +1207,24 @@ qboolean HBotGear(bot_state_t* bs){
 	}
 	return qtrue;
 }
-	
+
+void HBotEnterSpawn(bot_state_t* bs, char *s)
+{
+  HBotRecordStateSwitch(bs, "spawn", "" , s);
+  bs->state = HS_SPAWN;
+}
+
 qboolean HBotSpawn(bot_state_t* bs){
 	//state transitions
 	if( BotIsAlive(bs) ){
-		bs->state = HS_GEAR;
+	  HBotEnterGear(bs, "spawn: bot is alive");
 		return qfalse;
 	}
 	
 	HBotCheckRespawn(bs);
 	return qtrue;
 }
+
 void HBotEnterChat(bot_state_t *bs) {
   if (bs->team != TEAM_HUMANS)
     return;
@@ -1171,7 +1248,7 @@ qboolean HBotChat(bot_state_t *bs) {
 	if (bs->stand_time < FloatTime()) {
 		trap_BotEnterChat(bs->cs, 0, bs->chatto);
 		if(bs->prevstate == HS_TALK)
-			bs->state = HS_ATTACK;
+		  HBotEnterAttack(bs, "talk: done talking and prevstate = HS_TALK");
 		else
     {
 			bs->state = bs->prevstate;
@@ -1198,7 +1275,7 @@ qboolean HBotRunState(bot_state_t* bs){
 		        return HBotChat(bs);
 		default:
 		        Bot_Print( BPERROR, "bs->state irregular value %d \n", bs->state);
-		        bs->state = HS_SPAWN;
+		        HBotEnterSpawn(bs, va( "run state: irregular state value %d", bs->state) );
 		        return qtrue;
 	}
 }
@@ -1211,10 +1288,6 @@ BotHumanAI
 ==================
 */
 void BotHumanAI(bot_state_t *bs, float thinktime) {
-#ifdef USE_NEURAL_NET
-  int  i;
-  char name[144];
-#endif
   if (bs->setupcount > 0) {
     bs->setupcount--;
     if (bs->setupcount > 0) return;
@@ -1226,35 +1299,6 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
     bs->setupcount = 0;
   }
   
-#ifdef USE_NEURAL_NET
-  if (!bs->ainode) {
-    AIHumanEnter_Seek_LTG(bs, "BotHumanAI: no ai node");
-  }
-  //if the bot entered the game less than 8 seconds ago
-  if (!bs->entergamechat && bs->entergame_time > FloatTime() - 8) {
-    if (BotChat_EnterGame(bs)) {
-      bs->stand_time = FloatTime() + BotChatTime(bs);
-      AIHumanEnter_Stand(bs, "BotHumanAI: chat enter game");
-    }
-    bs->entergamechat = qtrue;
-  }
-  //reset the node switches from the previous frame
-  BotResetNodeSwitches();
-  //execute AI nodes
-  for (i = 0; i < MAX_NODESWITCHES; i++) {
-    if (bs->ainode(bs)) break;
-  }
-  //if the bot removed itself :)
-  if (!bs->inuse) return;
-  //if the bot executed too many AI nodes
-  if (i >= MAX_NODESWITCHES) {
-    trap_BotDumpGoalStack(bs->gs);
-    trap_BotDumpAvoidGoals(bs->gs);
-    BotDumpNodeSwitches(bs);
-    ClientName(bs->client, name, sizeof(name));
-    BotAI_Print(PRT_ERROR, "%s at %1.1f switched more than %d AI nodes\n", name, FloatTime(), MAX_NODESWITCHES);
-  }
-#else /*USE_NEURAL_NET*/
 	//char buf[144];
 	
 	/*bot_goal_t goal;
@@ -1272,9 +1316,12 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
 	
 	// run the FSM
 	bs->statecycles = 0;
+	//reset the state switches from the previous frame
+  BotResetStateSwitches();
 	while( !HBotRunState(bs) ){
-		if( ++(bs->statecycles) > 5){
+		if( ++(bs->statecycles) > MAX_STATESWITCHES){
 			BotAddInfo(bs, "botstates", "loop");
+      HBotDumpStateSwitches(bs);
 			break;
 		}
 	}
@@ -1301,5 +1348,4 @@ void BotHumanAI(bot_state_t *bs, float thinktime) {
 		// copy config string
 		trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);
 	}
-#endif /*USE_NEURAL_NET*/
 }

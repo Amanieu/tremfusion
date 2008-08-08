@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 #define MAX_ITEMS					256
+#define MAX_STATESWITCHES  5
 extern float floattime;
 #define FloatTime() floattime
 //bot flags
