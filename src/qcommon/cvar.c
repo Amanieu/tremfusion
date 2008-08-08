@@ -29,7 +29,7 @@ cvar_t		*cvar_vars;
 cvar_t		*cvar_cheats;
 int			cvar_modifiedFlags;
 
-#define	MAX_CVARS	1024
+#define	MAX_CVARS	4096
 cvar_t		cvar_indexes[MAX_CVARS];
 int			cvar_numIndexes;
 
