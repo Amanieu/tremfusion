@@ -1779,7 +1779,7 @@ void CL_MapInfo_f( void ) {
 		return;
 	}
 	
-	Com_Printf( "^3Map info:^7 %s\n", (!cl.gameState.stringOffsets[ 3 ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ 3 ] );
+	Com_Printf( "^3Map info:^7 %s\n", (!cl.gameState.stringOffsets[ CS_MESSAGE ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ CS_MESSAGE ] );
 }
 
 /*
@@ -1794,7 +1794,7 @@ void CL_LastVoteCalled_f( void ) {
 		return;
 	}
 		
-	Com_Printf( "^3Last vote called:^7 %s\n", (!cl.gameState.stringOffsets[ 9 ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ 9 ]  );
+	Com_Printf( "^3Last vote called:^7 %s\n", (!cl.gameState.stringOffsets[ CS_VOTE_STRING ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ CS_VOTE_STRING ]  );
 }
 
 /*
