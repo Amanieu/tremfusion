@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 lua_State *g_luaState = NULL;
 
 static void push_value(lua_State *L, scDataTypeValue_t *value);
-static void pop_value(lua_State *L, scDataTypeValue_t *value);
+static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 static scDataTypeString_t* pop_string(lua_State *L);
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function );
@@ -281,7 +281,7 @@ static int newindex_metamethod(lua_State *L)
   type = lua_tointeger(L, -1);
   lua_pop(L, 1);
 
-  pop_value(L, &value);
+  pop_value(L, &value, TYPE_OBJECT);
 
   switch(type)
   {
@@ -355,7 +355,7 @@ static int call_metamethod( lua_State *L )
   {
     // FIXME: have to consider metatables to check type
     //luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
-    pop_value(L, &args[i+mod]);
+    pop_value(L, &args[i+mod], function->argument[i+mod]);
     SC_ValueGCInc(&args[i+mod]);
   }
 
@@ -443,7 +443,7 @@ static int object_newindex_metamethod(lua_State *L)
   if(member)
   {
     // Call 'set' method with popped value
-    pop_value(L, &in[1]);
+    pop_value(L, &in[1], member->set.argument[2]);
 
     in[0].type = TYPE_OBJECT;
     in[0].data.object = object;
@@ -453,7 +453,7 @@ static int object_newindex_metamethod(lua_State *L)
   else if(field)
   {
     // Call SC_Field_Set with popped value
-    pop_value(L, &in[1]);
+    pop_value(L, &in[1], field->type);
     
     SC_Field_Set( object, field, &in[1] );
   }
@@ -565,7 +565,7 @@ static scDataTypeArray_t* pop_array(lua_State *L)
   lua_pushnil(L);
   while(lua_next(L, -1) != 0)
   {
-    pop_value(L, &val);
+    pop_value(L, &val, TYPE_ANY);
     SC_ArraySet(array, lua_tonumber(L, -1), &val);
   }
 
@@ -588,7 +588,7 @@ static scDataTypeHash_t* pop_hash(lua_State *L)
   {
     lstr = lua_tostring(L, -2);
     key = SC_StringNewFromChar(lstr);
-    pop_value(L, &val);
+    pop_value(L, &val, TYPE_ANY);
     SC_HashSet(hash, SC_StringToChar(key), &val);
   }
 
@@ -626,10 +626,10 @@ static scDataTypeFunction_t* pop_function(lua_State *L)
   return function;
 }
 
-static void pop_value(lua_State *L, scDataTypeValue_t *value)
+static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
 {
   int ltype = lua_type(L, -1);
-  scDataType_t type;
+  scDataType_t gtype;
       
   switch(ltype)
   {
@@ -639,8 +639,16 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
       break;
 
     case LUA_TNUMBER:
-      value->type = TYPE_FLOAT;
-      value->data.floating = lua_tonumber(L, -1);
+      if(type == TYPE_INTEGER)
+      {
+        value->type = TYPE_INTEGER;
+        value->data.integer = lua_tointeger(L, -1);
+      }
+      else
+      {
+        value->type = TYPE_FLOAT;
+        value->data.floating = lua_tonumber(L, -1);
+      }
       lua_pop(L, 1);
       break;
 
@@ -667,18 +675,18 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
         // Metatable, could be any type
         lua_pop(L, 1);
         lua_getfield(L, -1, "_type");
-        type = lua_tointeger(L, -1);
+        gtype = lua_tointeger(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, -1, "_ref");
         if(!lua_isnil(L, -1))
         {
-          value->type = type;
+          value->type = gtype;
           value->data.any = lua_touserdata(L, -1);
         }
         else
         {
-          switch(type)
+          switch(gtype)
           {
             case TYPE_UNDEF:
               value->type = TYPE_UNDEF;
@@ -763,9 +771,23 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value)
       }
       else
       {
-        // TODO: Should check : if there is only integers, it's a TYPE_ARRAY
-        value->type = TYPE_HASH;
-        value->data.hash = pop_hash(L);
+        if(type == TYPE_ARRAY)
+        {
+          value->type = TYPE_ARRAY;
+          value->data.array = pop_array(L);
+        }
+        else if(type == TYPE_NAMESPACE)
+        {
+          value->type = TYPE_NAMESPACE;
+          value->data.hash = pop_hash(L);
+        }
+        else
+        {
+          // TODO: Should check : if type = TYPE_ANY and 
+          // there is only integers, it's a TYPE_ARRAY
+          value->type = TYPE_HASH;
+          value->data.hash = pop_hash(L);
+        }
       }
       break;
 
@@ -1148,7 +1170,7 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
   if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
     Com_Printf("G_RunLuaFunction: error running function : %s\n", lua_tostring(L, -1));
 
-  pop_value(L, ret);
+  pop_value(L, ret, func->return_type);
 }
 
 /*

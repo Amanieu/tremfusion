@@ -394,7 +394,6 @@ typedef enum
   SC_EVENT_NODE_TYPE_UNDEF=0,
   SC_EVENT_NODE_TYPE_NODE,
   SC_EVENT_NODE_TYPE_HOOK,
-  SC_EVENT_NODE_TYPE_TEMPORARY_HOOK,
 } scEventNodeType_t;
 
 struct scEventNode_s
@@ -421,7 +420,6 @@ struct scEvent_s
   scEventNode_t         *root;
   scEventNode_t         *current_node;
   qboolean              skip;
-  int                   run_id;
 };
 
 struct scHook_s
@@ -430,9 +428,6 @@ struct scHook_s
 };
 
 extern scClass_t *event_class;
-extern scClass_t *loc_class;
-extern scClass_t *hook_class;
-extern scClass_t *tag_class;
 
 scEvent_t *SC_Event_New(void);
 void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params);
