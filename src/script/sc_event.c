@@ -138,12 +138,12 @@ static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   scDataTypeHash_t *args = in[0].data.object->data.data.userdata;
   scDataTypeValue_t value;
-  scEventNode_t *parent;
+  scEventNode_t *node;
   int type;
 
   // get parent node from location object
   SC_HashGet(args, "node", &value);
-  parent = (scEventNode_t*) value.data.userdata;
+  node = (scEventNode_t*) value.data.userdata;
 
   // get location type (after, before, inside or simple tag : implicit inside)
   SC_HashGet(args, "type", &value);
@@ -152,14 +152,12 @@ static void delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
   switch(type)
   {
     case EVENT_TAG:
-    case EVENT_INSIDE:
-      SC_Event_DeleteNode(&parent->inside.node);
+      SC_Event_DeleteNode(node);
       break;
     case EVENT_BEFORE:
-      SC_Event_DeleteNode(&parent->before);
-      break;
+    case EVENT_INSIDE:
     case EVENT_AFTER:
-      SC_Event_DeleteNode(&parent->after);
+      // Error
       break;
   }
 }
@@ -187,13 +185,13 @@ static void add( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
   {
     case EVENT_TAG:
     case EVENT_INSIDE:
-      SC_Event_AddNode(&parent->inside.node, node);
+      SC_Event_AddNode(parent, parent->last, node);
       break;
     case EVENT_BEFORE:
-      SC_Event_AddNode(&parent->before, node);
+      SC_Event_AddNode(parent->parent, parent->previous, node);
       break;
     case EVENT_AFTER:
-      SC_Event_AddNode(&parent->after, node);
+      SC_Event_AddNode(parent->parent, parent, node);
       break;
   }
   node->parent = parent;
@@ -243,10 +241,10 @@ static void node_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   node->type = type;
   if(type == SC_EVENT_NODE_TYPE_HOOK)
   {
-    node->inside.hook = in[2].data.function;
-    node->inside.hook->argument[0] = TYPE_HASH;
-    node->inside.hook->argument[1] = TYPE_UNDEF;
-    node->inside.hook->return_type = TYPE_UNDEF;
+    node->hook = in[2].data.function;
+    node->hook->argument[0] = TYPE_HASH;
+    node->hook->argument[1] = TYPE_UNDEF;
+    node->hook->return_type = TYPE_UNDEF;
   }
 
   self->data.type = TYPE_USERDATA;
@@ -298,46 +296,57 @@ void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
   if(node == NULL)
     return;
 
-  for(i = node->before; i != NULL; i = i->next)
-    SC_Event_Call(i, params);
-
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
-    for(i = node->inside.node; i != NULL; i = i->next)
+    for(i = node->first; i != NULL; i = i->next)
       SC_Event_Call(i, params);
   }
   else
   {
-    SC_RunFunction(node->inside.hook, args, &ret);
+    SC_RunFunction(node->hook, args, &ret);
   }
-
-  for(i = node->after; i != NULL; i = i->next)
-    SC_Event_Call(i, params);
 }
 
-void SC_Event_AddNode(scEventNode_t **list, scEventNode_t *node)
+void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new)
 {
-  node->next = *list;
-  *list = node;
-}
-
-void SC_Event_DeleteNode(scEventNode_t **list)
-{
-  scEventNode_t *node;
-  while(*list)
+  if(previous)
   {
-    node = *list;
-    *list = (*list)->next;
-
-    SC_Event_DeleteNode(&node->after);
-    SC_Event_DeleteNode(&node->before);
-    if(node->type == SC_EVENT_NODE_TYPE_NODE)
-      SC_Event_DeleteNode(&node->inside.node);
-    else
-      SC_FunctionGCDec(node->inside.hook);
-
-    BG_Free(node);
+    new->previous = previous;
+    new->next = previous->next;
+    previous->next = new;
   }
+  else
+  {
+    new->next = parent->first;
+    parent->first = new;
+  }
+
+  if(new->next)
+    new->next->previous = new;
+  else
+    parent->last = new;
+
+  new->parent = parent;
+}
+
+void SC_Event_DeleteNode(scEventNode_t *node)
+{
+  scEventNode_t *parent = node->parent;
+
+  while(node->first)
+    SC_Event_DeleteNode(node->first);
+
+  if(node->previous)
+    node->previous->next = node->next;
+  else
+    parent->first = node->next;
+
+  if(node->next)
+    node->next->previous = node->previous;
+  else
+    parent->last = node->previous;
+
+  BG_Free(node);
 }
 
 scEventNode_t *SC_Event_NewNode(const char *tag)
@@ -362,28 +371,14 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
     return node;
   else
   {
-    for(i = node->before; i != NULL; i = i->next)
-    {
-      found = SC_Event_FindChild(i, tag);
-      if(found)
-        return found;
-    }
-
     if(node->type == SC_EVENT_NODE_TYPE_NODE)
     {
-      for(i = node->inside.node; i != NULL; i = i->next)
+      for(i = node->first; i != NULL; i = i->next)
       {
         found = SC_Event_FindChild(i, tag);
         if(found)
           return found;
       }
-    }
-
-    for(i = node->after; i != NULL; i = i->next)
-    {
-      found = SC_Event_FindChild(i, tag);
-      if(found)
-        return found;
     }
   }
 
@@ -410,34 +405,16 @@ static void dump_rec(scEventNode_t *node, char *name)
 
   len = strlen(n);
 
-  tmpn = node->before;
-  strcat(n, "[before]");
-  while(tmpn)
-  {
-    dump_rec(tmpn, n);
-    tmpn = tmpn->next;
-  }
-  n[len] = '\0';
-
   Com_Printf("%s\n", n);
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
-    tmpn = node->inside.node;
-    strcat(n, "[inside]");
+    tmpn = node->first;
     while(tmpn)
     {
       dump_rec(tmpn, n);
       tmpn = tmpn->next;
     }
     n[len] = '\0';
-  }
-
-  tmpn = node->after;
-  strcat(n, "[after]");
-  while(tmpn)
-  {
-    dump_rec(tmpn, n);
-    tmpn = tmpn->next;
   }
 }
 

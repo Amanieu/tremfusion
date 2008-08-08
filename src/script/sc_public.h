@@ -401,16 +401,16 @@ struct scEventNode_s
   char            tag[MAX_TAG_SIZE+1];
 
   scEventNode_t   *parent; // Parent node in tree. TODO: Maybe useless ?
-  scEventNode_t   *next; // Next node in linked list
 
-  scEventNode_t   *before; // Childs in "before" branch
-  scEventNode_t   *after; // Childs in "after" branch
+  scEventNode_t   *next; // Next node in linked list
+  scEventNode_t   *previous; // Previous node in linked list
 
   scEventNodeType_t type;
-  union {
-    scEventNode_t *node; // Childs in "inside" branch
-    scDataTypeFunction_t  *hook; // Hook
-  } inside;
+
+  scEventNode_t   *first; // Childs in "inside" branch
+  scEventNode_t   *last; // Childs in "inside" branch
+
+  scDataTypeFunction_t  *hook; // Hook
 };
 
 struct scHook_s
@@ -424,8 +424,8 @@ extern scClass_t *hook_class;
 extern scClass_t *tag_class;
 
 void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params);
-void SC_Event_AddNode(scEventNode_t **list, scEventNode_t *node);
-void SC_Event_DeleteNode(scEventNode_t **list);
+void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new);
+void SC_Event_DeleteNode(scEventNode_t *node);
 scEventNode_t *SC_Event_NewNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
