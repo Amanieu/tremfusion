@@ -16,11 +16,11 @@ aifile	bots/gargoyle_c.c
 
 {
 
-name		Grism
+name		Capt_Pain
 
 model		sarge
 
-aifile	bots/grism_c.c
+aifile	bots/capt_pain_c.c
 
 }
 
@@ -64,7 +64,7 @@ name		Sarge
 
 model		sarge
 
-aifile	bots/grism_c.c
+aifile	bots/capt_pain_c.c
 
 }
 
