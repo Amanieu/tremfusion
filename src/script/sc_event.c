@@ -45,26 +45,40 @@ typedef enum
 
 static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scEventNode_t *root;
+  scEvent_t *event;
 
   SC_Common_Constructor(in, out, closure);
 
-  root = SC_Event_NewNode("all");
-  root->type = SC_EVENT_NODE_TYPE_NODE;
-  out[0].data.object->data.data.userdata = root;
+  event = BG_Alloc(sizeof(scEventNode_t));
+  strcpy(event->skip_tag, "");
+  event->root = SC_Event_NewNode("all");
+  event->root->type = SC_EVENT_NODE_TYPE_NODE;
+  out[0].data.object->data.data.userdata = event;
 }
 
 static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scEventNode_t *node = in[0].data.object->data.data.userdata;
+  scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  SC_Event_Call(node, in[1].data.hash);
+  SC_Event_Call(event, in[1].data.hash);
+
+  out[0].type = TYPE_UNDEF;
+}
+
+static void event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scEvent_t *event = in[0].data.object->data.data.userdata;
+
+  SC_Event_Skip(event, SC_StringToChar(in[1].data.string));
+
+  out[0].type = TYPE_UNDEF;
 }
 
 static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   int type = (int)closure;
   scDataTypeValue_t value;
+  scEvent_t *event;
   scEventNode_t *node;
   scObject_t *object;
   scDataTypeHash_t *hash;
@@ -76,8 +90,8 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 
   if(type == EVENT_TAG)
   {
-    node = (scEventNode_t*) in[0].data.object->data.data.userdata;
-    node = SC_Event_FindChild(node, SC_StringToChar(in[1].data.string));
+    event = (scEvent_t*) in[0].data.object->data.data.userdata;
+    node = SC_Event_FindChild(event->root, SC_StringToChar(in[1].data.string));
   }
   else
   {
@@ -100,9 +114,9 @@ static void event_loc_method( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 
 static void event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scEventNode_t *node = in[0].data.object->data.data.userdata;
+  scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  SC_Event_Dump(node);
+  SC_Event_Dump(event);
 
   out->type = TYPE_UNDEF;
 }
@@ -110,6 +124,7 @@ static void event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 static scLibObjectMethod_t event_methods[] = {
   { "tag", "", event_loc_method, { TYPE_STRING, TYPE_UNDEF }, TYPE_OBJECT, (void*) EVENT_TAG },
   { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "skip", "", event_skip, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "dump", "", event_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
@@ -283,7 +298,7 @@ Global functions
 ======================================================================
 */
 
-void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
+void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *params)
 {
   scEventNode_t *i;
   scDataTypeValue_t args[2];
@@ -299,12 +314,26 @@ void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params)
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
     for(i = node->first; i != NULL; i = i->next)
-      SC_Event_Call(i, params);
+    {
+      event_call_rec(event, i, params);
+
+      if(event->skip_tag[0] != '\0')
+      {
+        if(strcmp(node->tag, event->skip_tag) == 0)
+          strcpy(event->skip_tag, "");
+        break;
+      }
+    }
   }
   else
   {
     SC_RunFunction(node->hook, args, &ret);
   }
+}
+
+void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params)
+{
+  event_call_rec(event, event->root, params);
 }
 
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new)
@@ -359,6 +388,14 @@ scEventNode_t *SC_Event_NewNode(const char *tag)
   return node;
 }
 
+scEventNode_t *SC_Event_NewTemporaryNode(const char *tag)
+{
+  scEventNode_t *node = SC_Event_NewNode(tag);
+  node->ttl = 1;
+
+  return node;
+}
+
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
 {
   scEventNode_t *found;
@@ -383,6 +420,11 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
   }
 
   return NULL;
+}
+
+void SC_Event_Skip(scEvent_t *event, const char *tag)
+{
+  strcpy(event->skip_tag, tag);
 }
 
 void SC_Event_Init(void)
@@ -418,10 +460,10 @@ static void dump_rec(scEventNode_t *node, char *name)
   }
 }
 
-void SC_Event_Dump(scEventNode_t *node)
+void SC_Event_Dump(scEvent_t *event)
 {
   Com_Printf("--------- SC_Event_Dump ----------\n");
-  dump_rec(node, "");
+  dump_rec(event->root, "");
   Com_Printf("----------------------------------\n");
 }
 

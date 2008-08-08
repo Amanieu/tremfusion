@@ -387,6 +387,7 @@ void SC_Common_Init( void );
 #define MAX_TAG_SIZE 32
 typedef struct scEventNode_s scEventNode_t;
 typedef struct scHook_s scHook_t;
+typedef struct scEvent_s scEvent_t;
 
 typedef enum
 {
@@ -397,20 +398,27 @@ typedef enum
 
 struct scEventNode_s
 {
-  //int             run_id; // used for temporary events. 0 to permanent node
-  char            tag[MAX_TAG_SIZE+1];
+  char                  tag[MAX_TAG_SIZE+1];
 
-  scEventNode_t   *parent; // Parent node in tree. TODO: Maybe useless ?
+  scEventNode_t         *parent; // Parent node in tree. TODO: Maybe useless ?
 
-  scEventNode_t   *next; // Next node in linked list
-  scEventNode_t   *previous; // Previous node in linked list
+  scEventNode_t         *next; // Next node in linked list
+  scEventNode_t         *previous; // Previous node in linked list
 
-  scEventNodeType_t type;
+  scEventNodeType_t     type;
 
-  scEventNode_t   *first; // Childs in "inside" branch
-  scEventNode_t   *last; // Childs in "inside" branch
+  scEventNode_t         *first; // Childs in "inside" branch
+  scEventNode_t         *last; // Childs in "inside" branch
 
   scDataTypeFunction_t  *hook; // Hook
+
+  int                   ttl;
+};
+
+struct scEvent_s
+{
+  scEventNode_t         *root;
+  char                  skip_tag[MAX_TAG_SIZE+1];
 };
 
 struct scHook_s
@@ -423,13 +431,15 @@ extern scClass_t *loc_class;
 extern scClass_t *hook_class;
 extern scClass_t *tag_class;
 
-void SC_Event_Call(scEventNode_t *node, scDataTypeHash_t *params);
+void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params);
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new);
 void SC_Event_DeleteNode(scEventNode_t *node);
+void SC_Event_Skip(scEvent_t *event, const char *tag);
 scEventNode_t *SC_Event_NewNode(const char *tag);
+scEventNode_t *SC_Event_NewTemporaryNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
-void SC_Event_Dump(scEventNode_t *node);
+void SC_Event_Dump(scEvent_t *event);
 
 #endif
 
