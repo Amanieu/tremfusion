@@ -480,7 +480,8 @@ static qboolean GLimp_StartDriverAndSetMode( qboolean failSafe, qboolean fullscr
 
 		if (SDL_Init(SDL_INIT_VIDEO) == -1)
 		{
-			ri.Printf( PRINT_ALL, "SDL_Init FAILED (%s)\n", SDL_GetError());
+			ri.Printf( PRINT_ALL, "SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n",
+					SDL_GetError());
 			return qfalse;
 		}
 
@@ -704,6 +705,8 @@ void GLimp_Init( void )
 
 	r_allowSoftwareGL = ri.Cvar_Get( "r_allowSoftwareGL", "0", CVAR_LATCH );
 
+	Sys_GLimpInit( );
+
 	// create the window and set up the context
 	if( !GLimp_StartDriverAndSetMode( qfalse, r_fullscreen->integer ) )
 	{
@@ -734,8 +737,6 @@ void GLimp_Init( void )
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init( );
-
-	return;
 }
 
 
