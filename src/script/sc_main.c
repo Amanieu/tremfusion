@@ -34,6 +34,7 @@ static void SC_script_module_init( void );
 void SC_Init( void )
 {
   SC_NamespaceInit( );
+  SC_Constant_Init();
 
 #ifdef USE_LUA
   if (sc_lua.integer)

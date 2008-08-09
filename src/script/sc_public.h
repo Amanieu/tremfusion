@@ -439,5 +439,20 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
 void SC_Event_Dump(scEvent_t *event);
 
+// sc_utils.c
+
+#define MAX_CONSTANT_LENGTH 16
+
+typedef struct
+{
+  char            name[MAX_CONSTANT_LENGTH+1];
+  scDataType_t    type; // can't be composite types like array or hash
+  void            *data;
+} scConstant_t;
+
+void SC_Constant_Init(void);
+void SC_Constant_Add(scConstant_t *constants);
+scConstant_t *SC_Constant_Get(const char *name);
+
 #endif
 

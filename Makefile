@@ -1618,7 +1618,8 @@ GOBJ_ = \
   $(B)/base/script/sc_main.o \
   $(B)/base/script/sc_c.o \
   $(B)/base/script/sc_common.o \
-  $(B)/base/script/sc_event.o
+  $(B)/base/script/sc_event.o \
+  $(B)/base/script/sc_utils.o
   
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
