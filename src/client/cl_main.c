@@ -3120,7 +3120,7 @@ void CL_Init( void ) {
 
 	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "base", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	FS_ConditionalRestart (clc.checksumFeed);
 
