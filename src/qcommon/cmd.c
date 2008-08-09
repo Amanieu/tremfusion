@@ -1174,6 +1174,21 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 			}
 		}
 		*textOut = 0;
+
+		// "\$$" --> "\$"
+		text = textOut = cmd.cmd;
+		while (*text)
+		{
+			if ( text[0] == '\\' && text[1] == '$' && text[2] == '$' )
+			{
+				textOut[0] = '\\';
+				textOut[1] = '$';
+				textOut += 2;
+				text += 3;
+			}
+			else
+				*textOut++ = *text++;
+		}
 	}
 	else
 		Q_strncpyz( cmd.cmd, text_in, sizeof(cmd.cmd) );
