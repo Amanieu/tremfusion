@@ -175,7 +175,7 @@ static const char *IN_TranslateSDLToQ3Key(SDL_keysym *keysym, int *key)
 		}
 	}
 
-	if( keysym->unicode <= 127 )  // maps to ASCII?
+	if( keysym->unicode <= 255 )  // maps to ISO 8859-1
 	{
 		char ch = (char) keysym->unicode;
 		if (ch == '~')
