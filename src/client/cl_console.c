@@ -56,6 +56,8 @@ extern	console_t	con;
 
 console_t	con;
 
+cvar_t		*cl_autoNamelog;
+
 cvar_t		*con_conspeed;
 
 // Color and alpha for console
@@ -495,7 +497,9 @@ Con_Init
 */
 void Con_Init (void) {
 	int		i;
-
+	
+	cl_autoNamelog = Cvar_Get ("cl_autoNamelog", "0", CVAR_ARCHIVE);
+	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
 	
 	// Defines cvar for color and alpha for console/bar under console
@@ -567,7 +571,27 @@ void CL_ConsolePrint( char *txt ) {
 	int		c, l;
 	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
+	
+/* auto-namelog code */
+    if (( strstr(txt, "^7 connected\n") != NULL ) && !clc.demoplaying && cl_autoNamelog->integer)
+	{
+	char *p;
+	char text[MAX_SAY_TEXT];
 
+	Q_strncpyz( text, txt, MAX_SAY_TEXT );
+	p = strstr(text, "^7 connected\n");
+	if (p)
+		{
+		char buf[MAX_SAY_TEXT];
+
+		*p = '\0';
+
+		Com_sprintf( buf, sizeof(buf), "!namelog %s", text );
+		CL_AddReliableCommand( buf );
+		}
+	}
+/* end auto-namelog code */
+	
 	// TTimo - prefix for text that shows up in console but not in notify
 	// backported from RTCW
 	if ( !Q_strncmp( txt, "[skipnotify]", 12 ) ) {
