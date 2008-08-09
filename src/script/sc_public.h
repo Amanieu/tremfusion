@@ -299,6 +299,7 @@ void SC_ValueDump(scDataTypeValue_t *value);
 // sc_main.c
 
 void SC_Init( void );
+void SC_LoadLangages( void );
 void SC_AutoLoad( void );
 void SC_Shutdown( void );
 void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
@@ -449,6 +450,8 @@ typedef struct
   scDataType_t    type; // can't be composite types like array or hash
   void            *data;
 } scConstant_t;
+
+extern scConstant_t *sc_constants;
 
 void SC_Constant_Init(void);
 void SC_Constant_Add(scConstant_t *constants);

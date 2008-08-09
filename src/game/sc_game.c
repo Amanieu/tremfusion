@@ -175,10 +175,17 @@ static scLibObjectDef_t entity_def = {
   NULL
 };
 
+static scConstant_t constants[] = {
+  { "TEAM_NONE", TYPE_INTEGER, (void*) TEAM_NONE },
+  { "TEAM_ALIENS", TYPE_INTEGER, (void*) TEAM_ALIENS },
+  { "TEAM_HUMANS", TYPE_INTEGER, (void*) TEAM_HUMANS },
+  { "" }
+};
 
 void SC_game_init( void )
 {
   SC_AddLibrary( "game", game_lib );
   SC_AddClass( "game", &entity_def );
+  SC_Constant_Add(constants);
 }
 

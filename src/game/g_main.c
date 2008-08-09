@@ -2463,6 +2463,7 @@ void G_InitScript( void )
 {
   SC_Init();
   SC_game_init();
+  SC_LoadLangages();
   SC_AutoLoad();
 }
 

@@ -36,6 +36,13 @@ void SC_Init( void )
   SC_NamespaceInit( );
   SC_Constant_Init();
 
+  SC_script_module_init();
+  SC_Common_Init();
+  SC_Event_Init();
+}
+
+void SC_LoadLangages(void)
+{
 #ifdef USE_LUA
   if (sc_lua.integer)
     SC_Lua_Init( );
@@ -44,9 +51,6 @@ void SC_Init( void )
   if (sc_python.integer)
     SC_Python_Init( );
 #endif 
-  SC_script_module_init();
-  SC_Common_Init();
-  SC_Event_Init();
 }
 
 static void autoload_global(void)

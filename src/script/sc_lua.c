@@ -1041,6 +1041,44 @@ static const struct luaL_reg stacklib [] = {
   {NULL, NULL}
 };
 
+static void loadconstants(lua_State *L)
+{
+  scConstant_t *cst = sc_constants;
+  float val;
+  while(cst->name[0] != '\0')
+  {
+    switch(cst->type)
+    {
+      case TYPE_BOOLEAN:
+        lua_pushboolean(L, (int)cst->data);
+        lua_setglobal(L, cst->name);
+        break;
+      case TYPE_INTEGER:
+        lua_pushinteger(L, (int)cst->data);
+        lua_setglobal(L, cst->name);
+        break;
+      case TYPE_FLOAT:
+        memcpy(&val, &cst->name, sizeof(val));
+        lua_pushnumber(L, val);
+        lua_setglobal(L, cst->name);
+        break;
+      case TYPE_STRING:
+        lua_pushstring(L, (char*)cst->data);
+        lua_setglobal(L, cst->name);
+        break;
+      case TYPE_USERDATA:
+        lua_pushlightuserdata(L, cst->data);
+        lua_setglobal(L, cst->name);
+        break;
+      default:
+        // Error: type invalid
+        break;
+    }
+
+    cst++;
+  }
+}
+
 void SC_Lua_Init( void )
 {
   g_luaState = lua_open();
@@ -1053,6 +1091,8 @@ void SC_Lua_Init( void )
   luaopen_string(g_luaState);
   luaopen_table(g_luaState);
   lua_pop(g_luaState, 4);
+
+  loadconstants(g_luaState);
 
   map_luamethod(g_luaState, "pairs", pairs_method);
   map_luamethod(g_luaState, "type", type_method);
