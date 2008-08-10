@@ -3139,6 +3139,10 @@ void CL_Init( void ) {
 	Cvar_Get( "p_hp", "", CVAR_ROM );
 	Cvar_Get( "p_team", "", CVAR_ROM );
 	Cvar_Get( "p_class", "", CVAR_ROM );
+	Cvar_Get( "p_credits", "", CVAR_ROM );
+	Cvar_Get( "p_attacker", "", CVAR_ROM );
+	Cvar_Get( "p_killed", "", CVAR_ROM );
+	Cvar_Get( "p_score", "", CVAR_ROM );
 	
 	Cvar_Get ("password", "", CVAR_USERINFO);
 

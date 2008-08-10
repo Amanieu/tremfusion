@@ -209,6 +209,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	int			deltaNum;
 	int			oldMessageNum;
 	int			i, packetNum;
+	const char	*info;
 
 	// get the reliable sequence acknowledge number
 	// NOTE: now sent with all server to client messages
@@ -334,6 +335,16 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
 	Cvar_SetValue( "p_class", ps->stats[ STAT_CLASS ] );
 	Cvar_SetValue( "p_credits", ps->persistant[ PERS_CREDIT ] );
+	Cvar_SetValue( "p_score", ps->persistant[ PERS_SCORE ] );
+	Cvar_SetValue( "p_killed", ps->persistant[ PERS_KILLED ] ); 
+
+	// Wanted to grab the netname for this one, i like it better than client numbers - Google/Mercury
+	info = cl.gameState.stringData + cl.gameState.stringOffsets[ ps->persistant[ PERS_ATTACKER ] + 673 ];
+
+	if( !cl.gameState.stringOffsets[  ps->persistant[ PERS_ATTACKER ] ] )
+		Cvar_Set( "p_attacker", "" );
+	else
+		Cvar_Set( "p_attacker", Info_ValueForKey( info, "n" ) );
 }
 
 
