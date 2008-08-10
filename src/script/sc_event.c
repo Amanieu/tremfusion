@@ -193,6 +193,7 @@ scEvent_t *SC_Event_New(void)
   event->skip = 0;
   event->root = SC_Event_NewNode("all");
   event->root->type = SC_EVENT_NODE_TYPE_NODE;
+  event->root->parent = event->root;
   event->current_node = NULL;
 
   return event;
@@ -295,7 +296,6 @@ scEventNode_t *SC_Event_NewNode(const char *tag)
   scEventNode_t *node = BG_Alloc(sizeof(scEventNode_t));
   memset(node, 0x00, sizeof(scEventNode_t));
 
-  node->skip = qfalse;
   strcpy(node->tag, tag);
 
   return node;

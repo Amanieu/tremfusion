@@ -378,10 +378,21 @@ int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value
 int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value);
 
 // sc_common.c
+
+extern scClass_t *vec3_class;
+extern scClass_t *module_class;
+
 void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);
 
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 void SC_Common_Init( void );
+
+// modules
+void SC_Module_Init(scObject_t *self);
+void SC_Module_Register(scObject_t *self, scObject_t *toregister);
+void SC_Module_Load(scObject_t *self);
+void SC_Module_Unload(scObject_t *self);
+
 
 // sc_event.c
 

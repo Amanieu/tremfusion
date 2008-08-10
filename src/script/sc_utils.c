@@ -24,6 +24,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
+/*
+======================================================================
+
+Constants
+
+======================================================================
+*/
+
 scConstant_t *sc_constants;
 static int sc_buf_const;
 static int sc_num_const;
@@ -60,7 +68,6 @@ void SC_Constant_Add(scConstant_t *constants)
     BG_Free(cst);
   }
 
-  Com_Printf("copy %d datas to %d\n", n, sc_num_const);
   memcpy(sc_constants + sc_num_const, constants, n * sizeof(scConstant_t));
   sc_num_const += n;
 }
