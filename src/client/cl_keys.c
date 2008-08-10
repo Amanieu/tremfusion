@@ -1139,14 +1139,16 @@ void Key_Bind_f (void)
 	}
 
 	keyName = Cmd_Argv(1);
-	if ( keyName[0]=='-' && keyName[1] ) {
-		mode = KEY_RELEASE;
-		detailed = qtrue;
-		keyName++;
-	} else if ( keyName[0]=='+' && keyName[1] ) {
-		mode = KEY_PUSH;
-		detailed = qtrue;
-		keyName++;
+	if ( keyname[0] && keyname[1] ) {
+		if ( keyName[0] == '-' && keyName[1] ) {
+			mode = KEY_RELEASE;
+			detailed = qtrue;
+			keyName++;
+		} else if ( keyName[0] == '+' && keyName[1] ) {
+			mode = KEY_PUSH;
+			detailed = qtrue;
+			keyName++;
+		}
 	}
 
 	b = Key_StringToKeynum (keyName);
