@@ -186,7 +186,7 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
 endif
 
 # version info
-VERSION_NUMBER=0.0.1b2
+VERSION_NUMBER=0.0.1b3
 
 ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .svn),.svn)
