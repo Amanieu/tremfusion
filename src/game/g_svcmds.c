@@ -353,6 +353,40 @@ qboolean  ConsoleCommand( void )
 
     return qtrue;
   }
+
+  if( !Q_stricmp( cmd, "load" ) )
+  {
+    char name[MAX_NAMESPACE_LENGTH+1];
+    scDataTypeValue_t value;
+
+    trap_Argv( 0, name, sizeof( name ) );
+
+    SC_NamespaceGet(va("module.%s", name), &value);
+
+    if(value.type == TYPE_OBJECT)
+      SC_Module_Load(value.data.object);
+    else
+    {
+      // TODO: Error
+    }
+  }
+
+  if( !Q_stricmp( cmd, "unload" ) )
+  {
+    char name[MAX_NAMESPACE_LENGTH+1];
+    scDataTypeValue_t value;
+
+    trap_Argv( 0, name, sizeof( name ) );
+
+    SC_NamespaceGet(va("module.%s", name), &value);
+
+    if(value.type == TYPE_OBJECT)
+      SC_Module_Unload(value.data.object);
+    else
+    {
+      // TODO: Error
+    }
+  }
   
   // see if this is a a admin command
   if( G_admin_cmd_check( NULL, qfalse ) )
