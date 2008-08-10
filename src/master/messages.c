@@ -451,18 +451,23 @@ static void HandleGetMotd( const char* msg, const struct sockaddr_in* addr )
 	value = version;
 	while ( *value && *value != ' ' )
 		value++;
-	*value = '\0';
-	if ( strcmp( version, "tremfusion" ) )
-		havelatest = 0;
-	else if ( *value++ )
+	if ( *value )
 	{
-		char *end = value;
-		while ( *end && *end != ' ' && end != '_' )
-			end++;
-		*end = '\0';
-		if ( strcmp( value, VERSION ) )
+		*value++ = '\0';
+		if ( strcmp( version, "tremfusion" ) )
 			havelatest = 0;
+		else
+		{
+			char *end = value;
+			while ( *end && *end != ' ' && *end != '_' )
+				end++;
+			*end = '\0';
+			if ( strcmp( value, VERSION ) )
+				havelatest = 0;
+		}
 	}
+	else
+		havelatest = 0;
 
 	// Initialize the packet contents with the header
 	packetind = headersize;
