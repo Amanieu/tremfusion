@@ -1203,25 +1203,35 @@ qboolean SC_Lua_RunScript( const char *filename )
 SC_Lua_RunFunction
 =================
 */
-void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
+int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, scDataTypeValue_t *out)
 {
+  // TODO: error managment
   int narg = 0;
   lua_State *L = g_luaState;
 
   lua_getfield(L, LUA_REGISTRYINDEX, va("func_%d", func->data.luafunc));
+  if(lua_isnil(L, -1))
+    SC_EXEC_ERROR(va("error running lua function : internal error"));
 
-  while( args[narg].type != TYPE_UNDEF )
+  while( in[narg].type != TYPE_UNDEF )
   {
-    push_value( L, &args[narg] );
+    push_value( L, &in[narg] );
 
     narg++;
   }
 
   // do the call
-  if(lua_pcall(L, narg, 1, 0) != 0)	// do the call
-    Com_Printf("G_RunLuaFunction: error running function : %s\n", lua_tostring(L, -1));
+  if(lua_pcall(L, narg, 1, 0) != 0)
+  {
+    out->type = TYPE_STRING;
+    out->data.string = SC_StringNewFromChar(va("error running lua function : %s\n", lua_tostring(L, -1)));
 
-  pop_value(L, ret, func->return_type);
+    return -1;
+  }
+
+  pop_value(L, out, func->return_type);
+
+  return 0;
 }
 
 /*

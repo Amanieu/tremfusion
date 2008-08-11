@@ -141,7 +141,7 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );
 qboolean            SC_Python_RunScript( const char *filename );
-void                SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
+int                 SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
 void                SC_Python_InitClass( scClass_t *class );
 
 #endif

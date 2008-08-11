@@ -61,8 +61,9 @@ void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   out->data.object = self;
 }
 
-static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scObject_t *self;
   int settype = (int)closure;
   sc_vec3_t *data;
@@ -85,13 +86,16 @@ static void vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
       vec3[2] = in[1].data.floating ;
       break;
     default:
-      return;
+      return -1;
   }
   memcpy( data->vect, vec3, sizeof( vec3 ) );
+
+  return 0;
 }
 
-static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scObject_t *self;
   int gettype = (int)closure;
   sc_vec3_t *data;
@@ -119,10 +123,13 @@ static void vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
       break;
       // Error
   }
+
+  return 0;
 }
 
-static void vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scObject_t *self;
   sc_vec3_t *data;
   SC_Common_Constructor(in, out, closure);
@@ -134,10 +141,13 @@ static void vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void
   data->vect = BG_Alloc(sizeof(float) * 3);
   memset(data->vect, 0x00, sizeof(float) * 3);
   self->data.data.userdata = data;
+
+  return 0;
 }
 
-static void vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scObject_t *self;
   sc_vec3_t *data;
   
@@ -148,6 +158,8 @@ static void vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
     BG_Free(data->vect);
   
   BG_Free(data);
+
+  return 0;
 }
 
 static scLibObjectMember_t vec3_members[] = {
@@ -483,8 +495,9 @@ typedef enum
   MODULE_LOADED
 } module_closures;
 
-static void module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scObject_t *self;
 
   SC_Common_Constructor(in, out, closure);
@@ -492,54 +505,74 @@ static void module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, vo
 
   SC_Module_Init(self);
   SC_HashSet(self->data.data.hash, "name", &in[1]);
+
+  return 0;
 }
 
-static void module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
   SC_HashSet(hash, (char*)closure, &in[1]);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, (char*)closure, out);
 
   SC_ValueDump(out);
+
+  return 0;
 }
 
-static void module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   SC_Module_Load(in[0].data.object);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   SC_Module_Register(in[0].data.object, in[1].data.object);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   SC_Module_Unload(in[0].data.object);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   SC_ValueDump(&in[0].data.object->data);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
 static scLibObjectMember_t module_members[] = {

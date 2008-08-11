@@ -24,16 +24,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static scLibObjectDef_t entity_def;
 
-static void game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
+static int game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
   G_Printf(SC_StringToChar(args[0].data.string));
   ret->type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, void* closure )
+static int game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, void* closure )
 {
   trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(args[0].data.string));
   ret->type = TYPE_UNDEF;
+
+  return 0;
 }
 
 static scLibFunction_t game_lib[] = {
@@ -42,8 +46,9 @@ static scLibFunction_t game_lib[] = {
   { "" }
 };
 
-static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
+  // TODO: error management
   scObject_t *self;
 
   SC_Common_Constructor(in, out, closure);
@@ -55,10 +60,13 @@ static void entity_init ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
     self->data.data.userdata = (void*)&g_entities[ in[1].data.integer ];
   else if (in[1].type == TYPE_FLOAT) // damm you lua!!
     self->data.data.userdata = (void*)&g_entities[ atoi( va("%.0f",in[1].data.floating) ) ]; // Hax
+
+  return 0;
 }
 
-static void entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int entity_destroy ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
+  return 0;
 }
 
 typedef enum 
@@ -72,8 +80,9 @@ typedef enum
 #define ENT_SET_STR(x) x = (char*) SC_StringToChar(in[1].data.string); \
   break
 
-static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: Error management
   int settype = (int)closure;
   gentity_t *entity;
   scObject_t *self = in[0].data.object;
@@ -90,6 +99,8 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   }
 
   out->type = TYPE_UNDEF;
+
+  return 0;
 }
 
 #define ENT_GET_STR(x) \
@@ -100,8 +111,9 @@ static void entity_set( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
     out[0].data.string = SC_StringNewFromChar(""); \
   break
 
-static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   int gettype = (int)closure;
   scObject_t *instance;
   gentity_t *entity;
@@ -121,10 +133,13 @@ static void entity_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
       // Error
   }
   out[1].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   int methodnum = (int)closure;
   gentity_t *entity;
   scObject_t *self = in[0].data.object;
@@ -139,6 +154,8 @@ static void entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
       break;
   }
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
 static scLibObjectMember_t entity_members[] = {

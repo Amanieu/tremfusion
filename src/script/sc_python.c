@@ -397,19 +397,19 @@ qboolean SC_Python_RunScript( const char *filename )
 
 #endif /*#ifndef UNITTEST*/
 
-void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
+int SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
   PyObject *ArgsTuple, *ReturnValue;
   
 #ifndef UNITTEST
   if (!sc_python.integer){
     Com_Printf(S_COLOR_RED "Cannot run function: python disabled\n");
-    return;
+    return -1;
   }
   
   if (!py_initialized.integer){
     Com_Printf(S_COLOR_RED "Cannot run function: python not initilized\n");
-    return;
+    return -1;
   }
 #endif
   
@@ -447,10 +447,12 @@ void SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t 
   if (!ReturnValue)
   {
     PyErr_Print();
-    return;
+    return -1;
   }
   convert_to_value(ReturnValue, ret, TYPE_ANY);
   Py_DECREF(ReturnValue);
+
+  return 0;
 }
 
 

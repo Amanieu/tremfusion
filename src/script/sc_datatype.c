@@ -950,7 +950,7 @@ void SC_DataDump( void )
   Com_Printf("------------------------\n");
 }
 
-char* SC_LangageToString(scLangage_t langage)
+const char* SC_LangageToString(scLangage_t langage)
 {
   switch(langage)
   {
@@ -963,3 +963,24 @@ char* SC_LangageToString(scLangage_t langage)
   return "unknow";
 }
 
+const char* SC_DataTypeToString(scDataType_t type)
+{
+  switch(type)
+  {
+    case TYPE_ANY: return "any";
+    case TYPE_UNDEF: return "undef";
+    case TYPE_BOOLEAN: return "boolean";
+    case TYPE_INTEGER: return "integer";
+    case TYPE_FLOAT: return "float";
+    case TYPE_STRING: return "string";
+    case TYPE_FUNCTION: return "function";
+    case TYPE_ARRAY: return "array";
+    case TYPE_HASH: return "hash";
+    case TYPE_NAMESPACE: return "namespace";
+    case TYPE_OBJECT: return "object";
+    case TYPE_CLASS: return "class";
+    case TYPE_USERDATA: return "userdata";
+  }
+
+  return "unknow";
+}

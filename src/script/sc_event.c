@@ -42,14 +42,17 @@ typedef enum
   EVENT_AFTER,
 } loc_closure_t;
 
-static void event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   out[0].type = TYPE_INTEGER;
   out[0].data.integer = (int) closure;
+  return 0;
 }
 
-static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scEvent_t *event;
 
   SC_Common_Constructor(in, out, closure);
@@ -57,10 +60,13 @@ static void event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, vo
   event = SC_Event_New();
 
   out[0].data.object->data.data.userdata = event;
+
+  return 0;
 }
 
-static void event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scEvent_t *event;
   scEventNode_t *node;
   scEventNode_t *parent;
@@ -105,10 +111,13 @@ static void event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   }
 
   out->type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scEvent_t *event;
   const char *tag;
   scEventNode_t *node;
@@ -120,31 +129,42 @@ static void event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
   SC_Event_DeleteNode(node);
 
   out->type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   SC_Event_Call(in[0].data.object, in[1].data.hash);
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
   SC_Event_Skip(event, SC_StringToChar(in[1].data.string));
 
   out[0].type = TYPE_UNDEF;
+
+  return 0;
 }
 
-static void event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
+  // TODO: error management
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
   SC_Event_Dump(event);
 
   out->type = TYPE_UNDEF;
+
+  return 0;
 }
 
 static scLibObjectMember_t event_members[] = {

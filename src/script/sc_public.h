@@ -97,7 +97,7 @@ typedef struct scObject_s scObject_t;
 typedef struct scClass_s scClass_t;
 typedef scDataTypeHash_t scNamespace_t;
 
-typedef void (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
+typedef int (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
 
 #ifdef USE_LUA
 typedef unsigned int scLuaFunc_t;
@@ -291,7 +291,8 @@ scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
 scField_t *SC_ClassGetField(scClass_t *class, const char *name);
 
-char* SC_LangageToString(scLangage_t langage);
+const char* SC_LangageToString(scLangage_t langage);
+const char* SC_DataTypeToString(scDataType_t type);
 void SC_DataDump( void );
 void SC_HashDump(scDataTypeHash_t *hash);
 void SC_ArrayDump(scDataTypeArray_t *array);
@@ -299,11 +300,15 @@ void SC_ValueDump(scDataTypeValue_t *value);
 
 // sc_main.c
 
+#define SC_EXEC_ERROR(STRING) { out->type = TYPE_STRING; \
+                        out->data.string = SC_StringNewFromChar(STRING); \
+                        return -1; }
+
 void SC_Init( void );
 void SC_LoadLangages( void );
 void SC_AutoLoad( void );
 void SC_Shutdown( void );
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
+int  SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
 int SC_RunScript( scLangage_t langage, const char *filename );
 int SC_CallHooks( const char *path, gentity_t *entity );
 scLangage_t SC_LangageFromFilename(const char* filename);

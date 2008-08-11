@@ -134,24 +134,55 @@ void SC_Shutdown( void )
 #endif
 }
 
-void SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret)
+int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scDataTypeValue_t *out)
 {
+  int narg = 0;
+  int ret;
+
+  // Check parameters type
+  while(in[narg].type != TYPE_UNDEF || func->argument[narg] != TYPE_UNDEF)
+  {
+    // TYPE_ANYTYPE allow any type for this argument and followers, always match
+    if(func->argument[narg] == TYPE_ANY)
+      break;
+
+    if(in[narg].type != func->argument[narg])
+      SC_EXEC_ERROR(va("error running function : argument %d not match (waiting for %s but having %s", narg, SC_DataTypeToString(func->argument[narg]), SC_DataTypeToString(in[narg].type)));
+
+    narg++;
+  }
+
+  // Redirect call to langage specific functions
   switch( func->langage )
   {
     case LANGAGE_C:
-      func->data.ref(args, ret, func->closure);
+      ret = func->data.ref(in, out, func->closure);
       break;
 #ifdef USE_LUA
     case LANGAGE_LUA:
-      return SC_Lua_RunFunction( func, args, ret );
+      ret = SC_Lua_RunFunction( func, in, out );
 #endif
 #ifdef USE_PYTHON
     case LANGAGE_PYTHON:
-      return SC_Python_RunFunction( func, args, ret );
+      ret = SC_Python_RunFunction( func, in, out );
 #endif
     default:
+      SC_EXEC_ERROR("error running function : unknow langage");
 	  break;
   }
+
+  // On error, return now
+  if(ret != 0)
+    return ret;
+
+  // Check return value type
+  if(out->type != func->return_type && func->return_type != TYPE_ANY)
+    SC_EXEC_ERROR(
+        va("error running function : return value not match (waiting for %s but having %s", 
+          SC_DataTypeToString(func->return_type),
+          SC_DataTypeToString(out->type)));
+
+  return 0;
 }
 
 int SC_RunScript( scLangage_t langage, const char *filename )
@@ -216,10 +247,13 @@ void SC_InitClass( scClass_t *class )
 #endif
 }
 
-static void script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
+static int script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
+  // TODO: error management
   SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );
   ret->type = TYPE_UNDEF;
+
+  return 0;
 }
 
 static scLibFunction_t script_lib[] = {
