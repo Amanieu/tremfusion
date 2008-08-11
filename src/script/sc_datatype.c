@@ -322,6 +322,13 @@ void SC_ArrayGCDec(scDataTypeArray_t *array)
     arrayFree(array);
 }
 
+void SC_ArrayDump(scDataTypeArray_t *array)
+{
+  Com_Printf("---- SC_ArrayDump -----\n");
+  print_array(array, 0);
+  Com_Printf("-----------------------\n");
+}
+
 // Hash
 
 static void hashRealloc(scDataTypeHash_t *hash)
@@ -562,7 +569,9 @@ void SC_HashGCDec(scDataTypeHash_t *hash)
 
 void SC_HashDump(scDataTypeHash_t *hash)
 {
+  Com_Printf("----- SC_HashDump -----\n");
   print_hash(hash, 0);
+  Com_Printf("-----------------------\n");
 }
 
 // namespace
@@ -819,7 +828,7 @@ static void print_value( scDataTypeValue_t *value, int tab )
   {
     case TYPE_UNDEF:
       print_tabs( tab );
-      Com_Printf("<UNDEF>");
+      Com_Printf("<UNDEF>\n");
       break;
 
     case TYPE_BOOLEAN:

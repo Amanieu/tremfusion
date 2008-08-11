@@ -82,8 +82,9 @@ static void event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   if(type == SC_EVENT_NODE_TYPE_HOOK)
   {
     function = in[4].data.function;
-    function->argument[0] = TYPE_HASH;
-    function->argument[1] = TYPE_UNDEF;
+    function->argument[0] = TYPE_OBJECT;
+    function->argument[1] = TYPE_HASH;
+    function->argument[2] = TYPE_UNDEF;
     function->return_type = TYPE_UNDEF;
     node->hook = function;
   }
@@ -123,9 +124,7 @@ static void event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
 
 static void event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  scEvent_t *event = in[0].data.object->data.data.userdata;
-
-  SC_Event_Call(event, in[1].data.hash);
+  SC_Event_Call(in[0].data.object, in[1].data.hash);
 
   out[0].type = TYPE_UNDEF;
 }
@@ -199,15 +198,20 @@ scEvent_t *SC_Event_New(void)
   return event;
 }
 
-void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *params)
+void event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *params)
 {
   scEventNode_t *i;
-  scDataTypeValue_t args[2];
+  scDataTypeValue_t args[3];
   scDataTypeValue_t ret;
+  scEvent_t *data;
 
-  args[0].type = TYPE_HASH;
-  args[0].data.hash = params;
-  args[1].type = TYPE_UNDEF;
+  data = event->data.data.userdata;
+
+  args[0].type = TYPE_OBJECT;
+  args[0].data.object = event;
+  args[1].type = TYPE_HASH;
+  args[1].data.hash = params;
+  args[2].type = TYPE_UNDEF;
 
   if(node == NULL)
     return;
@@ -218,7 +222,7 @@ void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *par
     return;
   }
 
-  event->current_node = node;
+  data->current_node = node;
 
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
@@ -226,12 +230,12 @@ void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *par
     {
       event_call_rec(event, i, params);
 
-      if(event->skip)
+      if(data->skip)
       {
         if(node->skip)
         {
           node->skip = qfalse;
-          event->skip = qfalse;
+          data->skip = qfalse;
         }
         break;
       }
@@ -243,10 +247,11 @@ void event_call_rec(scEvent_t *event, scEventNode_t *node, scDataTypeHash_t *par
   }
 }
 
-void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params)
+void SC_Event_Call(scObject_t *event, scDataTypeHash_t *params)
 {
-  event_call_rec(event, event->root, params);
-  event->current_node = NULL;
+  scEvent_t *data = event->data.data.userdata;
+  event_call_rec(event, data->root, params);
+  data->current_node = NULL;
 }
 
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new)
@@ -332,7 +337,7 @@ void SC_Event_Skip(scEvent_t *event, const char *tag)
   scEventNode_t *node;
 
   node = event->current_node;
-  while(node)
+  while(node != node->parent)
   {
     if(strcmp(node->tag, tag) == 0)
     {
@@ -342,6 +347,8 @@ void SC_Event_Skip(scEvent_t *event, const char *tag)
 
     node = node->parent;
   }
+  if(strcmp(node->tag, tag) == 0)
+    event->skip = qtrue;
 
   node = SC_Event_FindChild(event->root, tag);
   if(node)
@@ -350,7 +357,7 @@ void SC_Event_Skip(scEvent_t *event, const char *tag)
 
 void SC_Event_Init(void)
 {
-  event_class = SC_AddClass("common", &event_def);
+  event_class = SC_AddClass("script", &event_def);
 }
 
 static void dump_rec(scEventNode_t *node, char *name)

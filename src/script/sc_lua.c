@@ -257,7 +257,7 @@ static int index_metamethod(lua_State *L)
       array = lua_touserdata(L, -1);
       lua_pop(L, 1);
 
-      SC_ArrayGet(array, lua_tointeger(L, -1), &value);
+      SC_ArrayGet(array, lua_tointeger(L, -1)-1, &value);
       break;
     default:
       // ERROR
@@ -267,6 +267,7 @@ static int index_metamethod(lua_State *L)
   lua_pop(L, 2);
 
   push_value(L, &value);
+
   return 1;
 }
 
@@ -299,7 +300,7 @@ static int newindex_metamethod(lua_State *L)
       array = lua_touserdata(L, -1);
       lua_pop(L, 1);
 
-      SC_ArraySet(array, lua_tointeger(L, -1), &value);
+      SC_ArraySet(array, lua_tointeger(L, -1)-1, &value);
       break;
     default:
       // ERROR
@@ -443,7 +444,7 @@ static int object_newindex_metamethod(lua_State *L)
   if(member)
   {
     // Call 'set' method with popped value
-    pop_value(L, &in[1], member->set.argument[2]);
+    pop_value(L, &in[1], member->set.argument[1]);
 
     in[0].type = TYPE_OBJECT;
     in[0].data.object = object;
@@ -548,28 +549,16 @@ static scDataTypeArray_t* pop_array(lua_State *L)
 
   luaL_checktype(L, -1, LUA_TTABLE);
 
-  // Array is an object with a metatable
-  if(lua_getmetatable(L, -1))
-  {
-    // TODO: Error
-  }
-
-  luaL_checktype(L, -1, LUA_TTABLE);
-  lua_pop(L, 1);
-  lua_getfield(L, -1, "_data");
-  lua_remove(L, -2);
-  luaL_checktype(L, -1, LUA_TTABLE);
-
   scDataTypeArray_t *array = SC_ArrayNew();
 
   lua_pushnil(L);
-  while(lua_next(L, -1) != 0)
+  while(lua_next(L, -2) != 0)
   {
     pop_value(L, &val, TYPE_ANY);
-    SC_ArraySet(array, lua_tonumber(L, -1), &val);
+    SC_ArraySet(array, lua_tointeger(L, -1) - 1, &val);
   }
 
-  lua_pop(L, 2);
+  lua_pop(L, 1);
 
   return array;
 }
@@ -781,10 +770,37 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
           value->type = TYPE_NAMESPACE;
           value->data.hash = pop_hash(L);
         }
+        else if(type == TYPE_ANY)
+        {
+          // If there is only integers as key, table is an array
+          int n = 0;
+
+          type = TYPE_ARRAY;
+          lua_pushnil(L);
+          while(lua_next(L, -2) != 0)
+          {
+            if(lua_type(L, -2) != LUA_TNUMBER && lua_tointeger(L, -2) != n)
+            {
+              type = TYPE_HASH;
+              break;
+            }
+            n++;
+            lua_pop(L, 1);
+          }
+
+          if(type == TYPE_ARRAY)
+          {
+            value->type = TYPE_ARRAY;
+            value->data.array = pop_array(L);
+          }
+          else
+          {
+            value->type = TYPE_HASH;
+            value->data.hash = pop_hash(L);
+          }
+        }
         else
         {
-          // TODO: Should check : if type = TYPE_ANY and 
-          // there is only integers, it's a TYPE_ARRAY
           value->type = TYPE_HASH;
           value->data.hash = pop_hash(L);
         }
@@ -1081,21 +1097,41 @@ static void loadconstants(lua_State *L)
 
 void SC_Lua_Init( void )
 {
-  g_luaState = lua_open();
+  scDataTypeValue_t value;
+  lua_State *L = lua_open();
 
-  luaL_register(g_luaState, "stack", stacklib);
-  lua_pop(g_luaState, 1);
+  luaL_register(L, "stack", stacklib);
+  lua_pop(L, 1);
 
   // Lua standard lib
-  luaopen_base(g_luaState);
-  luaopen_string(g_luaState);
-  luaopen_table(g_luaState);
-  lua_pop(g_luaState, 4);
+  luaopen_base(L);
+  luaopen_string(L);
+  luaopen_table(L);
+  lua_pop(L, 4);
 
-  loadconstants(g_luaState);
+  loadconstants(L);
 
-  map_luamethod(g_luaState, "pairs", pairs_method);
-  map_luamethod(g_luaState, "type", type_method);
+  map_luamethod(L, "pairs", pairs_method);
+  map_luamethod(L, "type", type_method);
+
+  // Register global table as root namespace
+  SC_NamespaceGet("", &value);
+  lua_pushlightuserdata(L, value.data.namespace);
+  lua_setfield(L, LUA_GLOBALSINDEX, "_ref");
+
+  lua_pushinteger(L, TYPE_NAMESPACE);
+  lua_setfield(L, LUA_GLOBALSINDEX, "_type");
+
+  lua_newtable(L);
+  lua_pushcfunction(L, index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, newindex_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, len_metamethod);
+  lua_setfield(L, -2, "__len");
+  lua_setmetatable(L, LUA_GLOBALSINDEX);
+
+  g_luaState = L;
 }
 
 /*
@@ -1116,20 +1152,6 @@ void SC_Lua_Shutdown( void )
   Com_Printf("-----------------------------------\n");
 }
 
-static void update_context(lua_State *L)
-{
-  // TODO: make better updating system
-  scDataTypeHash_t* hash = (scDataTypeHash_t*) namespace_root;
-  int i;
-  for( i = 0; i < hash->buflen; i++ )
-  {
-    if(SC_StringIsEmpty(&hash->data[i].key))
-      continue;
-    push_value( L, &hash->data[i].value);
-    lua_setglobal( L, SC_StringToChar(&hash->data[i].key));
-  }
-}
- 
 /*
 =================
 SC_Lua_RunScript
@@ -1161,8 +1183,6 @@ qboolean SC_Lua_RunScript( const char *filename )
   buf[len] = 0;
   trap_FS_FCloseFile(f);
 
-  update_context(g_luaState);
-
   if(luaL_loadbuffer(g_luaState, buf, strlen(buf), filename))
   {
     Com_Printf("SC_Lua_RunScript: cannot load lua file: %s\n", lua_tostring(g_luaState, -1));
@@ -1187,22 +1207,13 @@ void SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *ar
 {
   int narg = 0;
   lua_State *L = g_luaState;
-  scDataType_t *dt;
-  scDataTypeValue_t *value;
-
-  value = args;
-  dt = (scDataType_t*) func->argument;
-
-  update_context(L);
 
   lua_getfield(L, LUA_REGISTRYINDEX, va("func_%d", func->data.luafunc));
 
-  while( *dt != TYPE_UNDEF )
+  while( args[narg].type != TYPE_UNDEF )
   {
-    push_value( L, args );
+    push_value( L, &args[narg] );
 
-    dt++;
-    value++;
     narg++;
   }
 

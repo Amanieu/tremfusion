@@ -294,6 +294,7 @@ scField_t *SC_ClassGetField(scClass_t *class, const char *name);
 char* SC_LangageToString(scLangage_t langage);
 void SC_DataDump( void );
 void SC_HashDump(scDataTypeHash_t *hash);
+void SC_ArrayDump(scDataTypeArray_t *array);
 void SC_ValueDump(scDataTypeValue_t *value);
 
 // sc_main.c
@@ -442,7 +443,7 @@ struct scHook_s
 extern scClass_t *event_class;
 
 scEvent_t *SC_Event_New(void);
-void SC_Event_Call(scEvent_t *event, scDataTypeHash_t *params);
+void SC_Event_Call(scObject_t *object, scDataTypeHash_t *params);
 void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new);
 void SC_Event_DeleteNode(scEventNode_t *node);
 void SC_Event_Skip(scEvent_t *event, const char *tag);

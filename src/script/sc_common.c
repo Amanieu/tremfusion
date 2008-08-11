@@ -222,6 +222,7 @@ static void add_autohooks(scDataTypeArray_t *autohook)
 
     // TODO: check all types
     SC_ArrayGet(h, 0, &value);
+    SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
@@ -285,6 +286,7 @@ static void remove_autohooks(scDataTypeArray_t *autohook)
 
     // TODO: check all types
     SC_ArrayGet(h, 0, &value);
+    SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
@@ -310,6 +312,7 @@ void SC_Module_Init(scObject_t *self)
   value.data.array = SC_ArrayNew();
   SC_HashSet(hash, "registered", &value);
 
+  self->data.type = TYPE_HASH;
   self->data.data.hash = hash;
 }
 
@@ -354,7 +357,7 @@ void SC_Module_Load(scObject_t *self)
   SC_HashGet(hash, "autoload", &value);
   autoload = value.data.function;
 
-  SC_HashGet(hash, "autohook", &value);
+  SC_HashGet(hash, "autohooks", &value);
   autohook = value.data.array;
 
   // Make error if conflicted module is loaded
@@ -441,7 +444,7 @@ void SC_Module_Unload(scObject_t *self)
   SC_HashGet(hash, "autounload", &value);
   autounload = value.data.function;
 
-  SC_HashGet(hash, "autohook", &value);
+  SC_HashGet(hash, "autohooks", &value);
   autohook = value.data.array;
 
   // Check if able to unload (must not have dependent module loaded)
@@ -488,6 +491,7 @@ static void module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, vo
   self = out[0].data.object;
 
   SC_Module_Init(self);
+  SC_HashSet(self->data.data.hash, "name", &in[1]);
 }
 
 static void module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
@@ -505,7 +509,9 @@ static void module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
-  SC_HashGet(hash, (char*)closure, &out[0]);
+  SC_HashGet(hash, (char*)closure, out);
+
+  SC_ValueDump(out);
 }
 
 static void module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
@@ -529,6 +535,13 @@ static void module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   out[0].type = TYPE_UNDEF;
 }
 
+static void module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  SC_ValueDump(&in[0].data.object->data);
+
+  out[0].type = TYPE_UNDEF;
+}
+
 static scLibObjectMember_t module_members[] = {
   { "name", "", TYPE_STRING, module_set, module_get, (void*) "name" },
   { "version", "", TYPE_STRING, module_set, module_get, (void*) "version" },
@@ -537,7 +550,7 @@ static scLibObjectMember_t module_members[] = {
   { "conflict", "", TYPE_ARRAY, module_set, module_get, (void*) "conflict" },
   { "autoload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autoload" },
   { "autounload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autounload" },
-  { "autotags", "", TYPE_ARRAY, module_set, module_get, (void*) "autotags" },
+  { "autohooks", "", TYPE_ARRAY, module_set, module_get, (void*) "autohooks" },
   { "loaded", "", TYPE_BOOLEAN, 0, module_get, (void*) "loaded" },
   { "" }
 };
@@ -546,6 +559,7 @@ static scLibObjectMethod_t module_methods[] = {
   { "load", "", module_load, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "register", "", module_register, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };
 
