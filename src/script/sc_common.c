@@ -285,7 +285,7 @@ static void remove_autohooks(scDataTypeArray_t *autohook)
   scEvent_t *event;
   scEventNode_t *node;
 
-  for(i = 0; i < autohook->size; i++)
+  for(i = autohook->size - 1; i >= 0; i--)
   {
     SC_ArrayGet(autohook, i, &value);
     if(value.type != TYPE_ARRAY)
