@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 int numstateswitches;
 char stateswitch[MAX_STATESWITCHES+1][144];
+char *reason=NULL;
 
 typedef enum{
     HS_SPAWN,
@@ -577,8 +578,14 @@ qboolean HBotEquipOK(bot_state_t* bs){
 		totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) - 400  + bs->cur_ps.persistant[ PERS_CREDIT ];
 		switch(g_humanStage.integer){
 			case 0:
-				if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN) return qfalse;
-				else if( totalcredit >= 420 && weap != WP_LAS_GUN) return qfalse;
+				if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN){
+          reason = "has enough for shotgun";
+          return qfalse;
+				}
+				else if( totalcredit >= 420 && weap != WP_LAS_GUN) {
+				  reason = "has enough for lasgun";
+          return qfalse;
+				}
 				break;
 			case 1:
 				if( totalcredit >= 660 && weap != WP_PULSE_RIFLE ) return qfalse;
@@ -601,6 +608,7 @@ qboolean HBotEquipOK(bot_state_t* bs){
 			break;
 	}
 	if( bs->inventory[BI_WEAPON] < WP_MACHINEGUN || bs->inventory[BI_WEAPON] > WP_LUCIFER_CANNON) {
+	  reason = "invalid weapon";
 		return qfalse;
 	}
 		
@@ -696,11 +704,12 @@ void HBotUpdateInventory(bot_state_t* bs){
 	bs->inventory[BI_BSUIT] = BG_InventoryContainsUpgrade( UP_BATTLESUIT, bs->cur_ps.stats );
 }
 #define TIME_BETWEENBUYINGAMMO	4
+#define TIME_BETWEENBUYINGGUN   10
 
 void BuyAmmo(bot_state_t* bs){
-	if(bs->buyammo_time > level.time - TIME_BETWEENBUYINGAMMO) return;
+	if(bs->buy_time > level.time - TIME_BETWEENBUYINGAMMO) return;
 	trap_EA_Command(bs->client, "buy ammo" );
-	bs->buyammo_time = level.time;
+	bs->buy_time = level.time;
 }
 
 // armoury AI: buy stuff depending on credits (stage, situation)
@@ -709,10 +718,15 @@ void HBotShop(bot_state_t* bs){
 	int       maxAmmo, maxClips;
 	int weap = bs->inventory[BI_WEAPON];
 	float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
+	if(bs->buy_time > level.time - TIME_BETWEENBUYINGAMMO){
+	  reason = "bought gun within last 10 seconds";
+	  return;
+	}
 	totalcredit = BG_GetValueOfPlayer( &bs->cur_ps ) + bs->cur_ps.persistant[ PERS_CREDIT ] - 400;
 	switch(g_humanStage.integer){
 		case 0:
 			if( attack_skill >= 0.6 && totalcredit >= 220 && weap != WP_SHOTGUN){
+			  reason = "shotgun + lamour";
 				trap_EA_Command(bs->client, "sell weapons" );
 				trap_EA_Command(bs->client, "sell upgrades" );
 				trap_EA_Command(bs->client, "buy larmour" );
@@ -720,6 +734,7 @@ void HBotShop(bot_state_t* bs){
 				trap_EA_Command(bs->client, "buy shotgun" );
 			}
 			else if( totalcredit >= 420 && weap != WP_LAS_GUN ){
+			  reason = "lasgun + battpack + armour";
 				trap_EA_Command(bs->client, "sell weapons" );
 				trap_EA_Command(bs->client, "sell upgrades" );
 				trap_EA_Command(bs->client, "buy larmour" );
@@ -727,6 +742,7 @@ void HBotShop(bot_state_t* bs){
 				trap_EA_Command(bs->client, "buy lgun" );
 			}
 			else if( weap != WP_MACHINEGUN ) {
+			  reason = "rifle";
 			  trap_EA_Command(bs->client, "sell weapons" );
         trap_EA_Command(bs->client, "sell upgrades" );
         trap_EA_Command(bs->client, "buy rifle" );
@@ -949,7 +965,10 @@ void HBotStrafe(bot_state_t *bs){
 
 void HBotEnterAttack(bot_state_t* bs, char *s)
 {
-  HBotRecordStateSwitch(bs, "attack", "" , s);
+  if(reason)
+    HBotRecordStateSwitch(bs, "attack", "" , va("%s: %s", s, reason) );
+  else
+    HBotRecordStateSwitch(bs, "attack", "" ,  s);
   bs->state = HS_ATTACK;
 }
 
@@ -1137,7 +1156,11 @@ qboolean HBotHeal(bot_state_t* bs){
 
 void HBotEnterGear(bot_state_t* bs, char *s)
 {
-  HBotRecordStateSwitch(bs, "gear", "" , s);
+  if(reason)
+    HBotRecordStateSwitch(bs, "gear", "" , va("%s: %s", s, reason) );
+  else
+    HBotRecordStateSwitch(bs, "gear", "" ,  s);
+  reason = NULL;
   bs->state = HS_GEAR;
 }
 
