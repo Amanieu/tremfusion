@@ -26,21 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 #include "sc_python.h"
-//#include "../python/python_local.h"
 
-// TODO: move these to something like src/python/py_game.c
-static PyMethodDef game_methods[] = {
- {NULL, NULL, 0, NULL}
-};
-
-PyObject *gamemodule;
-PyObject *vec3d_module;
-PyObject *vec3d;
-
-/* 
- * We can't keep making new python module objects everytime we call 
- * update_context so we steal them from the main dict
- */
 PyObject *mainModule;
 PyObject *mainDict;
 
@@ -154,17 +140,7 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
     py_scobject = (PyScBaseObject*)pyvalue;
     value->type = TYPE_OBJECT;
     value->data.object = py_scobject->sc_object;
-//    value->data.function = convert_to_function( pyvalue );
   }
-//    case LUA_TFUNCTION:
-//      value->type = TYPE_FUNCTION;
-//      pop_function(L, value->data.function);
-//      break;
-//
-//    default:
-//      // TODO: Error
-//      break;
-//  }
   else
   {
 #ifdef UNITTEST
@@ -286,36 +262,8 @@ void SC_Python_Init( void )
   trap_Cvar_Update( &py_initialized ); 
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
-  mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ...
-//  
-//  value = BG_Alloc( sizeof( scDataTypeValue_t ));
-//  value->type = TYPE_INTEGER;
-//  value->data.integer = 1337;
-  
-//  SC_NamespaceSet("game.test", value);
-//  PyImport_AddModule("game");
-//  gamemodule = Py_InitModule("game", game_methods);
-//  if (PyType_Ready(&EntityType) < 0)
-//    return;
-//  Py_INCREF(&EntityType);
-//  PyModule_AddObject(gamemodule, "Entity", (PyObject *)&EntityType);
-//  if (PyType_Ready(&EntityStateType) < 0)
-//    return;
-//  Py_INCREF(&EntityStateType);
-//  PyModule_AddObject(gamemodule, "EntityState", (PyObject *)&EntityStateType);
-  
-//  if (PyType_Ready(&Vec3dType) < 0)
-//    return;
-//  Py_INCREF(&Vec3dType);
-//  PyModule_AddObject(gamemodule, "Vec3d", (PyObject *)&Vec3dType);
-//  PyRun_SimpleString("sys.path.append(\"/home/john/tremulous/server/test_base/stfu-trem/python\")");
-//  vec3d_module= PyImport_ImportModule("vec3d");
-//  if (!vec3d_module){
-//    Com_Printf("^1Cannot find vec3d.py\n");
-//    vec3d = NULL;
-//  } else {
-//    vec3d = PyObject_GetAttrString(vec3d_module, "vec3d" );
-//  }
+  mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ..
+  .
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
   if (PyType_Ready(&PyScMethod_Type) < 0)
@@ -339,20 +287,6 @@ void SC_Python_Shutdown( void )
   Py_DECREF( mainModule );
   Py_DECREF( mainDict );
 
-//  if (vec3d_module){ 
-//    Py_DECREF( vec3d_module);
-//    vec3d = NULL;
-//  }
-//  if (vec3d){
-//    Py_DECREF( vec3d );
-//    vec3d = NULL;
-//  }
-//  Py_DECREF( &EntityStateType );
-//  Py_DECREF( &EntityType );
-//  if (gamemodule){
-//    Py_DECREF( gamemodule );
-//    gamemodule = NULL;
-//  }
   trap_Cvar_Set( "py_initialized", "0" );
   Py_Finalize();
   G_Printf("-----------------------------------\n");
