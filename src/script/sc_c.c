@@ -169,9 +169,9 @@ int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value
   {
     case TYPE_BOOLEAN:
       *(qboolean *)( b + field->ofs ) = (value->data.boolean) ? qtrue : qfalse;
-//    case TYPE_INTEGER: // Disabled because value->data.integer is type long which could cause us to write too much data
-//      *(int *)( b + field->ofs ) = value->data.integer;
-//      break;
+    case TYPE_INTEGER:
+      *(int *)( b + field->ofs ) = (int)value->data.integer;
+      break;
     case TYPE_FLOAT:
       *(float *)( b + field->ofs ) = value->data.floating;
       break;
@@ -196,10 +196,10 @@ int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value
       value->type = TYPE_BOOLEAN;
       value->data.boolean = *(qboolean *)( b + field->ofs );
       break;
-//    case TYPE_INTEGER: // Disabled because value->data.integer is type long which could cause us to write too much data
-//      value->type = TYPE_INTEGER;
-//      value->data.integer = *(int *)( b + field->ofs );
-//      break;
+    case TYPE_INTEGER:
+      value->type = TYPE_INTEGER;
+      value->data.integer = (long)*(int *)( b + field->ofs );
+      break;
     case TYPE_FLOAT:
       value->type = TYPE_FLOAT;
       value->data.floating = *(float *)( b + field->ofs );

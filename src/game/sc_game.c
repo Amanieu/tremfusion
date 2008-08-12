@@ -152,8 +152,6 @@ static int entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
 static scLibObjectMember_t entity_members[] = {
   // Vectors
   { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, (void*)ENTITY_ORIGIN },
-  // Booleans
-//  { "inuse",     "", TYPE_BOOLEAN, entity_set, entity_get, (void*)ENTITY_INUSE },
   { "" },
 };
 
@@ -163,13 +161,22 @@ static scLibObjectMethod_t entity_methods[] = {
 };
 
 static scField_t entity_fields[] = {
+  { "inuse",      "", TYPE_BOOLEAN, FOFS(inuse) },
   { "classname",  "", TYPE_STRING,  FOFS(classname)  },
   { "model",      "", TYPE_STRING,  FOFS(model)      },
   { "model2",     "", TYPE_STRING,  FOFS(model2)     },
+  
+  { "soundPos1", "", TYPE_INTEGER,  FOFS(soundPos1) },
+  { "sound1to2", "", TYPE_INTEGER,  FOFS(sound1to2) },
+  { "sound2to1", "", TYPE_INTEGER,  FOFS(sound2to1) },
+  { "soundPos2", "", TYPE_INTEGER,  FOFS(soundPos2) },
+  { "soundLoop", "", TYPE_INTEGER,  FOFS(soundLoop) },
+  
   { "target",     "", TYPE_STRING,  FOFS(target)     },
   { "targetname", "", TYPE_STRING,  FOFS(targetname) },
   { "team",       "", TYPE_STRING,  FOFS(team)       },
-  { "inuse",      "", TYPE_BOOLEAN, FOFS(inuse)      },
+  { "targetShaderName", "", TYPE_BOOLEAN, FOFS(targetShaderName) },
+  { "targetShaderNewName", "", TYPE_BOOLEAN, FOFS(targetShaderNewName) },
   { "" },
 };
 

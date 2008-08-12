@@ -459,7 +459,7 @@ void SC_Event_Dump(scEvent_t *event);
 
 // sc_utils.c
 
-#define MAX_CONSTANT_LENGTH 16
+#define MAX_CONSTANT_LENGTH 32
 
 typedef struct
 {

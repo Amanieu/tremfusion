@@ -249,6 +249,44 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
 }
 #ifndef UNITTEST
 
+static void loadconstants(void)
+{
+  scConstant_t *cst = sc_constants;
+  float val;
+  PyObject* module;
+  module = PyImport_AddModule("constants");
+  while(cst->name[0] != '\0')
+  {
+    switch(cst->type)
+    {
+//      case TYPE_BOOLEAN:
+//        
+//        lua_pushboolean(L, (int)cst->data);
+//        PyModule_AddObject( mainModule, cst->name, (cst->data) ? );
+//        lua_setglobal(L, );
+//        break;
+      case TYPE_INTEGER:
+        PyModule_AddIntConstant(module, cst->name, (long)cst->data);
+        break;
+//      case TYPE_FLOAT: TODO: Floats are broken
+//        memcpy(&val, &cst->data, sizeof(val));
+//        PyModule_AddObject(module, cst->name, PyFloat_FromDouble(val));
+//        break;
+      case TYPE_STRING:
+        PyModule_AddStringConstant(module, cst->name, (char*)cst->data);
+        break;
+      case TYPE_USERDATA:
+        PyModule_AddObject(module, cst->name, PyCObject_FromVoidPtr(cst->data, NULL));
+        break;
+      default:
+        // Error: type invalid
+        break;
+    }
+
+    cst++;
+  }
+}
+
 void SC_Python_Init( void )
 {
 //  scDataTypeValue_t *value;
@@ -263,13 +301,14 @@ void SC_Python_Init( void )
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ..
-  .
+  
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
   if (PyType_Ready(&PyScMethod_Type) < 0)
     return;
   Py_INCREF(&PyScMethod_Type);
-
+  
+  loadconstants();
 //  if (PyType_Ready(&PyScObject_Type) < 0)
 //    return;
 //  Py_INCREF(&EntityType);
