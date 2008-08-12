@@ -32,6 +32,31 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 /*
 ======================================================================
 
+Global Functions
+
+======================================================================
+*/
+
+static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+{
+  while(in->type != TYPE_UNDEF)
+  {
+    G_Printf(SC_StringToChar(in->data.string));
+    in++;
+  }
+  out->type = TYPE_UNDEF;
+
+  return 0;
+}
+
+static scLibFunction_t common_lib[] = {
+  { "Print", "", common_Print, { TYPE_ANY , TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "" }
+};
+
+/*
+======================================================================
+
 Vec3
 
 ======================================================================
@@ -345,10 +370,10 @@ void SC_Module_Register(scObject_t *self, scObject_t *toregister)
 void SC_Module_Load(scObject_t *self)
 {
   scDataTypeHash_t *hash;
-  scDataTypeFunction_t *autoload;
-  scDataTypeArray_t *autohook;
-  scDataTypeArray_t *conflict;
-  scDataTypeArray_t *depend;
+  scDataTypeFunction_t *autoload = NULL;
+  scDataTypeArray_t *autohook = NULL;
+  scDataTypeArray_t *conflict = NULL;
+  scDataTypeArray_t *depend = NULL;
   const char* name;
   scDataTypeValue_t value, value2;
   scDataTypeValue_t fin[2];
@@ -361,70 +386,84 @@ void SC_Module_Load(scObject_t *self)
   name = SC_StringToChar(value.data.string);
 
   SC_HashGet(hash, "conflict", &value);
-  conflict = value.data.array;
+  if(value.type == TYPE_ARRAY)
+    conflict = value.data.array;
 
   SC_HashGet(hash, "depend", &value);
-  depend = value.data.array;
+  if(value.type == TYPE_ARRAY)
+    depend = value.data.array;
 
   SC_HashGet(hash, "autoload", &value);
-  autoload = value.data.function;
+  if(value.type == TYPE_FUNCTION)
+    autoload = value.data.function;
 
   SC_HashGet(hash, "autohooks", &value);
-  autohook = value.data.array;
+  if(value.type == TYPE_ARRAY)
+    autohook = value.data.array;
 
   // Make error if conflicted module is loaded
-  for(i = 0; i < conflict->size; i++)
+  if(conflict)
   {
-    SC_ArrayGet(conflict, i, &value);
-    if(value.type != TYPE_STRING)
+    for(i = 0; i < conflict->size; i++)
     {
-      // TODO: error
-    }
-
-    SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
-    if(value2.type != TYPE_UNDEF)
-    {
-      SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
-      if(value.data.boolean)
+      SC_ArrayGet(conflict, i, &value);
+      if(value.type != TYPE_STRING)
       {
-        // TODO: conflict error
+        // TODO: error
+      }
+
+      SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
+      if(value2.type != TYPE_UNDEF)
+      {
+        SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
+        if(value.data.boolean)
+        {
+          // TODO: conflict error
+        }
       }
     }
   }
 
   // Load all unloaded depends
-  for(i = 0; i < depend->size; i++)
+  if(depend)
   {
-    SC_ArrayGet(depend, i, &value);
-    if(value.type != TYPE_STRING)
+    for(i = 0; i < depend->size; i++)
     {
-      // TODO: error
-    }
-
-    SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
-    if(value2.type != TYPE_UNDEF)
-    {
-      SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
-      if(!value.data.boolean)
+      SC_ArrayGet(depend, i, &value);
+      if(value.type != TYPE_STRING)
       {
-        SC_Module_Register(value2.data.object, self);
-        SC_Module_Load(value2.data.object);
+        // TODO: error
       }
-    }
-    else
-    {
-      // TODO: error : can't autoload unknow module
+
+      SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
+      if(value2.type != TYPE_UNDEF)
+      {
+        SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
+        if(!value.data.boolean)
+        {
+          SC_Module_Register(value2.data.object, self);
+          SC_Module_Load(value2.data.object);
+        }
+      }
+      else
+      {
+        // TODO: error : can't autoload unknow module
+      }
     }
   }
 
   // Call "autoload" function
-  fin[0].type = TYPE_OBJECT;
-  fin[0].data.object = self;
-  fin[1].type = TYPE_UNDEF;
-  SC_RunFunction(autoload, fin, &fout);
+  if(autoload)
+  {
+    fin[0].type = TYPE_OBJECT;
+    fin[0].data.object = self;
+    fin[1].type = TYPE_UNDEF;
+    SC_RunFunction(autoload, fin, &fout);
+  }
 
   // Add autohooks
-  add_autohooks(autohook);
+  if(autohook)
+    add_autohooks(autohook);
 
   // TODO: move all module stuff to root namespace
 
@@ -437,8 +476,8 @@ void SC_Module_Load(scObject_t *self)
 void SC_Module_Unload(scObject_t *self)
 {
   scDataTypeHash_t *hash;
-  scDataTypeFunction_t *autounload;
-  scDataTypeArray_t *autohook;
+  scDataTypeFunction_t *autounload = NULL;
+  scDataTypeArray_t *autohook = NULL;
   scDataTypeArray_t *using;
   scDataTypeValue_t value;
   const char *name;
@@ -454,10 +493,12 @@ void SC_Module_Unload(scObject_t *self)
   using = value.data.array;
 
   SC_HashGet(hash, "autounload", &value);
-  autounload = value.data.function;
+  if(value.type == TYPE_FUNCTION)
+    autounload = value.data.function;
 
   SC_HashGet(hash, "autohooks", &value);
-  autohook = value.data.array;
+  if(value.type == TYPE_ARRAY)
+    autohook = value.data.array;
 
   // Check if able to unload (must not have dependent module loaded)
   if(using->size > 0)
@@ -466,13 +507,17 @@ void SC_Module_Unload(scObject_t *self)
   }
  
   // Remove autohooks
-  remove_autohooks(autohook);
+  if(autohook)
+    remove_autohooks(autohook);
 
   // Call "autounload" function
-  fin[0].type = TYPE_OBJECT;
-  fin[0].data.object = self;
-  fin[1].type = TYPE_UNDEF;
-  SC_RunFunction(autounload, fin, &fout);
+  if(autounload)
+  {
+    fin[0].type = TYPE_OBJECT;
+    fin[0].data.object = self;
+    fin[1].type = TYPE_UNDEF;
+    SC_RunFunction(autounload, fin, &fout);
+  }
 
   // TODO: remove all module stuff in root namespace
 
@@ -529,8 +574,6 @@ static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, (char*)closure, out);
-
-  SC_ValueDump(out);
 
   return 0;
 }
@@ -608,6 +651,7 @@ static scLibObjectDef_t module_def = {
 
 void SC_Common_Init( void )
 {
+  SC_AddLibrary( "common", common_lib );
   vec3_class = SC_AddClass( "common", &vec3_def);
   module_class = SC_AddClass("script", &module_def);
 }

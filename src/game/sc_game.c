@@ -24,14 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static scLibObjectDef_t entity_def;
 
-static int game_Print( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
-{
-  G_Printf(SC_StringToChar(args[0].data.string));
-  ret->type = TYPE_UNDEF;
-
-  return 0;
-}
-
 static int game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, void* closure )
 {
   trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(args[0].data.string));
@@ -41,7 +33,6 @@ static int game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, void* 
 }
 
 static scLibFunction_t game_lib[] = {
-  { "Print", "", game_Print, { TYPE_STRING , TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "Command", "", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
 };

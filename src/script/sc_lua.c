@@ -93,6 +93,34 @@ static const char* luatype2string(int luatype)
   return NULL;
 }
 
+static int print_method(lua_State *L)
+{
+  int top, i;
+
+  top = lua_gettop(L);
+  lua_getglobal(L, "tostring");
+  for(i = 1; i <= top; i++)
+  {
+    const char *s;
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, i);
+    lua_call(L, 1, 1);
+    s = lua_tostring(L, -1);
+    if(s == NULL)
+      return luaL_error(L, LUA_QL("tostring") " must return a string to "
+          LUA_QL("print"));
+
+    if(i > 1)
+      Com_Printf("\t");
+
+    Com_Printf(s);
+    lua_pop(L, 1);
+  }
+  Com_Printf("\n");
+
+  return 0;
+}
+
 static int type_method(lua_State *L)
 {
   int type;
@@ -149,6 +177,32 @@ static int null_metamethod(lua_State *L)
   Com_Printf("*** Warning: null_metamethod called\n");
  
   return 0;
+}
+
+static int tostring_metamethod(lua_State *L)
+{
+  int type;
+
+  lua_getfield(L, -1, "_type");
+  type = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+
+  if(type == TYPE_STRING)
+  {
+    scDataTypeString_t *string;
+    lua_getfield(L, -1, "_ref");
+    string = lua_touserdata(L, -1);
+    lua_pop(L, 2);
+
+    lua_pushstring(L, SC_StringToChar(string));
+  }
+  else
+  {
+    lua_pop(L, 1);
+    lua_pushstring(L, "");
+  }
+
+  return 1;
 }
 
 static int le_metamethod(lua_State *L)
@@ -362,7 +416,8 @@ static int call_metamethod( lua_State *L )
 
   args[top+mod].type = TYPE_UNDEF;
 
-  SC_RunFunction(function, args, &ret);
+  if(SC_RunFunction(function, args, &ret) != 0)
+    luaL_error(L, SC_StringToChar(ret.data.string));
 
   i--;
   while(i >= 0)
@@ -845,6 +900,8 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__lt");
   lua_pushcfunction(L, le_metamethod);
   lua_setfield(L, -2, "__le");
+  lua_pushcfunction(L, tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
 
   lua_setmetatable(L, -2);
 }
@@ -1113,6 +1170,7 @@ void SC_Lua_Init( void )
 
   map_luamethod(L, "pairs", pairs_method);
   map_luamethod(L, "type", type_method);
+  map_luamethod(L, "print", print_method);
 
   // Register global table as root namespace
   SC_NamespaceGet("", &value);
