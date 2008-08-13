@@ -387,8 +387,10 @@ void CL_SystemInfoChanged( void ) {
 	cl_connectedToVoipServer = (atoi( s ) == 1);
 #endif
 
-	s = Info_ValueForKey( systemInfo, "sv_cheats" );
-	if ( !clc.demoplaying ) {
+	if ( clc.demoplaying )
+		cl_connectedToCheatServer = 0;
+	else {
+		s = Info_ValueForKey( systemInfo, "sv_cheats" );
 		cl_connectedToCheatServer = atoi( s );
 		if ( !cl_connectedToCheatServer ) {
 			Cvar_SetCheatState();
@@ -445,7 +447,10 @@ void CL_SystemInfoChanged( void ) {
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
 		Cvar_Set( "fs_game", "" );
 	}
-	if ( !clc.demoplaying )
+	if ( clc.demoplaying ) {
+		Cvar_Set( "sv_pure", "0" );
+		Cvar_Set( "sv_cheats", "0" );
+	} else
 		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
 }
 
