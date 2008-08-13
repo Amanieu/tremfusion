@@ -312,7 +312,8 @@ typedef struct bot_state_s
   gentity_t *enemyent;
   gentity_t *ent;
   char hudinfo[MAX_INFO_STRING];  // for bot_developer hud debug text
-  float buy_time;
+  float buyammo_time;
+  float buygun_time;
   float findenemy_time;  //time the bot last looked for a new enemy
   int state;
   int prevstate;

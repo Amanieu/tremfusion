@@ -363,6 +363,84 @@ void BotCheckSnapshot(bot_state_t *bs) {
 	BotCheckEvents(bs, &state);
 }
 
+char *BotGetMenuText( int menu, int arg )
+{
+  switch( menu )
+  {
+    case MN_TEAM: return"menu tremulous_teamselect";
+    case MN_A_CLASS: return "menu tremulous_alienclass";
+    case MN_H_SPAWN: return "menu tremulous_humanitem";
+    case MN_A_BUILD: return "menu tremulous_alienbuild";
+    case MN_H_BUILD: return "menu tremulous_humanbuild";
+    case MN_H_ARMOURY: return "menu tremulous_humanarmoury";
+    //===============================
+    case MN_H_UNKNOWNITEM: return "Unknown item";
+    case MN_A_TEAMFULL: return "The alien team has too many players";
+    case MN_H_TEAMFULL: return "The human team has too many players";
+    case MN_A_TEAMCHANGEBUILDTIMER: return "You cannot change teams until your build timer expires.";
+    case MN_H_TEAMCHANGEBUILDTIMER: return "You cannot change teams until your build timer expires.";
+    case MN_CMD_CHEAT: return "Cheats are not enabled on this server";
+    case MN_CMD_TEAM: return "Join a team first";
+    case MN_CMD_SPEC: return "You can only use this command when spectating";
+    case MN_CMD_ALIEN: return "Must be alien to use this command";
+    case MN_CMD_HUMAN: return "Must be human to use this command";
+    case MN_CMD_LIVING: return "Must be living to use this command";
+    case MN_B_NOROOM: return "There is no room to build here";
+    case MN_B_NORMAL: return "Cannot build on this surface";
+    case MN_B_CANNOT: return "You cannot build that structure";
+    case MN_B_LASTSPAWN: return "You may not deconstruct the last spawn";
+    case MN_B_SUDDENDEATH: return "Cannot build during Sudden Death";
+    case MN_B_REVOKED: return "Your building rights have been revoked";
+    case MN_B_SURRENDER: return "Building is denied to traitorous cowards";
+//      longMsg   = "Your team has decided to admit defeat and concede the game:"
+//                  "traitors and cowards are not allowed to build.";
+//                  // too harsh? <- LOL
+    case MN_H_NOBP: return "There is no power remaining";
+    case MN_H_NOTPOWERED: return "This buildable is not powered";
+    case MN_H_ONEREACTOR: return "There can only be one Reactor";
+    case MN_H_NOPOWERHERE: return "There is no power here";
+    case MN_H_NODCC: return "There is no Defense Computer";
+    case MN_H_RPTPOWERHERE: return "This area already has power";
+    case MN_H_NOSLOTS: return "You have no room to carry this";
+    case MN_H_NOFUNDS: return "Insufficient funds";
+    case MN_H_ITEMHELD: return "You already hold this item";
+    case MN_H_NOARMOURYHERE: return "You must be near a powered Armoury";
+    case MN_H_NOENERGYAMMOHERE: return "You must be near a Reactor or a powered Armoury or Repeater";
+    case MN_H_NOROOMBSUITON: return "Not enough room here to put on a Battle Suit";
+    case MN_H_NOROOMBSUITOFF: return "Not enough room here to take off your Battle Suit";
+    case MN_H_ARMOURYBUILDTIMER: return "You can not buy or sell weapons until your build timer expires";
+    case MN_H_DEADTOCLASS: return "You must be dead to use the class command";
+    case MN_H_UNKNOWNSPAWNITEM: return "Unknown starting item";
+    //===============================
+    case MN_A_NOCREEP: return "There is no creep here";
+    case MN_A_NOOVMND: return "There is no Overmind";
+    case MN_A_ONEOVERMIND: return "There can only be one Overmind";
+    case MN_A_ONEHOVEL: return "There can only be one Hovel";
+    case MN_A_NOBP: return "The Overmind cannot control any more structures";
+    case MN_A_NOEROOM: return "There is no room to evolve here";
+    case MN_A_TOOCLOSE: return "This location is too close to the enemy to evolve";
+    case MN_A_NOOVMND_EVOLVE: return "There is no Overmind";
+    case MN_A_EVOLVEBUILDTIMER: return "You cannot Evolve until your build timer expires";
+    case MN_A_HOVEL_OCCUPIED: return "This Hovel is already occupied by another builder";
+    case MN_A_HOVEL_BLOCKED: return "The exit to this Hovel is currently blocked";
+    case MN_A_HOVEL_EXIT: return "The exit to this Hovel would always be blocked";
+    case MN_A_INFEST: return "menu tremulous_alienupgrade\n";
+    case MN_A_CANTEVOLVE: return va( "You cannot evolve into a %s", 
+                                     BG_ClassConfig( arg )->humanName );
+    case MN_A_EVOLVEWALLWALK: return "You cannot evolve while wallwalking";
+    case MN_A_UNKNOWNCLASS: return "Unknown class";
+    case MN_A_CLASSNOTSPAWN: return va( "You cannot spawn as a %s", 
+                                        BG_ClassConfig( arg )->humanName );
+    case MN_A_CLASSNOTALLOWED: return va( "The %s is not allowed", 
+                                          BG_ClassConfig( arg )->humanName );
+    case MN_A_CLASSNOTATSTAGE: return va( "The %s is not allowed at Stage %d",
+                                          BG_ClassConfig( arg )->humanName,
+                                          g_alienStage.integer + 1 );
+    default:
+      return va( "BotGetMenuText: debug: no such menu %d\n", menu );
+  }
+}
+
 int BotAI(int client, float thinktime) {
 	bot_state_t *bs;
 	char buf[1024], *args;
@@ -385,6 +463,7 @@ int BotAI(int client, float thinktime) {
 		if (!args) continue;
 		*args++ = '\0';
 
+		
 		//remove color espace sequences from the arguments
 		//RemoveColorEscapeSequences( args );
 
@@ -409,13 +488,20 @@ int BotAI(int client, float thinktime) {
 			//args[strlen(args)-1] = '\0';
 			//trap_BotQueueConsoleMessage(bs->cs, CMS_CHAT, args);
 		}
-//		else if (!Q_stricmp(buf, "servermenu")) {
-//		  if( bot_developer.integer){
-//        memmove(args, args+1, strlen(args));
-//        args[strlen(args)-1] = '\0';
-//        Bot_Print(BPDEBUG, "[BOT_MENU] %s\n", args);
-//      }
-//    }
+		else if (!Q_stricmp(buf, "servermenu")) {
+		  char arg1[ 4 ], arg2[ 4 ];
+		  char *menu_text;
+		  if( trap_Argc( ) == 2  ) {
+		    trap_Argv( 1, arg1, sizeof(arg1));
+		    menu_text = BotGetMenuText( atoi( arg1 ), 0 );
+		  }
+		  if( trap_Argc( ) == 3 ) {
+		    trap_Argv( 1, arg1, sizeof(arg1) );
+		    trap_Argv( 2, arg2, sizeof(arg2) );
+		    menu_text = BotGetMenuText( atoi( arg1), atoi( arg2 ) );
+		  }
+		  Bot_Print(BPDEBUG, "[BOT_MENU] %s\n", menu_text);
+		}
 		else if (!Q_stricmp(buf, "scores"))	// parse scores?
 			{  }
 		else if (!Q_stricmp(buf, "clientLevelShot"))

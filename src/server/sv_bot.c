@@ -590,6 +590,7 @@ int SV_BotGetConsoleMessage( int client, char *buf, int size )
 	}
 
 	Q_strncpyz( buf, cl->reliableCommands[index], size );
+	Cmd_TokenizeString( buf );
 	return qtrue;
 }
 
