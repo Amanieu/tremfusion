@@ -76,6 +76,13 @@ scDataTypeString_t *SC_StringNewFromChar(const char* str)
   return string;
 }
 
+scDataTypeString_t *SC_StringNewFromCharAndSize(const char* str, int len)
+{
+  scDataTypeString_t *string = SC_StringNew();
+  SC_StrcatWithLen(string, str, len);
+  return string;
+}
+
 const char* SC_StringToChar(scDataTypeString_t *string)
 {
   return string->data;
@@ -94,6 +101,20 @@ void SC_Strcat( scDataTypeString_t *string, const char *src )
   if (!src)
     return;
   len = strlen(src);
+  if(len == 0)
+    return;
+
+  if(string->buflen < string->length + len + 1)
+    strRealloc(string, string->length + len + 1);
+
+  Q_strncpyz(string->data + string->length, src, len + 1);
+  string->length += len;
+}
+
+void SC_StrcatWithLen( scDataTypeString_t *string, const char *src, int len )
+{
+  if (!src)
+    return;
   if(len == 0)
     return;
 

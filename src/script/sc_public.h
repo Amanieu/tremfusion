@@ -242,7 +242,9 @@ extern scNamespace_t *namespace_root;
 
 scDataTypeString_t *SC_StringNew(void);
 scDataTypeString_t *SC_StringNewFromChar(const char* str);
+scDataTypeString_t *SC_StringNewFromCharAndSize(const char* str, int len);
 void SC_Strcat( scDataTypeString_t *string, const char *src );
+void SC_StrcatWithLen( scDataTypeString_t *string, const char *src, int len );
 void SC_Strcpy( scDataTypeString_t *string, const char *src );
 qboolean SC_StringIsEmpty(scDataTypeString_t *string);
 const char* SC_StringToChar(scDataTypeString_t *string);
@@ -382,6 +384,8 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def );
 
 int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value);
 int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value);
+
+int SC_BuildValue(scDataTypeValue_t *val, const char *format, ...);
 
 // sc_common.c
 

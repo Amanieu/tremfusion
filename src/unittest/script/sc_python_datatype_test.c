@@ -36,6 +36,10 @@ static void print_hash( scDataTypeHash_t *hash, int tab );
 static void print_array( scDataTypeArray_t *array, int tab );
 static void print_namespace( scNamespace_t *hash, int tab );
 
+int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scDataTypeValue_t *out){
+  return 0;
+}
+
 // Display data tree
 
 static void print_tabs( int tab )

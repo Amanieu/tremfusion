@@ -140,7 +140,7 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
   int ret;
 
   // Check parameters type
-  while(in[narg].type != TYPE_UNDEF || func->argument[narg] != TYPE_UNDEF)
+  while(in[narg].type != TYPE_UNDEF && func->argument[narg] != TYPE_UNDEF)
   {
     // TYPE_ANYTYPE allow any type for this argument and followers, always match
     if(func->argument[narg] == TYPE_ANY)
@@ -176,7 +176,7 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
     return ret;
 
   // Check return value type
-  if(out->type != func->return_type && func->return_type != TYPE_ANY)
+  if( out && out->type != func->return_type && func->return_type != TYPE_ANY)
     SC_EXEC_ERROR(
         va("error running function : return value not match (waiting for %s but having %s", 
           SC_DataTypeToString(func->return_type),

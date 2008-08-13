@@ -73,7 +73,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
 
   class->destructor.gc.count = 0;
   class->destructor.langage = LANGAGE_C;
-  class->destructor.argument[0] = TYPE_CLASS;
+  class->destructor.argument[0] = TYPE_OBJECT;
   class->destructor.argument[1] = TYPE_UNDEF;
   class->destructor.return_type = TYPE_UNDEF;
   class->destructor.data.ref = def->destructor;
@@ -197,19 +197,14 @@ int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value
       value->data.boolean = *(qboolean *)( b + field->ofs );
       break;
     case TYPE_INTEGER:
-      value->type = TYPE_INTEGER;
-      value->data.integer = (long)*(int *)( b + field->ofs );
+      SC_BuildValue(value, "i", (long)*(int *)( b + field->ofs ));
       break;
     case TYPE_FLOAT:
       value->type = TYPE_FLOAT;
       value->data.floating = *(float *)( b + field->ofs );
       break;
     case TYPE_STRING:
-      value->type = TYPE_STRING;
-      if( *(char **)( b + field->ofs ) )
-        value->data.string = SC_StringNewFromChar(*(char **)( b + field->ofs ) );
-      else
-        value->data.string = SC_StringNewFromChar("");
+      SC_BuildValue(value, "s", *(char **)( b + field->ofs ));
       break;
     default:
       // Field type invalid
@@ -217,3 +212,191 @@ int SC_Field_Get( scObject_t *object, scField_t *field, scDataTypeValue_t *value
   }
   return 1;
 }
+
+/* Helper for mkvalue() to scan the length of a format */
+
+static int
+countformat(const char *format, int endchar)
+{
+  int count = 0;
+  int level = 0;
+  while (level > 0 || *format != endchar) {
+    switch (*format) {
+    case '\0':
+      /* Premature end */
+      //TODO: ERROR
+      return -1;
+    case '(':
+    case '[':
+    case '{':
+      if (level == 0)
+        count++;
+      level++;
+      break;
+    case ')':
+    case ']':
+    case '}':
+      level--;
+      break;
+    case '#':
+    case '&':
+    case ',':
+    case ':':
+    case ' ':
+    case '\t':
+      break;
+    default:
+      if (level == 0)
+        count++;
+    }
+    format++;
+  }
+  return count;
+}
+
+static int do_mkvalue(scDataTypeValue_t *val, const char **p_format, va_list *p_va, int flags)
+{
+  for (;;) {
+    switch (*(*p_format)++) {
+//    case '(':
+//      return do_mktuple(p_format, p_va, ')',
+//            countformat(*p_format, ')'), flags);
+//
+//    case '[':
+//      return do_mklist(p_format, p_va, ']',
+//           countformat(*p_format, ']'), flags);
+//
+//    case '{':
+//      return do_mkdict(p_format, p_va, '}',
+//           countformat(*p_format, '}'), flags);
+//
+    case 'b': // Convert a plain C char to a script integer
+    case 'B': // Convert a C unsigned char to a script integer
+    case 'h': // Convert a plain C short int to a script integer
+    case 'i': // Convert a plain C int to a script integer
+      val->type = TYPE_INTEGER;
+      val->data.integer = (long)va_arg(*p_va, int);
+      return 0;
+    case 'l': // Convert a C long int to a script integer
+      val->type = TYPE_INTEGER;
+      val->data.integer = (long)va_arg(*p_va, long);
+      return 0;
+    case 'H': // Convert a C unsigned short int to a script integer
+      val->type = TYPE_INTEGER;
+      val->data.integer = (long)va_arg(*p_va, unsigned int);
+      return 0;
+    case 'f': // Convert a C float to a script float
+      val->type = TYPE_FLOAT;
+      val->data.floating = (float)va_arg(*p_va, double);
+      return 0;
+
+//    case 'c':
+//    {
+//      char p[1];
+//      p[0] = (char)va_arg(*p_va, int);
+//      return PyString_FromStringAndSize(p, 1);
+//    }
+
+    case 's':
+    case 'z':
+    {
+      scDataTypeString_t *v;
+      char *str = va_arg(*p_va, char *);
+      int n;
+      if (**p_format == '#') {
+        ++*p_format;
+          n = va_arg(*p_va, int);
+      }
+      else
+        n = -1;
+      if (str == NULL) {
+        val->type = TYPE_UNDEF;
+        return 0;
+      }
+      else {
+        if (n < 0) {
+          size_t m = strlen(str);
+          n = (int)m;
+        }
+        v = SC_StringNewFromCharAndSize(str, n);
+      }
+      val->type = TYPE_STRING;
+      val->data.string = v;
+      return 0;
+    }
+//
+//    case 'N':
+//    case 'S':
+//    case 'O':
+//    if (**p_format == '&') {
+//      typedef int (*converter)(scDataTypeValue_t*, void *);
+//      converter func = va_arg(*p_va, converter);
+//      void *arg = va_arg(*p_va, void *);
+//      ++*p_format;
+//      return (*func)(val, arg);
+//    }
+//    else {
+//      PyObject *v;
+//      v = va_arg(*p_va, scDataTypeValue_t *);
+//      if (v != NULL) {
+//        if (*(*p_format - 1) != 'N')
+//          SC_ValueGCInc(v);
+//      }
+//      return v;
+//    }
+
+    case ':':
+    case ',':
+    case ' ':
+    case '\t':
+      break;
+
+    default:
+      //TODO: ERROR
+//        "bad format char passed to SC_BuildValue");
+      return -1;
+
+    }
+  }
+}
+
+static int va_build_value(scDataTypeValue_t *val, const char *format, va_list va, int flags)
+{
+  const char *f = format;
+  int n = countformat(f, '\0');
+  va_list lva;
+
+#ifdef VA_LIST_IS_ARRAY
+  memcpy(lva, va, sizeof(va_list));
+#else
+#ifdef __va_copy
+  __va_copy(lva, va);
+#else
+  lva = va;
+#endif
+#endif
+
+  if (n < 0)
+    return -1;
+  if (n == 0) {
+    val->type = TYPE_UNDEF;
+    return 0;
+  }
+  if (n == 1)
+    return do_mkvalue(val, &f, &lva, flags);
+//  return do_mktuple(&f, &lva, '\0', n, flags);
+  else
+    val->type = TYPE_UNDEF;
+  return 0;
+}
+
+int SC_BuildValue(scDataTypeValue_t *val, const char *format, ...)
+{
+  va_list va;
+  int retval;
+  va_start(va, format);
+  retval = va_build_value(val, format, va, 0);
+  va_end(va);
+  return retval;
+}
+
