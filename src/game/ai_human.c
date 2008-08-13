@@ -670,7 +670,7 @@ qboolean HBotEquipOK(bot_state_t* bs){
   int weap = bs->ent->client->ps.weapon;
   float attack_skill = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_ATTACK_SKILL, 0, 1);
   if(!G_FindBuildable(BA_H_ARMOURY)) return qtrue; //No arm so cant buy more ammo
-  if(bs->buygun_time > level.time - TIME_BETWEENBUYINGAMMO) return qtrue; // Prevent unneeded looping
+  if(bs->buygun_time > FloatTime() - TIME_BETWEENBUYINGAMMO) return qtrue; // Prevent unneeded looping
   BotAddInfo(bs, "Value of Bots Equipment:", va("%d", BG_GetValueOfPlayer( &bs->cur_ps )-400 ) );
   BotAddInfo(bs, "bs->cur_ps.persistant[ PERS_CREDIT ]", va("%d", bs->cur_ps.persistant[ PERS_CREDIT ] ) );
   if(G_BuildableRange( bs->cur_ps.origin, 1000, BA_H_ARMOURY )){
