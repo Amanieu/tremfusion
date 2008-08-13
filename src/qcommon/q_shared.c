@@ -1054,11 +1054,11 @@ varargs versions of all text functions.
 */
 char	* QDECL va( char *format, ... ) {
 	va_list		argptr;
-	static char string[2][32000]; // in case va is called by nested functions
+	static char string[8][32000]; // in case va is called by nested functions
 	static int	index = 0;
 	char		*buf;
 
-	buf = string[index & 1];
+	buf = string[index & 7];
 	index++;
 
 	va_start (argptr, format);
