@@ -41,7 +41,7 @@ static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
 {
   while(in->type != TYPE_UNDEF)
   {
-    G_Printf(SC_StringToChar(in->data.string));
+    Com_Printf(SC_StringToChar(in->data.string));
     in++;
   }
   out->type = TYPE_UNDEF;

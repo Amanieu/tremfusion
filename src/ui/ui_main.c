@@ -100,6 +100,11 @@ vmCvar_t  ui_winner;
 
 vmCvar_t  ui_emoticons;
 
+vmCvar_t  sc_python;
+vmCvar_t  py_initialized;
+vmCvar_t  sc_lua;
+vmCvar_t  lua_initialized;
+
 static cvarTable_t    cvarTable[ ] =
 {
   { &ui_browserShowFull, "ui_browserShowFull", "1", CVAR_ARCHIVE },
@@ -123,6 +128,11 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_textWrapCache, "ui_textWrapCache", "1", CVAR_ARCHIVE },
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
   { &ui_emoticons, "ui_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
+  
+  { &sc_python,       "sc_python",       "1", CVAR_LATCH },
+  { &py_initialized,  "py_initialized",  "0", CVAR_ROM },
+  { &sc_lua,          "sc_lua",          "1", CVAR_LATCH },
+  { &lua_initialized, "lua_initialized", "0", CVAR_ROM },
 };
 
 static int    cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -1139,6 +1149,7 @@ UI_Shutdown
 */
 void UI_Shutdown( void )
 {
+  UI_ScriptShutdown();
   trap_LAN_SaveCachedServers();
 }
 
@@ -3893,6 +3904,8 @@ void UI_Init( qboolean inGameLoad )
 
   UI_RegisterCvars();
   UI_InitMemory();
+  
+  UI_ScriptInit();
 
   // cache redundant calulations
   trap_GetGlconfig( &uiInfo.uiDC.glconfig );

@@ -291,7 +291,7 @@ void SC_Python_Init( void )
 {
 //  scDataTypeValue_t *value;
   
-  G_Printf("------- Game Python Initialization -------\n");
+  Com_Printf("Python initializing... ");
   Py_Initialize();
   // Make python threads work at all
   PyEval_InitThreads( );
@@ -312,7 +312,7 @@ void SC_Python_Init( void )
 //  if (PyType_Ready(&PyScObject_Type) < 0)
 //    return;
 //  Py_INCREF(&EntityType);
-  G_Printf("-----------------------------------\n");
+  Com_Printf("done\n");
 }
 
 /*
@@ -322,13 +322,13 @@ SC_Python_Shutdown
 */
 void SC_Python_Shutdown( void )
 {
-  G_Printf("------- Game Python Finalization -------\n");
+  Com_Printf("Python shutting down... ");
   Py_DECREF( mainModule );
   Py_DECREF( mainDict );
 
   trap_Cvar_Set( "py_initialized", "0" );
   Py_Finalize();
-  G_Printf("-----------------------------------\n");
+  Com_Printf("done\n");
 }
 
 static void update_module( scDataTypeString_t *module, scDataTypeValue_t *value )

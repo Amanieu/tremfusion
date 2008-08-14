@@ -1063,6 +1063,13 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		re.RemapShader( VMA(1), VMA(2), VMA(3) );
 		return 0;
 
+	case UI_ADD_COMMAND:
+    Cmd_AddCommand( VMA(1), VMA(2) );
+    return 0;
+  case UI_REMOVE_COMMAND:
+    Cmd_RemoveCommand( VMA(1) );
+    return 0;
+		
 	default:
 		Com_Error( ERR_DROP, "Bad UI system trap: %ld", (long int) args[0] );
 

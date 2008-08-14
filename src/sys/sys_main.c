@@ -367,7 +367,7 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 	libHandle = Sys_LoadLibrary(fn);
 
 	if(!libHandle) {
-		Com_DPrintf( "Sys_LoadDll(%s) failed:\n\"%s\"\n", fn, Sys_LibraryError() );
+		Com_Printf( "Sys_LoadDll(%s) failed:\n\"%s\"\n", fn, Sys_LibraryError() );
 		return NULL;
 	}
 

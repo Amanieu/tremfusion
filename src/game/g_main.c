@@ -669,6 +669,20 @@ static void G_ClearVotes( void )
 }
 
 /*
+================
+G_ShutdownScript
+
+Shutdown scripting system and unload libraries
+================
+*/
+void G_ShutdownScript( void )
+{
+  Com_Printf("------- Game Scripting System Shutdown -------\n");
+  SC_Shutdown( );
+  Com_Printf("-----------------------------------\n");
+}
+
+/*
 =================
 G_ShutdownGame
 =================
@@ -695,7 +709,7 @@ void G_ShutdownGame( int restart )
   G_admin_cleanup( );
   G_admin_namelog_cleanup( );
 
-  SC_Shutdown( );
+  G_ShutdownScript( );
   G_SVCommandsShutdown();
 
   level.restarted = qfalse;
@@ -2459,11 +2473,14 @@ G_InitScript
 Initialize scripting system and load libraries
 ================
 */
+//TODO!: Move to sc_game.c
 void G_InitScript( void )
 {
+  Com_Printf("------- Game Scripting System Initializing -------\n");
   SC_Init();
   SC_game_init();
   SC_LoadLangages();
   SC_AutoLoad();
+  Com_Printf("-----------------------------------\n");
 }
 

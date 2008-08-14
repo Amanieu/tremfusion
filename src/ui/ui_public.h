@@ -136,7 +136,10 @@ typedef enum
   UI_ATAN2,
   UI_SQRT,
   UI_FLOOR,
-  UI_CEIL
+  UI_CEIL,
+  
+  UI_ADD_COMMAND,
+  UI_REMOVE_COMMAND,
 }
 uiImport_t;
 

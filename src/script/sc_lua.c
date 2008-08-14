@@ -1154,6 +1154,7 @@ static void loadconstants(lua_State *L)
 
 void SC_Lua_Init( void )
 {
+  Com_Printf("Lua initializing... ");
   scDataTypeValue_t value;
   lua_State *L = lua_open();
 
@@ -1190,6 +1191,7 @@ void SC_Lua_Init( void )
   lua_setmetatable(L, LUA_GLOBALSINDEX);
 
   g_luaState = L;
+  Com_Printf("done\n");
 }
 
 /*
@@ -1199,7 +1201,7 @@ SC_Lua_Shutdown
 */
 void SC_Lua_Shutdown( void )
 {
-  Com_Printf("------- Game Lua Finalization -------\n");
+  Com_Printf("Lua shutting down... ");
 
   if(g_luaState)
   {
@@ -1207,7 +1209,7 @@ void SC_Lua_Shutdown( void )
     g_luaState = NULL;
   }
 
-  Com_Printf("-----------------------------------\n");
+  Com_Printf("done\n");
 }
 
 /*

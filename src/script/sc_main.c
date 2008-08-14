@@ -22,7 +22,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 // sc_main.c
 
-#include "../game/g_local.h"
 #include "../qcommon/q_shared.h"
 
 #include "sc_public.h"
@@ -207,13 +206,14 @@ int SC_RunScript( scLangage_t langage, const char *filename )
 
   return -1;
 }
-
+//TODO: Move to sc_game.c
+#ifdef GAME
 int SC_CallHooks( const char *path, gentity_t *entity )
 {
   // TODO: implement function
   return 1;
 }
-
+#endif
 scLangage_t SC_LangageFromFilename(const char* filename)
 {
   const char *ext = NULL;

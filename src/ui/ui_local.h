@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/keycodes.h"
 #include "../game/bg_public.h"
 #include "ui_shared.h"
-
+#include "ui_script.h"
 //
 // ui_main.c
 //
@@ -301,6 +301,14 @@ void      UI_DrawHandlePic( float x, float y, float w, float h, qhandle_t hShade
 void      UI_FillRect( float x, float y, float width, float height, const float *color );
 
 //
+// script cvars
+//
+extern  vmCvar_t  sc_python;
+extern  vmCvar_t  py_initialized;
+extern  vmCvar_t  sc_lua;
+extern  vmCvar_t  lua_initialized;
+
+//
 // ui_syscalls.c
 //
 void      trap_Print( const char *string );
@@ -386,5 +394,8 @@ void      trap_SetPbClStatus( int status );
 
 int        trap_CrosshairPlayer( void );
 int        trap_LastAttacker( void );
+
+void     trap_AddCommand( const char *cmd_name, void (*function) (void));
+void     trap_RemoveCommand( const char *cmd_name);
 
 #endif

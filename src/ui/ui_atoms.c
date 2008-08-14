@@ -365,6 +365,8 @@ qboolean UI_ConsoleCommand( int realTime )
     }
     return qtrue;    
   }
+  
+  
 
   return qfalse;
 }
