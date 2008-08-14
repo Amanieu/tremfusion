@@ -1140,6 +1140,7 @@ void UI_Refresh( int realtime )
     UI_DrawHandlePic( uiInfo.uiDC.cursorx - ( 16.0f * uiInfo.uiDC.aspectScale ), uiInfo.uiDC.cursory - 16.0f,
                       32.0f * uiInfo.uiDC.aspectScale, 32.0f, uiInfo.uiDC.Assets.cursor );
   }
+  SC_UIRefresh();
 }
 
 /*

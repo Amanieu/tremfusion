@@ -51,7 +51,9 @@ void QDECL Com_Printf( const char *msg, ... )
   Q_vsnprintf( text, sizeof( text ), msg, argptr );
   va_end( argptr );
 
-  trap_Print( va( "%s", text ) );
+  //NOTE: Champion: this was trap_Print( va( "%s", text ));
+  // but that caused some weird things to happen
+  trap_Print(  text );
 }
 
 

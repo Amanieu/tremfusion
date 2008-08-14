@@ -1067,7 +1067,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 							strstr(filename, "levelshots") == NULL &&
 							Q_stricmp(filename + l - 4, ".bot") != 0 &&
 							Q_stricmp(filename + l - 6, ".arena") != 0 &&
-							Q_stricmp(filename + l - 5, ".menu") != 0) {
+							Q_stricmp(filename + l - 5, ".menu") != 0 &&
+							Q_stricmp(filename + l - 3, ".py") != 0 &&
+							Q_stricmp(filename + l - 4, ".lua") != 0){
 							pak->referenced |= FS_GENERAL_REF;
 						}
 					}
@@ -1130,7 +1132,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 					&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 					&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
-					&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
+					&& Q_stricmp( filename + l - 4, ".dat" )   // for journal files
+					&& Q_stricmp( filename + l - 3, ".py" ) // for python script files
+					&& Q_stricmp( filename + l - 4, ".lua" )) { // for lua script files
 					continue;
 				}
 			}
@@ -1147,7 +1151,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
-				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
+				&& Q_stricmp( filename + l - 4, ".dat" ) // for journal files
+				&& Q_stricmp( filename + l - 3, ".py" ) // for python script files
+        && Q_stricmp( filename + l - 4, ".lua" )) { // for lua script files
 				fs_unpureReferenced = qtrue;
 			}
 
