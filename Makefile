@@ -1670,9 +1670,8 @@ endif
 
 ifeq ($(USE_PYTHON),1)
   GOBJ += \
-    $(B)/base/python/py_entity.o \
-    $(B)/base/python/py_function.o \
-    $(B)/base/python/py_object.o \
+    $(B)/base/game/sc_python_func.o \
+    $(B)/base/game/sc_python_object.o \
     $(B)/base/game/sc_python.o
 endif
 
@@ -1751,8 +1750,8 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
   endif
   ifeq ($(USE_PYTHON),1)
     UIOBJ += \
-      $(B)/base/python/py_function.o \
-      $(B)/base/python/py_object.o \
+      $(B)/base/ui/sc_python_func.o \
+      $(B)/base/ui/sc_python_object.o \
       $(B)/base/ui/sc_python.o
   endif
 endif
