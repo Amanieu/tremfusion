@@ -1026,9 +1026,6 @@ makedirs:
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
 	@if [ ! -d $(B)/base/python ];then $(MKDIR) $(B)/base/python;fi
 	@if [ ! -d $(B)/base/lua ];then $(MKDIR) $(B)/base/lua;fi
-	@if [ ! -d $(B)/base/script_ui ];then $(MKDIR) $(B)/base/script_ui;fi
-	@if [ ! -d $(B)/base/script_game ];then $(MKDIR) $(B)/base/script_game;fi
-	@if [ ! -d $(B)/base/script_cgame ];then $(MKDIR) $(B)/base/script_cgame;fi
 	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
 	@if [ ! -d $(B)/tools ];then $(MKDIR) $(B)/tools;fi
 	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
@@ -1619,7 +1616,7 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
-  $(B)/base/game/sc_game.o \
+  $(B)/base/game/g_script.o \
   \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o \
@@ -1709,48 +1706,48 @@ UIVMOBJ = $(UIOBJ_:%.o=%.asm)
 
 ifeq ($(ENABLE_SCRIPT_UI),1)
   UIOBJ +=  \
-    $(B)/base/script_ui/sc_datatype.o \
-    $(B)/base/script_ui/sc_main.o \
+    $(B)/base/ui/sc_datatype.o \
+    $(B)/base/ui/sc_main.o \
     $(B)/base/script_ui/sc_c.o \
-    $(B)/base/script_ui/sc_common.o \
-    $(B)/base/script_ui/sc_event.o \
-    $(B)/base/script_ui/sc_utils.o \
+    $(B)/base/ui/sc_common.o \
+    $(B)/base/ui/sc_event.o \
+    $(B)/base/ui/sc_utils.o \
     $(B)/base/ui/ui_script.o \
     $(B)/base/game/bg_alloc.o 
   ifeq ($(USE_LUA),1)
-  UIOBJ +=  \
-    $(B)/base/lua/lapi.o \
-    $(B)/base/lua/lauxlib.o \
-    $(B)/base/lua/lbaselib.o \
-    $(B)/base/lua/lcode.o \
-    $(B)/base/lua/ldblib.o \
-    $(B)/base/lua/ldebug.o \
-    $(B)/base/lua/ldo.o \
-    $(B)/base/lua/ldump.o \
-    $(B)/base/lua/lfunc.o \
-    $(B)/base/lua/lgc.o \
-    $(B)/base/lua/linit.o \
-    $(B)/base/lua/liolib.o \
-    $(B)/base/lua/llex.o \
-    $(B)/base/lua/lmathlib.o \
-    $(B)/base/lua/lmem.o \
-    $(B)/base/lua/loadlib.o \
-    $(B)/base/lua/lobject.o \
-    $(B)/base/lua/lopcodes.o \
-    $(B)/base/lua/loslib.o \
-    $(B)/base/lua/lparser.o \
-    $(B)/base/lua/lstate.o \
-    $(B)/base/lua/lstring.o \
-    $(B)/base/lua/lstrlib.o \
-    $(B)/base/lua/ltable.o \
-    $(B)/base/lua/ltablib.o \
-    $(B)/base/lua/ltm.o \
-    $(B)/base/lua/lua.o \
-    $(B)/base/lua/lundump.o \
-    $(B)/base/lua/lvm.o \
-    $(B)/base/lua/lzio.o \
-    $(B)/base/lua/print.o \
-    $(B)/base/script_ui/sc_lua.o
+    UIOBJ +=  \
+      $(B)/base/lua/lapi.o \
+      $(B)/base/lua/lauxlib.o \
+      $(B)/base/lua/lbaselib.o \
+      $(B)/base/lua/lcode.o \
+      $(B)/base/lua/ldblib.o \
+      $(B)/base/lua/ldebug.o \
+      $(B)/base/lua/ldo.o \
+      $(B)/base/lua/ldump.o \
+      $(B)/base/lua/lfunc.o \
+      $(B)/base/lua/lgc.o \
+      $(B)/base/lua/linit.o \
+      $(B)/base/lua/liolib.o \
+      $(B)/base/lua/llex.o \
+      $(B)/base/lua/lmathlib.o \
+      $(B)/base/lua/lmem.o \
+      $(B)/base/lua/loadlib.o \
+      $(B)/base/lua/lobject.o \
+      $(B)/base/lua/lopcodes.o \
+      $(B)/base/lua/loslib.o \
+      $(B)/base/lua/lparser.o \
+      $(B)/base/lua/lstate.o \
+      $(B)/base/lua/lstring.o \
+      $(B)/base/lua/lstrlib.o \
+      $(B)/base/lua/ltable.o \
+      $(B)/base/lua/ltablib.o \
+      $(B)/base/lua/ltm.o \
+      $(B)/base/lua/lua.o \
+      $(B)/base/lua/lundump.o \
+      $(B)/base/lua/lvm.o \
+      $(B)/base/lua/lzio.o \
+      $(B)/base/lua/print.o \
+      $(B)/base/script_ui/sc_lua.o
   endif
   ifeq ($(USE_PYTHON),1)
     UIOBJ += \
@@ -1867,17 +1864,29 @@ $(B)/base/cgame/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/cgame/%.o: $(CGDIR)/%.c
 	$(DO_CGAME_CC)
 
+$(B)/base/cgame/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_CGAME_CC)
+
 $(B)/base/cgame/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
 $(B)/base/cgame/%.asm: $(CGDIR)/%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
+$(B)/base/cgame/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
+	$(DO_CGAME_Q3LCC)
+
 
 $(B)/base/game/%.o: $(GDIR)/%.c
 	$(DO_GAME_CC)
 
+$(B)/base/game/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_GAME_CC)
+
 $(B)/base/game/%.asm: $(GDIR)/%.c $(Q3LCC)
+	$(DO_GAME_Q3LCC)
+
+$(B)/base/game/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
 	$(DO_GAME_Q3LCC)
 
 
@@ -1887,29 +1896,21 @@ $(B)/base/ui/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/ui/%.o: $(UIDIR)/%.c
 	$(DO_UI_CC)
 
+$(B)/base/ui/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_UI_CC)
+
 $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
 $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
+$(B)/base/ui/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
+	$(DO_ui_Q3LCC)
+
 $(B)/base/script_game/%.o: $(SCRIPTDIR)/%.c
 	$(DO_GAME_CC)
 
-$(B)/base/script_game/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
-	$(DO_GAME_Q3LCC)
-	
-$(B)/base/script_cgame/%.o: $(SCRIPTDIR)/%.c
-	$(DO_SHLIB_CC)
-
-$(B)/base/script_cgame/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
-	$(DO_Q3LCC)
-	
-$(B)/base/script_ui/%.o: $(SCRIPTDIR)/%.c
-	$(DO_UI_CC)
-
-$(B)/base/script_ui/%.asm: $(SCRIPTDIR)/%.c $(Q3LCC)
-	$(DO_UI_Q3LCC)
 
 $(B)/base/python/%.o: $(PYTHONDIR)/%.c
 	$(DO_SHLIB_CC)
@@ -1917,11 +1918,13 @@ $(B)/base/python/%.o: $(PYTHONDIR)/%.c
 $(B)/base/python/%.asm: $(PYTHONDIR)/%.c $(Q3LCC)
 	$(DO_Q3LCC)
 
+
 $(B)/base/lua/%.o: $(LUADIR)/%.c
 	$(DO_SHLIB_CC)
 
 $(B)/base/lua/%.asm: $(LUADIC)/%.c $(Q3LCC)
 	$(DO_Q3LCC)
+
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c
 	$(DO_SHLIB_CC)

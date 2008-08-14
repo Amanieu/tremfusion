@@ -933,6 +933,11 @@ int  G_TimeTilSuddenDeath( void );
 void G_InitScript( void );
 
 //
+// g_script.c
+//
+void G_script_init( void );
+
+//
 // g_client.c
 //
 char *ClientConnect( int clientNum, qboolean firstTime );

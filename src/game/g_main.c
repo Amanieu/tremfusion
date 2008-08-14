@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "sc_local.h"
 #include "g_local.h"
 
 level_locals_t  level;
@@ -2478,7 +2477,7 @@ void G_InitScript( void )
 {
   Com_Printf("------- Game Scripting System Initializing -------\n");
   SC_Init();
-  SC_game_init();
+  G_script_init();
   SC_LoadLangages();
   SC_AutoLoad();
   Com_Printf("-----------------------------------\n");

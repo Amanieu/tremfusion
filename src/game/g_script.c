@@ -197,7 +197,7 @@ static scConstant_t constants[] = {
   { "" }
 };
 
-void SC_game_init( void )
+void G_script_init( void )
 {
   SC_AddLibrary( "game", game_lib );
   SC_AddClass( "game", &entity_def );
