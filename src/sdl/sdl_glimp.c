@@ -264,10 +264,10 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		// by assuming (relatively safely) that it is set at or close to
 		// the display's native aspect ratio
 		glConfig.displayAspect = (float)videoInfo->current_w / (float)videoInfo->current_h;
-#endif
 
 		ri.Printf( PRINT_DEVELOPER, "Estimated display aspect: %.3f\n", glConfig.displayAspect );
 	}
+#endif
 
 	if( !failSafe )
 	{
