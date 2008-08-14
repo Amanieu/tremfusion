@@ -175,6 +175,9 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
   // On error, return now
   if(ret != 0)
     return ret;
+  
+  if(func->langage == LANGAGE_PYTHON) // ingnore return value type checking
+    return 0;
 
   // Check return value type
   if( out && out->type != func->return_type && func->return_type != TYPE_ANY)

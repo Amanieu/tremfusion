@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 int               current_draw_func_index=0;
 scDataTypeArray_t draw_func_array;
+scDataTypeArray_t draw_func_arg_array;
 
 static void UI_Script_f(void);
 static void SC_UIModuleInit( void );
@@ -83,8 +84,11 @@ void SC_UIRefresh ( void )
     scDataTypeValue_t ret;
     scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
     if(draw_func_array.data[i].type != TYPE_FUNCTION) continue;
-    args[0].type = TYPE_UNDEF;
+    args[0].data.function->argument[0] = TYPE_ANY;
+    args[0].data.function->return_type = TYPE_ANY;
+    SC_ArrayGet(&draw_func_arg_array, i, &args[0]);
     SC_RunFunction( draw_func_array.data[i].data.function, args, &ret );
+    SC_ArraySet( &draw_func_arg_array, i, &ret);
   }
 }
 
@@ -94,6 +98,7 @@ void SC_UIRefresh ( void )
 static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
   SC_ArraySet( &draw_func_array, current_draw_func_index, &in[0]);
+  SC_ArraySet( &draw_func_arg_array, current_draw_func_index, &in[1]);
   SC_BuildValue(out, "i", current_draw_func_index);
   current_draw_func_index++;
   out->type = TYPE_UNDEF;
@@ -103,18 +108,20 @@ static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
   int x, y;
+  float scale;
   const char *text;
-  x = in[0].data.integer;
-  y = in[1].data.integer;
-  text = SC_StringToChar(in[2].data.string);
-  UI_Text_Paint( x, y, 0.2, g_color_table[7], text, 0, 0, ITEM_TEXTSTYLE_NORMAL);
+  x     = in[0].data.integer;
+  y     = in[1].data.integer;
+  scale = in[2].data.floating;
+  text  = SC_StringToChar(in[3].data.string);
+  UI_Text_Paint( x, y, scale, g_color_table[7], text, 0, 0, ITEM_TEXTSTYLE_NORMAL);
   out->type = TYPE_UNDEF;
   return 0;
 }
 
 static scLibFunction_t ui_lib[] = {
-  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_UNDEF }, TYPE_INTEGER, NULL },
-  { "DrawText", "", draw_text, { TYPE_INTEGER, TYPE_INTEGER, TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
+  { "DrawText", "", draw_text, { TYPE_INTEGER, TYPE_INTEGER, TYPE_FLOAT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
   { "" }
 };
 
