@@ -639,3 +639,10 @@ qboolean CL_VideoRecording( void );
 //
 void CL_WriteDemoMessage ( msg_t *msg, int headerBytes );
 
+//
+// cl_logs.c
+//
+void CL_OpenClientLog(void);
+void CL_CloseClientLog(void);
+void CL_WriteClientLog( char *text );
+void CL_WriteClientChatLog( char *text );
