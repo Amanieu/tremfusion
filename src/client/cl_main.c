@@ -109,6 +109,8 @@ cvar_t  *cl_defaultUI;
 
 cvar_t  *cl_persistantConsole;
 
+cvar_t	*cl_logs;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -3126,6 +3128,8 @@ void CL_Init( void ) {
 
 	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
 
+	cl_logs = Cvar_Get ("cl_logs", "0", CVAR_ARCHIVE);
+
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );
 
@@ -3227,6 +3231,9 @@ void CL_Init( void ) {
 	Cvar_Get( "cl_guid", "", CVAR_USERINFO | CVAR_ROM );
 	CL_UpdateGUID( NULL, 0 );
 
+	CL_OpenClientLog();
+	CL_WriteClientLog( "`~-     Client Opened     -~`\n" );
+
 	Com_Printf( "----- Client Initialization Complete -----\n" );
 }
 
@@ -3282,6 +3289,9 @@ void CL_Shutdown( void ) {
 	Cmd_RemoveCommand ("model");
 	Cmd_RemoveCommand ("video");
 	Cmd_RemoveCommand ("stopvideo");
+
+	CL_WriteClientLog( "`~-     Client Closed     -~`\n" );
+	CL_CloseClientLog();
 
 	Cvar_Set( "cl_running", "0" );
 

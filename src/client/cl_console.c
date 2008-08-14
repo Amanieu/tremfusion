@@ -572,6 +572,8 @@ void CL_ConsolePrint( char *txt ) {
 	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
 	
+	CL_WriteClientChatLog( txt );
+	
 /* auto-namelog code */
     if (( strstr(txt, "^7 connected\n") != NULL ) && !clc.demoplaying && cl_autoNamelog->integer)
 	{
