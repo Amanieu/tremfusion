@@ -38,8 +38,8 @@ void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] )
     var.data.function = SC_FunctionNew();
     var.data.function->langage = LANGAGE_C;
     memcpy( var.data.function->argument, l->argument, sizeof( var.data.function->argument ) );
-    var.data.function->return_type = lib->return_type;
-    var.data.function->data.ref = lib->ref;
+    var.data.function->return_type = l->return_type;
+    var.data.function->data.ref = l->ref;
 
     Q_strncpyz( name + nslen + 1, l->name, strlen( l->name ) + 1);
 
