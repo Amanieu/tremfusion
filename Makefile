@@ -1621,12 +1621,12 @@ GOBJ_ = \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o \
   \
-  $(B)/base/script_game/sc_datatype.o \
-  $(B)/base/script_game/sc_main.o \
-  $(B)/base/script_game/sc_c.o \
-  $(B)/base/script_game/sc_common.o \
-  $(B)/base/script_game/sc_event.o \
-  $(B)/base/script_game/sc_utils.o
+  $(B)/base/game/sc_datatype.o \
+  $(B)/base/game/sc_main.o \
+  $(B)/base/game/sc_c.o \
+  $(B)/base/game/sc_common.o \
+  $(B)/base/game/sc_event.o \
+  $(B)/base/game/sc_utils.o
   
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
@@ -1665,7 +1665,7 @@ ifeq ($(USE_LUA),1)
     $(B)/base/lua/lvm.o \
     $(B)/base/lua/lzio.o \
     $(B)/base/lua/print.o \
-    $(B)/base/script_game/sc_lua.o
+    $(B)/base/game/sc_lua.o
 endif
 
 ifeq ($(USE_PYTHON),1)
@@ -1673,7 +1673,7 @@ ifeq ($(USE_PYTHON),1)
     $(B)/base/python/py_entity.o \
     $(B)/base/python/py_function.o \
     $(B)/base/python/py_object.o \
-    $(B)/base/script_game/sc_python.o
+    $(B)/base/game/sc_python.o
 endif
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
@@ -1708,7 +1708,7 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
   UIOBJ +=  \
     $(B)/base/ui/sc_datatype.o \
     $(B)/base/ui/sc_main.o \
-    $(B)/base/script_ui/sc_c.o \
+    $(B)/base/ui/sc_c.o \
     $(B)/base/ui/sc_common.o \
     $(B)/base/ui/sc_event.o \
     $(B)/base/ui/sc_utils.o \
@@ -1747,13 +1747,13 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
       $(B)/base/lua/lvm.o \
       $(B)/base/lua/lzio.o \
       $(B)/base/lua/print.o \
-      $(B)/base/script_ui/sc_lua.o
+      $(B)/base/ui/sc_lua.o
   endif
   ifeq ($(USE_PYTHON),1)
     UIOBJ += \
       $(B)/base/python/py_function.o \
       $(B)/base/python/py_object.o \
-      $(B)/base/script_ui/sc_python.o
+      $(B)/base/ui/sc_python.o
   endif
 endif
 
@@ -1907,9 +1907,6 @@ $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 
 $(B)/base/ui/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
 	$(DO_ui_Q3LCC)
-
-$(B)/base/script_game/%.o: $(SCRIPTDIR)/%.c
-	$(DO_GAME_CC)
 
 
 $(B)/base/python/%.o: $(PYTHONDIR)/%.c
