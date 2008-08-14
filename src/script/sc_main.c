@@ -160,10 +160,12 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
 #ifdef USE_LUA
     case LANGAGE_LUA:
       ret = SC_Lua_RunFunction( func, in, out );
+      break;
 #endif
 #ifdef USE_PYTHON
     case LANGAGE_PYTHON:
       ret = SC_Python_RunFunction( func, in, out );
+      break;
 #endif
     default:
       SC_EXEC_ERROR("error running function : unknow langage");
