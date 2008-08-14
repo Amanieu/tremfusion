@@ -70,6 +70,7 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
   for( i=0; i < argcount; i++)
   {
     convert_to_value( PyTuple_GetItem( pArgs, i ), &args[i], self->function->argument[i] );
+    SC_ValueGCInc(&args[i]);
     if (self->function->argument[i] !=  TYPE_ANY && args[i].type != self->function->argument[i])
     {
       PyErr_SetNone(PyExc_TypeError);
@@ -78,6 +79,9 @@ static PyObject *Call( PyFunction* self, PyObject* pArgs, PyObject* kArgs )
   }
   args[argcount].type = TYPE_UNDEF;
   SC_RunFunction( self->function, args, &ret );
+  
+  for( i=0; i < argcount; i++) // Free args
+    SC_ValueGCDec(&args[i]);
   
   return convert_from_value(&ret);
 }
