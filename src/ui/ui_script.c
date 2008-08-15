@@ -88,7 +88,8 @@ void SC_UIRefresh ( void )
     args[0].data.function->return_type = TYPE_ANY;
     SC_ArrayGet(&draw_func_arg_array, i, &args[0]);
     SC_RunFunction( draw_func_array.data[i].data.function, args, &ret );
-    SC_ArraySet( &draw_func_arg_array, i, &ret);
+    if(args[0].type != TYPE_UNDEF && ret.type != TYPE_UNDEF)
+      SC_ArraySet( &draw_func_arg_array, i, &ret);
   }
 }
 

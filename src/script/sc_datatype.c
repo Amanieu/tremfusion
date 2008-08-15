@@ -570,8 +570,14 @@ void SC_HashClear( scDataTypeHash_t *hash )
 
 static void hashFree( scDataTypeHash_t *hash )
 {
-  // FIXME: Memory leak with keys
+  int i;
   SC_HashClear(hash);
+  for( i = 0; i < hash->buflen; i++ )
+  {
+    if(!hash->data[i].key.data) continue;
+    BG_Free(hash->data[i].key.data);
+    hash->data[i].key.data = NULL;
+  }
   BG_Free(hash->data);
   BG_Free(hash);
 }
