@@ -1173,9 +1173,22 @@ typedef enum
               // this avoids having to set eFlags and eventNum
 } entityType_t;
 
-void  *BG_Alloc( int size );
+#define BG_MEMORY_DEBUG 1
+
+#if BG_MEMORY_DEBUG
+#define BG_Alloc(x) _BG_Alloc(x, __FILE__, __LINE__)
+void  *_BG_Alloc( int size, char *file, int line );
+#define BG_Free(x) _BG_Free(x, __FILE__, __LINE__)
+void  _BG_Free( void *ptr, char *file, int line );
+#else
+#define BG_Alloc(x) _BG_Alloc(x)
+void  *_BG_Alloc( int size);
+#define BG_Free(x) _BG_Free(x)
+void  _BG_Free( void *ptr);
+void BG_MemoryDebugDump( void );
+#endif
+
 void  BG_InitMemory( void );
-void  BG_Free( void *ptr );
 void  BG_DefragmentMemory( void );
 
 void  BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result );

@@ -279,7 +279,7 @@ static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       return -1;
   }
   memcpy( data->vect, vec4, sizeof( vec4 ) );
-
+  out[0].type = TYPE_UNDEF;
   return 0;
 }
 

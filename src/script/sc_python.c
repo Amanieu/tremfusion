@@ -294,7 +294,7 @@ void SC_Python_Init( void )
   Com_Printf("Python initializing... ");
   Py_Initialize();
   // Make python threads work at all
-  PyEval_InitThreads( );
+//  PyEval_InitThreads( );
   
   trap_Cvar_Set( "py_initialized", "1" );
   trap_Cvar_Update( &py_initialized ); 
