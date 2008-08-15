@@ -215,19 +215,18 @@ void _BG_Free( void *ptr )
     Com_Error( ERR_DROP, "BG_Free: Memory corruption detected!\n" );
   }
 #endif
-  freeptr++; // Let the rest of code work normaly
   for( fmn = freeHead; fmn; fmn = fmn->next )
   {
     freeend = ((char *) fmn) + fmn->size;
     if( freeend == (char *) freeptr )
     {
       // Released block can be merged to an existing node
-
-      fmn->size += *freeptr;    // Add size of node.
+      memset( freeptr, 0xFE, allocsize );
+      fmn->size += allocsize;    // Add size of node.
       return;
     }
   }
-  memset( &freeptr[-1], 0xABADCAFE, allocsize ); // Mark memory that has been freed before
+  memset( freeptr, 0xFE, allocsize ); // Mark memory that has been freed before
   // No merging, add to head of list
   fmn = (freeMemNode_t *) freeptr;
   fmn->size = allocsize;        // Set this first to avoid corrupting *freeptr
