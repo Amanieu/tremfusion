@@ -469,12 +469,9 @@ typedef struct {
 
 // Snaps the vector to the floor value always, ignoring any weirdness from
 // snapping negative versus positive numbers
-#define Floor(f) ( (f) >= 0.f ? (int)(f) : -(int)(-(f)) )
-//#define SnapVector(v) {(v)[0]=Floor((v)[0]);(v)[1]=Floor((v)[1]);(v)[2]=Floor((v)[2]);}
-#define SnapVector(v) {\
-	(v)[0]=((v)[0] >= 0.f ? (int)((v)[0]) : -(int)(-((v)[0]))); \
-	(v)[1]=((v)[1] >= 0.f ? (int)((v)[1]) : -(int)(-((v)[1]))); \
-	(v)[2]=((v)[2] >= 0.f ? (int)((v)[2]) : -(int)(-((v)[2]))); }
+#define Floor(fl) ( (fl) >= 0.f ? (int)(fl) : -(int)(-(fl)) )
+#define SnapVector(v) {(v)[0]=Floor((v)[0]);(v)[1]=Floor((v)[1]);(v)[2]=Floor((v)[2]);}
+
 
 // just in case you do't want to use the macros
 vec_t _DotProduct( const vec3_t v1, const vec3_t v2 );
