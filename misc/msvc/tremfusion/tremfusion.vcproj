@@ -27,6 +27,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				CommandLine=""
+				Outputs=""
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -106,8 +108,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="@echo on&#x0D;&#x0A;copy ..\SDL.dll ..\release\SDL.dll"
-				Outputs="$(SolutionDir\release\SDL.dll"
+				CommandLine=""
+				Outputs=""
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -174,7 +176,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description=""
 				CommandLine=""
 			/>
 		</Configuration>
