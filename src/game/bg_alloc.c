@@ -127,7 +127,7 @@ void BG_Free( void *ptr )
 
   freeptr = ptr;
   freeptr--;
-  if( freeptr != BLOCKSIZECOOKIE )
+  if( *freeptr != BLOCKSIZECOOKIE )
     Com_Error( ERR_DROP, "BG_Alloc: Memory corruption detected!\n" );
   freeptr--;
   
