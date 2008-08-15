@@ -359,6 +359,7 @@ void Con_Grep_f (void)
 	char	buffer2[1024];
 	char	printbuf[CON_TEXTSIZE];
 	char	*search;
+	char	lastcolor;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -381,7 +382,7 @@ void Con_Grep_f (void)
 	buffer[con.linewidth] = 0;
 	search = Cmd_Argv( 1 );
 	printbuf[0] = '\0';
-	char lastcolor = 7;
+	lastcolor = 7;
 	for ( ; l <= con.current ; l++)
 	{
 		line = con.text + (l%con.totallines)*con.linewidth;
