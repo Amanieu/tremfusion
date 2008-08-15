@@ -226,6 +226,184 @@ scObject_t *SC_Vec3FromVec3_t( float *vect )
 /*
 ======================================================================
 
+Vec4
+
+======================================================================
+*/
+
+scClass_t *vec4_class;
+
+typedef struct
+{
+  qboolean sc_created; // qtrue if created from python or lua, false if created by SC_Vec4FromVec4_t
+                       // Prevents call of BG_Free on a vec3_t 
+  float   *vect;       
+}sc_vec4_t;
+
+typedef enum 
+{
+  VEC4_R,
+  VEC4_G,
+  VEC4_B,
+  VEC4_A,
+} vec4_closures;
+
+static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  int settype = (int)closure;
+  sc_vec4_t *data;
+  vec4_t vec4;
+  
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
+    
+  memcpy( vec4, data->vect, sizeof( vec4 ) );
+  
+  switch (settype)
+  {
+    case VEC4_R:
+      vec4[0] = in[1].data.floating ;
+      break;
+    case VEC4_G:
+      vec4[1] = in[1].data.floating ;
+      break;
+    case VEC4_B:
+      vec4[2] = in[1].data.floating ;
+      break;
+    case VEC4_A:
+      vec4[3] = in[1].data.floating ;
+      break;
+    default:
+      return -1;
+  }
+  memcpy( data->vect, vec4, sizeof( vec4 ) );
+
+  return 0;
+}
+
+static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  int gettype = (int)closure;
+  sc_vec3_t *data;
+  vec4_t vec4;
+  
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
+  
+  memcpy( vec4, data->vect, sizeof( vec4 ) );
+  out[0].type = TYPE_FLOAT;
+  
+  switch (gettype)
+  {
+    case VEC4_R:
+      out[0].data.floating = vec4[0];
+      break;
+    case VEC4_G:
+      out[0].data.floating = vec4[1];
+      break;
+    case VEC4_B:
+      out[0].data.floating = vec4[2];
+      break;
+    case VEC4_A:
+      out[0].data.floating = vec4[3];
+      break;
+    default:
+      out[0].type = TYPE_UNDEF;
+      break;
+      // Error
+  }
+
+  return 0;
+}
+
+static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  sc_vec4_t *data;
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+
+  self->data.type = TYPE_USERDATA;
+  data = BG_Alloc(sizeof(sc_vec4_t));
+  data->sc_created = qtrue;
+  data->vect = BG_Alloc(sizeof(float) * 4);
+  memset(data->vect, 0x00, sizeof(float) * 4);
+  self->data.data.userdata = data;
+
+  return 0;
+}
+
+static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  sc_vec4_t *data;
+  
+  self = in[0].data.object;
+  data =  self->data.data.userdata;
+
+  if(data->sc_created)
+    BG_Free(data->vect);
+  
+  BG_Free(data);
+
+  return 0;
+}
+
+static scLibObjectMember_t vec4_members[] = {
+    { "r", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_R },
+    { "g", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_G },
+    { "b", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_B },
+    { "a", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_A },
+    { "" },
+};
+
+static scLibObjectMethod_t vec4_methods[] = {
+    { "" },
+};
+
+static scLibObjectDef_t vec4_def = { 
+  "Vec4", "",
+  vec4_constructor, { TYPE_UNDEF },
+  vec4_destructor,
+  vec4_members, 
+  vec4_methods, 
+  NULL,
+  NULL
+};
+
+scObject_t *SC_Vec4FromVec4_t( float *vect )
+{
+  scObject_t *instance;
+  sc_vec4_t *data;
+  instance = SC_ObjectNew(vec4_class);
+
+  instance->data.type = TYPE_USERDATA;
+  data = BG_Alloc(sizeof(sc_vec4_t));
+  data->sc_created = qfalse;
+  data->vect = vect;
+  instance->data.data.userdata = data;
+
+  return instance;
+}
+
+vec4_t *SC_Vec4t_from_Vec4( scObject_t *vectobject )
+{
+  sc_vec4_t *data;
+  
+  data = vectobject->data.data.userdata;
+
+  return data->vect;
+}
+
+/*
+======================================================================
+
 Modules
 
 ======================================================================
@@ -653,6 +831,7 @@ void SC_Common_Init( void )
 {
   SC_AddLibrary( "common", common_lib );
   vec3_class = SC_AddClass( "common", &vec3_def);
+  vec4_class = SC_AddClass( "common", &vec4_def);
   module_class = SC_AddClass("script", &module_def);
 }
 

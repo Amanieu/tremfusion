@@ -25,12 +25,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "bg_public.h"
 
 #ifdef GAME
-# define  POOLSIZE ( 1024 * 1024 )
+# define  POOLSIZE ( 1024 * 1024 * 25)
 #else
 # define  POOLSIZE ( 256 * 1024 )
 #endif
 
 #define  FREEMEMCOOKIE  ((int)0xDEADBE3F)  // Any unlikely to be used value
+#define  BLOCKSIZECOOKIE  ((int)0xCAF3BAB3)  // Any unlikely to be used value
 #define  ROUNDBITS    31UL          // Round to 32 bytes
 
 typedef struct freeMemNode_s
@@ -54,7 +55,7 @@ void *BG_Alloc( int size )
   char *endptr;
   int *ptr;
 
-  allocsize = ( size + sizeof(int) + ROUNDBITS ) & ~ROUNDBITS;    // Round to 32-byte boundary
+  allocsize = ( size + (sizeof(int) * 2) + ROUNDBITS ) & ~ROUNDBITS;    // Round to 32-byte boundary
   ptr = NULL;
 
   smallest = NULL;
@@ -107,6 +108,8 @@ void *BG_Alloc( int size )
     freeMem -= allocsize;
     memset( ptr, 0, allocsize );
     *ptr++ = allocsize;        // Store a copy of size for deallocation
+    *ptr++ = BLOCKSIZECOOKIE;
+    Com_Printf("BG_Alloc returning pointer %p\n",(void *) ptr);
     return( (void *) ptr );
   }
 
@@ -117,16 +120,18 @@ void *BG_Alloc( int size )
 void BG_Free( void *ptr )
 {
   // Release allocated memory, add it to the free list.
-
+  Com_Printf("BG_Free called on pointer  %p\n", ptr);
   freeMemNode_t *fmn;
   char *freeend;
   int *freeptr;
 
   freeptr = ptr;
   freeptr--;
-
+  if( freeptr != BLOCKSIZECOOKIE )
+    Com_Error( ERR_DROP, "BG_Alloc: Memory corruption detected!\n" );
+  freeptr--;
+  
   freeMem += *freeptr;
-
   for( fmn = freeHead; fmn; fmn = fmn->next )
   {
     freeend = ((char *) fmn) + fmn->size;
@@ -159,6 +164,8 @@ void BG_InitMemory( void )
   freeHead->next = NULL;
   freeHead->prev = NULL;
   freeMem = sizeof( memoryPool );
+  Com_Printf("BG_InitMemory: freeMem = %d\n", freeMem);
+  Com_Printf("BG_InitMemory: FREEMEMCOOKIE = %d\n", FREEMEMCOOKIE);
 }
 
 void BG_DefragmentMemory( void )
