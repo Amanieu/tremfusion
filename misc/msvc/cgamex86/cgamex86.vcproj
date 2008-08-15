@@ -323,7 +323,6 @@
 				RelativePath="..\..\..\src\qcommon\q_shared.c"
 				>
 			</File>
-			</File>
 			<File
 				RelativePath="..\..\..\src\ui\ui_shared.c"
 				>
