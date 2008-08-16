@@ -1251,7 +1251,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 		cmd.argc++;
 
 		// skip until whitespace, quote, or command
-		while ( *text > ' ' ) {
+		while ( *text > ' ' || *text < 0 ) {
 			if ( !ignoreQuotes && text[0] == '"' ) {
 				break;
 			}
