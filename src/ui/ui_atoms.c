@@ -308,7 +308,7 @@ qboolean UI_ConsoleCommand( int realTime )
 
   if( Q_stricmp( cmd, "prompt" ) == 0 )
   {
-    static char buffer[ MAX_SAY_TEXT ];
+    char buffer[ MAX_SAY_TEXT ] = "";
     itemDef_t *item;
     if ( trap_Argc( ) < 3 )
     {
