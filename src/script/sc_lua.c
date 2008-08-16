@@ -263,20 +263,26 @@ static int len_metamethod(lua_State *L)
 
 static int concat_metamethod(lua_State *L)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
-  /*if(lua_istable(L, -2))
-    lua_getfield(L, -2, "_data");
+  lua_getglobal(L, "tostring");
+  if(!lua_isstring(L, -3))
+  {
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -4);
+    lua_call(L, 1, 1);
+  }
   else
-    lua_pushvalue(L, -2);
+    lua_pushvalue(L, -3);
 
-  if(lua_istable(L, -2))
-    lua_getfield(L, -2, "_data");
-  else
+  if(!lua_isstring(L, -3))
+  {
     lua_pushvalue(L, -2);
+    lua_pushvalue(L, -4);
+    lua_call(L, 1, 1);
+  }
+  else
+    lua_pushvalue(L, -3);
 
   lua_concat(L, 2);
-  lua_remove(L, -2);
-  lua_remove(L, -2);*/
 
   return 1;
 }
@@ -445,36 +451,48 @@ static int object_index_metamethod(lua_State *L)
   scField_t        *field;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
   scDataTypeValue_t out;
+  const char *name;
 
   lua_getfield(L, -2, "_ref");
   object = lua_touserdata(L, -1);
   lua_pop(L, 1);
 
-  method = SC_ClassGetMethod(object->class, lua_tostring(L, -1));
+  name = lua_tostring(L, -1);
+
+  method = SC_ClassGetMethod(object->class, name);
   if(method)
   {
     push_function(L, &method->method);
     return 1;
   }
 
-  member = SC_ClassGetMember(object->class, lua_tostring(L, -1));
-  if(member)
-  {
-    // Call 'get' method, push result
-    in[0].type = TYPE_OBJECT;
-    in[0].data.object = object;
-    in[1].type = TYPE_UNDEF;
-    SC_RunFunction(&member->get, in, &out);
-
-    push_value(L, &out);
-    return 1;
-  }
-  field = SC_ClassGetField(object->class, lua_tostring(L, -1));
+  field = SC_ClassGetField(object->class, name);
   if(field)
   {
     // Call SC_Field_Get, push results
     SC_Field_Get(object, field, &out);
     
+    push_value(L, &out);
+    return 1;
+  }
+
+  member = SC_ClassGetMember(object->class, name);
+  if(member)
+  {
+    // Call 'get' method, push result
+    in[0].type = TYPE_OBJECT;
+    in[0].data.object = object;
+	if(strcmp(member->name, "_") == 0)
+	{
+      in[1].type = TYPE_STRING;
+      in[1].data.string = SC_StringNewFromChar(name);
+      in[2].type = TYPE_UNDEF;
+    }
+    else
+      in[1].type = TYPE_UNDEF;
+
+    SC_RunFunction(&member->get, in, &out);
+
     push_value(L, &out);
     return 1;
   }
@@ -489,34 +507,51 @@ static int object_newindex_metamethod(lua_State *L)
   scField_t        *field;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
   scDataTypeValue_t out;
+  const char *name;
 
   lua_getfield(L, -3, "_ref");
   object = lua_touserdata(L, -1);
   lua_pop(L, 1);
 
-  member = SC_ClassGetMember(object->class, lua_tostring(L, -2));
-  field  = SC_ClassGetField(object->class, lua_tostring(L, -2));
+  name = lua_tostring(L, -2);
+
+  member = SC_ClassGetMember(object->class, name);
   if(member)
   {
-    // Call 'set' method with popped value
-    pop_value(L, &in[1], member->set.argument[1]);
-
     in[0].type = TYPE_OBJECT;
     in[0].data.object = object;
-    in[2].type = TYPE_UNDEF;
+    // Call 'set' method with popped value
+    if(strcmp(member->name, "_") == 0)
+    {
+      in[1].type = TYPE_STRING;
+      in[1].data.string = SC_StringNewFromChar(name);
+
+      pop_value(L, &in[2], member->set.argument[1]);
+      in[3].type = TYPE_UNDEF;
+    }
+    else
+    {
+      pop_value(L, &in[1], member->set.argument[1]);
+      in[2].type = TYPE_UNDEF;
+    }
+
     SC_RunFunction(&member->set, in, &out);
+
+    return 0;
   }
-  else if(field)
+
+  field  = SC_ClassGetField(object->class, name);
+  if(field)
   {
     // Call SC_Field_Set with popped value
     pop_value(L, &in[1], field->type);
     
     SC_Field_Set( object, field, &in[1] );
+
+    return 0;
   }
-  else
-  {
-    // TODO: Error: unknow value
-  }
+
+  // TODO: Error: unknow value
 
   return 0;
 }
