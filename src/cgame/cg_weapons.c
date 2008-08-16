@@ -1356,7 +1356,7 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
     if( !BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) )
       continue;
 
-    if( !ps->ammo[0] && !ps->ammo[1] && !BG_Weapon( i )->infiniteAmmo )
+    if( !ps->ammo && !ps->clips && !BG_Weapon( i )->infiniteAmmo )
       colinfo[ numItems ] = 1;
     else
       colinfo[ numItems ] = 0;

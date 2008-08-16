@@ -1497,8 +1497,8 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   maxAmmo = BG_Weapon( weapon )->maxAmmo;
   maxClips = BG_Weapon( weapon )->maxClips;
   BG_AddWeaponToInventory( weapon, client->ps.stats );
-  client->ps.ammo[0] = maxAmmo;
-  client->ps.ammo[1] = maxClips;
+  client->ps.ammo = maxAmmo;
+  client->ps.clips = maxClips;
 
   client->ps.persistant[ PERS_NEWWEAPON ] = 0;
 

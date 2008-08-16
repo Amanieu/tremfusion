@@ -391,12 +391,12 @@ void Cmd_Give_f( gentity_t *ent )
         BG_Weapon( client->ps.weapon )->infiniteAmmo )
       return;
 
-    client->ps.ammo[0] = BG_Weapon( client->ps.weapon )->maxAmmo;
-    client->ps.ammo[1] = BG_Weapon( client->ps.weapon )->maxClips;
+    client->ps.ammo = BG_Weapon( client->ps.weapon )->maxAmmo;
+    client->ps.clips = BG_Weapon( client->ps.weapon )->maxClips;
 
     if( BG_Weapon( client->ps.weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, client->ps.stats ) )
-      client->ps.ammo[0] = (int)( (float)client->ps.ammo[0] * BATTPACK_MODIFIER );
+      client->ps.ammo = (int)( (float)client->ps.ammo * BATTPACK_MODIFIER );
   }
 }
 
@@ -586,7 +586,6 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
   G_LeaveTeam( ent );
   ent->client->pers.teamSelection = newTeam;
 
-  ent->client->ps.persistant[ PERS_CREDIT ] = 0;
 
   ent->client->pers.classSelection = PCL_NONE;
   ClientSpawn( ent, NULL, NULL, NULL );
@@ -2164,12 +2163,12 @@ void Cmd_Buy_f( gentity_t *ent )
 
     //add to inventory
     BG_AddWeaponToInventory( weapon, ent->client->ps.stats );
-    ent->client->ps.ammo[0] = BG_Weapon( weapon )->maxAmmo;
-    ent->client->ps.ammo[1] = BG_Weapon( weapon )->maxClips;
+    ent->client->ps.ammo = BG_Weapon( weapon )->maxAmmo;
+    ent->client->ps.clips = BG_Weapon( weapon )->maxClips;
 
     if( BG_Weapon( weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, ent->client->ps.stats ) )
-      ent->client->ps.ammo[0] *= BATTPACK_MODIFIER;
+      ent->client->ps.ammo *= BATTPACK_MODIFIER;
 
     G_ForceWeaponChange( ent, weapon );
 

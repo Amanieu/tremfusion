@@ -827,11 +827,11 @@ void ClientTimerActions( gentity_t *ent, int msec )
   // Regenerate Adv. Dragoon barbs
   if( client->ps.weapon == WP_ALEVEL3_UPG )
   {
-    if( client->ps.ammo[0] < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
+    if( client->ps.ammo < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
     {
       if( ent->timestamp + LEVEL3_BOUNCEBALL_REGEN < level.time )
       {
-        client->ps.ammo[0]++;
+        client->ps.ammo++;
         ent->timestamp = level.time;
       }
     }

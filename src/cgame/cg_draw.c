@@ -598,7 +598,7 @@ static void CG_DrawPlayerPoisonBarbs( rectDef_t *rect, vec4_t color, qhandle_t s
   qboolean      vertical;
   int           iconsize, numBarbs, i;
 
-  numBarbs = ps->ammo[0];
+  numBarbs = ps->ammo;
 
   if( height > width )
   {
@@ -672,7 +672,7 @@ static void CG_DrawPlayerAmmoValue( rectDef_t *rect, vec4_t color )
         break;
 
       default:
-        value = ps->ammo[0];
+        value = ps->ammo;
         break;
     }
 
@@ -804,7 +804,7 @@ static void CG_DrawPlayerClipsValue( rectDef_t *rect, vec4_t color )
       break;
 
     default:
-      value = ps->ammo[1];
+      value = ps->clips;
 
       if( value > -1 )
       {
@@ -1252,11 +1252,11 @@ float CG_GetValue( int ownerDraw )
   {
     case CG_PLAYER_AMMO_VALUE:
       if( weapon )
-        return ps->ammo[0];
+        return ps->ammo;
       break;
     case CG_PLAYER_CLIPS_VALUE:
       if( weapon )
-        return ps->ammo[1];
+        return ps->clips;
       break;
     case CG_PLAYER_HEALTH:
       return ps->stats[ STAT_HEALTH ];
@@ -2068,9 +2068,9 @@ void CG_DrawWeaponIcon( rectDef_t *rect, vec4_t color )
 
   CG_RegisterWeapon( weapon );
 
-  if( ps->ammo[1] == 0 && !BG_Weapon( weapon )->infiniteAmmo )
+  if( ps->clips == 0 && !BG_Weapon( weapon )->infiniteAmmo )
   {
-    float ammoPercent = (float)ps->ammo[0] / (float)BG_Weapon( weapon )->maxAmmo;
+    float ammoPercent = (float)ps->ammo / (float)BG_Weapon( weapon )->maxAmmo;
 
     if( ammoPercent < 0.33f )
     {
