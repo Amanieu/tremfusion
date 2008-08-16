@@ -638,7 +638,7 @@ void CL_ConsolePrint( char *txt ) {
 
 		// count word length
 		for (l=0 ; l< con.linewidth ; l++) {
-			if ( txt[l] <= ' ') {
+			if ( txt[l] <= ' ' && txt[l] >= 0) {
 				break;
 			}
 
