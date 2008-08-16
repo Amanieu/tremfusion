@@ -21,6 +21,9 @@ parser.add_option("--dir", "--directory",
 parser.add_option("-s", "--symlink",
                   dest="symlink_dir", default=None,
                   help="the directory to place symlinks to the pk3's in")
+parser.add_option("-g", "--game", 
+                  action="store_true", dest="inc_game_qvm", default=False,
+                  help="includes game.qvm in the tremfusion-game.pk3")
 
 (options, args) = parser.parse_args()
 scm_rev_num = int( commands.getoutput("hg identify -n | tr -d '+'") )
@@ -94,7 +97,8 @@ else:
 for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue
   pk3path = "vm/" + os.path.basename(fspath)
-  if pk3path == "vm/game.qvm": # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
+  # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
+  if  not options.inc_game_qvm and pk3path == "vm/game.qvm":
     continue
   add_file(fspath, pk3path)
 
