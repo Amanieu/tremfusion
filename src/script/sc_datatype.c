@@ -616,12 +616,12 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
     return qtrue;
   }
   
-  idx = Q_strrchr( base, '.' );
-  while( idx != NULL )
+  while( (idx = strchr( base, '.' )) != NULL )
   {
     Q_strncpyz( tmp, base, idx - base + 1 );
 	tmp[idx-base] = '\0';
 
+	Com_Printf("SC_HashGet: %s\n", tmp);
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, value ) )
 	{
       if( value->type != TYPE_NAMESPACE )
@@ -635,7 +635,6 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
 
     namespace = value->data.namespace;
     base = idx + 1;
-    idx = Q_strrchr( base, '.' );
   }
 
   return SC_HashGet( (scDataTypeHash_t*) namespace, base, value );
@@ -684,7 +683,7 @@ qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )
   if( strcmp( path, "" ) == 0 )
     return qfalse;
   
-  while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
+  while( ( idx = strchr( base, '.' ) ) != NULL )
   {
     Q_strncpyz( tmp, base, idx - base + 1 );
     tmp[idx-base] = '\0';
@@ -759,15 +758,19 @@ scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
 {
   scObjectMember_t *member = class->members;
+  scObjectMember_t *always = NULL;
   while(member->name[0] != '\0')
   {
     if(strcmp(member->name, name) == 0)
       return member;
 
+	if(strcmp(member->name, "_") == 0)
+		always = member;
+
     member++;
   }
 
-  return NULL;
+  return always;
 }
 
 scField_t *SC_ClassGetField(scClass_t *class, const char *name)
@@ -899,6 +902,17 @@ static void print_value( scDataTypeValue_t *value, int tab )
     case TYPE_USERDATA:
       print_tabs(tab);
       Com_Printf(va("userdata\n"));
+	  break;
+
+	case TYPE_OBJECT:
+	  print_tabs(tab);
+	  Com_Printf(va("object of %s\n", value->data.object->class->name));
+	  break;
+
+	case TYPE_CLASS:
+	  print_tabs(tab);
+	  Com_Printf(va("class %s\n", value->data.class->name));
+	  break;
 
     default:
       print_tabs( tab );
@@ -947,12 +961,15 @@ static void print_namespace( scNamespace_t *hash, int tab )
 
   print_tabs(tab);
   Com_Printf("Namespace [\n");
-  for( i = 0; i < ( ( scDataTypeHash_t* ) hash )->size; i++ )
+  for( i = 0; i < ( ( scDataTypeHash_t* ) hash )->buflen; i++ )
   {
-    print_tabs( tab );
-    print_string( &((scDataTypeHash_t*)hash)->data[i].key);
-    Com_Printf(" =>\n");
-    print_value( &((scDataTypeHash_t*)hash)->data[i].value, tab + 1 );
+    if(!SC_StringIsEmpty(&(((scDataTypeHash_t*)hash)->data[i].key)))
+    {
+      print_tabs( tab );
+      print_string( &((scDataTypeHash_t*)hash)->data[i].key);
+      Com_Printf(" =>\n");
+      print_value( &((scDataTypeHash_t*)hash)->data[i].value, tab + 1 );
+    }
   }
 
   print_tabs(tab);

@@ -196,7 +196,11 @@ void _BG_Free( void *ptr )
   freeptr = ptr;
   freeptr--;
   allocsize = *freeptr;
+
+#if BG8MEMORY_DEBUG
   Com_Printf("BG_Free: freeing %d bytes\n", allocsize);
+#endif
+
   freeMem += *freeptr;
   freeptr--;
   if( *freeptr != BLOCKSTARTCOOKIE ){

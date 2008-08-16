@@ -643,7 +643,10 @@ void SC_Module_Load(scObject_t *self)
   if(autohook)
     add_autohooks(autohook);
 
-  // TODO: move all module stuff to root namespace
+  // copy all module stuff to root namespace
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet(name, &value);
 
   // Set "loaded" flag
   value.type = TYPE_BOOLEAN;
@@ -697,7 +700,8 @@ void SC_Module_Unload(scObject_t *self)
     SC_RunFunction(autounload, fin, &fout);
   }
 
-  // TODO: remove all module stuff in root namespace
+  // remove all module stuff in root namespace
+  SC_NamespaceDelete(name);
 
   // Unset "loaded" flag
   value.type = TYPE_BOOLEAN;
@@ -745,6 +749,19 @@ static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
+static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scDataTypeHash_t *hash;
+
+  hash = in[0].data.object->data.data.hash;
+  SC_HashSet(hash, SC_StringToChar(in[1].data.string), &in[2]);
+
+  out[0].type = TYPE_UNDEF;
+
+  return 0;
+}
+
 static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   // TODO: error management
@@ -752,6 +769,17 @@ static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, (char*)closure, out);
+
+  return 0;
+}
+
+static int module_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scDataTypeHash_t *hash;
+
+  hash = in[0].data.object->data.data.hash;
+  SC_HashGet(hash, SC_StringToChar(in[1].data.string), out);
 
   return 0;
 }
@@ -799,6 +827,7 @@ static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 static scLibObjectMember_t module_members[] = {
   { "name", "", TYPE_STRING, module_set, module_get, (void*) "name" },
   { "version", "", TYPE_STRING, module_set, module_get, (void*) "version" },
+  { "description", "", TYPE_STRING, module_set, module_get, (void*) "description" },
   { "author", "", TYPE_STRING, module_set, module_get, (void*) "author" },
   { "depend", "", TYPE_ARRAY, module_set, module_get, (void*) "depend" },
   { "conflict", "", TYPE_ARRAY, module_set, module_get, (void*) "conflict" },
@@ -806,6 +835,7 @@ static scLibObjectMember_t module_members[] = {
   { "autounload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autounload" },
   { "autohooks", "", TYPE_ARRAY, module_set, module_get, (void*) "autohooks" },
   { "loaded", "", TYPE_BOOLEAN, 0, module_get, (void*) "loaded" },
+  { "_", "", TYPE_ANY, module_metaset, module_metaget, NULL },
   { "" }
 };
 
