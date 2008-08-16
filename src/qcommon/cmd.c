@@ -1156,8 +1156,8 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 				else
 				{
 					cvarName -= 2;
-					while ( *cvarName++ && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
-						*textOut++ = *cvarName;
+					while ( *cvarName && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
+						*textOut++ = *cvarName++;
 					if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
 						break;
 					*textOut++ = '\\';
@@ -1177,9 +1177,9 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 
 		// "\$$" --> "\$"
 		text = textOut = cmd.cmd;
-		while (*text)
+		while (text[0])
 		{
-			if ( text[0] == '\\' && text[1] == '$' && text[2] == '$' )
+			if ( text[0] == '\\'  && text[1]  && text[1] == '$'&& text[2] && text[2] == '$' )
 			{
 				textOut[0] = '\\';
 				textOut[1] = '$';
@@ -1189,6 +1189,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 			else
 				*textOut++ = *text++;
 		}
+		*textOut = '\0';
 	}
 	else
 		Q_strncpyz( cmd.cmd, text_in, sizeof(cmd.cmd) );
@@ -1432,7 +1433,7 @@ void	Cmd_ExecuteString( const char *text ) {
 
 	// send it as a server command if we are connected
 	// this will usually result in a chat message
-	CL_ForwardCommandToServer ( text );
+	CL_ForwardCommandToServer ( cmd.cmd );
 }
 
 /*
