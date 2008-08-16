@@ -20,7 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #ifdef USE_PYTHON
-#include "../game/g_local.h"
 #include "../script/sc_public.h"
 #include "../script/sc_python.h"
 

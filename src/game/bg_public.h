@@ -1173,7 +1173,7 @@ typedef enum
               // this avoids having to set eFlags and eventNum
 } entityType_t;
 
-#define BG_MEMORY_DEBUG 1
+#define BG_MEMORY_DEBUG 0
 
 #if BG_MEMORY_DEBUG
 #define BG_Alloc(x) _BG_Alloc(x, __FILE__, __LINE__)

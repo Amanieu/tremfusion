@@ -134,7 +134,6 @@ PyTypeObject PyScMethod_Type;
 PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 int PyScMethod_init(PyScMethod *self, PyObject *parent, scObject_t* instance, scObjectMethod_t* method);
 
-extern PyObject *vec3d;
 PyObject *convert_from_value( scDataTypeValue_t *value );
 void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 

@@ -249,7 +249,7 @@ static void arrayRealloc(scDataTypeArray_t *array, int buflen)
 
   array->buflen = buflen * 2;
   array->data = (scDataTypeValue_t*) BG_Alloc( sizeof(scDataTypeValue_t) * array->buflen);
-
+  
   if(old)
   {
     memcpy(array->data, old, sizeof( scDataTypeArray_t ) * array->size);
@@ -319,9 +319,9 @@ void SC_ArrayClear(scDataTypeArray_t *array)
 {
   int i;
 
-  array->size = 0;
   for(i = 0; i < array->size; i++)
     SC_ValueGCDec(&array->data[i]);
+  array->size = 0;
 }
 
 static void arrayFree(scDataTypeArray_t *array)

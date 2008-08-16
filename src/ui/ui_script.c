@@ -25,8 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 extern displayContextDef_t *DC;
 
 int               current_draw_func_index=0;
-scDataTypeArray_t draw_func_array;
-scDataTypeArray_t draw_func_arg_array;
+scDataTypeArray_t *draw_func_array;
+scDataTypeArray_t *draw_func_arg_array;
 
 static void UI_Script_f(void);
 static void SC_UIModuleInit( void );
@@ -49,6 +49,10 @@ void UI_ScriptInit( void )
 #ifndef Q3_VM
   trap_AddCommand( "script", UI_Script_f );
 #endif
+  draw_func_array     = SC_ArrayNew();
+  draw_func_arg_array = SC_ArrayNew();
+  SC_ArrayGCInc( draw_func_array );
+  SC_ArrayGCInc( draw_func_arg_array );
   Com_Printf("-----------------------------------\n");
 }
 
@@ -62,6 +66,8 @@ Shutdown scripting system and unload libraries
 void UI_ScriptShutdown( void )
 {
   Com_Printf("------- UI Scripting System Shutdown -------\n");
+  SC_ArrayGCDec( draw_func_array );
+  SC_ArrayGCDec( draw_func_arg_array );
   SC_Shutdown( );
   Com_Printf("-----------------------------------\n");
 }
@@ -81,23 +87,26 @@ static void UI_Script_f(void)
 void SC_UIRefresh ( void )
 {
   int i;
-  for( i = 0; i < draw_func_array.size; i++ )
+  for( i = 0; i < draw_func_array->size; i++ )
   {
     scDataTypeValue_t ret;
     scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
-    if(draw_func_array.data[i].type != TYPE_FUNCTION) continue;
-    args[0].data.function->argument[0] = TYPE_ANY;
-    args[0].data.function->return_type = TYPE_ANY;
-    SC_ArrayGet(&draw_func_arg_array, i, &args[0]);
-    if(SC_RunFunction( draw_func_array.data[i].data.function, args, &ret ) )
+    scDataTypeValue_t function;
+    SC_ArrayGet(draw_func_array, i, &function);
+    SC_ArrayGet(draw_func_arg_array, i, &args[0]);
+    args[1].type = TYPE_UNDEF;
+    if(function.type != TYPE_FUNCTION) continue;
+    function.data.function->argument[0] = TYPE_ANY;
+    function.data.function->return_type = TYPE_ANY;
+    if(SC_RunFunction( function.data.function, args, &ret ) )
     {
       // Error running function, remove draw func to prevent repeat errors
-      SC_ArrayDelete(&draw_func_array, i);
-      SC_ArrayDelete(&draw_func_arg_array, i);
+      SC_ArrayDelete(draw_func_array, i);
+      SC_ArrayDelete(draw_func_arg_array, i);
       continue;
     }
     if(args[0].type != TYPE_UNDEF && ret.type != TYPE_UNDEF)
-      SC_ArraySet( &draw_func_arg_array, i, &ret);
+      SC_ArraySet( draw_func_arg_array, i, &ret);
   }
 }
 
@@ -106,8 +115,8 @@ void SC_UIRefresh ( void )
                            "array for ui.RemoveDrawFunc(index)"
 static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  SC_ArraySet( &draw_func_array, current_draw_func_index, &in[0]);
-  SC_ArraySet( &draw_func_arg_array, current_draw_func_index, &in[1]);
+  SC_ArraySet( draw_func_array, current_draw_func_index, &in[0]);
+  SC_ArraySet( draw_func_arg_array, current_draw_func_index, &in[1]);
   SC_BuildValue(out, "i", current_draw_func_index);
   current_draw_func_index++;
   out->type = TYPE_UNDEF;

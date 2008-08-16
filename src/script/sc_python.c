@@ -155,11 +155,13 @@ static PyObject *convert_from_array( scDataTypeArray_t *array )
 {
   int i;
   PyObject *list;
+  scDataTypeValue_t value;
 
   list = PyList_New( array->size ); // Creat a new python list
   for( i = 0; i < array->size; i++ )
   {
-    PyList_SetItem( list, i, convert_from_value( &array->data[i] ) );
+    SC_ArrayGet(array, i, &value);
+    PyList_SetItem( list, i, convert_from_value( &value ) );
   }
   return list;
 }
