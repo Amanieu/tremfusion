@@ -1203,7 +1203,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 
 		while ( 1 ) {
 			// skip whitespace
-			while ( *text && *text <= ' ' ) {
+			while ( *text >= '\0' && *text <= ' ' ) {
 				text++;
 			}
 			if ( !*text ) {
