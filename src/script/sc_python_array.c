@@ -27,9 +27,42 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static int PyScArray_init(PyScArray *self, PyObject *args, PyObject *kwds)
 {
-  // TODO: Allow passing a sequence of items to args to initialize the array with
+  PyObject *arg = NULL;
+  scDataTypeValue_t val;
+  int index;
+  
+  static char *kwlist[] = {"sequence", 0};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:list", kwlist, &arg))
+    return -1;
+  
   self->array = SC_ArrayNew();
   SC_ArrayGCInc(self->array);
+  
+  PyObject *iterator = PyObject_GetIter(args);
+  PyObject *item;
+
+  if (iterator == NULL) {
+    return -1;
+  }
+
+  index = 0;
+  while ( (item = PyIter_Next(iterator) ) ) {
+    convert_to_value( item, &val, TYPE_ANY );
+    SC_ArraySet(self->array, index, &val);
+    Py_DECREF(item);
+    index++;
+  }
+
+  Py_DECREF(iterator);
+
+  if (PyErr_Occurred()) {
+      /* propagate error */
+  }
+  else {
+      /* continue doing useful work */
+  }
+
   return 0;
 }
 
