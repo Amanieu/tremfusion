@@ -492,10 +492,12 @@ void Cmd_Math_f( void ) {
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( ! ( Cvar_VariableValue( v1 ) == 0 ) )
+      if ( atoi( v1 ) == 0 )
       {
-        Cvar_SetValueSafe( v, ( atoi( v ) / atoi( v1 ) ) );
-      }
+      	Com_Printf ("Cannot divide by 0!\n");
+      	return;
+	  }
+      Cvar_SetValueSafe( v, ( atoi( v ) / atoi( v1 ) ) );
     }
     else
     {
@@ -523,10 +525,12 @@ void Cmd_Math_f( void ) {
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( ! ( atoi( v2 ) == 0 ) )
+      if ( atoi( v2 ) == 0 )
       {
-        Cvar_SetValueSafe( v, ( atoi( v1 ) / atoi( v2 ) ) );
-      }
+      	Com_Printf ("Cannot divide by 0!\n");
+      	return;
+	  }
+      Cvar_SetValueSafe( v, ( atoi( v1 ) / atoi( v2 ) ) );
     }
     else
     {
@@ -610,6 +614,65 @@ void Cmd_Concat_f( void ) {
   	Q_strcat( vc, sizeof(vc), Cvar_VariableString( Cmd_Argv(i) ) );
 
   Cvar_Set( Cmd_Argv( 1 ), vc );
+}
+
+/*
+===============
+Cmd_Calc_f
+
+Does math and displays the value into the chat/console, this is used for basic math functions
+===============
+*/
+void Cmd_Calc_f( void ) {
+  char	*arg1;
+  char	*arg2;
+  char	*func;
+  
+  if (Cmd_Argc () < 3)
+  {
+      Com_Printf ("calc <number> <function> <number>, accepted functions: +, -, /, */x\n");
+      return;
+  }
+  
+  arg1 = Cmd_Argv( 1 );
+  func = Cmd_Argv( 2 );
+  arg2 = Cmd_Argv( 3 );
+  
+  // Add
+  if( !strcmp( func, "+"  ) )
+  {
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) + atoi(arg2)) );
+ 	return;
+  }
+  
+  // Subtract
+  else if( !strcmp( func, "-"  ) )
+  {
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) - atoi(arg2)) );
+ 	return;
+  }
+  
+  // Divide
+  else if( !strcmp( func, "/"  ) )
+  {
+     if( atoi(arg2) == 0 )
+     {
+      Com_Printf ("Cannot divide by zero!\n" );
+      return;
+     }
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) / atoi(arg2)) );
+ 	return;
+  }
+  
+  // Multiply
+  else if( !strcmp( func, "*"  ) || !strcmp( func, "x"  ) )
+  {
+ 	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) * atoi(arg2)) );
+	return;
+  }
+  
+  // Invalid function, help the poor guy out
+  Com_Printf ("calc <number> <function> <number>, accepted functions: +, -, /, */x\n");
 }
 
 // 
@@ -1473,6 +1536,7 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("exec",Cmd_Exec_f);
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
 	Cmd_AddCommand ("if",Cmd_If_f);
+	Cmd_AddCommand ("calc",Cmd_Calc_f);
 	Cmd_AddCommand ("math",Cmd_Math_f);
 	Cmd_AddCommand ("concat",Cmd_Concat_f);
 	Cmd_AddCommand ("strcmp",Cmd_Strcmp_f);
