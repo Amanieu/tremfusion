@@ -211,6 +211,7 @@ static PyObject *convert_from_object( scObject_t *sc_object )
   py_object = (PyScBaseObject*)PyScObject_new( (ScPyTypeObject*)sc_object->class->python_type, NULL, NULL);
   
   py_object->sc_object = sc_object;
+  SC_ObjectGCInc(py_object->sc_object);
   
   return (PyObject*)py_object;
 }

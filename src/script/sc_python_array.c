@@ -38,6 +38,116 @@ static void PyScArray_dealloc(PyScArray* self)
   SC_ArrayGCDec(self->array);
 }
 
+static int PyScArray_print(PyScArray *self, FILE *fp, int flags)
+{
+  int rc;
+  Py_ssize_t i;
+
+  rc = Py_ReprEnter((PyObject*)self);
+  if (rc != 0) {
+    if (rc < 0)
+      return rc;
+    fprintf(fp, "[...]");
+    return 0;
+  }
+  fprintf(fp, "[");
+  for (i = 0; i < self->array->size; i++) {
+    scDataTypeValue_t value;
+    PyObject *pyvalue;
+    if (i > 0)
+      fprintf(fp, ", ");
+    if(!SC_ArrayGet(self->array, i, &value))
+      goto Error;
+    pyvalue = convert_from_value(&value);
+    if (pyvalue == NULL)
+      goto Error;
+    if (PyObject_Print(pyvalue, fp, 0) != 0)
+      goto Error;
+    Py_DECREF(pyvalue);
+  }
+  fprintf(fp, "]");
+  Py_ReprLeave((PyObject *)self);
+  return 0;
+  Error:
+  Py_ReprLeave((PyObject *)self);
+  return -1;
+}
+
+static PyObject *PyScArray_repr(PyScArray *self)
+{
+  // Code adapted from pythons list object's list_repr (listobject.c)
+  Py_ssize_t i;
+  PyObject *s, *temp;
+  PyObject *pieces = NULL, *result = NULL;
+
+  i = Py_ReprEnter((PyObject*)self);
+  if (i != 0) {
+    return i > 0 ? PyString_FromString("[...]") : NULL;
+  }
+
+  if (self->array->size == 0) {
+    result = PyString_FromString("[]");
+    goto Done;
+  }
+
+  pieces = PyList_New(0);
+  if (pieces == NULL)
+    goto Done;
+
+  /* Do repr() on each element.  Note that this may mutate the list,
+     so must refetch the list size on each iteration. */
+  for (i = 0; i < self->array->size; ++i) {
+    int status;
+    scDataTypeValue_t value;
+    PyObject *pyvalue;
+    if(!SC_ArrayGet(self->array, i, &value))
+      goto Done;
+    pyvalue = convert_from_value(&value);
+    if (pyvalue == NULL)
+      goto Done;
+    s = PyObject_Repr(pyvalue);
+    Py_DECREF(pyvalue);
+    if (s == NULL)
+      goto Done;
+    status = PyList_Append(pieces, s);
+    Py_DECREF(s);  /* append created a new ref */
+    if (status < 0)
+      goto Done;
+  }
+
+  /* Add "[]" decorations to the first and last items. */
+  assert(PyList_GET_SIZE(pieces) > 0);
+  s = PyString_FromString("[");
+  if (s == NULL)
+    goto Done;
+  temp = PyList_GET_ITEM(pieces, 0);
+  PyString_ConcatAndDel(&s, temp);
+  PyList_SET_ITEM(pieces, 0, s);
+  if (s == NULL)
+    goto Done;
+
+  s = PyString_FromString("]");
+  if (s == NULL)
+    goto Done;
+  temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
+  PyString_ConcatAndDel(&temp, s);
+  PyList_SET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1, temp);
+  if (temp == NULL)
+    goto Done;
+
+  /* Paste them all together with ", " between. */
+  s = PyString_FromString(", ");
+  if (s == NULL)
+    goto Done;
+  result = _PyString_Join(s, pieces);
+  Py_DECREF(s);
+
+Done:
+  Py_XDECREF(pieces);
+  Py_ReprLeave((PyObject *)self);
+  return result;
+}
+
 static PyObject *PyScArray_get_item(PyScArray *self, Py_ssize_t index)
 {
   scDataTypeValue_t value;
@@ -93,11 +203,11 @@ PyTypeObject PyScArray_Type = {
   sizeof(PyScArray),             /* tp_basicsize */
   0,                             /* tp_itemsize */
   (destructor)PyScArray_dealloc, /* tp_dealloc */
-  0,                             /* tp_print */
+  (printfunc)PyScArray_print,    /* tp_print */
   0,                             /* tp_getattr */
   0,                             /* tp_setattr */
   0,                             /* tp_compare */
-  0,                             /* tp_repr */
+  (reprfunc)PyScArray_repr,      /* tp_repr */
   0,                             /* tp_as_number */
   &PyScArray_as_sequence,        /* tp_as_sequence */
   0,                             /* tp_as_mapping */
