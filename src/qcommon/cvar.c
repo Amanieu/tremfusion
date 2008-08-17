@@ -737,61 +737,44 @@ void Cvar_Print_f(void)
 ============
 Cvar_Toggle_f
 
-Toggles a cvar for easy single key binding
+Toggles a cvar for easy single key binding, optionally through a list of
+given values
 ============
 */
 void Cvar_Toggle_f( void ) {
-	int		v;
+	int		i, c = Cmd_Argc();
+	char		*curval;
 
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf ("usage: toggle <variable>\n");
+	if(c < 2) {
+		Com_Printf("usage: toggle <variable> [value1, value2, ...]\n");
 		return;
 	}
 
-	v = Cvar_VariableValue( Cmd_Argv( 1 ) );
-	v = !v;
-
-	Cvar_Set2 (Cmd_Argv(1), va("%i", v), qfalse, qfalse);
-}
-
-/*
-============
-Cvar_ToggleList_f
-
-Toggles a cvar between a list of strings for easy single key binding
-============
-*/
-void Cvar_ToggleList_f( void ) {
-	int n;
-	char *strval;
-
-	if( Cmd_Argc() < 3 ) {
-		Com_Printf ("usage: togglelist <variable> <value1> <value2> ...\n");
+	if(c == 2) {
+		Cvar_Set2(Cmd_Argv(1), va("%d", 
+			!Cvar_VariableValue(Cmd_Argv(1))), 
+			qfalse);
 		return;
 	}
 
-	strval = Cvar_VariableString( Cmd_Argv(1) );
+	if(c == 3) {
+		Com_Printf("toggle: nothing to toggle to\n");
+		return;
+	}
 
-	n = 2;
-	for(;;) {
-		if( !strcmp( Cmd_Argv(n), strval ) ) {
-			// found it, set it to the next (or wrapped to the first) one in the list
-			if( ++n < Cmd_Argc() ) {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(n), qfalse, qfalse );
-			}
-			else {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
-			}
-			break;
-		}
+	curval = Cvar_VariableString(Cmd_Argv(1));
 
-		++n;
-		if( n >= Cmd_Argc() ) {
-			// not found, set it to the first one in the list
-			Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
-			break;
+	// don't bother checking the last arg for a match since the desired
+	// behaviour is the same as no match (set to the first argument)
+	for(i = 2; i + 1 < c; i++) {
+		if(strcmp(curval, Cmd_Argv(i)) == 0) {
+			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse);
+			return;
 		}
 	}
+
+	// fallback
+	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse);
 }
 
 /*
@@ -1152,7 +1135,6 @@ void Cvar_Init (void) {
 
 	Cmd_AddCommand ("print", Cvar_Print_f);
 	Cmd_AddCommand ("toggle", Cvar_Toggle_f);
-	Cmd_AddCommand ("togglelist", Cvar_ToggleList_f);
 	Cmd_AddCommand ("set", Cvar_Set_f);
 	Cmd_AddCommand ("sets", Cvar_Set_f);
 	Cmd_AddCommand ("setu", Cvar_Set_f);
