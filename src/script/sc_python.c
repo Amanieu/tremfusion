@@ -93,53 +93,72 @@ static scDataTypeFunction_t* convert_to_function( PyObject *function_obj  )
 }
 
 /* Convert a python object into a script data value */
-void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
+int convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type )
 {
   value->gc.count = 0;
   if (pyvalue == Py_None){
     value->type = TYPE_UNDEF;
+    return qtrue;
   }
   else if ( PyInt_Check(pyvalue) )
   {
     value->type = TYPE_INTEGER;
     value->data.integer = PyInt_AsLong( pyvalue );
+    return qtrue;
   }
   else if ( PyFloat_Check(pyvalue) )
   {
     value->type = TYPE_FLOAT;
     value->data.floating = PyFloat_AsDouble( pyvalue );
+    return qtrue;
   }
   else if (  PyBool_Check(pyvalue) )
   {
     value->type = TYPE_BOOLEAN;
     value->data.boolean = ( pyvalue == Py_True) ? qtrue : qfalse;
+    return qtrue;
   }
   else if (  PyString_Check(pyvalue) )
   {
     value->type = TYPE_STRING;
     value->data.string = convert_to_string( pyvalue );
+    return qtrue;
   }
   else if ( PyDict_Check(pyvalue) )
   {
     value->type = TYPE_HASH;
     value->data.hash = convert_to_hash( pyvalue );
+    return qtrue;
   }
   else if ( PyList_Check(pyvalue) || PyTuple_Check( pyvalue ) )
   {
     value->type = TYPE_ARRAY;
     value->data.array = convert_to_array( pyvalue );
+    return qtrue;
+  }
+  else if ( PyObject_TypeCheck( pyvalue, &PyScArray_Type) )
+  {
+    PyScArray *pyScArray;
+    pyScArray = (PyScArray*)pyvalue;
+    value->type = TYPE_ARRAY;
+    SC_ArrayGCInc(pyScArray->array);
+    value->data.array = pyScArray->array;
+    return qtrue;
   }
   else if ( PyCallable_Check(pyvalue) )
   {
     value->type = TYPE_FUNCTION;
     value->data.function = convert_to_function( pyvalue );
+    return qtrue;
   }
   else if ( PyType_IsSubtype(pyvalue->ob_type, &PyScBaseObject_Type) )
   {
     PyScBaseObject *py_scobject;
     py_scobject = (PyScBaseObject*)pyvalue;
+    SC_ObjectGCInc(py_scobject->sc_object);
     value->type = TYPE_OBJECT;
     value->data.object = py_scobject->sc_object;
+    return qtrue;
   }
   else
   {
@@ -148,22 +167,13 @@ void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_
     print_pyobject( pyvalue->ob_type );
 #endif
     value->type = TYPE_UNDEF;
+    return qfalse;
   }
 }
 
 static PyObject *convert_from_array( scDataTypeArray_t *array )
 {
-  int i;
-  PyObject *list;
-  scDataTypeValue_t value;
-
-  list = PyList_New( array->size ); // Creat a new python list
-  for( i = 0; i < array->size; i++ )
-  {
-    SC_ArrayGet(array, i, &value);
-    PyList_SetItem( list, i, convert_from_value( &value ) );
-  }
-  return list;
+  return (PyObject*)PyScArrayFrom_ScArray( array );
 }
 
 static PyObject *convert_from_hash( scDataTypeHash_t *hash )
@@ -306,9 +316,13 @@ void SC_Python_Init( void )
   
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
+  Py_INCREF(&PyFunctionType);
   if (PyType_Ready(&PyScMethod_Type) < 0)
     return;
   Py_INCREF(&PyScMethod_Type);
+  if (PyType_Ready(&PyScArray_Type) < 0)
+    return;
+  Py_INCREF(&PyScArray_Type);
   
   loadconstants();
 //  if (PyType_Ready(&PyScObject_Type) < 0)

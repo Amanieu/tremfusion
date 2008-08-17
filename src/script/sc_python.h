@@ -134,8 +134,16 @@ PyTypeObject PyScMethod_Type;
 PyObject *PyScMethod_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 int PyScMethod_init(PyScMethod *self, PyObject *parent, scObject_t* instance, scObjectMethod_t* method);
 
+typedef struct {
+  PyObject_HEAD
+  scDataTypeArray_t *array;
+} PyScArray;
+
+PyTypeObject PyScArray_Type;
+PyScArray *PyScArrayFrom_ScArray( scDataTypeArray_t *array);
+
 PyObject *convert_from_value( scDataTypeValue_t *value );
-void convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
+int convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );
