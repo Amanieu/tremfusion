@@ -3620,21 +3620,41 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+      int mode = trap_Cvar_VariableValue( "r_mode" );
+      if ( mode < 0 || mode >= uiInfo.numResolutions )
       {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
-        return resolution;
+        Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)",
+                     (int)trap_Cvar_VariableValue( "r_customWidth" ),
+                     (int)trap_Cvar_VariableValue( "r_customHeight" ) );
       }
+      else
+      {
+        Com_sprintf( resolution, sizeof( resolution ), "%dx%d",
+                     uiInfo.resolutions[ mode ].w,
+                     uiInfo.resolutions[ mode ].h );
+      }
+      return resolution;
     }
+    else
+    {
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
 
-    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
-    return resolution;
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+        {
+          Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+          return resolution;
+        }
+      }
+
+      Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+      return resolution;
+    }
   }
 
   return "";
@@ -3764,8 +3784,13 @@ static void UI_FeederSelection( float feederID, int index )
     uiInfo.humanBuildIndex = index;
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
-    trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    if ( uiInfo.oldResolutions )
+      trap_Cvar_Set( "r_mode", va( "%d", index ) );
+    else
+    {
+      trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
+      trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    }
   }
 }
 
@@ -3773,14 +3798,19 @@ static int UI_FeederInitialise( float feederID )
 {
   if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
+      return trap_Cvar_VariableValue( "r_mode" );
+    else
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-        return i;
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
+
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+          return i;
+      }
     }
   }
 
@@ -3858,7 +3888,16 @@ void UI_ParseResolutions( void )
   char        *s = NULL;
 
   trap_Cvar_VariableStringBuffer( "r_availableModes", buf, sizeof( buf ) );
-  p = buf;
+  if ( buf[0] )
+  {
+    p = buf;
+    uiInfo.oldResolutions = qfalse;
+  }
+  else
+  {
+    p = "320x240 400x300 512x384 640x480 800x600 960x720 1024x768 1152x864 1280x1024 1600x1200 2048x1536 856x480";
+    uiInfo.oldResolutions = qtrue;
+  }
   uiInfo.numResolutions = 0;
 
   while( String_Parse( &p, &out ) )
