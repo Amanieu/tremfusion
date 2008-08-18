@@ -1673,6 +1673,7 @@ ifeq ($(USE_PYTHON),1)
     $(B)/base/game/sc_python_func.o \
     $(B)/base/game/sc_python_object.o \
     $(B)/base/game/sc_python_array.o \
+    $(B)/base/game/sc_python_hash.o \
     $(B)/base/game/sc_python.o
 endif
 
@@ -1754,6 +1755,7 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
       $(B)/base/ui/sc_python_func.o \
       $(B)/base/ui/sc_python_object.o \
       $(B)/base/ui/sc_python_array.o \
+      $(B)/base/ui/sc_python_hash.o \
       $(B)/base/ui/sc_python.o
   endif
 endif

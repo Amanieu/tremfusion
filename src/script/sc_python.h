@@ -142,6 +142,14 @@ typedef struct {
 PyTypeObject PyScArray_Type;
 PyScArray *PyScArrayFrom_ScArray( scDataTypeArray_t *array);
 
+typedef struct {
+  PyObject_HEAD
+  scDataTypeHash_t *hash;
+} PyScHash;
+
+PyTypeObject PyScHash_Type;
+PyScHash *PyScHashFrom_ScHash( scDataTypeHash_t *hash);
+
 PyObject *convert_from_value( scDataTypeValue_t *value );
 int convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
 

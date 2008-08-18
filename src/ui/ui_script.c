@@ -125,12 +125,11 @@ static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 
 static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  int x, y;
-  float scale;
+  float x, y, scale;
   vec4_t *colour;
   const char *text;
-  x      = in[0].data.integer;
-  y      = in[1].data.integer;
+  x      = in[0].data.floating;
+  y      = in[1].data.floating;
   scale  = in[2].data.floating;
   colour = SC_Vec4t_from_Vec4(in[3].data.object);
   text  = SC_StringToChar(in[4].data.string);
@@ -141,13 +140,20 @@ static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
 static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-//  DC->drawRect(
+  float x, y, w, h, size;
+  vec4_t *colour;
+  x      = in[0].data.floating;
+  y      = in[1].data.floating;
+  w      = in[2].data.floating;
+  h      = in[3].data.floating;
+  size   = in[4].data.floating;
+//  DC->drawRect();
 }
 
 
 static scLibFunction_t ui_lib[] = {
   { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
-  { "DrawText", "", draw_text, { TYPE_INTEGER, TYPE_INTEGER, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
+  { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
   { "" }
 };
 

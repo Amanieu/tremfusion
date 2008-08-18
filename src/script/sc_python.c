@@ -130,6 +130,15 @@ int convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t
     value->data.hash = convert_to_hash( pyvalue );
     return qtrue;
   }
+  else if ( PyObject_TypeCheck( pyvalue, &PyScHash_Type) )
+  {
+    PyScHash *pyScHash;
+    pyScHash = (PyScHash*)pyvalue;
+    value->type = TYPE_HASH;
+    SC_HashGCInc(pyScHash->hash);
+    value->data.hash = pyScHash->hash;
+    return qtrue;
+  }
   else if ( PyList_Check(pyvalue) || PyTuple_Check( pyvalue ) )
   {
     value->type = TYPE_ARRAY;
@@ -178,18 +187,19 @@ static PyObject *convert_from_array( scDataTypeArray_t *array )
 
 static PyObject *convert_from_hash( scDataTypeHash_t *hash )
 {
-  int i;
-  PyObject *dict, *temp;
-
-  dict = PyDict_New();
-  for( i = 0; i < hash->buflen; i++ )
-  {
-    if(SC_StringIsEmpty(&hash->data[i].key))
-      continue;
-    temp = convert_from_value( &hash->data[i].value );
-    PyDict_SetItemString( dict, SC_StringToChar(&hash->data[i].key), temp);
-  }
-  return dict;
+//  int i;
+//  PyObject *dict, *temp;
+//
+//  dict = PyDict_New();
+//  for( i = 0; i < hash->buflen; i++ )
+//  {
+//    if(SC_StringIsEmpty(&hash->data[i].key))
+//      continue;
+//    temp = convert_from_value( &hash->data[i].value );
+//    PyDict_SetItemString( dict, SC_StringToChar(&hash->data[i].key), temp);
+//  }
+//  return dict;
+  return (PyObject*)PyScHashFrom_ScHash(hash);
 }
 
 static PyObject *convert_from_function( scDataTypeFunction_t *function )
@@ -265,7 +275,7 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
 static void loadconstants(void)
 {
   scConstant_t *cst = sc_constants;
-  float val;
+//  float val;
   PyObject* module;
   module = PyImport_AddModule("constants");
   while(cst->name[0] != '\0')
@@ -324,6 +334,9 @@ void SC_Python_Init( void )
   if (PyType_Ready(&PyScArray_Type) < 0)
     return;
   Py_INCREF(&PyScArray_Type);
+  if (PyType_Ready(&PyScHash_Type) < 0)
+    return;
+  Py_INCREF(&PyScHash_Type);
   
   loadconstants();
 //  if (PyType_Ready(&PyScObject_Type) < 0)

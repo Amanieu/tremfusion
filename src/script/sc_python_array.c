@@ -199,6 +199,7 @@ static int PyScArray_ass_item (PyScArray *self, Py_ssize_t index, PyObject *valu
   if(!convert_to_value(value, &scValue, TYPE_ANY)) 
   {
     PyErr_SetString(PyExc_TypeError, "cannot convert to script type");
+    return -1;
   }
   SC_ArraySet( self->array, index, &scValue);
   return 0;
