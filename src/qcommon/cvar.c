@@ -753,7 +753,7 @@ void Cvar_Toggle_f( void ) {
 	if(c == 2) {
 		Cvar_Set2(Cmd_Argv(1), va("%d", 
 			!Cvar_VariableValue(Cmd_Argv(1))), 
-			qfalse);
+			qfalse, qfalse);
 		return;
 	}
 
@@ -768,13 +768,13 @@ void Cvar_Toggle_f( void ) {
 	// behaviour is the same as no match (set to the first argument)
 	for(i = 2; i + 1 < c; i++) {
 		if(strcmp(curval, Cmd_Argv(i)) == 0) {
-			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse);
+			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse, qfalse);
 			return;
 		}
 	}
 
 	// fallback
-	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse);
+	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse);
 }
 
 /*
