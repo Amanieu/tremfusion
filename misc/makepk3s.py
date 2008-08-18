@@ -74,11 +74,11 @@ if options.makedata:
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
-    add_dir_tree(os.path.join(options.repository, "/fonts/*"), "fonts/")
-    add_dir_tree(os.path.join(options.repository, "/gfx/*"), "gfx/")
-    add_dir_tree(os.path.join(options.repository, "/models/*"), "models/")
-    add_dir_tree(os.path.join(options.repository, "/sound/*"), "sound/")
-    add_dir_tree(os.path.join(options.repository, "/ui/*"), "ui/")
+    add_dir_tree(os.path.join(options.repository, "fonts/*"), "fonts/")
+    add_dir_tree(os.path.join(options.repository, "gfx/*"), "gfx/")
+    add_dir_tree(os.path.join(options.repository, "models/*"), "models/")
+    add_dir_tree(os.path.join(options.repository, "sound/*"), "sound/")
+    add_dir_tree(os.path.join(options.repository, "ui/*"), "ui/")
 
     pk3.close()
     if symlink_dir:
@@ -94,20 +94,20 @@ pk3filename = join ( dir_path, "tremfusion-game-r%04d.pk3" % scm_rev_num )
 print "Creating pk3 file at: %s" % pk3filename
 pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
-add_dir_tree(os.path.join(options.repository, "/armour/*"), "armour/")
-add_dir_tree(os.path.join(options.repository, "/configs/*"), "configs/")
-add_dir_tree(os.path.join(options.repository, "/scripts/*"), "scripts/")
+add_dir_tree(os.path.join(options.repository, "armour/*"), "armour/")
+add_dir_tree(os.path.join(options.repository, "configs/*"), "configs/")
+add_dir_tree(os.path.join(options.repository, "scripts/*"), "scripts/")
 
 if options.usedebug:
-  qvmglobstring = options.repository + "/build/debug-*/base/vm/*.qvm"
+  qvmglobstring = os.path.join(options.repository, "build/debug-*/base/vm/*.qvm")
 else:
-  qvmglobstring = options.repository + "/build/release-*/base/vm/*.qvm"
+  qvmglobstring = os.path.join(options.repository, "build/release-*/base/vm/*.qvm")
 
 for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue
   pk3path = "vm/" + os.path.basename(fspath)
   # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
-  if  not options.inc_game_qvm and pk3path == "vm/game.qvm":
+  if not options.inc_game_qvm and pk3path == "vm/game.qvm":
     continue
   add_file(fspath, pk3path)
 
