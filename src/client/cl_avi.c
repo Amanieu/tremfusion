@@ -582,8 +582,8 @@ void CL_TakeVideoFrame( void )
   if( !afd.fileOpen )
     return;
 
-  re.TakeVideoFrame( afd.width, afd.height,
-      afd.cBuffer, afd.eBuffer, afd.motionJpeg );
+//  re.TakeVideoFrame( afd.width, afd.height,
+//      afd.cBuffer, afd.eBuffer, afd.motionJpeg );
 }
 
 /*

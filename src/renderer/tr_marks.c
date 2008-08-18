@@ -1,7 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
-Copyright (C) 2006-2008 Robert Beckebans <trebor_7@users.sourceforge.net>
+Copyright (C) 2006 Robert Beckebans <trebor_7@users.sourceforge.net>
 
 This file is part of XreaL source code.
 
@@ -144,11 +144,12 @@ static void R_ChopPolyBehindPlane(int numInPoints, vec3_t inPoints[MAX_VERTS_ON_
 R_BoxSurfaces_r
 =================
 */
-void R_BoxSurfaces_r(bspNode_t * node, vec3_t mins, vec3_t maxs, surfaceType_t ** list, int listsize, int *listlength, vec3_t dir)
+void R_BoxSurfaces_r(mnode_t * node, vec3_t mins, vec3_t maxs, surfaceType_t ** list, int listsize,
+					 int *listlength, vec3_t dir)
 {
 
 	int             s, c;
-	bspSurface_t   *surf, **mark;
+	msurface_t     *surf, **mark;
 
 	// do the tail recursion in a loop
 	while(node->contents == -1)
@@ -170,8 +171,8 @@ void R_BoxSurfaces_r(bspNode_t * node, vec3_t mins, vec3_t maxs, surfaceType_t *
 	}
 
 	// add the individual surfaces
-	mark = node->markSurfaces;
-	c = node->numMarkSurfaces;
+	mark = node->firstmarksurface;
+	c = node->nummarksurfaces;
 	while(c--)
 	{
 		//
@@ -180,7 +181,8 @@ void R_BoxSurfaces_r(bspNode_t * node, vec3_t mins, vec3_t maxs, surfaceType_t *
 		//
 		surf = *mark;
 		// check if the surface has NOIMPACT or NOMARKS set
-		if((surf->shader->surfaceFlags & (SURF_NOIMPACT | SURF_NOMARKS)) || (surf->shader->contentFlags & CONTENTS_FOG))
+		if((surf->shader->surfaceFlags & (SURF_NOIMPACT | SURF_NOMARKS))
+		   || (surf->shader->contentFlags & CONTENTS_FOG))
 		{
 			surf->viewCount = tr.viewCount;
 		}
@@ -269,12 +271,7 @@ void R_AddMarkFragments(int numClipPoints, vec3_t clipPoints[2][MAX_VERTS_ON_POL
 	mf = fragmentBuffer + (*returnedFragments);
 	mf->firstPoint = (*returnedPoints);
 	mf->numPoints = numClipPoints;
-
-#if defined(SSEVEC3_T)
-	Com_Memcpy(pointBuffer + (*returnedPoints) * 4, clipPoints[pingPong], numClipPoints * sizeof(vec3_t));
-#else
 	Com_Memcpy(pointBuffer + (*returnedPoints) * 3, clipPoints[pingPong], numClipPoints * sizeof(vec3_t));
-#endif
 
 	(*returnedPoints) += numClipPoints;
 	(*returnedFragments)++;
@@ -406,7 +403,8 @@ int R_MarkFragments(int numPoints, const vec3_t * points, const vec3_t projectio
 						R_AddMarkFragments(numClipPoints, clipPoints,
 										   numPlanes, normals, dists,
 										   maxPoints, pointBuffer,
-										   maxFragments, fragmentBuffer, &returnedPoints, &returnedFragments, mins, maxs);
+										   maxFragments, fragmentBuffer,
+										   &returnedPoints, &returnedFragments, mins, maxs);
 
 						if(returnedFragments == maxFragments)
 						{
@@ -431,7 +429,8 @@ int R_MarkFragments(int numPoints, const vec3_t * points, const vec3_t projectio
 						R_AddMarkFragments(numClipPoints, clipPoints,
 										   numPlanes, normals, dists,
 										   maxPoints, pointBuffer,
-										   maxFragments, fragmentBuffer, &returnedPoints, &returnedFragments, mins, maxs);
+										   maxFragments, fragmentBuffer,
+										   &returnedPoints, &returnedFragments, mins, maxs);
 
 						if(returnedFragments == maxFragments)
 						{
@@ -444,7 +443,7 @@ int R_MarkFragments(int numPoints, const vec3_t * points, const vec3_t projectio
 		else if(*surfaces[i] == SF_FACE)
 		{
 			surf = (srfSurfaceFace_t *) surfaces[i];
-
+			
 			// check the normal of this face
 			if(DotProduct(surf->plane.normal, projectionDir) > -0.5)
 			{
@@ -469,7 +468,8 @@ int R_MarkFragments(int numPoints, const vec3_t * points, const vec3_t projectio
 				R_AddMarkFragments(3, clipPoints,
 								   numPlanes, normals, dists,
 								   maxPoints, pointBuffer,
-								   maxFragments, fragmentBuffer, &returnedPoints, &returnedFragments, mins, maxs);
+								   maxFragments, fragmentBuffer,
+								   &returnedPoints, &returnedFragments, mins, maxs);
 				if(returnedFragments == maxFragments)
 				{
 					return returnedFragments;	// not enough space for more fragments

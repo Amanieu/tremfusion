@@ -38,6 +38,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // surface geometry should not exceed these limits
 #define	SHADER_MAX_VERTEXES	1000
 #define	SHADER_MAX_INDEXES	(6*SHADER_MAX_VERTEXES)
+#define SHADER_MAX_TRIANGLES (SHADER_MAX_INDEXES / 3)
 
 
 // the maximum size of game relative pathnames
@@ -69,6 +70,23 @@ typedef struct {
 	//!!! below here is VM_MAGIC_VER2 !!!
 	int		jtrgLength;			// number of jump table targets
 } vmHeader_t;
+
+/*
+========================================================================
+
+TGA files are used for 24/32 bit images
+
+========================================================================
+*/
+
+typedef struct _TargaHeader
+{
+  unsigned char   id_length, colormap_type, image_type;
+  unsigned short  colormap_index, colormap_length;
+  unsigned char   colormap_size;
+  unsigned short  x_origin, y_origin, width, height;
+  unsigned char   pixel_size, attributes;
+} TargaHeader;
 
 /*
 ========================================================================

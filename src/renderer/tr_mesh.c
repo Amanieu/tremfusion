@@ -23,6 +23,53 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_mesh.c -- triangle model functions
 #include "tr_local.h"
 
+static float ProjectRadius(float r, vec3_t location)
+{
+	float		pr;
+	float		dist;
+	float		c;
+	vec3_t		p;
+	float		projected[4];
+
+	c = DotProduct(tr.viewParms.or.axis[0], tr.viewParms.or.origin);
+	dist = DotProduct(tr.viewParms.or.axis[0], location) - c;
+
+	if (dist <= 0)
+		return 0;
+
+	p[0] = 0;
+	p[1] = fabs(r);
+	p[2] = -dist;
+
+	projected[0] = p[0] * tr.viewParms.projectionMatrix[0] + 
+		           p[1] * tr.viewParms.projectionMatrix[4] +
+				   p[2] * tr.viewParms.projectionMatrix[8] +
+				   tr.viewParms.projectionMatrix[12];
+
+	projected[1] = p[0] * tr.viewParms.projectionMatrix[1] + 
+		           p[1] * tr.viewParms.projectionMatrix[5] +
+				   p[2] * tr.viewParms.projectionMatrix[9] +
+				   tr.viewParms.projectionMatrix[13];
+
+	projected[2] = p[0] * tr.viewParms.projectionMatrix[2] + 
+		           p[1] * tr.viewParms.projectionMatrix[6] +
+				   p[2] * tr.viewParms.projectionMatrix[10] +
+				   tr.viewParms.projectionMatrix[14];
+
+	projected[3] = p[0] * tr.viewParms.projectionMatrix[3] + 
+		           p[1] * tr.viewParms.projectionMatrix[7] +
+				   p[2] * tr.viewParms.projectionMatrix[11] +
+				   tr.viewParms.projectionMatrix[15];
+
+
+	pr = projected[1] / projected[3];
+
+	if ( pr > 1.0f )
+		pr = 1.0f;
+
+	return pr;
+}
+
 /*
 =============
 R_CullMDX
@@ -38,28 +85,26 @@ static void R_CullMDX(mdxModel_t * model, trRefEntity_t * ent)
 	// compute frame pointers
 	newFrame = model->frames + ent->e.frame;
 	oldFrame = model->frames + ent->e.oldframe;
-
+	
 	// calculate a bounding box in the current coordinate system
 	for(i = 0; i < 3; i++)
 	{
-		ent->localBounds[0][i] =
-			oldFrame->bounds[0][i] < newFrame->bounds[0][i] ? oldFrame->bounds[0][i] : newFrame->bounds[0][i];
-		ent->localBounds[1][i] =
-			oldFrame->bounds[1][i] > newFrame->bounds[1][i] ? oldFrame->bounds[1][i] : newFrame->bounds[1][i];
+		ent->localBounds[0][i] = oldFrame->bounds[0][i] < newFrame->bounds[0][i] ? oldFrame->bounds[0][i] : newFrame->bounds[0][i];
+		ent->localBounds[1][i] = oldFrame->bounds[1][i] > newFrame->bounds[1][i] ? oldFrame->bounds[1][i] : newFrame->bounds[1][i];
 	}
-
+	
 	// setup world bounds for intersection tests
 	ClearBounds(ent->worldBounds[0], ent->worldBounds[1]);
-
+		
 	for(i = 0; i < 8; i++)
 	{
 		v[0] = ent->localBounds[i & 1][0];
 		v[1] = ent->localBounds[(i >> 1) & 1][1];
 		v[2] = ent->localBounds[(i >> 2) & 1][2];
-
+	
 		// transform local bounds vertices into world space
 		R_LocalPointToWorld(v, transformed);
-
+			
 		AddPointToBounds(transformed, ent->worldBounds[0], ent->worldBounds[1]);
 	}
 
@@ -127,12 +172,12 @@ static void R_CullMDX(mdxModel_t * model, trRefEntity_t * ent)
 			tr.pc.c_box_cull_mdx_in++;
 			ent->cull = CULL_IN;
 			return;
-
+			
 		case CULL_CLIP:
 			tr.pc.c_box_cull_mdx_clip++;
 			ent->cull = CULL_CLIP;
 			return;
-
+			
 		case CULL_OUT:
 		default:
 			tr.pc.c_box_cull_mdx_out++;
@@ -171,7 +216,7 @@ int R_ComputeLOD(trRefEntity_t * ent)
 
 		radius = RadiusFromBounds(frame->bounds[0], frame->bounds[1]);
 
-		if((projectedRadius = R_ProjectRadius(radius, ent->e.origin)) != 0)
+		if((projectedRadius = ProjectRadius(radius, ent->e.origin)) != 0)
 		{
 			lodscale = r_lodscale->value;
 			if(lodscale > 20)
@@ -185,7 +230,7 @@ int R_ComputeLOD(trRefEntity_t * ent)
 		}
 
 		flod *= tr.currentModel->numLods;
-		lod = Q_ftol(flod);
+		lod = myftol(flod);
 
 		if(lod < 0)
 		{
@@ -216,9 +261,12 @@ void R_AddMDXSurfaces(trRefEntity_t * ent)
 {
 	int             i;
 	mdxModel_t     *model = 0;
+	mdxFrame_t     *frame = 0;
 	mdxSurface_t   *surface = 0;
+	mdxShader_t    *mdxShader = 0;
 	shader_t       *shader = 0;
 	int             lod;
+	int             fogNum;
 	qboolean        personalModel;
 
 	// don't add third_person objects if not in a portal
@@ -235,7 +283,8 @@ void R_AddMDXSurfaces(trRefEntity_t * ent)
 	// when the surfaces are rendered, they don't need to be
 	// range checked again.
 	if((ent->e.frame >= tr.currentModel->mdx[0]->numFrames)
-	   || (ent->e.frame < 0) || (ent->e.oldframe >= tr.currentModel->mdx[0]->numFrames) || (ent->e.oldframe < 0))
+	   || (ent->e.frame < 0)
+	   || (ent->e.oldframe >= tr.currentModel->mdx[0]->numFrames) || (ent->e.oldframe < 0))
 	{
 		ri.Printf(PRINT_DEVELOPER, "R_AddMDXSurfaces: no such frame %d to %d for '%s'\n",
 				  ent->e.oldframe, ent->e.frame, tr.currentModel->name);
@@ -262,90 +311,70 @@ void R_AddMDXSurfaces(trRefEntity_t * ent)
 		R_SetupEntityLighting(&tr.refdef, ent);
 	}
 
+	// see if we are in a fog volume
+	// FIXME: non-normalized axis issues
+	frame = model->frames + ent->e.frame;
+	fogNum = R_FogLocalPointAndRadius(frame->localOrigin, frame->radius);
+
 	// draw all surfaces
-	if(r_vboModels->integer && model->numVBOSurfaces)
+	for(i = 0, surface = model->surfaces; i < model->numSurfaces; i++, surface++)
 	{
-		int             i;
-		srfVBOMesh_t   *vboSurface;
-		shader_t       *shader;
-
-		for(i = 0; i < model->numVBOSurfaces; i++)
+		if(ent->e.customShader)
 		{
-			vboSurface = model->vboSurfaces[i];
-			shader = vboSurface->shader;
+			shader = R_GetShaderByHandle(ent->e.customShader);
+		}
+		else if(ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins)
+		{
+			skin_t         *skin;
+			int             j;
 
-			// don't add third_person objects if not viewing through a portal
-			if(!personalModel)
+			skin = R_GetSkinByHandle(ent->e.customSkin);
+
+			// match the surface name to something in the skin file
+			shader = tr.defaultShader;
+			for(j = 0; j < skin->numSurfaces; j++)
 			{
-				R_AddDrawSurf((void *)vboSurface, shader, -1);
+				// the names have both been lowercased
+				if(!strcmp(skin->surfaces[j]->name, surface->name))
+				{
+					shader = skin->surfaces[j]->shader;
+					break;
+				}
+			}
+			if(shader == tr.defaultShader)
+			{
+				ri.Printf(PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name,
+						  skin->name);
+			}
+			else if(shader->defaultShader)
+			{
+				ri.Printf(PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name,
+						  skin->name);
 			}
 		}
-	}
-	else
-	{
-		for(i = 0, surface = model->surfaces; i < model->numSurfaces; i++, surface++)
+		else if(surface->numShaders <= 0)
 		{
-			if(ent->e.customShader)
-			{
-				shader = R_GetShaderByHandle(ent->e.customShader);
-			}
-			else if(ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins)
-			{
-				skin_t         *skin;
-				int             j;
+			shader = tr.defaultShader;
+		}
+		else
+		{
+			mdxShader = surface->shaders;
+			mdxShader += ent->e.skinNum % surface->numShaders;
+			shader = tr.shaders[mdxShader->shaderIndex];
+		}
 
-				skin = R_GetSkinByHandle(ent->e.customSkin);
+		// we will add shadows even if the main object isn't visible in the view
 
-				// match the surface name to something in the skin file
-				shader = tr.defaultShader;
-				for(j = 0; j < skin->numSurfaces; j++)
-				{
-					// the names have both been lowercased
-					if(!strcmp(skin->surfaces[j]->name, surface->name))
-					{
-						shader = skin->surfaces[j]->shader;
-						break;
-					}
-				}
-				if(shader == tr.defaultShader)
-				{
-					ri.Printf(PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
-				}
-				else if(shader->defaultShader)
-				{
-					ri.Printf(PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
-				}
-			}
-			else
-			{
-				shader = surface->shader;
-			}
-			/*
-			   else if(surface->numShaders <= 0)
-			   {
-			   shader = tr.defaultShader;
-			   }
-			   else
-			   {
-			   mdxShader = surface->shaders;
-			   mdxShader += ent->e.skinNum % surface->numShaders;
-			   shader = tr.shaders[mdxShader->shaderIndex];
-			   }
-			 */
+		// projection shadows work fine with personal models 	 
+		if(r_shadows->integer == 2 && fogNum == 0 && (ent->e.renderfx & RF_SHADOW_PLANE) && shader->sort == SS_OPAQUE) 	 
+		{ 	 
+			R_AddDrawSurf((void *)surface, tr.projectionShadowShader, -1, 0); 	 
+		}
 
-			// we will add shadows even if the main object isn't visible in the view
-
-			// projection shadows work fine with personal models
-			if(r_shadows->integer == 2 && (ent->e.renderfx & RF_SHADOW_PLANE) && shader->sort == SS_OPAQUE)
-			{
-				R_AddDrawSurf((void *)surface, tr.projectionShadowShader, -1);
-			}
-
-			// don't add third_person objects if not viewing through a portal
-			if(!personalModel)
-			{
-				R_AddDrawSurf((void *)surface, shader, -1);
-			}
+		// don't add third_person objects if not viewing through a portal
+		if(!personalModel)
+		{
+			R_AddDrawSurf((void *)surface, shader, -1, fogNum);
 		}
 	}
 }
@@ -355,17 +384,17 @@ void R_AddMDXSurfaces(trRefEntity_t * ent)
 R_AddMDXInteractions
 =================
 */
-void R_AddMDXInteractions(trRefEntity_t * ent, trRefLight_t * light)
+void R_AddMDXInteractions(trRefEntity_t * ent, trRefDlight_t * light)
 {
 	int             i;
 	mdxModel_t     *model = 0;
 	mdxSurface_t   *surface = 0;
+	mdxShader_t    *mdxShader = 0;
 	shader_t       *shader = 0;
 	int             lod;
 	qboolean        personalModel;
-	byte            cubeSideBits;
 	interactionType_t iaType = IA_DEFAULT;
-
+	
 	// cull the entire model if merged bounding box of both frames
 	// is outside the view frustum and we don't care about proper shadowing
 	if(ent->cull == CULL_OUT)
@@ -375,17 +404,10 @@ void R_AddMDXInteractions(trRefEntity_t * ent, trRefLight_t * light)
 		else
 			iaType = IA_SHADOWONLY;
 	}
-
-	// avoid drawing of certain objects
-	if(light->l.inverseShadows)
-	{
-		if(iaType != IA_LIGHTONLY && (light->l.noShadowID && (light->l.noShadowID != ent->e.noShadowID)))
-			return;
-	}
 	else
 	{
-		if(iaType != IA_LIGHTONLY && (light->l.noShadowID && (light->l.noShadowID == ent->e.noShadowID)))
-			return;
+		if(r_shadows->integer <= 2)
+			iaType = IA_LIGHTONLY;
 	}
 
 	// don't add third_person objects if not in a portal
@@ -413,176 +435,64 @@ void R_AddMDXInteractions(trRefEntity_t * ent, trRefLight_t * light)
 		}
 	}
 
-	cubeSideBits = R_CalcLightCubeSideBits(light, ent->worldBounds);
-
 	// generate interactions with all surfaces
-	if(r_vboModels->integer && model->numVBOSurfaces)
+	for(i = 0, surface = model->surfaces; i < model->numSurfaces; i++, surface++)
 	{
-		// new brute force method: just render everthing with static VBOs
-		int             i;
-		srfVBOMesh_t   *vboSurface;
-		shader_t       *shader;
-
-		if(r_shadows->integer == 3)
+		if(ent->e.customShader)
 		{
-			// add shadow interactions because we cannot use shadow volumes with static VBOs ..
-			for(i = 0, surface = model->surfaces; i < model->numSurfaces; i++, surface++)
+			shader = R_GetShaderByHandle(ent->e.customShader);
+		}
+		else if(ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins)
+		{
+			skin_t         *skin;
+			int             j;
+
+			skin = R_GetSkinByHandle(ent->e.customSkin);
+
+			// match the surface name to something in the skin file
+			shader = tr.defaultShader;
+			for(j = 0; j < skin->numSurfaces; j++)
 			{
-				if(ent->e.customShader)
+				// the names have both been lowercased
+				if(!strcmp(skin->surfaces[j]->name, surface->name))
 				{
-					shader = R_GetShaderByHandle(ent->e.customShader);
-				}
-				else if(ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins)
-				{
-					skin_t         *skin;
-					int             j;
-
-					skin = R_GetSkinByHandle(ent->e.customSkin);
-
-					// match the surface name to something in the skin file
-					shader = tr.defaultShader;
-					for(j = 0; j < skin->numSurfaces; j++)
-					{
-						// the names have both been lowercased
-						if(!strcmp(skin->surfaces[j]->name, surface->name))
-						{
-							shader = skin->surfaces[j]->shader;
-							break;
-						}
-					}
-					if(shader == tr.defaultShader)
-					{
-						ri.Printf(PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
-					}
-					else if(shader->defaultShader)
-					{
-						ri.Printf(PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
-					}
-				}
-				else
-				{
-					shader = surface->shader;
-				}
-
-				// skip all surfaces that don't matter for lighting only pass
-				if(shader->isSky || !shader->interactLight || shader->noShadows)
-					continue;
-
-				// we will add shadows even if the main object isn't visible in the view
-
-				// don't add third_person objects if not viewing through a portal
-				if(!personalModel)
-				{
-					R_AddLightInteraction(light, (void *)surface, shader, cubeSideBits, IA_SHADOWONLY);
-					tr.pc.c_dlightSurfaces++;
+					shader = skin->surfaces[j]->shader;
+					break;
 				}
 			}
-
-			// use static VBOs for lighting only
-			for(i = 0; i < model->numVBOSurfaces; i++)
+			if(shader == tr.defaultShader)
 			{
-				vboSurface = model->vboSurfaces[i];
-				shader = vboSurface->shader;
-
-				// skip all surfaces that don't matter for lighting only pass
-				if(shader->isSky || (!shader->interactLight && shader->noShadows))
-					continue;
-
-				// don't add third_person objects if not viewing through a portal
-				if(!personalModel)
-				{
-					R_AddLightInteraction(light, (void *)vboSurface, shader, cubeSideBits, IA_LIGHTONLY);
-					tr.pc.c_dlightSurfaces++;
-				}
+				ri.Printf(PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name,
+						  skin->name);
 			}
+			else if(shader->defaultShader)
+			{
+				ri.Printf(PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name,
+						  skin->name);
+			}
+		}
+		else if(surface->numShaders <= 0)
+		{
+			shader = tr.defaultShader;
 		}
 		else
 		{
-			// static VBOs are fine for lighting and shadow mapping
-			for(i = 0; i < model->numVBOSurfaces; i++)
-			{
-				vboSurface = model->vboSurfaces[i];
-				shader = vboSurface->shader;
-
-				// skip all surfaces that don't matter for lighting only pass
-				if(shader->isSky || (!shader->interactLight && shader->noShadows))
-					continue;
-
-				// we will add shadows even if the main object isn't visible in the view
-
-				// don't add third_person objects if not viewing through a portal
-				if(!personalModel)
-				{
-					R_AddLightInteraction(light, (void *)vboSurface, shader, cubeSideBits, iaType);
-					tr.pc.c_dlightSurfaces++;
-				}
-			}
+			mdxShader = surface->shaders;
+			mdxShader += ent->e.skinNum % surface->numShaders;
+			shader = tr.shaders[mdxShader->shaderIndex];
 		}
-	}
-	else
-	{
-		for(i = 0, surface = model->surfaces; i < model->numSurfaces; i++, surface++)
+		
+		// skip all surfaces that don't matter for lighting only pass
+		if(shader->isSky || (!shader->interactLight && shader->noShadows))
+			continue;
+		
+		// we will add shadows even if the main object isn't visible in the view
+
+		// don't add third_person objects if not viewing through a portal
+		if(!personalModel)
 		{
-			if(ent->e.customShader)
-			{
-				shader = R_GetShaderByHandle(ent->e.customShader);
-			}
-			else if(ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins)
-			{
-				skin_t         *skin;
-				int             j;
-
-				skin = R_GetSkinByHandle(ent->e.customSkin);
-
-				// match the surface name to something in the skin file
-				shader = tr.defaultShader;
-				for(j = 0; j < skin->numSurfaces; j++)
-				{
-					// the names have both been lowercased
-					if(!strcmp(skin->surfaces[j]->name, surface->name))
-					{
-						shader = skin->surfaces[j]->shader;
-						break;
-					}
-				}
-				if(shader == tr.defaultShader)
-				{
-					ri.Printf(PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
-				}
-				else if(shader->defaultShader)
-				{
-					ri.Printf(PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
-				}
-			}
-			else
-			{
-				shader = surface->shader;
-			}
-			/*
-			   else if(surface->numShaders <= 0)
-			   {
-			   shader = tr.defaultShader;
-			   }
-			   else
-			   {
-			   mdxShader = surface->shaders;
-			   mdxShader += ent->e.skinNum % surface->numShaders;
-			   shader = tr.shaders[mdxShader->shaderIndex];
-			   }
-			 */
-
-			// skip all surfaces that don't matter for lighting only pass
-			if(shader->isSky || (!shader->interactLight && shader->noShadows))
-				continue;
-
-			// we will add shadows even if the main object isn't visible in the view
-
-			// don't add third_person objects if not viewing through a portal
-			if(!personalModel)
-			{
-				R_AddLightInteraction(light, (void *)surface, shader, cubeSideBits, iaType);
-				tr.pc.c_dlightSurfaces++;
-			}
+			R_AddDlightInteraction(light, (void *)surface, shader, 0, NULL, 0, NULL, iaType);
+			tr.pc.c_dlightSurfaces++;
 		}
 	}
 }

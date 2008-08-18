@@ -552,8 +552,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		re.LoadWorld( VMA(1) );
 		return 0; 
 	case CG_R_REGISTERMODEL:
-	  //TODO: Champion: Change the actual trap to allow setting forceStatic
-		return re.RegisterModel( VMA(1), qfalse );
+		return re.RegisterModel( VMA(1));
 	case CG_R_REGISTERSKIN:
 		return re.RegisterSkin( VMA(1) );
 	case CG_R_REGISTERSHADER:

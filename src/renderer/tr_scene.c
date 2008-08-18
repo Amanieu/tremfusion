@@ -1,7 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
-Copyright (C) 2006-2008 Robert Beckebans <trebor_7@users.sourceforge.net>
+Copyright (C) 2006 Robert Beckebans <trebor_7@users.sourceforge.net>
 
 This file is part of XreaL source code.
 
@@ -29,13 +29,13 @@ static int      r_firstSceneInteraction;
 static int      r_numLights;
 static int      r_firstSceneLight;
 
-static int      r_numEntities;
+static int      r_numentities;
 static int      r_firstSceneEntity;
 
-static int      r_numPolys;
+static int      r_numpolys;
 static int      r_firstScenePoly;
 
-static int      r_numPolyVerts;
+static int      r_numpolyverts;
 
 
 /*
@@ -64,13 +64,13 @@ void R_ToggleSmpFrame(void)
 	r_numLights = 0;
 	r_firstSceneLight = 0;
 
-	r_numEntities = 0;
+	r_numentities = 0;
 	r_firstSceneEntity = 0;
 
-	r_numPolys = 0;
+	r_numpolys = 0;
 	r_firstScenePoly = 0;
 
-	r_numPolyVerts = 0;
+	r_numpolyverts = 0;
 }
 
 
@@ -82,8 +82,8 @@ RE_ClearScene
 void RE_ClearScene(void)
 {
 	r_firstSceneLight = r_numLights;
-	r_firstSceneEntity = r_numEntities;
-	r_firstScenePoly = r_numPolys;
+	r_firstSceneEntity = r_numentities;
+	r_firstScenePoly = r_numpolys;
 }
 
 /*
@@ -112,7 +112,7 @@ void R_AddPolygonSurfaces(void)
 	for(i = 0, poly = tr.refdef.polys; i < tr.refdef.numPolys; i++, poly++)
 	{
 		sh = R_GetShaderByHandle(poly->hShader);
-		R_AddDrawSurf((void *)poly, sh, -1);
+		R_AddDrawSurf((void *)poly, sh, -1, poly->fogIndex);
 	}
 }
 
@@ -124,7 +124,10 @@ RE_AddPolyToScene
 void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t * verts, int numPolys)
 {
 	srfPoly_t      *poly;
-	int             j;
+	int             i, j;
+	int             fogIndex;
+	fog_t          *fog;
+	vec3_t          bounds[2];
 
 	if(!tr.registered)
 	{
@@ -139,7 +142,7 @@ void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t * verts
 
 	for(j = 0; j < numPolys; j++)
 	{
-		if(r_numPolyVerts + numVerts >= r_maxPolyVerts->integer || r_numPolys >= r_maxPolys->integer)
+		if(r_numpolyverts + numVerts > max_polyverts || r_numpolys >= max_polys)
 		{
 			/*
 			   NOTE TTimo this was initially a PRINT_WARNING
@@ -151,17 +154,62 @@ void RE_AddPolyToScene(qhandle_t hShader, int numVerts, const polyVert_t * verts
 			return;
 		}
 
-		poly = &backEndData[tr.smpFrame]->polys[r_numPolys];
+		poly = &backEndData[tr.smpFrame]->polys[r_numpolys];
 		poly->surfaceType = SF_POLY;
 		poly->hShader = hShader;
 		poly->numVerts = numVerts;
-		poly->verts = &backEndData[tr.smpFrame]->polyVerts[r_numPolyVerts];
+		poly->verts = &backEndData[tr.smpFrame]->polyVerts[r_numpolyverts];
 
 		Com_Memcpy(poly->verts, &verts[numVerts * j], numVerts * sizeof(*verts));
 
+		if(glConfig.hardwareType == GLHW_RAGEPRO)
+		{
+			poly->verts->modulate[0] = 255;
+			poly->verts->modulate[1] = 255;
+			poly->verts->modulate[2] = 255;
+			poly->verts->modulate[3] = 255;
+		}
 		// done.
-		r_numPolys++;
-		r_numPolyVerts += numVerts;
+		r_numpolys++;
+		r_numpolyverts += numVerts;
+
+		// if no world is loaded
+		if(tr.world == NULL)
+		{
+			fogIndex = 0;
+		}
+		// see if it is in a fog volume
+		else if(tr.world->numfogs == 1)
+		{
+			fogIndex = 0;
+		}
+		else
+		{
+			// find which fog volume the poly is in
+			VectorCopy(poly->verts[0].xyz, bounds[0]);
+			VectorCopy(poly->verts[0].xyz, bounds[1]);
+			for(i = 1; i < poly->numVerts; i++)
+			{
+				AddPointToBounds(poly->verts[i].xyz, bounds[0], bounds[1]);
+			}
+			for(fogIndex = 1; fogIndex < tr.world->numfogs; fogIndex++)
+			{
+				fog = &tr.world->fogs[fogIndex];
+				if(bounds[1][0] >= fog->bounds[0][0]
+				   && bounds[1][1] >= fog->bounds[0][1]
+				   && bounds[1][2] >= fog->bounds[0][2]
+				   && bounds[0][0] <= fog->bounds[1][0]
+				   && bounds[0][1] <= fog->bounds[1][1] && bounds[0][2] <= fog->bounds[1][2])
+				{
+					break;
+				}
+			}
+			if(fogIndex == tr.world->numfogs)
+			{
+				fogIndex = 0;
+			}
+		}
+		poly->fogIndex = fogIndex;
 	}
 }
 
@@ -180,111 +228,59 @@ void RE_AddRefEntityToScene(const refEntity_t * ent)
 	{
 		return;
 	}
-
+	
 	// Tr3B: fixed was ENTITYNUM_WORLD
-	if(r_numEntities >= MAX_REF_ENTITIES)
+	if(r_numentities >= MAX_ENTITIES)
 	{
 		return;
 	}
-
+	
 	if(ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE)
 	{
 		ri.Error(ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
 	}
 
-	Com_Memcpy(&backEndData[tr.smpFrame]->entities[r_numEntities].e, ent, sizeof(refEntity_t));
+	Com_Memcpy(&backEndData[tr.smpFrame]->entities[r_numentities].e, ent, sizeof(refEntity_t));
 	//backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
-	backEndData[tr.smpFrame]->entities[r_numEntities].lightingCalculated = qfalse;
+	backEndData[tr.smpFrame]->entities[r_numentities].lightingCalculated = qfalse;
 
-	r_numEntities++;
+	r_numentities++;
 }
 
 /*
 =====================
-RE_AddRefLightToScene
+RE_AddRefDlightToScene
 =====================
 */
-void RE_AddRefLightToScene(const refLight_t * l)
+void RE_AddRefDlightToScene(const refLight_t * light)
 {
-	trRefLight_t   *light;
-
+	trRefDlight_t *dl;
+		
 	if(!tr.registered)
 	{
 		return;
 	}
-
-	if(r_numLights >= MAX_REF_LIGHTS)
+	
+	if(r_numLights >= MAX_LIGHTS)
 	{
 		return;
 	}
-
-	if(l->radius[0] <= 0 && !VectorLength(l->radius) && l->distance <= 0)
+	
+	if(light->radius[0] <= 0 && !VectorLength(light->radius))
 	{
 		return;
 	}
-
-	if(l->rlType < 0 || l->rlType >= RL_MAX_REF_LIGHT_TYPE)
+	
+	if(light->rlType < 0 || light->rlType >= RL_MAX_REF_LIGHT_TYPE)
 	{
-		ri.Error(ERR_DROP, "RE_AddRefLightToScene: bad rlType %i", l->rlType);
+		ri.Error(ERR_DROP, "RE_AddRefDlightToScene: bad rlType %i", light->rlType);
 	}
-
-	light = &backEndData[tr.smpFrame]->lights[r_numLights++];
-	light->l = *l;
-
-	light->isStatic = qfalse;
-	light->additive = qtrue;
-
-	if(!r_dynamicLightsCastShadows->integer && !light->l.inverseShadows)
-	{
-		light->l.noShadows = qtrue;
-	}
-}
-
-/*
-=====================
-R_AddWorldLightsToScene
-=====================
-*/
-static void R_AddWorldLightsToScene()
-{
-	int             i;
-	trRefLight_t   *light;
-
-	if(!tr.registered)
-	{
-		return;
-	}
-
-	if(tr.refdef.rdflags & RDF_NOWORLDMODEL)
-	{
-		return;
-	}
-
-	for(i = 0; i < tr.world->numLights; i++)
-	{
-		light = tr.currentLight = &tr.world->lights[i];
-
-		if(r_numLights >= MAX_REF_LIGHTS)
-		{
-			return;
-		}
-
-		/*
-		   if(light->radius[0] <= 0 && !VectorLength(light->radius) && light->distance <= 0)
-		   {
-		   continue;
-		   }
-		 */
-
-		if(!light->firstInteractionCache)
-		{
-			// this light has no interactions precached
-			continue;
-		}
-
-		Com_Memcpy(&backEndData[tr.smpFrame]->lights[r_numLights], light, sizeof(trRefLight_t));
-		r_numLights++;
-	}
+	
+	dl = &backEndData[tr.smpFrame]->dlights[r_numLights++];
+	dl->l = *light;
+	
+	dl->isStatic = qfalse;
+	dl->additive = qtrue;
 }
 
 /*
@@ -294,48 +290,46 @@ RE_AddDynamicLightToScene
 */
 static void RE_AddDynamicLightToScene(const vec3_t org, float intensity, float r, float g, float b, int additive)
 {
-	trRefLight_t   *light;
-
+	trRefDlight_t *dl;
+		
 	if(!tr.registered)
 	{
 		return;
 	}
-
-	if(r_numLights >= MAX_REF_LIGHTS)
+	
+	if(r_numLights >= MAX_LIGHTS)
 	{
 		return;
 	}
-
+	
 	if(intensity <= 0)
 	{
 		return;
 	}
+	
+	dl = &backEndData[tr.smpFrame]->dlights[r_numLights++];
+	
+	dl->l.rlType = RL_OMNI;
+//	dl->l.lightfx = 0;
+	VectorCopy(org, dl->l.origin);
 
-	light = &backEndData[tr.smpFrame]->lights[r_numLights++];
+	// HACK: this will tell the renderer backend to use tr.defaultDynamicLightShader
+	dl->l.attenuationShader = 0;
+	
+	dl->l.radius[0] = intensity;
+	dl->l.radius[1] = intensity;
+	dl->l.radius[2] = intensity;
 
-	light->l.rlType = RL_OMNI;
-//  light->l.lightfx = 0;
-	VectorCopy(org, light->l.origin);
-
-	QuatClear(light->l.rotation);
-	VectorClear(light->l.center);
-
-	// HACK: this will tell the renderer backend to use tr.defaultLightShader
-	light->l.attenuationShader = 0;
-
-	light->l.radius[0] = intensity;
-	light->l.radius[1] = intensity;
-	light->l.radius[2] = intensity;
-
-	light->l.color[0] = r;
-	light->l.color[1] = g;
-	light->l.color[2] = b;
-
-	light->l.noShadows = r_dynamicLightsCastShadows->integer ? qfalse : qtrue;
-	light->l.inverseShadows = qfalse;
-
-	light->isStatic = qfalse;
-	light->additive = additive;
+	dl->l.color[0] = r;
+	dl->l.color[1] = g;
+	dl->l.color[2] = b;
+	
+	AxisCopy(axisDefault, dl->l.axis);
+	dl->l.nonNormalizedAxes = qfalse;
+	dl->l.noShadows = qfalse;
+	
+	dl->isStatic = qfalse;
+	dl->additive = additive;
 }
 
 /*
@@ -432,24 +426,23 @@ void RE_RenderScene(const refdef_t * fd)
 		}
 	}
 
-	R_AddWorldLightsToScene();
 
 	// derived info
 	tr.refdef.floatTime = tr.refdef.time * 0.001f;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs = backEndData[tr.smpFrame]->drawSurfs;
-
+	
 	tr.refdef.numInteractions = r_firstSceneInteraction;
 	tr.refdef.interactions = backEndData[tr.smpFrame]->interactions;
 
-	tr.refdef.numEntities = r_numEntities - r_firstSceneEntity;
+	tr.refdef.numEntities = r_numentities - r_firstSceneEntity;
 	tr.refdef.entities = &backEndData[tr.smpFrame]->entities[r_firstSceneEntity];
 
-	tr.refdef.numLights = r_numLights - r_firstSceneLight;
-	tr.refdef.lights = &backEndData[tr.smpFrame]->lights[r_firstSceneLight];
+	tr.refdef.numDlights = r_numLights - r_firstSceneLight;
+	tr.refdef.dlights = &backEndData[tr.smpFrame]->dlights[r_firstSceneLight];
 
-	tr.refdef.numPolys = r_numPolys - r_firstScenePoly;
+	tr.refdef.numPolys = r_numpolys - r_firstScenePoly;
 	tr.refdef.polys = &backEndData[tr.smpFrame]->polys[r_firstScenePoly];
 
 	// a single frame may have multiple scenes draw inside it --
@@ -488,9 +481,9 @@ void RE_RenderScene(const refdef_t * fd)
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
 	r_firstSceneInteraction = tr.refdef.numInteractions;
-	r_firstSceneEntity = r_numEntities;
+	r_firstSceneEntity = r_numentities;
 	r_firstSceneLight = r_numLights;
-	r_firstScenePoly = r_numPolys;
+	r_firstScenePoly = r_numpolys;
 
 	tr.frontEndMsec += ri.Milliseconds() - startTime;
 }

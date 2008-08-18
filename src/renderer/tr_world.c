@@ -1,7 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
-Copyright (C) 2006-2008 Robert Beckebans <trebor_7@users.sourceforge.net>
+Copyright (C) 2006 Robert Beckebans <trebor_7@users.sourceforge.net>
 
 This file is part of XreaL source code.
 
@@ -143,29 +143,13 @@ static qboolean R_CullSurface(surfaceType_t * surface, shader_t * shader)
 		return qfalse;
 	}
 
-	// now it must be a SF_FACE
-	sface = (srfSurfaceFace_t *) surface;
-
-	if(shader->isPortal)
-	{
-		if(R_CullLocalBox(sface->bounds) == CULL_OUT)
-		{
-			return qtrue;
-		}
-	}
-
 	if(shader->cullType == CT_TWO_SIDED)
 	{
 		return qfalse;
 	}
 
 	// face culling
-	if(!r_facePlaneCull->integer)
-	{
-		return qfalse;
-	}
-
-
+	sface = (srfSurfaceFace_t *) surface;
 	d = DotProduct(tr.or.viewOrigin, sface->plane.normal);
 
 	// don't cull exactly on the plane, because there are levels of rounding
@@ -189,8 +173,7 @@ static qboolean R_CullSurface(surfaceType_t * surface, shader_t * shader)
 	return qfalse;
 }
 
-// *INDENT-OFF*
-static qboolean R_LightFace(srfSurfaceFace_t * face, trRefLight_t  * light, byte * cubeSideBits)
+static qboolean R_DlightFace(srfSurfaceFace_t * face, trRefDlight_t  * light)
 {
 	// do a quick AABB cull
 	if(!BoundsIntersect(light->worldBounds[0], light->worldBounds[1], face->bounds[0], face->bounds[1]))
@@ -207,15 +190,10 @@ static qboolean R_LightFace(srfSurfaceFace_t * face, trRefLight_t  * light, byte
 		}
 	}
 	
-	if(r_cullShadowPyramidFaces->integer)
-	{
-		*cubeSideBits = R_CalcLightCubeSideBits(light, face->bounds);
-	}
 	return qtrue;
 }
-// *INDENT-ON*
 
-static int R_LightGrid(srfGridMesh_t * grid, trRefLight_t * light, byte * cubeSideBits)
+static int R_DlightGrid(srfGridMesh_t * grid, trRefDlight_t * light)
 {
 	// do a quick AABB cull
 	if(!BoundsIntersect(light->worldBounds[0], light->worldBounds[1], grid->meshBounds[0], grid->meshBounds[1]))
@@ -231,16 +209,11 @@ static int R_LightGrid(srfGridMesh_t * grid, trRefLight_t * light, byte * cubeSi
 			return qfalse;
 		}
 	}
-
-	if(r_cullShadowPyramidCurves->integer)
-	{
-		*cubeSideBits = R_CalcLightCubeSideBits(light, grid->meshBounds);
-	}
 	return qtrue;
 }
 
 
-static int R_LightTrisurf(srfTriangles_t * tri, trRefLight_t * light, byte * cubeSideBits)
+static int R_DlightTrisurf(srfTriangles_t * tri, trRefDlight_t * light)
 {
 	// do a quick AABB cull
 	if(!BoundsIntersect(light->worldBounds[0], light->worldBounds[1], tri->bounds[0], tri->bounds[1]))
@@ -256,11 +229,6 @@ static int R_LightTrisurf(srfTriangles_t * tri, trRefLight_t * light, byte * cub
 			return qfalse;
 		}
 	}
-
-	if(r_cullShadowPyramidTriangles->integer)
-	{
-		*cubeSideBits = R_CalcLightCubeSideBits(light, tri->bounds);
-	}
 	return qtrue;
 }
 
@@ -270,12 +238,11 @@ static int R_LightTrisurf(srfTriangles_t * tri, trRefLight_t * light, byte * cub
 R_AddInteractionSurface
 ======================
 */
-static void R_AddInteractionSurface(bspSurface_t * surf, trRefLight_t * light)
+static void R_AddInteractionSurface(msurface_t * surf, trRefDlight_t * light)
 {
 	qboolean        intersects;
 	interactionType_t iaType = IA_DEFAULT;
-	byte            cubeSideBits = CUBESIDE_CLIPALL;
-
+	
 	// Tr3B - this surface is maybe not in this view but it may still cast a shadow
 	// into this view
 	if(surf->viewCount != tr.viewCount)
@@ -285,41 +252,43 @@ static void R_AddInteractionSurface(bspSurface_t * surf, trRefLight_t * light)
 		else
 			iaType = IA_SHADOWONLY;
 	}
-
+	else
+	{
+		if(r_shadows->integer <= 2)
+			iaType = IA_LIGHTONLY;	
+	}
+	
 	if(surf->lightCount == tr.lightCount)
 	{
 		return;					// already checked this surface
 	}
 	surf->lightCount = tr.lightCount;
-
-	if(r_vboDynamicLighting->integer && !surf->shader->isSky && !surf->shader->isPortal && !surf->shader->numDeforms)
-		return;
-
+	
 	//  skip all surfaces that don't matter for lighting only pass
 	if(surf->shader->isSky || (!surf->shader->interactLight && surf->shader->noShadows))
 		return;
 
 	if(*surf->data == SF_FACE)
 	{
-		intersects = R_LightFace((srfSurfaceFace_t *) surf->data, light, &cubeSideBits);
+		intersects = R_DlightFace((srfSurfaceFace_t *) surf->data, light);
 	}
 	else if(*surf->data == SF_GRID)
 	{
-		intersects = R_LightGrid((srfGridMesh_t *) surf->data, light, &cubeSideBits);
+		intersects = R_DlightGrid((srfGridMesh_t *) surf->data, light);
 	}
 	else if(*surf->data == SF_TRIANGLES)
 	{
-		intersects = R_LightTrisurf((srfTriangles_t *) surf->data, light, &cubeSideBits);
+		intersects = R_DlightTrisurf((srfTriangles_t *) surf->data, light);
 	}
 	else
 	{
-		intersects = qfalse;
+		intersects = qfalse;	
 	}
-
+	
 	if(intersects)
 	{
-		R_AddLightInteraction(light, surf->data, surf->shader, cubeSideBits, iaType);
-
+		R_AddDlightInteraction(light, surf->data, surf->shader, 0, NULL, 0, NULL, iaType);
+		
 		if(light->isStatic)
 			tr.pc.c_slightSurfaces++;
 		else
@@ -328,7 +297,7 @@ static void R_AddInteractionSurface(bspSurface_t * surf, trRefLight_t * light)
 	else
 	{
 		if(!light->isStatic)
-			tr.pc.c_dlightSurfacesCulled++;
+			tr.pc.c_dlightSurfacesCulled++;	
 	}
 }
 
@@ -337,26 +306,23 @@ static void R_AddInteractionSurface(bspSurface_t * surf, trRefLight_t * light)
 R_AddWorldSurface
 ======================
 */
-static void R_AddWorldSurface(bspSurface_t * surf)
+static void R_AddWorldSurface(msurface_t * surf)
 {
-	shader_t       *shader;
-
 	if(surf->viewCount == tr.viewCount)
-		return;
+	{
+		return;					// already in this view
+	}
 	surf->viewCount = tr.viewCount;
+	
+	// FIXME: bmodel fog?
 
-	shader = surf->shader;
-
-	if(r_vboWorld->integer && !shader->isSky && !shader->isPortal && !shader->numDeforms)
-		return;
-
-	// try to cull before lighting or adding
+	// try to cull before dlighting or adding
 	if(R_CullSurface(surf->data, surf->shader))
 	{
 		return;
 	}
 
-	R_AddDrawSurf(surf->data, surf->shader, surf->lightmapNum);
+	R_AddDrawSurf(surf->data, surf->shader, surf->lightmapNum, surf->fogIndex);
 }
 
 /*
@@ -372,7 +338,7 @@ static void R_AddWorldSurface(bspSurface_t * surf)
 R_AddBrushModelSurface
 ======================
 */
-static void R_AddBrushModelSurface(bspSurface_t * surf)
+static void R_AddBrushModelSurface(msurface_t * surf, int fogIndex)
 {
 	if(surf->viewCount == tr.viewCount)
 	{
@@ -386,7 +352,7 @@ static void R_AddBrushModelSurface(bspSurface_t * surf)
 		return;
 	}
 
-	R_AddDrawSurf(surf->data, surf->shader, surf->lightmapNum);
+	R_AddDrawSurf(surf->data, surf->shader, surf->lightmapNum, fogIndex);
 }
 
 /*
@@ -396,61 +362,49 @@ R_AddBrushModelSurfaces
 */
 void R_AddBrushModelSurfaces(trRefEntity_t * ent)
 {
-	bspModel_t     *bspModel;
+	bmodel_t       *bModel;
 	model_t        *pModel;
 	int             i;
 	vec3_t          v;
 	vec3_t          transformed;
+	int             fogNum = 0;
 
 	pModel = R_GetModelByHandle(ent->e.hModel);
-	bspModel = pModel->bsp;
-
+	bModel = pModel->bmodel;
+	
 	// copy local bounds
 	for(i = 0; i < 3; i++)
 	{
-		ent->localBounds[0][i] = bspModel->bounds[0][i];
-		ent->localBounds[1][i] = bspModel->bounds[1][i];
+		ent->localBounds[0][i] = bModel->bounds[0][i];
+		ent->localBounds[1][i] = bModel->bounds[1][i];
 	}
-
+	
 	// setup world bounds for intersection tests
 	ClearBounds(ent->worldBounds[0], ent->worldBounds[1]);
-
+		
 	for(i = 0; i < 8; i++)
 	{
 		v[0] = ent->localBounds[i & 1][0];
 		v[1] = ent->localBounds[(i >> 1) & 1][1];
 		v[2] = ent->localBounds[(i >> 2) & 1][2];
-
+	
 		// transform local bounds vertices into world space
 		R_LocalPointToWorld(v, transformed);
-
+			
 		AddPointToBounds(transformed, ent->worldBounds[0], ent->worldBounds[1]);
 	}
 
-	ent->cull = R_CullLocalBox(bspModel->bounds);
+	ent->cull = R_CullLocalBox(bModel->bounds);
 	if(ent->cull == CULL_OUT)
 	{
 		return;
 	}
+	
+	fogNum = R_FogWorldBox(ent->worldBounds);
 
-	if(r_vboModels->integer && bspModel->numVBOSurfaces)
+	for(i = 0; i < bModel->numSurfaces; i++)
 	{
-		int             i;
-		srfVBOMesh_t   *vboSurface;
-
-		for(i = 0; i < bspModel->numVBOSurfaces; i++)
-		{
-			vboSurface = bspModel->vboSurfaces[i];
-
-			R_AddDrawSurf((void *)vboSurface, vboSurface->shader, vboSurface->lightmapNum);
-		}
-	}
-	else
-	{
-		for(i = 0; i < bspModel->numSurfaces; i++)
-		{
-			R_AddBrushModelSurface(bspModel->firstSurface + i);
-		}
+		R_AddBrushModelSurface(bModel->firstSurface + i, fogNum);
 	}
 }
 
@@ -469,12 +423,12 @@ void R_AddBrushModelSurfaces(trRefEntity_t * ent)
 R_RecursiveWorldNode
 ================
 */
-static void R_RecursiveWorldNode(bspNode_t * node, int planeBits)
+static void R_RecursiveWorldNode(mnode_t * node, int planeBits)
 {
 	do
 	{
 		// if the node wasn't marked as potentially visible, exit
-		if(node->visCounts[tr.visIndex] != tr.visCounts[tr.visIndex])
+		if(node->visCount != tr.visCount)
 		{
 			return;
 		}
@@ -493,7 +447,7 @@ static void R_RecursiveWorldNode(bspNode_t * node, int planeBits)
 					r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[i]);
 					if(r == 2)
 					{
-						return;	// culled
+						return;		// culled
 					}
 					if(r == 1)
 					{
@@ -518,7 +472,7 @@ static void R_RecursiveWorldNode(bspNode_t * node, int planeBits)
 	{
 		// leaf node, so add mark surfaces
 		int             c;
-		bspSurface_t   *surf, **mark;
+		msurface_t     *surf, **mark;
 
 		tr.pc.c_leafs++;
 
@@ -549,10 +503,9 @@ static void R_RecursiveWorldNode(bspNode_t * node, int planeBits)
 			tr.viewParms.visBounds[1][2] = node->maxs[2];
 		}
 
-
 		// add the individual surfaces
-		mark = node->markSurfaces;
-		c = node->numMarkSurfaces;
+		mark = node->firstmarksurface;
+		c = node->nummarksurfaces;
 		while(c--)
 		{
 			// the surface may have already been added if it
@@ -569,17 +522,17 @@ static void R_RecursiveWorldNode(bspNode_t * node, int planeBits)
 R_RecursiveInteractionNode
 ================
 */
-static void R_RecursiveInteractionNode(bspNode_t * node, trRefLight_t * light, int planeBits)
+static void R_RecursiveInteractionNode(mnode_t * node, trRefDlight_t * light, int planeBits)
 {
 	int             i;
 	int             r;
-
+	
 	// if the node wasn't marked as potentially visible, exit
-	if(node->visCounts[tr.visIndex] != tr.visCounts[tr.visIndex])
+	if(node->visCount != tr.visCount)
 	{
 		return;
 	}
-
+	
 	// light already hit node
 	if(node->lightCount == tr.lightCount)
 	{
@@ -599,12 +552,12 @@ static void R_RecursiveInteractionNode(bspNode_t * node, trRefLight_t * light, i
 			if(planeBits & (1 << i))
 			{
 				r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[i]);
-
+				
 				if(r == 2)
 				{
 					return;		// culled
 				}
-
+				
 				if(r == 1)
 				{
 					planeBits &= ~(1 << i);	// all descendants will also be in front
@@ -617,11 +570,11 @@ static void R_RecursiveInteractionNode(bspNode_t * node, trRefLight_t * light, i
 	{
 		// leaf node, so add mark surfaces
 		int             c;
-		bspSurface_t   *surf, **mark;
+		msurface_t     *surf, **mark;
 
 		// add the individual surfaces
-		mark = node->markSurfaces;
-		c = node->numMarkSurfaces;
+		mark = node->firstmarksurface;
+		c = node->nummarksurfaces;
 		while(c--)
 		{
 			// the surface may have already been added if it
@@ -636,17 +589,17 @@ static void R_RecursiveInteractionNode(bspNode_t * node, trRefLight_t * light, i
 	// node is just a decision point, so go down both sides
 	// since we don't care about sort orders, just go positive to negative
 	r = BoxOnPlaneSide(light->worldBounds[0], light->worldBounds[1], node->plane);
-
+	
 	switch (r)
 	{
 		case 1:
 			R_RecursiveInteractionNode(node->children[0], light, planeBits);
 			break;
-
+			
 		case 2:
 			R_RecursiveInteractionNode(node->children[1], light, planeBits);
 			break;
-
+		
 		case 3:
 		default:
 			// recurse down the children, front side first
@@ -662,9 +615,9 @@ static void R_RecursiveInteractionNode(bspNode_t * node, trRefLight_t * light, i
 R_PointInLeaf
 ===============
 */
-static bspNode_t *R_PointInLeaf(const vec3_t p)
+static mnode_t *R_PointInLeaf(const vec3_t p)
 {
-	bspNode_t      *node;
+	mnode_t        *node;
 	float           d;
 	cplane_t       *plane;
 
@@ -717,7 +670,7 @@ R_inPVS
 */
 qboolean R_inPVS(const vec3_t p1, const vec3_t p2)
 {
-	bspNode_t      *leaf;
+	mnode_t        *leaf;
 	byte           *vis;
 
 	leaf = R_PointInLeaf(p1);
@@ -732,329 +685,6 @@ qboolean R_inPVS(const vec3_t p1, const vec3_t p2)
 }
 
 /*
-=================
-BSPSurfaceCompare
-compare function for qsort()
-=================
-*/
-static int BSPSurfaceCompare(const void *a, const void *b)
-{
-	bspSurface_t   *aa, *bb;
-
-	aa = *(bspSurface_t **) a;
-	bb = *(bspSurface_t **) b;
-
-	// shader first
-	if(aa->shader < bb->shader)
-		return -1;
-
-	else if(aa->shader > bb->shader)
-		return 1;
-
-	// by lightmap
-	if(aa->lightmapNum < bb->lightmapNum)
-		return -1;
-
-	else if(aa->lightmapNum > bb->lightmapNum)
-		return 1;
-
-	return 0;
-}
-
-/*
-===============
-R_UpdateClusterSurfaces()
-===============
-*/
-static void R_UpdateClusterSurfaces()
-{
-	int             i, k, l;
-
-	int             numVerts;
-	int             numTriangles;
-
-//  static glIndex_t indexes[MAX_MAP_DRAW_INDEXES];
-//  static byte     indexes[MAX_MAP_DRAW_INDEXES * sizeof(glIndex_t)];
-	glIndex_t      *indexes;
-	int             indexesSize;
-
-	shader_t       *shader, *oldShader;
-	int             lightmapNum, oldLightmapNum;
-
-	int             numSurfaces;
-	bspSurface_t   *surface, *surface2;
-	bspSurface_t  **surfacesSorted;
-
-	bspCluster_t   *cluster;
-
-	srfVBOMesh_t   *vboSurf;
-	IBO_t          *ibo;
-
-	vec3_t          bounds[2];
-
-	if(tr.visClusters[tr.visIndex] < 0 || tr.visClusters[tr.visIndex] >= tr.world->numClusters)
-	{
-		// Tr3B: this is not a bug, the super claster is the last one in the array
-		cluster = &tr.world->clusters[tr.world->numClusters];
-	}
-	else
-	{
-		cluster = &tr.world->clusters[tr.visClusters[tr.visIndex]];
-	}
-
-	tr.world->numClusterVBOSurfaces[tr.visIndex] = 0;
-
-	// count number of static cluster surfaces
-	numSurfaces = 0;
-	for(k = 0; k < cluster->numMarkSurfaces; k++)
-	{
-		surface = cluster->markSurfaces[k];
-		shader = surface->shader;
-
-		if(shader->isSky)
-			continue;
-
-		if(shader->isPortal)
-			continue;
-
-		if(shader->numDeforms)
-			continue;
-
-		numSurfaces++;
-	}
-
-	if(!numSurfaces)
-		return;
-
-	// build interaction caches list
-	surfacesSorted = ri.Hunk_AllocateTempMemory(numSurfaces * sizeof(surfacesSorted[0]));
-
-	numSurfaces = 0;
-	for(k = 0; k < cluster->numMarkSurfaces; k++)
-	{
-		surface = cluster->markSurfaces[k];
-		shader = surface->shader;
-
-		if(shader->isSky)
-			continue;
-
-		if(shader->isPortal)
-			continue;
-
-		if(shader->numDeforms)
-			continue;
-
-		surfacesSorted[numSurfaces] = surface;
-		numSurfaces++;
-	}
-
-	// sort surfaces by shader
-	qsort(surfacesSorted, numSurfaces, sizeof(surfacesSorted), BSPSurfaceCompare);
-
-	shader = oldShader = NULL;
-	lightmapNum = oldLightmapNum = -1;
-
-	for(k = 0; k < numSurfaces; k++)
-	{
-		surface = surfacesSorted[k];
-		shader = surface->shader;
-		lightmapNum = surface->lightmapNum;
-
-		if(shader != oldShader || (r_precomputedLighting->integer ? lightmapNum != oldLightmapNum : 0))
-		{
-			oldShader = shader;
-			oldLightmapNum = lightmapNum;
-
-			// count vertices and indices
-			numVerts = 0;
-			numTriangles = 0;
-
-			for(l = k; l < numSurfaces; l++)
-			{
-				surface2 = surfacesSorted[l];
-
-				if(surface2->shader != shader)
-					continue;
-
-				if(*surface2->data == SF_FACE)
-				{
-					srfSurfaceFace_t *face = (srfSurfaceFace_t *) surface2->data;
-
-					if(face->numVerts)
-						numVerts += face->numVerts;
-
-					if(face->numTriangles)
-						numTriangles += face->numTriangles;
-				}
-				else if(*surface2->data == SF_GRID)
-				{
-					srfGridMesh_t  *grid = (srfGridMesh_t *) surface2->data;
-
-					if(grid->numVerts)
-						numVerts += grid->numVerts;
-
-					if(grid->numTriangles)
-						numTriangles += grid->numTriangles;
-				}
-				else if(*surface2->data == SF_TRIANGLES)
-				{
-					srfTriangles_t *tri = (srfTriangles_t *) surface2->data;
-
-					if(tri->numVerts)
-						numVerts += tri->numVerts;
-
-					if(tri->numTriangles)
-						numTriangles += tri->numTriangles;
-				}
-			}
-
-			if(!numVerts || !numTriangles)
-				continue;
-
-			ClearBounds(bounds[0], bounds[1]);
-
-			// build triangle indices
-			indexesSize = numTriangles * 3 * sizeof(glIndex_t);
-			indexes = ri.Hunk_AllocateTempMemory(indexesSize);
-
-			numTriangles = 0;
-			for(l = k; l < numSurfaces; l++)
-			{
-				surface2 = surfacesSorted[l];
-
-				if(surface2->shader != shader)
-					continue;
-
-				// set up triangle indices
-				if(*surface2->data == SF_FACE)
-				{
-					srfSurfaceFace_t *srf = (srfSurfaceFace_t *) surface2->data;
-
-					if(srf->numTriangles)
-					{
-						srfTriangle_t  *tri;
-
-						for(i = 0, tri = tr.world->triangles + srf->firstTriangle; i < srf->numTriangles; i++, tri++)
-						{
-							indexes[numTriangles * 3 + i * 3 + 0] = tri->indexes[0];
-							indexes[numTriangles * 3 + i * 3 + 1] = tri->indexes[1];
-							indexes[numTriangles * 3 + i * 3 + 2] = tri->indexes[2];
-						}
-
-						numTriangles += srf->numTriangles;
-						BoundsAdd(bounds[0], bounds[1], srf->bounds[0], srf->bounds[1]);
-					}
-				}
-				else if(*surface2->data == SF_GRID)
-				{
-					srfGridMesh_t  *srf = (srfGridMesh_t *) surface2->data;
-
-					if(srf->numTriangles)
-					{
-						srfTriangle_t  *tri;
-
-						for(i = 0, tri = tr.world->triangles + srf->firstTriangle; i < srf->numTriangles; i++, tri++)
-						{
-							indexes[numTriangles * 3 + i * 3 + 0] = tri->indexes[0];
-							indexes[numTriangles * 3 + i * 3 + 1] = tri->indexes[1];
-							indexes[numTriangles * 3 + i * 3 + 2] = tri->indexes[2];
-						}
-
-						numTriangles += srf->numTriangles;
-						BoundsAdd(bounds[0], bounds[1], srf->meshBounds[0], srf->meshBounds[1]);
-					}
-				}
-				else if(*surface2->data == SF_TRIANGLES)
-				{
-					srfTriangles_t *srf = (srfTriangles_t *) surface2->data;
-
-					if(srf->numTriangles)
-					{
-						srfTriangle_t  *tri;
-
-						for(i = 0, tri = tr.world->triangles + srf->firstTriangle; i < srf->numTriangles; i++, tri++)
-						{
-							indexes[numTriangles * 3 + i * 3 + 0] = tri->indexes[0];
-							indexes[numTriangles * 3 + i * 3 + 1] = tri->indexes[1];
-							indexes[numTriangles * 3 + i * 3 + 2] = tri->indexes[2];
-						}
-
-						numTriangles += srf->numTriangles;
-						BoundsAdd(bounds[0], bounds[1], srf->bounds[0], srf->bounds[1]);
-					}
-				}
-			}
-
-			if(tr.world->numClusterVBOSurfaces[tr.visIndex] < tr.world->clusterVBOSurfaces[tr.visIndex].currentElements)
-			{
-				vboSurf = (srfVBOMesh_t *) Com_GrowListElement(&tr.world->clusterVBOSurfaces[tr.visIndex], tr.world->numClusterVBOSurfaces[tr.visIndex]);
-				ibo = vboSurf->ibo;
-
-				/*
-				   if(ibo->indexesVBO)
-				   {
-				   qglDeleteBuffersARB(1, &ibo->indexesVBO);
-				   ibo->indexesVBO = 0;
-				   }
-				 */
-
-				//Com_Dealloc(ibo);
-				//Com_Dealloc(vboSurf);
-			}
-			else
-			{
-				vboSurf = ri.Hunk_Alloc(sizeof(*vboSurf), h_low);
-				vboSurf->surfaceType = SF_VBO_MESH;
-
-				vboSurf->vbo = tr.world->vbo;
-				vboSurf->ibo = ibo = ri.Hunk_Alloc(sizeof(*ibo), h_low);
-
-				qglGenBuffersARB(1, &ibo->indexesVBO);
-
-				Com_AddToGrowList(&tr.world->clusterVBOSurfaces[tr.visIndex], vboSurf);
-			}
-
-			// update surface properties
-			vboSurf->numIndexes = numTriangles * 3;
-			vboSurf->numVerts = numVerts;
-
-			vboSurf->shader = shader;
-			vboSurf->lightmapNum = lightmapNum;
-
-			VectorCopy(bounds[0], vboSurf->bounds[0]);
-			VectorCopy(bounds[1], vboSurf->bounds[1]);
-
-			// make sure the render thread is stopped
-			R_SyncRenderThread();
-
-			// update IBO
-			Q_strncpyz(ibo->name, va("staticWorldMesh_IBO_visIndex%i_surface%i", tr.visIndex, tr.world->numClusterVBOSurfaces[tr.visIndex]), sizeof(ibo->name));
-			ibo->indexesSize = indexesSize;
-
-			R_BindIBO(ibo);
-			qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, indexesSize, indexes, GL_DYNAMIC_DRAW_ARB);
-			R_BindNullIBO();
-
-			GL_CheckErrors();
-
-			ri.Hunk_FreeTempMemory(indexes);
-
-			tr.world->numClusterVBOSurfaces[tr.visIndex]++;
-		}
-	}
-
-	ri.Hunk_FreeTempMemory(surfacesSorted);
-
-#if 0
-	if(r_showcluster->integer)
-	{
-		ri.Printf(PRINT_ALL, "%i VBO surfaces created for cluster %i and vis index %i\n", tr.world->numClusterVBOSurfaces[tr.visIndex],
-				  cluster - tr.world->clusters, tr.visIndex);
-	}
-#endif
-}
-
-/*
 ===============
 R_MarkLeaves
 
@@ -1065,7 +695,7 @@ cluster
 static void R_MarkLeaves(void)
 {
 	const byte     *vis;
-	bspNode_t      *leaf, *parent;
+	mnode_t        *leaf, *parent;
 	int             i;
 	int             cluster;
 
@@ -1083,53 +713,37 @@ static void R_MarkLeaves(void)
 	// if the cluster is the same and the area visibility matrix
 	// hasn't changed, we don't need to mark everything again
 
-	for(i = 0; i < MAX_VISCOUNTS; i++)
-	{
-		if(tr.visClusters[i] == cluster)
-		{
-			//tr.visIndex = i;
-			break;
-		}
-	}
 	// if r_showcluster was just turned on, remark everything
-	if(i != MAX_VISCOUNTS && !tr.refdef.areamaskModified && !r_showcluster->modified)
+	if(tr.viewCluster == cluster && !tr.refdef.areamaskModified && !r_showcluster->modified)
 	{
-		if(tr.visClusters[i] != tr.visClusters[tr.visIndex] && r_showcluster->integer)
-		{
-			ri.Printf(PRINT_ALL, "found cluster:%i  area:%i  index:%i\n", cluster, leaf->area, i);
-		}
-		tr.visIndex = i;
 		return;
 	}
-
-	tr.visIndex = (tr.visIndex + 1) % MAX_VISCOUNTS;
-	tr.visCounts[tr.visIndex]++;
-	tr.visClusters[tr.visIndex] = cluster;
 
 	if(r_showcluster->modified || r_showcluster->integer)
 	{
 		r_showcluster->modified = qfalse;
 		if(r_showcluster->integer)
 		{
-			ri.Printf(PRINT_ALL, "update cluster:%i  area:%i  index:%i\n", cluster, leaf->area, tr.visIndex);
+			ri.Printf(PRINT_ALL, "cluster:%i  area:%i\n", cluster, leaf->area);
 		}
 	}
 
-	R_UpdateClusterSurfaces();
+	tr.visCount++;
+	tr.viewCluster = cluster;
 
-	if(r_novis->integer || tr.visClusters[tr.visIndex] == -1)
+	if(r_novis->integer || tr.viewCluster == -1)
 	{
 		for(i = 0; i < tr.world->numnodes; i++)
 		{
 			if(tr.world->nodes[i].contents != CONTENTS_SOLID)
 			{
-				tr.world->nodes[i].visCounts[tr.visIndex] = tr.visCounts[tr.visIndex];
+				tr.world->nodes[i].visCount = tr.visCount;
 			}
 		}
 		return;
 	}
 
-	vis = R_ClusterPVS(tr.visClusters[tr.visIndex]);
+	vis = R_ClusterPVS(tr.viewCluster);
 
 	for(i = 0, leaf = tr.world->nodes; i < tr.world->numnodes; i++, leaf++)
 	{
@@ -1156,9 +770,9 @@ static void R_MarkLeaves(void)
 		parent = leaf;
 		do
 		{
-			if(parent->visCounts[tr.visIndex] == tr.visCounts[tr.visIndex])
+			if(parent->visCount == tr.visCount)
 				break;
-			parent->visCounts[tr.visIndex] = tr.visCounts[tr.visIndex];
+			parent->visCount = tr.visCount;
 			parent = parent->parent;
 		} while(parent);
 	}
@@ -1166,9 +780,7 @@ static void R_MarkLeaves(void)
 
 
 /*
-=============
-R_SetFarClip
-=============
+** SetFarClip
 */
 static void R_SetFarClip(void)
 {
@@ -1230,7 +842,6 @@ static void R_SetFarClip(void)
 	tr.viewParms.skyFar = sqrt(farthestCornerDistance);
 }
 
-
 /*
 =============
 R_AddWorldSurfaces
@@ -1256,41 +867,11 @@ void R_AddWorldSurfaces(void)
 	// clear out the visible min/max
 	ClearBounds(tr.viewParms.visBounds[0], tr.viewParms.visBounds[1]);
 
-	// update visbounds and add surfaces that weren't cached with VBOs
+	// perform frustum culling and add all the potentially visible surfaces
 	R_RecursiveWorldNode(tr.world->nodes, FRUSTUM_CLIPALL);
-
+	
 	// dynamically compute far clip plane distance for sky
 	R_SetFarClip();
-
-	if(r_vboWorld->integer)
-	{
-		int             j, i;
-		srfVBOMesh_t   *srf;
-		shader_t       *shader;
-		cplane_t       *frust;
-		int             r;
-
-		for(j = 0; j < tr.world->numClusterVBOSurfaces[tr.visIndex]; j++)
-		{
-			srf = (srfVBOMesh_t *) Com_GrowListElement(&tr.world->clusterVBOSurfaces[tr.visIndex], j);
-			shader = srf->shader;
-
-			for(i = 0; i < FRUSTUM_PLANES; i++)
-			{
-				frust = &tr.viewParms.frustum[i];
-
-				r = BoxOnPlaneSide(srf->bounds[0], srf->bounds[1], frust);
-
-				if(r == 2)
-				{
-					// completely outside frustum
-					continue;
-				}
-			}
-
-			R_AddDrawSurf((void *)srf, shader, srf->lightmapNum);
-		}
-	}
 }
 
 /*
@@ -1298,7 +879,7 @@ void R_AddWorldSurfaces(void)
 R_AddWorldInteractions
 =============
 */
-void R_AddWorldInteractions(trRefLight_t * light)
+void R_AddWorldInteractions(trRefDlight_t * light)
 {
 	if(!r_drawworld->integer)
 	{
@@ -1315,62 +896,6 @@ void R_AddWorldInteractions(trRefLight_t * light)
 	// perform frustum culling and add all the potentially visible surfaces
 	tr.lightCount++;
 	R_RecursiveInteractionNode(tr.world->nodes, light, FRUSTUM_CLIPALL);
-
-	if(r_vboDynamicLighting->integer)
-	{
-		int             j;
-		srfVBOMesh_t   *srf;
-		shader_t       *shader;
-		qboolean        intersects;
-		interactionType_t iaType = IA_DEFAULT;
-		byte            cubeSideBits = CUBESIDE_CLIPALL;
-
-		for(j = 0; j < tr.world->numClusterVBOSurfaces[tr.visIndex]; j++)
-		{
-			srf = (srfVBOMesh_t *) Com_GrowListElement(&tr.world->clusterVBOSurfaces[tr.visIndex], j);
-			shader = srf->shader;
-
-			//  skip all surfaces that don't matter for lighting only pass
-			if(shader->isSky || (!shader->interactLight && shader->noShadows))
-				continue;
-
-			intersects = qtrue;
-
-			// do a quick AABB cull
-			if(!BoundsIntersect(light->worldBounds[0], light->worldBounds[1], srf->bounds[0], srf->bounds[1]))
-				intersects = qfalse;
-
-			// FIXME? do a more expensive and precise light frustum cull
-			if(!r_noLightFrustums->integer)
-			{
-				if(R_CullLightWorldBounds(light, srf->bounds) == CULL_OUT)
-				{
-					intersects = qfalse;
-				}
-			}
-		
-			// FIXME?
-			if(r_cullShadowPyramidFaces->integer)
-			{
-				cubeSideBits = R_CalcLightCubeSideBits(light, srf->bounds);
-			}
-
-			if(intersects)
-			{
-				R_AddLightInteraction(light, (void *) srf, srf->shader, cubeSideBits, iaType);
-
-				if(light->isStatic)
-					tr.pc.c_slightSurfaces++;
-				else
-					tr.pc.c_dlightSurfaces++;
-			}
-			else
-			{
-				if(!light->isStatic)
-					tr.pc.c_dlightSurfacesCulled++;
-			}
-		}
-	}
 }
 
 /*
@@ -1378,10 +903,12 @@ void R_AddWorldInteractions(trRefLight_t * light)
 R_AddPrecachedWorldInteractions
 =============
 */
-void R_AddPrecachedWorldInteractions(trRefLight_t * light)
+void R_AddPrecachedWorldInteractions(trRefDlight_t * light)
 {
+	interactionCache_t  *iaCache;
+	msurface_t     *surface;
 	interactionType_t iaType = IA_DEFAULT;
-
+	
 	if(!r_drawworld->integer)
 	{
 		return;
@@ -1391,7 +918,7 @@ void R_AddPrecachedWorldInteractions(trRefLight_t * light)
 	{
 		return;
 	}
-
+	
 	if(!light->firstInteractionCache)
 	{
 		// this light has no interactions precached
@@ -1399,101 +926,96 @@ void R_AddPrecachedWorldInteractions(trRefLight_t * light)
 	}
 
 	tr.currentEntity = &tr.worldEntity;
-
-	if(r_vboShadows->integer || r_vboLighting->integer)
+	
+	for(iaCache = light->firstInteractionCache; iaCache; iaCache = iaCache->next)
 	{
-		interactionVBO_t *iaVBO;
-		srfVBOMesh_t   *srf;
-		srfVBOShadowVolume_t *shadowSrf;
-		shader_t       *shader;
-
-		if(r_shadows->integer == 3)
+		surface = iaCache->surface;
+		
+		// Tr3B - this surface is maybe not in this view but it may still cast a shadow
+		// into this view
+		if(surface->viewCount != tr.viewCount)
 		{
-			for(iaVBO = light->firstInteractionVBO; iaVBO; iaVBO = iaVBO->next)
-			{
-				if(!iaVBO->vboShadowVolume)
-					continue;
-
-				shadowSrf = iaVBO->vboShadowVolume;
-
-				R_AddLightInteraction(light, (void *)shadowSrf, tr.defaultShader, CUBESIDE_CLIPALL, IA_SHADOWONLY);
-			}
-
-			for(iaVBO = light->firstInteractionVBO; iaVBO; iaVBO = iaVBO->next)
-			{
-				if(!iaVBO->vboLightMesh)
-					continue;
-
-				srf = iaVBO->vboLightMesh;
-				shader = iaVBO->shader;
-
-				R_AddLightInteraction(light, (void *)srf, shader, CUBESIDE_CLIPALL, IA_LIGHTONLY);
-			}
+			if(r_shadows->integer <= 2 || light->l.noShadows)
+				continue;
+			else
+				iaType = IA_SHADOWONLY;
 		}
 		else
 		{
-			// this can be shadow mapping or shadowless lighting
-			for(iaVBO = light->firstInteractionVBO; iaVBO; iaVBO = iaVBO->next)
+			if(r_shadows->integer <= 2)
+				iaType = IA_LIGHTONLY;
+			else
+				iaType = IA_DEFAULT;
+		}
+		
+		R_AddDlightInteraction(light, surface->data, surface->shader, iaCache->numLightIndexes, iaCache->lightIndexes, iaCache->numShadowIndexes, iaCache->shadowIndexes, iaType);
+	}
+}
+
+
+/*
+===============
+R_ShutdownVBOs
+===============
+*/
+void R_ShutdownVBOs()
+{
+	int             i;
+	msurface_t     *surface;
+	
+	if(!tr.world || (tr.refdef.rdflags & RDF_NOWORLDMODEL))
+	{
+		return;
+	}
+	
+	if(!glConfig2.vertexBufferObjectAvailable)
+	{
+		return;
+	}
+
+	for(i = 0, surface = &tr.world->surfaces[0]; i < tr.world->numsurfaces; i++, surface++)
+	{
+		if(*surface->data == SF_FACE)
+		{
+			srfSurfaceFace_t *face = (srfSurfaceFace_t *) surface->data;
+			
+			if(face->indexesVBO)
 			{
-				if(!iaVBO->vboLightMesh)
-					continue;
-
-				srf = iaVBO->vboLightMesh;
-				shader = iaVBO->shader;
-
-				switch (light->l.rlType)
-				{
-					case RL_OMNI:
-						R_AddLightInteraction(light, (void *)srf, shader, CUBESIDE_CLIPALL, IA_LIGHTONLY);
-						break;
-
-					default:
-					case RL_PROJ:
-						R_AddLightInteraction(light, (void *)srf, shader, CUBESIDE_CLIPALL, IA_DEFAULT);
-						break;
-				}
+				qglDeleteBuffersARB(1, &face->indexesVBO);
 			}
-
-			// add meshes for shadowmap generation if any
-			for(iaVBO = light->firstInteractionVBO; iaVBO; iaVBO = iaVBO->next)
+			
+			if(face->vertsVBO)
 			{
-				if(!iaVBO->vboShadowMesh)
-					continue;
-
-				srf = iaVBO->vboShadowMesh;
-				shader = iaVBO->shader;
-
-				R_AddLightInteraction(light, (void *)srf, shader, iaVBO->cubeSideBits, IA_SHADOWONLY);
+				qglDeleteBuffersARB(1, &face->vertsVBO);
 			}
 		}
-	}
-	else
-	{
-		interactionCache_t *iaCache;
-		bspSurface_t   *surface;
-
-		for(iaCache = light->firstInteractionCache; iaCache; iaCache = iaCache->next)
+		else if(*surface->data == SF_GRID)
 		{
-			if(iaCache->redundant)
-				continue;
-
-			surface = iaCache->surface;
-
-			// Tr3B - this surface is maybe not in this view but it may still cast a shadow
-			// into this view
-			if(surface->viewCount != tr.viewCount)
+			srfGridMesh_t  *grid = (srfGridMesh_t *) surface->data;
+			
+			if(grid->indexesVBO)
 			{
-				if(r_shadows->integer <= 3 || light->l.noShadows)
-					continue;
-				else
-					iaType = IA_SHADOWONLY;
+				qglDeleteBuffersARB(1, &grid->indexesVBO);
 			}
-			else
+			
+			if(grid->vertsVBO)
 			{
-				iaType = iaCache->type;
+				qglDeleteBuffersARB(1, &grid->vertsVBO);
 			}
-
-			R_AddLightInteraction(light, surface->data, surface->shader, iaCache->cubeSideBits, iaType);
+		}
+		else if(*surface->data == SF_TRIANGLES)
+		{
+			srfTriangles_t  *tri = (srfTriangles_t *) surface->data;
+			
+			if(tri->indexesVBO)
+			{
+				qglDeleteBuffersARB(1, &tri->indexesVBO);
+			}
+			
+			if(tri->vertsVBO)
+			{
+				qglDeleteBuffersARB(1, &tri->vertsVBO);
+			}
 		}
 	}
 }

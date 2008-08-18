@@ -1,7 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
-Copyright (C) 2006-2008 Robert Beckebans <trebor_7@users.sourceforge.net>
+Copyright (C) 2006 Robert Beckebans <trebor_7@users.sourceforge.net>
 
 This file is part of XreaL source code.
 
@@ -464,10 +464,8 @@ static void FillCloudySkySide(const int mins[2], const int maxs[2], qboolean add
 			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.or.origin, tess.xyz[tess.numVertexes]);
 			tess.xyz[tess.numVertexes][3] = 1;
 
-			tess.texCoords[tess.numVertexes][0] = s_skyTexCoords[t][s][0];
-			tess.texCoords[tess.numVertexes][1] = s_skyTexCoords[t][s][1];
-			tess.texCoords[tess.numVertexes][2] = 0;
-			tess.texCoords[tess.numVertexes][3] = 1;
+			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
+			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
 
 			tess.numVertexes++;
 
@@ -551,10 +549,10 @@ static void FillCloudBox(const shader_t * shader, int stage)
 			continue;
 		}
 
-		sky_mins_subd[0] = Q_ftol(sky_mins[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_mins_subd[1] = Q_ftol(sky_mins[1][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[0] = Q_ftol(sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[1] = Q_ftol(sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS);
+		sky_mins_subd[0] = myftol(sky_mins[0][i] * HALF_SKY_SUBDIVISIONS);
+		sky_mins_subd[1] = myftol(sky_mins[1][i] * HALF_SKY_SUBDIVISIONS);
+		sky_maxs_subd[0] = myftol(sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS);
+		sky_maxs_subd[1] = myftol(sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS);
 
 		if(sky_mins_subd[0] < -HALF_SKY_SUBDIVISIONS)
 			sky_mins_subd[0] = -HALF_SKY_SUBDIVISIONS;
@@ -616,7 +614,7 @@ static void BuildCloudData()
 			{
 				break;
 			}
-
+			
 			FillCloudBox(tess.surfaceShader, i);
 		}
 	}
@@ -716,16 +714,14 @@ void RB_DrawSun(void)
 	qglDepthRange(1.0, 1.0);
 
 	// FIXME: use quad stamp
-	Tess_Begin(Tess_StageIteratorGeneric, tr.sunShader, NULL, tess.skipTangentSpaces, qfalse, -1);
+	Tess_Begin(tr.sunShader, NULL, tess.lightmapNum, tess.fogNum, tess.skipTangentSpaces, qfalse);
 	VectorCopy(origin, temp);
 	VectorSubtract(temp, vec1, temp);
 	VectorSubtract(temp, vec2, temp);
 	VectorCopy(temp, tess.xyz[tess.numVertexes]);
 	tess.xyz[tess.numVertexes][3] = 1;
-	tess.texCoords[tess.numVertexes][0] = 0;
-	tess.texCoords[tess.numVertexes][1] = 0;
-	tess.texCoords[tess.numVertexes][2] = 0;
-	tess.texCoords[tess.numVertexes][3] = 1;
+	tess.texCoords[tess.numVertexes][0][0] = 0;
+	tess.texCoords[tess.numVertexes][0][1] = 0;
 	tess.colors[tess.numVertexes][0] = 255;
 	tess.colors[tess.numVertexes][1] = 255;
 	tess.colors[tess.numVertexes][2] = 255;
@@ -736,10 +732,8 @@ void RB_DrawSun(void)
 	VectorSubtract(temp, vec2, temp);
 	VectorCopy(temp, tess.xyz[tess.numVertexes]);
 	tess.xyz[tess.numVertexes][3] = 1;
-	tess.texCoords[tess.numVertexes][0] = 0;
-	tess.texCoords[tess.numVertexes][1] = 1;
-	tess.texCoords[tess.numVertexes][2] = 0;
-	tess.texCoords[tess.numVertexes][3] = 1;
+	tess.texCoords[tess.numVertexes][0][0] = 0;
+	tess.texCoords[tess.numVertexes][0][1] = 1;
 	tess.colors[tess.numVertexes][0] = 255;
 	tess.colors[tess.numVertexes][1] = 255;
 	tess.colors[tess.numVertexes][2] = 255;
@@ -750,10 +744,8 @@ void RB_DrawSun(void)
 	VectorAdd(temp, vec2, temp);
 	VectorCopy(temp, tess.xyz[tess.numVertexes]);
 	tess.xyz[tess.numVertexes][3] = 1;
-	tess.texCoords[tess.numVertexes][0] = 1;
-	tess.texCoords[tess.numVertexes][1] = 1;
-	tess.texCoords[tess.numVertexes][2] = 0;
-	tess.texCoords[tess.numVertexes][3] = 1;
+	tess.texCoords[tess.numVertexes][0][0] = 1;
+	tess.texCoords[tess.numVertexes][0][1] = 1;
 	tess.colors[tess.numVertexes][0] = 255;
 	tess.colors[tess.numVertexes][1] = 255;
 	tess.colors[tess.numVertexes][2] = 255;
@@ -764,10 +756,8 @@ void RB_DrawSun(void)
 	VectorAdd(temp, vec2, temp);
 	VectorCopy(temp, tess.xyz[tess.numVertexes]);
 	tess.xyz[tess.numVertexes][3] = 1;
-	tess.texCoords[tess.numVertexes][0] = 1;
-	tess.texCoords[tess.numVertexes][1] = 0;
-	tess.texCoords[tess.numVertexes][2] = 0;
-	tess.texCoords[tess.numVertexes][3] = 1;
+	tess.texCoords[tess.numVertexes][0][0] = 1;
+	tess.texCoords[tess.numVertexes][0][1] = 0;
 	tess.colors[tess.numVertexes][0] = 255;
 	tess.colors[tess.numVertexes][1] = 255;
 	tess.colors[tess.numVertexes][2] = 255;
@@ -814,27 +804,16 @@ void Tess_StageIteratorSky(void)
 						 ("--- Tess_StageIteratorSky( %s, %i vertices, %i triangles ) ---\n", tess.surfaceShader->name,
 						  tess.numVertexes, tess.numIndexes / 3));
 	}
-	
-	// trebor: HACK why does this happen with cg_draw2D 0 ?
-	if(tess.stageIteratorFunc2 == NULL)
-	{
-		tess.stageIteratorFunc2 = Tess_StageIteratorGeneric;	
-	}
-
-	if(tess.stageIteratorFunc2 == Tess_StageIteratorGBuffer)
-	{
-		R_BindFBO(tr.deferredRenderFBO);
-	}
 
 	// go through all the polygons and project them onto
 	// the sky box to see which blocks on each side need
 	// to be drawn
 	Tess_ClipSkyPolygons();
 
-	// r_showSky will let all the sky blocks be drawn in
+	// r_showsky will let all the sky blocks be drawn in
 	// front of everything to allow developers to see how
 	// much sky is getting sucked in
-	if(r_showSky->integer)
+	if(r_showsky->integer)
 	{
 		qglDepthRange(0.0, 0.0);
 	}
@@ -849,10 +828,10 @@ void Tess_StageIteratorSky(void)
 		qglColor3f(tr.identityLight, tr.identityLight, tr.identityLight);
 
 		qglPushMatrix();
-
+		
 		GL_State(0);
 		GL_Program(0);
-
+		
 		qglTranslatef(backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
 
 		DrawSkyBox(tess.surfaceShader);
@@ -865,14 +844,9 @@ void Tess_StageIteratorSky(void)
 	BuildCloudData();
 
 	if(tess.numVertexes)
-		tess.stageIteratorFunc2();
+		Tess_StageIteratorGeneric();
 
-	// Tr3B: TODO draw the inner skybox?
-
-	if(tess.stageIteratorFunc2 == Tess_StageIteratorGBuffer)
-	{
-		R_BindNullFBO();
-	}
+	// TODO: draw the inner skybox?
 
 	// back to normal depth range
 	qglDepthRange(0.0, 1.0);

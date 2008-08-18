@@ -2740,7 +2740,7 @@ CL_InitRenderer
 */
 void CL_InitRenderer( void ) {
 	// this sets up the renderer and calls R_Init
-	re.BeginRegistration( &cls.glconfig );
+  re.BeginRegistration( &cls.glconfig, &cls.glconfig2 );
 
 	// load character sets
 	cls.charSetShader = re.RegisterShader( "gfx/2d/bigchars" );
@@ -2839,7 +2839,7 @@ void CL_InitRef( void ) {
 #endif
 	ri.Hunk_AllocateTempMemory = Hunk_AllocateTempMemory;
 	ri.Hunk_FreeTempMemory = Hunk_FreeTempMemory;
-	ri.CM_DrawDebugSurface = CM_DrawDebugSurface;
+//	ri.CM_DrawDebugSurface = CM_DrawDebugSurface;
 	ri.FS_ReadFile = FS_ReadFile;
 	ri.FS_FreeFile = FS_FreeFile;
 	ri.FS_WriteFile = FS_WriteFile;
@@ -2849,7 +2849,7 @@ void CL_InitRef( void ) {
 	ri.FS_FileExists = FS_FileExists;
 	ri.Cvar_Get = Cvar_Get;
 	ri.Cvar_Set = Cvar_Set;
-	ri.Cvar_CheckRange = Cvar_CheckRange;
+//	ri.Cvar_CheckRange = Cvar_CheckRange;
 
 	// cinematic stuff
 
@@ -2857,7 +2857,7 @@ void CL_InitRef( void ) {
 	ri.CIN_PlayCinematic = CIN_PlayCinematic;
 	ri.CIN_RunCinematic = CIN_RunCinematic;
   
-	ri.CL_WriteAVIVideoFrame = CL_WriteAVIVideoFrame;
+//	ri.CL_WriteAVIVideoFrame = CL_WriteAVIVideoFrame;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 

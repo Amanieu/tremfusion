@@ -342,6 +342,7 @@ typedef struct {
 
 	// rendering info
 	glConfig_t	glconfig;
+	glConfig2_t glconfig2;
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;

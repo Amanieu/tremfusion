@@ -1296,7 +1296,6 @@ Q3OBJ += \
   \
   $(B)/client/tr_animation.o \
   $(B)/client/tr_backend.o \
-  $(B)/client/tr_bloom.o \
   $(B)/client/tr_bsp.o \
   $(B)/client/tr_cmds.o \
   $(B)/client/tr_curve.o \
@@ -1305,9 +1304,7 @@ Q3OBJ += \
   $(B)/client/tr_image.o \
   $(B)/client/tr_image_png.o \
   $(B)/client/tr_image_jpg.o \
-  $(B)/client/tr_image_bmp.o \
   $(B)/client/tr_image_tga.o \
-  $(B)/client/tr_image_pcx.o \
   $(B)/client/tr_init.o \
   $(B)/client/tr_light.o \
   $(B)/client/tr_main.o \
@@ -1319,10 +1316,10 @@ Q3OBJ += \
   $(B)/client/tr_shade.o \
   $(B)/client/tr_shade_calc.o \
   $(B)/client/tr_shader.o \
-  $(B)/client/tr_shadows.o \
   $(B)/client/tr_sky.o \
   $(B)/client/tr_surface.o \
   $(B)/client/tr_world.o \
+  $(B)/client/tr_fbo.o \
   \
   $(B)/client/sdl_gamma.o \
   $(B)/client/sdl_input.o \

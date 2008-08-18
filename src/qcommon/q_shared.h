@@ -98,6 +98,7 @@ typedef int intptr_t;
 
 #include <assert.h>
 #include <math.h>
+#include <float.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -167,6 +168,15 @@ typedef int		clipHandle_t;
 #define	PITCH				0		// up / down
 #define	YAW					1		// left / right
 #define	ROLL				2		// fall over
+
+// plane sides
+typedef enum
+{
+  SIDE_FRONT = 0,
+  SIDE_BACK = 1,
+  SIDE_ON = 2,
+  SIDE_CROSS = 3
+} planeSide_t;
 
 // the game guarantees that no string from the network will ever
 // exceed MAX_STRING_CHARS
@@ -381,10 +391,16 @@ extern vec4_t	g_color_table[8];
 #define DEG2RAD( a ) ( ( (a) * M_PI ) / 180.0F )
 #define RAD2DEG( a ) ( ( (a) * 180.0f ) / M_PI )
 
+#define Q_max(a, b)      ((a) > (b) ? (a) : (b))
+#define Q_min(a, b)      ((a) < (b) ? (a) : (b))
+#define Q_bound(a, b, c) (Q_max(a, Q_min(b, c)))
+#define Q_clamp(a, b, c) ((b) >= (c) ? (a)=(b) : (a) < (b) ? (a)=(b) : (a) > (c) ? (a)=(c) : (a))
+
 struct cplane_s;
 
 extern	vec3_t	vec3_origin;
 extern	vec3_t	axisDefault[3];
+extern matrix_t matrixIdentity;
 
 #define	nanmask (255<<23)
 
@@ -415,6 +431,7 @@ static ID_INLINE float Q_fabs(float x) {
 #endif
 
 #else
+vec_t Q_recip(vec_t in);
 float Q_fabs( float f );
 float Q_rsqrt( float f );		// reciprocal square root
 #endif
@@ -438,7 +455,16 @@ void ByteToDir( int b, vec3_t dir );
 #define	VectorMA(v, s, b, o)	((o)[0]=(v)[0]+(b)[0]*(s),(o)[1]=(v)[1]+(b)[1]*(s),(o)[2]=(v)[2]+(b)[2]*(s))
 #define VectorLerp( f, s, e, r ) ((r)[0]=(s)[0]+(f)*((e)[0]-(s)[0]),\
   (r)[1]=(s)[1]+(f)*((e)[1]-(s)[1]),\
-  (r)[2]=(s)[2]+(f)*((e)[2]-(s)[2])) 
+  (r)[2]=(s)[2]+(f)*((e)[2]-(s)[2]))
+
+static ID_INLINE void TR_VectorLerp(const vec3_t from, const vec3_t to, float frac, vec3_t out)
+{
+  //*this = to + ((from - to) * f);
+
+  out[0] = to[0] + ((from[0] - to[0]) * frac);
+  out[1] = to[1] + ((from[1] - to[1]) * frac);
+  out[2] = to[2] + ((from[2] - to[2]) * frac);
+}
 
 #else
 
@@ -490,6 +516,7 @@ unsigned ColorBytes3 (float r, float g, float b);
 unsigned ColorBytes4 (float r, float g, float b, float a);
 
 float NormalizeColor( const vec3_t in, vec3_t out );
+void  ClampColor(vec4_t color);
 
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
 void ClearBounds( vec3_t mins, vec3_t maxs );
@@ -626,7 +653,7 @@ float AngleNormalize360 ( float angle );
 float AngleNormalize180 ( float angle );
 float AngleDelta ( float angle1, float angle2 );
 
-qboolean PlaneFromPoints( vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c );
+qboolean PlaneFromPoints(vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c, qboolean cw);
 void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 void RotateAroundDirection( vec3_t axis[3], vec_t angle );
@@ -635,7 +662,127 @@ void MakeNormalVectors( const vec3_t forward, vec3_t right, vec3_t up );
 
 //int	PlaneTypeForNormal (vec3_t normal);
 
-void MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3]);
+void MatrixIdentity(matrix_t m);
+void MatrixClear(matrix_t m);
+void MatrixCopy(const matrix_t in, matrix_t out);
+void MatrixTransposeIntoXMM(const matrix_t m);
+void MatrixTranspose(const matrix_t in, matrix_t out);
+void MatrixSetupXRotation(matrix_t m, vec_t degrees);
+void MatrixSetupYRotation(matrix_t m, vec_t degrees);
+void MatrixSetupZRotation(matrix_t m, vec_t degrees);
+void MatrixSetupTranslation(matrix_t m, vec_t x, vec_t y, vec_t z);
+void MatrixSetupScale(matrix_t m, vec_t x, vec_t y, vec_t z);
+void MatrixSetupShear(matrix_t m, vec_t x, vec_t y);
+void MatrixMultiply(const matrix_t a, const matrix_t b, matrix_t out);
+void MatrixMultiply2(matrix_t m, matrix_t m2);
+void MatrixMultiplyRotation(matrix_t m, vec_t pitch, vec_t yaw, vec_t roll);
+void MatrixMultiplyZRotation(matrix_t m, vec_t degrees);
+void MatrixMultiplyTranslation(matrix_t m, vec_t x, vec_t y, vec_t z);
+void MatrixMultiplyScale(matrix_t m, vec_t x, vec_t y, vec_t z);
+void MatrixMultiplyShear(matrix_t m, vec_t x, vec_t y);
+void MatrixToAngles(const matrix_t m, vec3_t angles);
+void MatrixFromAngles(matrix_t m, vec_t pitch, vec_t yaw, vec_t roll);
+void MatrixFromVectorsFLU(matrix_t m, const vec3_t forward, const vec3_t left, const vec3_t up);
+void MatrixFromVectorsFRU(matrix_t m, const vec3_t forward, const vec3_t right, const vec3_t up);
+void MatrixFromQuat(matrix_t m, const quat_t q);
+void MatrixFromPlanes(matrix_t m, const vec4_t left, const vec4_t right, const vec4_t bottom, const vec4_t top,
+                      const vec4_t front, const vec4_t back);
+void MatrixToVectorsFLU(const matrix_t m, vec3_t forward, vec3_t left, vec3_t up);
+void MatrixToVectorsFRU(const matrix_t m, vec3_t forward, vec3_t right, vec3_t up);
+void MatrixSetupTransform(matrix_t m, const vec3_t forward, const vec3_t left, const vec3_t up, const vec3_t origin);
+void MatrixSetupTransformFromRotation(matrix_t m, const matrix_t rot, const vec3_t origin);
+void MatrixSetupTransformFromQuat(matrix_t m, const quat_t quat, const vec3_t origin);
+void MatrixAffineInverse(const matrix_t in, matrix_t out);
+void MatrixTransformNormal(const matrix_t m, const vec3_t in, vec3_t out);
+void MatrixTransformPoint(const matrix_t m, const vec3_t in, vec3_t out);
+void MatrixTransform4(const matrix_t m, const vec4_t in, vec4_t out);
+
+#define QuatSet(q,x,y,z,w)  ((q)[0]=(x),(q)[1]=(y),(q)[2]=(z),(q)[3]=(w))
+#define QuatCopy(a, b)          ((b)[0]=(a)[0], (b)[1]=(a)[1], (b)[2]=(a)[2], (b)[3]=(a)[3])
+
+#define QuatCompare(a,b)  ((a)[0]==(b)[0] && (a)[1]==(b)[1] && (a)[2]==(b)[2] && (a)[3]==(b)[3])
+
+static ID_INLINE void QuatClear(quat_t q)
+{
+  q[0] = 0;
+  q[1] = 0;
+  q[2] = 0;
+  q[3] = 1;
+}
+
+/*
+static ID_INLINE int QuatCompare(const quat_t a, const quat_t b)
+{
+  if(a[0] != b[0] || a[1] != b[1] || a[2] != b[2] || a[3] != b[3])
+  {
+    return 0;
+  }
+  return 1;
+}
+*/
+
+static ID_INLINE void QuatCalcW(quat_t q)
+{
+#if 1
+  vec_t           term = 1.0f - (q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
+
+  if(term < 0.0)
+    q[3] = 0.0;
+  else
+    q[3] = -sqrt(term);
+#else
+  q[3] = sqrt(fabs(1.0f - (q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));
+#endif
+}
+
+static ID_INLINE void QuatInverse(quat_t q)
+{
+  q[0] = -q[0];
+  q[1] = -q[1];
+  q[2] = -q[2];
+}
+
+static ID_INLINE void QuatAntipodal(quat_t q)
+{
+  q[0] = -q[0];
+  q[1] = -q[1];
+  q[2] = -q[2];
+  q[3] = -q[3];
+}
+
+static ID_INLINE vec_t QuatLength(const quat_t q)
+{
+  return (vec_t) sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+}
+
+vec_t           QuatNormalize(quat_t q);
+
+void            QuatFromAngles(quat_t q, vec_t pitch, vec_t yaw, vec_t roll);
+
+static ID_INLINE void AnglesToQuat(const vec3_t angles, quat_t q)
+{
+  QuatFromAngles(q, angles[PITCH], angles[YAW], angles[ROLL]);
+}
+
+void            QuatFromMatrix(quat_t q, const matrix_t m);
+void            QuatToVectors(const quat_t quat, vec3_t forward, vec3_t right, vec3_t up);
+void            QuatToAxis(const quat_t q, vec3_t axis[3]);
+void            QuatToAngles(const quat_t q, vec3_t angles);
+
+// Quaternion multiplication, analogous to the matrix multiplication routines.
+// qa = rotate by qa, then qb
+void            QuatMultiply0(quat_t qa, const quat_t qb);
+// qc = rotate by qa, then qb
+void            QuatMultiply1(const quat_t qa, const quat_t qb, quat_t qc);
+// qc = rotate by qa, then by inverse of qb
+void            QuatMultiply2(const quat_t qa, const quat_t qb, quat_t qc);
+// qc = rotate by inverse of qa, then by qb
+void            QuatMultiply3(const quat_t qa, const quat_t qb, quat_t qc);
+// qc = rotate by inverse of qa, then by inverse of qb
+void            QuatMultiply4(const quat_t qa, const quat_t qb, quat_t qc);
+void            QuatSlerp(const quat_t from, const quat_t to, float frac, quat_t out);
+void            QuatTransformVector(const quat_t q, const vec3_t in, vec3_t out);
+
 void VectorMatrixMultiply( const vec3_t p, vec3_t m[ 3 ], vec3_t out );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 void PerpendicularVector( vec3_t dst, const vec3_t src );
@@ -759,7 +906,7 @@ const char	*Q_stristr( const char *s, const char *find);
 // buffer size safe library replacements
 void	Q_strncpyz( char *dest, const char *src, int destsize );
 void	Q_strcat( char *dest, int size, const char *src );
-
+qboolean   Q_strreplace(char *dest, int destsize, const char *find, const char *replace);
 // strlen that discounts Quake color sequences
 int Q_PrintStrlen( const char *string );
 // removes color sequences from string

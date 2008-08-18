@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_types.h"
 
-#define	REF_API_VERSION		12
+#define	REF_API_VERSION		10
 
 //
 // these are the functions exported by the refresh module
@@ -46,13 +46,13 @@ typedef struct
 	// and returns the current gl configuration, including screen width
 	// and height, which can be used by the client to intelligently
 	// size display elements
-	void            (*BeginRegistration) (glConfig_t * config);
-	                qhandle_t(*RegisterModel) (const char *name, qboolean forceStatic);
-	                qhandle_t(*RegisterAnimation) (const char *name);
-	                qhandle_t(*RegisterSkin) (const char *name);
-	                qhandle_t(*RegisterShader) (const char *name);
-	                qhandle_t(*RegisterShaderNoMip) (const char *name);
-	                qhandle_t(*RegisterShaderLightAttenuation) (const char *name);
+	void            (*BeginRegistration) (glConfig_t * config, glConfig2_t * glconfig2);
+	qhandle_t       (*RegisterModel) (const char *name);
+	qhandle_t       (*RegisterAnimation) (const char *name);
+	qhandle_t       (*RegisterSkin) (const char *name);
+	qhandle_t       (*RegisterShader) (const char *name);
+	qhandle_t       (*RegisterShaderNoMip) (const char *name);
+	qhandle_t       (*RegisterShaderLightAttenuation) (const char *name);
 	void            (*LoadWorld) (const char *name);
 
 	// the vis data is a large enough block of data that we go to the trouble
@@ -92,22 +92,20 @@ typedef struct
 
 	int             (*LerpTag) (orientation_t * tag, qhandle_t model, int startFrame, int endFrame,
 								float frac, const char *tagName);
-
+	
 	int             (*BuildSkeleton) (refSkeleton_t * skel, qhandle_t anim, int startFrame, int endFrame, float frac,
 									  qboolean clearOrigin);
 	int             (*BlendSkeleton) (refSkeleton_t * skel, const refSkeleton_t * blend, float frac);
 	int             (*BoneIndex) (qhandle_t hModel, const char *boneName);
 	int             (*AnimNumFrames) (qhandle_t hAnim);
 	int             (*AnimFrameRate) (qhandle_t hAnim);
-
+	
 	void            (*ModelBounds) (qhandle_t model, vec3_t mins, vec3_t maxs);
 
 	void            (*RegisterFont) (const char *fontName, int pointSize, fontInfo_t * font);
 	void            (*RemapShader) (const char *oldShader, const char *newShader, const char *offsetTime);
-	                qboolean(*GetEntityToken) (char *buffer, int size);
-	                qboolean(*inPVS) (const vec3_t p1, const vec3_t p2);
-
-	void            (*TakeVideoFrame) (int h, int w, byte * captureBuffer, byte * encodeBuffer, qboolean motionJpeg);
+	qboolean		(*GetEntityToken) (char *buffer, int size);
+	qboolean		(*inPVS) (const vec3_t p1, const vec3_t p2);
 } refexport_t;
 
 //
@@ -141,7 +139,6 @@ typedef struct
 
 	cvar_t         *(*Cvar_Get) (const char *name, const char *value, int flags);
 	void            (*Cvar_Set) (const char *name, const char *value);
-	void			(*Cvar_CheckRange) (cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral);
 
 	void            (*Cmd_AddCommand) (const char *name, void (*cmd) (void));
 	void            (*Cmd_RemoveCommand) (const char *name);
@@ -151,9 +148,6 @@ typedef struct
 
 	void            (*Cmd_ExecuteText) (int exec_when, const char *text);
 
-	// visualization for debugging collision detection
-	void            (*CM_DrawDebugSurface) (void (*drawPoly) (int color, int numPoints, float *points));
-
 	// a -1 return means the file does not exist
 	// NULL can be passed for buf to just determine existance
 	int             (*FS_FileIsInPAK) (const char *name, int *pCheckSum);
@@ -162,14 +156,12 @@ typedef struct
 	char          **(*FS_ListFiles) (const char *name, const char *extension, int *numfilesfound);
 	void            (*FS_FreeFileList) (char **filelist);
 	void            (*FS_WriteFile) (const char *qpath, const void *buffer, int size);
-	                qboolean(*FS_FileExists) (const char *file);
+	qboolean		(*FS_FileExists) (const char *file);
 
 	// cinematic stuff
 	void            (*CIN_UploadCinematic) (int handle);
 	int             (*CIN_PlayCinematic) (const char *arg0, int xpos, int ypos, int width, int height, int bits);
-	                e_status(*CIN_RunCinematic) (int handle);
-
-	void            (*CL_WriteAVIVideoFrame) (const byte * buffer, int size);
+	e_status		(*CIN_RunCinematic) (int handle);
 } refimport_t;
 
 

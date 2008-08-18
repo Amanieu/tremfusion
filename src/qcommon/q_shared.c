@@ -963,6 +963,43 @@ const char *Q_stristr( const char *s, const char *find)
   return s;
 }
 
+/*
+=============
+Q_strreplace
+ 
+replaces content of find by replace in dest
+=============
+*/
+qboolean Q_strreplace(char *dest, int destsize, const char *find, const char *replace)
+{
+  int             lstart, lfind, lreplace, lend;
+  char           *s;
+  char            backup[32000];  // big, but small enough to fit in PPC stack
+
+  lend = strlen(dest);
+  if(lend >= destsize)
+  {
+    Com_Error(ERR_FATAL, "Q_strreplace: already overflowed");
+  }
+
+  s = Q_stristr(dest, find);
+  if(!s)
+  {
+    return qfalse;
+  }
+  else
+  {
+    Q_strncpyz(backup, dest, lend + 1);
+    lstart = s - dest;
+    lfind = strlen(find);
+    lreplace = strlen(replace);
+
+    strncpy(s, replace, destsize - lstart - 1);
+    strncpy(s + lreplace, backup + lstart + lfind, destsize - lstart - lreplace - 1);
+
+    return qtrue;
+  }
+}
 
 int Q_PrintStrlen( const char *string ) {
 	int			len;
