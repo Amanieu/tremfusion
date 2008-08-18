@@ -59,7 +59,7 @@ qboolean inPVS( const vec3_t p1, const vec3_t p2 ) {return qtrue;}
 void	TakeVideoFrame( int h, int w, byte* captureBuffer, byte *encodeBuffer, qboolean motionJpeg ) {}
 
 
-void	BeginRegistration( glconfig_t *config )
+void	BeginRegistration( glConfig_t *config )
 {
 	config->renderer_string[0] = '\0';
 	config->vendor_string[0] = '\0';

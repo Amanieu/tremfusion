@@ -1327,7 +1327,7 @@ typedef struct
 typedef struct
 {
   gameState_t   gameState;              // gamestate from server
-  glconfig_t    glconfig;               // rendering configuration
+  glConfig_t    glconfig;               // rendering configuration
   float         screenXScale;           // derived from glconfig
   float         screenYScale;
   float         screenXBias;
@@ -1992,7 +1992,7 @@ void          trap_R_RemapShader( const char *oldShader, const char *newShader, 
 // The glconfig_t will not change during the life of a cgame.
 // If it needs to change, the entire cgame will be restarted, because
 // all the qhandle_t are then invalid.
-void          trap_GetGlconfig( glconfig_t *glconfig );
+void          trap_GetGlconfig( glConfig_t *glconfig );
 
 // the gamestate should be grabbed at startup, and whenever a
 // configstring changes

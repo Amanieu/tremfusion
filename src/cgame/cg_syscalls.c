@@ -397,7 +397,7 @@ void  trap_R_RemapShader( const char *oldShader, const char *newShader, const ch
   syscall( CG_R_REMAP_SHADER, oldShader, newShader, timeOffset );
 }
 
-void trap_GetGlconfig( glconfig_t *glconfig )
+void trap_GetGlconfig( glConfig_t *glconfig )
 {
   syscall( CG_GETGLCONFIG, glconfig );
 }

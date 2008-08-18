@@ -44,7 +44,7 @@ void CL_GetGameState( gameState_t *gs ) {
 CL_GetGlconfig
 ====================
 */
-void CL_GetGlconfig( glconfig_t *glconfig ) {
+void CL_GetGlconfig( glConfig_t *glconfig ) {
 	*glconfig = cls.glconfig;
 }
 
@@ -552,7 +552,8 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		re.LoadWorld( VMA(1) );
 		return 0; 
 	case CG_R_REGISTERMODEL:
-		return re.RegisterModel( VMA(1) );
+	  //TODO: Champion: Change the actual trap to allow setting forceStatic
+		return re.RegisterModel( VMA(1), qfalse );
 	case CG_R_REGISTERSKIN:
 		return re.RegisterSkin( VMA(1) );
 	case CG_R_REGISTERSHADER:
