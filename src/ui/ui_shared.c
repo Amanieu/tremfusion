@@ -5280,6 +5280,7 @@ static bind_t g_bindings[] =
     { "messagemode5", -1,            -1, -1, -1 },
     { "messagemode6", -1,            -1, -1, -1 },
     { "prompt",       -1,            -1, -1, -1 },
+    { "squadmark",    'k',           -1, -1, -1 },
   };
 
 

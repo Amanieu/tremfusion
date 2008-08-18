@@ -100,6 +100,14 @@
     "is still building, but can no longer damage turrets and teslas that "
     "have been completed."
   }
+  "Squad Marking"
+  {
+    "Want to keep track of certain teammates? Mark them as members of your "
+    "squad. Bind a key to 'Toggle Squad Mark' (Options -> Misc), walk up to "
+    "the target player and press that key. A triangle will appear above them "
+    "marking them as a squad member. The triangle will stay on screen as long "
+    "as the player is around you."
+  }
   "Tyrant"
   {
     "The Tyrant is now a weaker class as its health has been lowered and "
