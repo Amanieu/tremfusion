@@ -1118,8 +1118,8 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			misc[MAX_MISC];	// misc data
-        int                     ammo;
-        int                     clips;
+	int			ammo;
+	int			clips;
 
 	int			ammo_extra[14]; // compatibility
 

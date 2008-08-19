@@ -1226,7 +1226,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 		}
 	}
 	// backporting: 1.1 expects an array here
-	ammobits = (to->ammo != from->ammo) & (to->clips != from->clips)<<1;
+	ammobits = (to->ammo != from->ammo) | (to->clips != from->clips)<<1;
 	for (i=0 ; i<14 ; i++) {
 		if (to->ammo_extra[i] != from->ammo_extra[i]) {
 			ammobits |= 4<<i;
