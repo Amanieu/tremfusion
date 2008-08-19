@@ -154,7 +154,7 @@ static void G_WideTrace( trace_t *tr, gentity_t *ent, float range,
   // Set aiming directions
   VectorMA( muzzle, range, forward, end );
 
-  G_UnlaggedOn( muzzle, range );
+  G_UnlaggedOn( ent, muzzle, range );
   //prefer the target in the crosshairs
   trap_Trace( tr, muzzle, NULL, NULL, end, ent->s.number, CONTENTS_BODY );
 
@@ -344,7 +344,7 @@ void bulletFire( gentity_t *ent, float spread, int damage, int mod )
   // don't use unlagged if this is not a client (e.g. turret)
   if( ent->client )
   {
-    G_UnlaggedOn( muzzle, 8192 * 16 );
+    G_UnlaggedOn( ent, muzzle, 8192 * 16 );
     trap_Trace( &tr, muzzle, NULL, NULL, end, ent->s.number, MASK_SHOT );
     G_UnlaggedOff( );
   }
@@ -435,8 +435,8 @@ void shotgunFire( gentity_t *ent )
   SnapVector( tent->s.origin2 );
   tent->s.eventParm = rand() & 255;    // seed for spread pattern
   tent->s.otherEntityNum = ent->s.number;
-  //G_UnlaggedOn( muzzle, 8192 * 16 );
-  G_UnlaggedOn( muzzle, SHOTGUN_RANGE );
+  //G_UnlaggedOn( ent, muzzle, 8192 * 16 );
+  G_UnlaggedOn( ent, muzzle, SHOTGUN_RANGE );
   ShotgunPattern( tent->s.pos.trBase, tent->s.origin2, tent->s.eventParm, ent );
   G_UnlaggedOff();
 }
@@ -459,7 +459,7 @@ void massDriverFire( gentity_t *ent )
   int i, hits = 0, skipent;
 
   // loop through all entities hit by a line trace
-  G_UnlaggedOn( muzzle, 8192 * 16 );
+  G_UnlaggedOn( ent, muzzle, 8192 * 16 );
   VectorMA( muzzle, 8192 * 16, forward, end );
   VectorCopy( muzzle, tr.endpos );
   skipent = ent->s.number;
@@ -682,7 +682,7 @@ void lasGunFire( gentity_t *ent )
 
   VectorMA( muzzle, 8192 * 16, forward, end );
 
-  G_UnlaggedOn( muzzle, 8192 * 16 );
+  G_UnlaggedOn( ent, muzzle, 8192 * 16 );
   trap_Trace( &tr, muzzle, NULL, NULL, end, ent->s.number, MASK_SHOT );
   G_UnlaggedOff( );
 
@@ -1085,7 +1085,7 @@ void poisonCloud( gentity_t *ent )
   VectorAdd( ent->client->ps.origin, range, maxs );
   VectorSubtract( ent->client->ps.origin, range, mins );
 
-  G_UnlaggedOn( ent->client->ps.origin, LEVEL1_PCLOUD_RANGE );
+  G_UnlaggedOn( ent, ent->client->ps.origin, LEVEL1_PCLOUD_RANGE );
   num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
   for( i = 0; i < num; i++ )
   {
