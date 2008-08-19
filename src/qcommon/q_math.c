@@ -1462,6 +1462,32 @@ void MatrixSetupShear(matrix_t m, vec_t x, vec_t y)
   m[ 3] = 0;      m[ 7] = 0;      m[11] = 0;      m[15] = 1;
 }
 
+/*
+================
+MatrixMultiply
+================
+*/
+void MatrixMultiplyVM(float in1[3][3], float in2[3][3], float out[3][3]) {
+  out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
+        in1[0][2] * in2[2][0];
+  out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
+        in1[0][2] * in2[2][1];
+  out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
+        in1[0][2] * in2[2][2];
+  out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
+        in1[1][2] * in2[2][0];
+  out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
+        in1[1][2] * in2[2][1];
+  out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
+        in1[1][2] * in2[2][2];
+  out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
+        in1[2][2] * in2[2][0];
+  out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
+       in1[2][2] * in2[2][1];
+  out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
+       in1[2][2] * in2[2][2];
+}
+
 void MatrixMultiply(const matrix_t a, const matrix_t b, matrix_t out)
 {
 #if id386_sse && defined __GNUC__

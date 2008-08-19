@@ -673,6 +673,7 @@ void MatrixSetupZRotation(matrix_t m, vec_t degrees);
 void MatrixSetupTranslation(matrix_t m, vec_t x, vec_t y, vec_t z);
 void MatrixSetupScale(matrix_t m, vec_t x, vec_t y, vec_t z);
 void MatrixSetupShear(matrix_t m, vec_t x, vec_t y);
+void MatrixMultiplyVM(float in1[3][3], float in2[3][3], float out[3][3]); 
 void MatrixMultiply(const matrix_t a, const matrix_t b, matrix_t out);
 void MatrixMultiply2(matrix_t m, matrix_t m2);
 void MatrixMultiplyRotation(matrix_t m, vec_t pitch, vec_t yaw, vec_t roll);

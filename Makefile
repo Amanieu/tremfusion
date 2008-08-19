@@ -857,7 +857,8 @@ endif
 ifeq ($(USE_MUMBLE),1)
   BASE_CFLAGS += -DUSE_MUMBLE
 endif
-
+CLIENT_LDFLAGS+= -lfreetype -lz
+BASE_CFLAGS += -DBUILD_FREETYPE -I/usr/include/freetype2
 ifeq ($(USE_VOIP),1)
   BASE_CFLAGS += -DUSE_VOIP
   ifeq ($(USE_INTERNAL_SPEEX),1)

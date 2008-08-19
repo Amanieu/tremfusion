@@ -239,9 +239,9 @@ void RE_AddRefEntityToScene(const refEntity_t * ent)
 	{
 		ri.Error(ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType);
 	}
-
+	
+//  backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
 	Com_Memcpy(&backEndData[tr.smpFrame]->entities[r_numentities].e, ent, sizeof(refEntity_t));
-	//backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
 	backEndData[tr.smpFrame]->entities[r_numentities].lightingCalculated = qfalse;
 
 	r_numentities++;
