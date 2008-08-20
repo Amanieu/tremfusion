@@ -7035,6 +7035,7 @@ qboolean ItemParse_visible( itemDef_t *item, int handle )
   if( !PC_Int_Parse( handle, &i ) )
     return qfalse;
 
+  item->window.flags &= ~WINDOW_VISIBLE;
   if( i )
     item->window.flags |= WINDOW_VISIBLE;
 
