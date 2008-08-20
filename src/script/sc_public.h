@@ -31,7 +31,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_PATH_LENGTH         64
 #define MAX_DESC_LENGTH         1024
 
+#ifndef Q3_VM
 #define offsetof(st, m)   ( (char *)&((st *)(0))->m - (char *)&((st *)(0)) ) // for class fields
+#else
+#define offsetof(st, m)   ( (char *)&(((st *)0)->x))
+#endif
 
 // Define SC_GC_DEBUG to 1 to get debug info about reference count increases and decreases
 #define SC_GC_DEBUG 0

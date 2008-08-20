@@ -152,15 +152,6 @@ static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-
-static scLibFunction_t ui_lib[] = {
-  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
-  { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
-  { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
-                                TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },
-  { "" }
-};
-
 // Rectangle class
 
 scClass_t *rect_class;
@@ -239,6 +230,14 @@ static scLibObjectDef_t rect_def = {
   rect_methods, 
   rect_fields,
   NULL
+};
+
+static scLibFunction_t ui_lib[] = {
+  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
+  { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
+  { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
+                                TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },
+  { "" }
 };
 
 static void SC_UIModuleInit( void )
