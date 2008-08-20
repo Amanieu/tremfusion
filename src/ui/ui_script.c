@@ -133,7 +133,7 @@ static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   scale  = in[2].data.floating;
   colour = SC_Vec4t_from_Vec4(in[3].data.object);
   text  = SC_StringToChar(in[4].data.string);
-  UI_Text_Paint( x, y, scale, colour, text, 0, 0, ITEM_TEXTSTYLE_NORMAL);
+  UI_Text_Paint( x, y, scale, *colour, text, 0, 0, ITEM_TEXTSTYLE_NORMAL);
   out->type = TYPE_UNDEF;
   return 0;
 }
@@ -147,18 +147,103 @@ static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   w      = in[2].data.floating;
   h      = in[3].data.floating;
   size   = in[4].data.floating;
-//  DC->drawRect();
+  colour = SC_Vec4t_from_Vec4(in[5].data.object);
+  DC->drawRect(x, y, w, h, size, *colour);
+  return 0;
 }
 
 
 static scLibFunction_t ui_lib[] = {
   { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
   { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
+  { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
+                                TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },
   { "" }
+};
+
+// Rectangle class
+
+scClass_t *rect_class;
+
+typedef struct
+{
+  rectDef_t *rect;
+  qboolean sc_created;
+} sc_rect_t;
+
+static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  rectDef_t *rect;
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+  Com_Printf("offsetof(sc_rect_t, rect) = %d\n", offsetof(sc_rect_t, rect));
+  self->data.type = TYPE_USERDATA;
+  rect = BG_Alloc(sizeof(rectDef_t));
+  memset(rect, 0x00, sizeof(rectDef_t));
+  self->data.data.userdata = rect;
+
+  return 0;
+}
+
+static int rect_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  rectDef_t *rect;
+  
+  self = in[0].data.object;
+  rect =  self->data.data.userdata;
+  
+  BG_Free(rect);
+
+  return 0;
+}
+
+static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  float x, y;
+  scObject_t *self;
+  rectDef_t *rect;
+  
+  self = in[0].data.object;
+  rect =  self->data.data.userdata;
+ 
+  x      = in[1].data.floating;
+  y      = in[2].data.floating;
+  
+  out->type = TYPE_BOOLEAN;
+  out->data.boolean = Rect_ContainsPoint(rect, x, y);
+  return 0;
+}
+
+static scField_t rect_fields[] = {
+  { "x", "", TYPE_FLOAT, offsetof(rectDef_t, x) },
+  { "y", "", TYPE_FLOAT, offsetof(rectDef_t, y) },
+  { "h", "", TYPE_FLOAT, offsetof(rectDef_t, h) },
+  { "w", "", TYPE_FLOAT, offsetof(rectDef_t, w) },
+  { "" },
+};
+
+static scLibObjectMethod_t rect_methods[] = {
+  { "ContainsPoint", "", rect_containspoint, {TYPE_FLOAT, TYPE_FLOAT, TYPE_UNDEF}, TYPE_BOOLEAN, NULL },
+  { "" }, //Rect_ContainsPoint
+};
+
+static scLibObjectDef_t rect_def = { 
+  "Rect", "",
+  rect_constructor, { TYPE_UNDEF },
+  rect_destructor,
+  NULL, 
+  rect_methods, 
+  rect_fields,
+  NULL
 };
 
 static void SC_UIModuleInit( void )
 {
   SC_AddLibrary( "ui", ui_lib );
+  rect_class =  SC_AddClass( "ui", &rect_def);
 }
 
