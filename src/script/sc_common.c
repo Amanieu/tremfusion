@@ -398,7 +398,7 @@ vec4_t *SC_Vec4t_from_Vec4( scObject_t *vectobject )
   
   data = vectobject->data.data.userdata;
 
-  return data->vect;
+  return (vec4_t*)data->vect;
 }
 
 /*

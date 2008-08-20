@@ -1140,7 +1140,9 @@ void UI_Refresh( int realtime )
     UI_DrawHandlePic( uiInfo.uiDC.cursorx - ( 16.0f * uiInfo.uiDC.aspectScale ), uiInfo.uiDC.cursory - 16.0f,
                       32.0f * uiInfo.uiDC.aspectScale, 32.0f, uiInfo.uiDC.Assets.cursor );
   }
+#ifdef ENABLE_SCRIPT_UI
   SC_UIRefresh();
+#endif
 }
 
 /*
@@ -1150,7 +1152,9 @@ UI_Shutdown
 */
 void UI_Shutdown( void )
 {
+#ifdef ENABLE_SCRIPT_UI
   UI_ScriptShutdown();
+#endif
   trap_LAN_SaveCachedServers();
 }
 
@@ -3905,8 +3909,9 @@ void UI_Init( qboolean inGameLoad )
 
   UI_RegisterCvars();
   UI_InitMemory();
-  
+#ifdef ENABLE_SCRIPT_UI
   UI_ScriptInit();
+#endif
 
   // cache redundant calulations
   trap_GetGlconfig( &uiInfo.uiDC.glconfig );
