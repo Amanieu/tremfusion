@@ -23,6 +23,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 // sc_lua.c
 
+/*
+ * TODO:
+ * - Make all metatables as userdata only instead of table with _ref as userdata (see luaL_newmetatable and luaL_checkudata
+ * - Add methods to make scripting registered data under lua
+ * - Make lua type for TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN (and metamethod)
+ * - Bad GC when pop a value ?
+ */
+
 #ifdef USE_LUA
 
 #include "sc_public.h"
@@ -34,6 +42,7 @@ lua_State *g_luaState = NULL;
 
 static void push_value(lua_State *L, scDataTypeValue_t *value);
 static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
+static void push_string(lua_State *L, scDataTypeString_t *string);
 static scDataTypeString_t* pop_string(lua_State *L);
 
 static void push_function( lua_State *L, scDataTypeFunction_t *function );
@@ -148,34 +157,151 @@ static int type_method(lua_State *L)
   return 1;
 }
 
-static int pairs_method(lua_State *L)
+static int pairs_closure(lua_State *L)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
+  int keystate = lua_tointeger(L, lua_upvalueindex(1));
+  int type;
+  scDataTypeHash_t *hash;
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
 
-  // If table has a metatable, get defined type
-  /*if(lua_istable(L, -1) && lua_getmetatable(L, -1))
+  keystate = lua_tointeger(L, lua_upvalueindex(1));
+
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 2, LUA_TSTRING);
+
+  lua_getfield(L, -2, "_type");
+  type = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+
+  switch(type)
   {
-    lua_pop(L, 1);
+    case TYPE_ARRAY:
+      lua_getfield(L, -2, "_ref");
+      array = lua_touserdata(L, -1);
+      lua_pop(L, 1);
 
-    lua_getfield(L, -1, "_data");
-    lua_remove(L, -2);
+      if(keystate >= array->size)
+      {
+        // no more entries, push nil
+        lua_pushnil(L);
+        return 1;
+      }
+      else
+      {
+        SC_ArrayGet(array, keystate, &value);
+
+        // push index as return value
+        lua_pushinteger(L, keystate);
+
+        // update upvalue 
+        keystate++;
+        lua_pushinteger(L, keystate);
+        lua_replace(L, lua_upvalueindex(1));
+
+        // push array value as return value
+        push_value(L, &value);
+
+        return 2;
+      }
+
+    case TYPE_HASH:
+    case TYPE_NAMESPACE:
+      // get hash data
+      lua_getfield(L, -2, "_ref");
+      hash = lua_touserdata(L, -1);
+      lua_pop(L, 1);
+
+      // lookup in hashtable from current index to max hashtable size
+      while(keystate < hash->buflen)
+      {
+        // Find next used entry in hashtable
+        if(SC_StringIsEmpty(&hash->data[keystate].key))
+          keystate++;
+        else
+        {
+          // update upvalue
+          lua_pushinteger(L, keystate);
+          lua_replace(L, lua_upvalueindex(1));
+
+          // push key
+          push_string(L, &hash->data[keystate].key);
+
+          // push value
+          push_value(L, &hash->data[keystate].value);
+
+          return 2;
+        }
+      }
+
+      // no more values, push nil
+      lua_pushnil(L);
+      return 1;
   }
 
-  lua_getfield(L, LUA_REGISTRYINDEX, "pairs");
-  lua_insert(L, -2);
+  luaL_error(L, "lua internal error in %s (%d) : unknow datatype", __FILE__, __LINE__);
 
-  lua_call(L, 1, 2);
-  lua_remove(L, -3);
-
-  return 2;*/
   return 0;
 }
 
-static int null_metamethod(lua_State *L)
+static int pairs_method(lua_State *L)
 {
-  // TODO: error message
-  Com_Printf("*** Warning: null_metamethod called\n");
- 
+  luaL_checktype(L, 1, LUA_TTABLE);
+
+  if(lua_getmetatable(L, -1))
+  {
+    lua_pop(L, 1);
+
+    // Push integer as closure upvalue
+    lua_pushinteger(L, 0);
+    lua_pushcclosure(L, pairs_closure, 1);
+
+    // Push table as first argument
+    lua_pushvalue(L, -2);
+
+    // FIXME: is third argument always 0 ?
+    lua_pushinteger(L, 0);
+
+    return 3;
+  }
+  else
+  {
+    lua_getfield(L, LUA_REGISTRYINDEX, "_pairs");
+    lua_replace(L, -3);
+
+    lua_call(L, 1, 3);
+
+    return 3;
+  }
+}
+
+static int invalid_index_metamethod(lua_State *L)
+{
+  int type;
+  int top;
+
+  top = lua_gettop(L);
+
+  lua_getfield(L, -top, "_type");
+  type = lua_tointeger(L, -1);
+
+  luaL_error(L, "attempt to index a %s value", luatype2string(sctype2luatype(type)));
+
+  return 0;
+}
+
+static int invalid_length_metamethod(lua_State *L)
+{
+  int type;
+  int top;
+
+  top = lua_gettop(L);
+
+  lua_getfield(L, -top, "_type");
+  type = lua_tointeger(L, -1);
+
+  luaL_error(L, "attempt to get length of a %s value", luatype2string(sctype2luatype(type)));
+
   return 0;
 }
 
@@ -205,60 +331,113 @@ static int tostring_metamethod(lua_State *L)
   return 1;
 }
 
-static int le_metamethod(lua_State *L)
+static const char *to_comparable_string(lua_State *L, int index, int left)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
-  /*int result;
-  lua_getfield(L, -2, "_data");
-  lua_getfield(L, -2, "_data");
-  result = lua_lessthan(L, -1, -2) || lua_equal(L, -1, -2);
-  lua_pop(L, 4);
+  scDataTypeString_t *string;
+  int ltype, sctype;
+  const char *str = NULL;
 
-  lua_pushboolean(L, result);*/
+  ltype = lua_type(L, index);
+  if(ltype == LUA_TSTRING)
+    str = lua_tostring(L, index);
+  else if(ltype == LUA_TTABLE)
+  {
+    lua_getfield(L, -1, "_type");
 
-  return 1;
+    // table hasn't '_type' value, it's a simple lua table
+    if(lua_isnil(L, -1))
+    {
+      if(left)
+        luaL_error(L, "attempt to compare table with string");
+      else
+        luaL_error(L, "attempt to compare string with table");
+    }
+
+    sctype = lua_tointeger(L, -1);
+    if(sctype != TYPE_STRING)
+    {
+      if(left)
+        luaL_error(L, "attempt to compare %s with string", luatype2string(sctype2luatype(sctype)));
+      else
+        luaL_error(L, "attempt to compare string with %s", luatype2string(sctype2luatype(sctype)));
+    }
+
+    lua_getfield(L, -2, "_ref");
+    string = lua_touserdata(L, -1);
+    str = SC_StringToChar(string);
+
+    lua_pop(L, 2);
+  }
+
+  return str;
 }
 
-static int lt_metamethod(lua_State *L)
+static int le_string_metamethod(lua_State *L)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
-  /*int result;
-  lua_getfield(L, -2, "_data");
-  lua_getfield(L, -2, "_data");
-  result = lua_lessthan(L, -1, -2);
-  lua_pop(L, 4);
+  const char *str1, *str2;
 
-  lua_pushboolean(L, result);*/
+  str1 = to_comparable_string(L, -2, 1);
+  str2 = to_comparable_string(L, -1, 0);
 
-  lua_pushboolean(L, qfalse);
-  return 1;
+  return strcmp(str1, str2) <= 0;
 }
 
-static int eq_metamethod(lua_State *L)
+static int lt_string_metamethod(lua_State *L)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
-  /*int result;
-  lua_getfield(L, -2, "_data");
-  lua_getfield(L, -2, "_data");
-  result = lua_equal(L, -1, -2);
-  lua_pop(L, 4);
+  const char *str1, *str2;
 
-  lua_pushboolean(L, result);*/
+  str1 = to_comparable_string(L, -2, 1);
+  str2 = to_comparable_string(L, -1, 0);
 
-  lua_pushboolean(L, qfalse);
-  return 1;
+  return strcmp(str1, str2) < 0;
+}
+
+static int eq_string_metamethod(lua_State *L)
+{
+  const char *str1, *str2;
+
+  str1 = to_comparable_string(L, -2, 1);
+  str2 = to_comparable_string(L, -1, 0);
+
+  return strcmp(str1, str2) == 0;
 }
 
 static int len_metamethod(lua_State *L)
 {
-  // TODO: OUT TO DATE, have to rewrite it !
-  /*lua_getfield(L, -1, "_data");
-  lua_pushinteger(L, lua_objlen(L, -1));
-  lua_remove(L, -2);
-  lua_remove(L, -2);*/
+  int type;
+  scDataTypeString_t *string;
+  scDataTypeArray_t *array;
+  scDataTypeHash_t *hash;
 
-  lua_pushinteger(L, 0);
-  return 1;
+  lua_getfield(L, -1, "_type");
+  type = lua_tointeger(L, -1);
+
+  switch(type)
+  {
+    case TYPE_STRING:
+      lua_getfield(L, -2, "_ref");
+      string = lua_touserdata(L, -1);
+
+      return string->length;
+
+    case TYPE_ARRAY:
+      lua_getfield(L, -2, "_ref");
+      array = lua_touserdata(L, -1);
+
+      return array->size;
+
+    case TYPE_HASH:
+    case TYPE_NAMESPACE:
+      lua_getfield(L, -2, "_ref");
+      hash = lua_touserdata(L, -1);
+
+      return hash->size;
+
+    default:
+      luaL_error(L, "attempt to get length of a %s value", luatype2string(sctype2luatype(type)));
+  }
+
+  return 0;
 }
 
 static int concat_metamethod(lua_State *L)
@@ -389,11 +568,9 @@ static int call_metamethod( lua_State *L )
   type = lua_tointeger(L, -1);
   lua_pop(L, 1);
   lua_getfield(L, -top, "_ref");
-  // FIXME: can userdata be modified under lua ? Maybe security issue...
+
   if(type == TYPE_FUNCTION)
-  {
     function = lua_touserdata(L, -1);
-  }
   else if(type == TYPE_CLASS)
   {
     class = lua_touserdata(L, -1);
@@ -403,9 +580,7 @@ static int call_metamethod( lua_State *L )
     mod = 1;
   }
   else
-  {
-    // TODO: raise error
-  }
+    luaL_error(L, va("internal error: datatype can't be called at %s (%d)", __FILE__, __LINE__));
 
   lua_pop(L, 1);
   lua_remove(L, -top);
@@ -414,8 +589,6 @@ static int call_metamethod( lua_State *L )
 
   for(i = top-1; i >= 0; i--)
   {
-    // FIXME: have to consider metatables to check type
-    //luaL_checktype(L, -1, sctype2luatype(function->argument[i+mod]));
     pop_value(L, &args[i+mod], function->argument[i+mod]);
     SC_ValueGCInc(&args[i+mod]);
   }
@@ -496,7 +669,8 @@ static int object_index_metamethod(lua_State *L)
     push_value(L, &out);
     return 1;
   }
-  // TODO: Error: unknow value
+
+  luaL_error(L, va("can't index `%s' field : unknow member", name));
   return 0;
 }
 
@@ -551,7 +725,66 @@ static int object_newindex_metamethod(lua_State *L)
     return 0;
   }
 
-  // TODO: Error: unknow value
+  luaL_error(L, va("can't index `%s' field : unknow member", name));
+  return 0;
+}
+
+static int gc_string_metamethod(lua_State *L)
+{
+  scDataTypeString_t *string;
+
+  string = lua_touserdata(L, -1);
+  SC_StringGCDec(string);
+
+  return 0;
+}
+
+static int gc_array_metamethod(lua_State *L)
+{
+  scDataTypeArray_t *array;
+
+  array = lua_touserdata(L, -1);
+  SC_ArrayGCDec(array);
+
+  return 0;
+}
+
+static int gc_hash_metamethod(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+
+  hash = lua_touserdata(L, -1);
+  SC_HashGCDec(hash);
+
+  return 0;
+}
+
+static int gc_function_metamethod(lua_State *L)
+{
+  scDataTypeFunction_t *function;
+
+  function = lua_touserdata(L, -1);
+  SC_FunctionGCDec(function);
+
+  return 0;
+}
+
+static int gc_class_metamethod(lua_State *L)
+{
+  scClass_t *class;
+
+  class = lua_touserdata(L, -1);
+  //SC_ClassGCDec(class);
+
+  return 0;
+}
+
+static int gc_object_metamethod(lua_State *L)
+{
+  scObject_t *object;
+
+  object = lua_touserdata(L, -1);
+  SC_ObjectGCDec(object);
 
   return 0;
 }
@@ -573,64 +806,11 @@ static scDataTypeString_t* pop_string(lua_State *L)
   const char *lstr;
   scDataTypeString_t *string;
 
-  if(lua_isstring(L, -1))
-    lstr = lua_tostring(L, -1);
-  else
-  {
-    luaL_checktype(L, -1, LUA_TTABLE);
-
-    // String is an object with a metatable
-    if(lua_getmetatable(L, -1))
-    {
-      // TODO: Error
-    }
-
-    luaL_checktype(L, -1, LUA_TTABLE);
-    lua_pop(L, 1);
-    lua_getfield(L, -1, "_data");
-    lua_remove(L, -2);
-    lua_remove(L, -2);
-
-    luaL_checktype(L, -1, LUA_TSTRING);
-    lstr = lua_tostring(L, -1);
-
-  }
+  lstr = lua_tostring(L, -1);
   string = SC_StringNewFromChar(lstr);
   lua_pop(L, 1);
 
   return string;
-}
-
-static scObject_t* pop_object(lua_State *L)
-{
-  // TODO: error: objects always have a _ref entry
-
-  /*luaL_checktype(L, -1, LUA_TTABLE);
-  lua_pop(L, 1);
-  lua_getfield(L, -1, "_data");
-  lua_remove(L, -2);
-  luaL_checktype(L, -1, LUA_TTABLE);
-
-  scDataTypeArray_t *array = SC_ArrayNew();
-
-  lua_pushnil(L);
-  while(lua_next(L, -1) != 0)
-  {
-    pop_value(L, &val);
-    SC_ArraySet(array, lua_tonumber(L, -1), &val);
-  }
-*/
-  lua_pop(L, 1);
-
-  return NULL;
-}
-
-static scClass_t* pop_class(lua_State *L)
-{
-  // TODO: is it really usefull ?
-  lua_pop(L, 1);
-
-  return NULL;
 }
 
 static scDataTypeArray_t* pop_array(lua_State *L)
@@ -680,27 +860,14 @@ static scDataTypeFunction_t* pop_function(lua_State *L)
 {
   scDataTypeFunction_t *function;
 
-  if(lua_istable(L, -1))
-  {
-    lua_getmetatable(L, -1);
-    luaL_checktype(L, -1, LUA_TTABLE);
-    lua_pop(L, 1);
-    lua_getfield(L, -1, "_ref");
-    luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
-    function = lua_touserdata(L, -1);
-    lua_pop(L, 3);
-  }
-  else
-  {
-    function = SC_FunctionNew();
-    function->langage = LANGAGE_LUA;
-    // TODO: What are arguments and return type ?
-    function->argument[0] = TYPE_ANY;
-    function->argument[1] = TYPE_UNDEF;
-    function->return_type = TYPE_ANY;
-    function->closure = NULL;
-    SC_Lua_Fregister(function);
-  }
+  function = SC_FunctionNew();
+  function->langage = LANGAGE_LUA;
+  // Impossible to know arguments type, set generic types
+  function->argument[0] = TYPE_ANY;
+  function->argument[1] = TYPE_UNDEF;
+  function->return_type = TYPE_ANY;
+  function->closure = NULL;
+  SC_Lua_Fregister(function);
 
   return function;
 }
@@ -755,98 +922,11 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
         lua_pop(L, 1);
         lua_getfield(L, -1, "_type");
         gtype = lua_tointeger(L, -1);
-        lua_pop(L, 1);
 
         lua_getfield(L, -1, "_ref");
-        if(!lua_isnil(L, -1))
-        {
-          value->type = gtype;
-          value->data.any = lua_touserdata(L, -1);
-        }
-        else
-        {
-          switch(gtype)
-          {
-            case TYPE_UNDEF:
-              value->type = TYPE_UNDEF;
-              lua_pop(L, 1);
-              break;
-            case TYPE_BOOLEAN:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_BOOLEAN;
-              value->data.boolean = lua_toboolean(L, -1);
-              lua_pop(L, 1);
-              break;
-            case TYPE_INTEGER:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_INTEGER;
-              value->data.integer = lua_tointeger(L, -1);
-              lua_pop(L, 1);
-              break;
-            case TYPE_FLOAT:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_INTEGER;
-              value->data.floating = lua_tonumber(L, -1);
-              lua_pop(L, 1);
-              break;
-            case TYPE_STRING:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_STRING;
-              value->data.string = pop_string(L);
-              break;
-            case TYPE_FUNCTION:
-              lua_getfield(L, -1, "_ref");
-              lua_remove(L, -2);
-              value->type = TYPE_FUNCTION;
-              value->data.function = pop_function(L);
-              break;
-            case TYPE_ARRAY:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_ARRAY;
-              value->data.array = pop_array(L);
-              break;
-            case TYPE_HASH:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_HASH;
-              value->data.hash = pop_hash(L);
-              break;
-            case TYPE_NAMESPACE:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_NAMESPACE;
-              value->data.namespace = pop_hash(L);
-              break;
-            case TYPE_OBJECT:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_OBJECT;
-              value->data.object = pop_object(L);
-              break;
-            case TYPE_CLASS:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_CLASS;
-              value->data.class = pop_class(L);
-              break;
-            case TYPE_USERDATA:
-              lua_getfield(L, -1, "_data");
-              lua_remove(L, -2);
-              value->type = TYPE_USERDATA;
-              value->data.userdata = lua_touserdata(L, -1);
-              lua_pop(L, 1);
-              break;
-            default:
-              // TODO: error case
-              break;
-          }
-        }
-        lua_pop(L, 2);
+        value->type = gtype;
+        value->data.any = lua_touserdata(L, -1);
+        lua_pop(L, 3);
       }
       else
       {
@@ -903,7 +983,7 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
       break;
 
     default:
-      // TODO: Error
+      luaL_error(L, "internal error : attempt to pop an unknow value (%d) in %s (%d)", ltype, __FILE__, __LINE__);
       break;
   }
 }
@@ -913,13 +993,21 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
   // global table
   lua_newtable(L);
 
-  // data table
+  // push object
   lua_pushlightuserdata(L, string);
+
+  // add a new reference for string
+  SC_StringGCInc(string);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_string_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
   lua_setfield(L, -2, "_ref");
   
-  lua_pushstring(L, SC_StringToChar(string));
-  lua_setfield(L, -2, "_data");
-
   lua_pushinteger(L, TYPE_STRING);
   lua_setfield(L, -2, "_type");
 
@@ -929,11 +1017,11 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__concat");
   lua_pushcfunction(L, len_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, eq_metamethod);
+  lua_pushcfunction(L, eq_string_metamethod);
   lua_setfield(L, -2, "__eq");
-  lua_pushcfunction(L, lt_metamethod);
+  lua_pushcfunction(L, lt_string_metamethod);
   lua_setfield(L, -2, "__lt");
-  lua_pushcfunction(L, le_metamethod);
+  lua_pushcfunction(L, le_string_metamethod);
   lua_setfield(L, -2, "__le");
   lua_pushcfunction(L, tostring_metamethod);
   lua_setfield(L, -2, "__tostring");
@@ -946,9 +1034,21 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
   // global table
   lua_newtable(L);
 
+  // push object
   lua_pushlightuserdata(L, array);
-  lua_setfield(L, -2, "_ref");
 
+  // add a new reference for string
+  SC_ArrayGCInc(array);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_array_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
+  lua_setfield(L, -2, "_ref");
+  
   lua_pushinteger(L, TYPE_ARRAY);
   lua_setfield(L, -2, "_type");
 
@@ -958,9 +1058,9 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, newindex_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_setmetatable(L, -2);
   lua_pushcfunction(L, len_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_setmetatable(L, -2);
 }
 
 static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
@@ -968,9 +1068,21 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
   // global table
   lua_newtable( L );
 
+  // push object
   lua_pushlightuserdata(L, hash);
-  lua_setfield(L, -2, "_ref");
 
+  // add a new reference for hash
+  SC_HashGCInc(hash);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_hash_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
+  lua_setfield(L, -2, "_ref");
+  
   lua_pushinteger(L, TYPE_HASH);
   lua_setfield(L, -2, "_type");
 
@@ -989,9 +1101,22 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
 {
   // function global table
   lua_newtable(L);
-  lua_pushlightuserdata(L, function);
-  lua_setfield(L, -2, "_ref");
 
+  // push object
+  lua_pushlightuserdata(L, function);
+
+  // add a new reference for hash
+  SC_FunctionGCInc(function);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_function_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
+  lua_setfield(L, -2, "_ref");
+  
   lua_pushinteger(L, TYPE_FUNCTION);
   lua_setfield(L, -2, "_type");
 
@@ -999,11 +1124,11 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_newtable(L);
   lua_pushcfunction(L, call_metamethod);
   lua_setfield(L, -2, "__call");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_index_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
 
   lua_setmetatable(L, -2);
@@ -1014,9 +1139,21 @@ static void push_class(lua_State *L, scClass_t *class)
   // main table
   lua_newtable(L);
 
+  // push object
   lua_pushlightuserdata(L, class);
-  lua_setfield(L, -2, "_ref");
 
+  // add a new reference for class
+  //SC_ClassGCInc(class);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_class_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
+  lua_setfield(L, -2, "_ref");
+  
   lua_pushinteger(L, TYPE_CLASS);
   lua_setfield(L, -2, "_type");
 
@@ -1024,11 +1161,11 @@ static void push_class(lua_State *L, scClass_t *class)
   lua_newtable(L);
   lua_pushcfunction(L, call_metamethod);
   lua_setfield(L, -2, "__call");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_index_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, null_metamethod);
+  lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
 
   lua_setmetatable(L, -2);
@@ -1039,9 +1176,21 @@ static void push_object(lua_State *L, scObject_t *object)
   // main table
   lua_newtable(L);
 
+  // push object
   lua_pushlightuserdata(L, object);
-  lua_setfield(L, -2, "_ref");
 
+  // add a new reference for object
+  SC_ObjectGCInc(object);
+
+  // add a __gc metamethod for garbage collection
+  lua_newtable(L);
+  lua_pushcfunction(L, gc_object_metamethod);
+  lua_setfield(L, -2, "__gc");
+  lua_setmetatable(L, -2);
+
+  // use lightuserdata as _ref
+  lua_setfield(L, -2, "_ref");
+  
   lua_pushinteger(L, TYPE_OBJECT);
   lua_setfield(L, -2, "_type");
 
@@ -1096,7 +1245,7 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
       push_class(L, value->data.class);
       break;
     default:
-      // TODO: Error here
+      luaL_error(L, "internal error : attempt to push an unknow value (%d) in %s (%d)", value->type, __FILE__, __LINE__);
       break;
   }
 }
@@ -1204,6 +1353,8 @@ void SC_Lua_Init( void )
 
   loadconstants(L);
 
+  // TODO: write ipairs metamethod
+  //map_luamethod(L, "ipairs", ipairs_method);
   map_luamethod(L, "pairs", pairs_method);
   map_luamethod(L, "type", type_method);
   map_luamethod(L, "print", print_method);
@@ -1300,13 +1451,12 @@ SC_Lua_RunFunction
 */
 int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, scDataTypeValue_t *out)
 {
-  // TODO: error managment
   int narg = 0;
   lua_State *L = g_luaState;
 
   lua_getfield(L, LUA_REGISTRYINDEX, va("func_%d", func->data.luafunc));
   if(lua_isnil(L, -1))
-    SC_EXEC_ERROR(va("error running lua function : internal error"));
+    SC_EXEC_ERROR(va("internal error : attempt to call an unregistered function at %s (%d)", __FILE__, __LINE__));
 
   while( in[narg].type != TYPE_UNDEF )
   {
@@ -1317,12 +1467,7 @@ int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, 
 
   // do the call
   if(lua_pcall(L, narg, 1, 0) != 0)
-  {
-    out->type = TYPE_STRING;
-    out->data.string = SC_StringNewFromChar(va("error running lua function : %s\n", lua_tostring(L, -1)));
-
-    return -1;
-  }
+    SC_EXEC_ERROR(va("error running lua function : %s", lua_tostring(L, -1)));
 
   pop_value(L, out, func->return_type);
 
