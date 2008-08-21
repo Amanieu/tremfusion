@@ -136,6 +136,12 @@ static void SV_Map_f( void ) {
 		killBots = qfalse;
 	}
 
+	// stop any demos
+	if (sv.demoState == DS_RECORDING)
+		SV_DemoStopRecord();
+	if (sv.demoState == DS_PLAYBACK)
+		SV_DemoStopPlayback();
+
 	// save the map name here cause on a map restart we reload the autogen.cfg
 	// and thus nuke the arguments of the map command
 	Q_strncpyz(mapname, map, sizeof(mapname));
@@ -201,8 +207,8 @@ static void SV_MapRestart_f( void ) {
 	}
 
 	// check for changes in variables that can't just be restarted
-	// check for maxclients change
-	if ( sv_maxclients->modified ) {
+	// check for maxclients and democlients change
+	if ( sv_maxclients->modified || sv_democlients->modified ) {
 		char	mapname[MAX_QPATH];
 
 		Com_Printf( "variable change -- restarting.\n" );
@@ -212,6 +218,12 @@ static void SV_MapRestart_f( void ) {
 		SV_SpawnServer( mapname, qfalse );
 		return;
 	}
+
+	// stop any demos
+	if (sv.demoState == DS_RECORDING)
+		SV_DemoStopRecord();
+	if (sv.demoState == DS_PLAYBACK)
+		SV_DemoStopPlayback();
 
 	// toggle the server bit so clients can detect that a
 	// map_restart has happened
@@ -462,6 +474,151 @@ static void SV_RedirectClient_f( void ) {
 	Com_EndRedirect( );
 }
 
+
+/*
+=================
+SV_Demo_Record_f
+=================
+*/
+static void SV_Demo_Record_f( void ) {
+	// make sure server is running
+	if (!com_sv_running->integer) {
+		Com_Printf("Server is not running.\n");
+		return;
+	}
+
+	if (Cmd_Argc() > 2) {
+		Com_Printf("Usage: demo_record <demoname>\n");
+		return;
+	}
+
+	if (sv.demoState != DS_NONE) {
+		Com_Printf("A demo is already being recorded/played.\n");
+		return;
+	}
+
+	if (sv_maxclients->integer == MAX_CLIENTS) {
+		Com_Printf("Too many slots, reduce sv_maxclients.\n");
+		return;
+	}
+
+	if (Cmd_Argc() == 2)
+		sprintf(sv.demoName, "svdemos/%s.svdm_%d", Cmd_Argv(1), PROTOCOL_VERSION);
+	else {
+		int	number;
+		// scan for a free demo name
+		for (number = 0 ; number >= 0 ; number++) {
+			Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%d.svdm_%d", number, PROTOCOL_VERSION);
+			if (!FS_FileExists(sv.demoName))
+				break;	// file doesn't exist
+		}
+		if (number < 0) {
+			Com_Printf("Couldn't generate a filename for the demo, try deleting some old ones.\n");
+			return;
+		}
+	}
+
+	sv.demoFile = FS_FOpenFileWrite(sv.demoName);
+	if (!sv.demoFile) {
+		Com_Printf("ERROR: Couldn't open %s for writing.\n", sv.demoName);
+		return;
+	}
+	sv.demoState = DS_RECORDING;
+	SV_DemoStartRecord();
+}
+
+
+/*
+=================
+SV_Demo_StopRecord_f
+=================
+*/
+static void SV_Demo_StopRecord_f( void ) {
+	// make sure server is running
+	if ( !com_sv_running->integer ) {
+		Com_Printf( "Server is not running.\n" );
+		return;
+	}
+
+	if (sv.demoState != DS_RECORDING) {
+		Com_Printf("No demo is currently being recorded.\n");
+		return;
+	}
+
+	// Close the demo file
+	SV_DemoStopRecord();
+	Com_Printf("Stopped recording demo.\n");
+}
+
+
+/*
+=================
+SV_Demo_Play_f
+=================
+*/
+static void SV_Demo_Play_f( void ) {
+	char *arg;
+
+	// make sure server is running
+	if (!com_sv_running->integer) {
+		Com_Printf("Server is not running.\n");
+		return;
+	}
+
+	if (Cmd_Argc() != 2) {
+		Com_Printf("Usage: demo_play <demoname>\n");
+		return;
+	}
+
+	if (sv.demoState != DS_NONE) {
+		Com_Printf("A demo is already being recorded/played.\n");
+		return;
+	}
+
+	if (sv_democlients->integer <= 0) {
+		Com_Printf("You need to set sv_democlients to a value greater than 0.\n");
+		return;
+	}
+	
+	// check for an extension .svdm_?? (?? is protocol)
+	arg = Cmd_Argv(1);
+	if (!strcmp(arg + strlen(arg) - 6, va(".svdm_%d", PROTOCOL_VERSION)))
+		Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s", arg);
+	else
+		Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s.svdm_%d", arg, PROTOCOL_VERSION);
+
+	FS_FOpenFileRead(sv.demoName, &sv.demoFile, qtrue);
+	if (!sv.demoFile) {
+		Com_Printf("ERROR: Couldn't open %s for reading.\n", sv.demoName);
+		return;
+	}
+	sv.demoState = DS_PLAYBACK;
+	SV_DemoStartPlayback();
+}
+
+
+/*
+=================
+SV_Demo_Stop_f
+=================
+*/
+static void SV_Demo_Stop_f( void ) {
+	// make sure server is running
+	if ( !com_sv_running->integer ) {
+		Com_Printf( "Server is not running.\n" );
+		return;
+	}
+
+	if (sv.demoState != DS_PLAYBACK) {
+		Com_Printf("No demo is currently being played.\n");
+		return;
+	}
+
+	// Close the demo file
+	SV_DemoStopPlayback();
+	Com_Printf("Stopped playing demo.\n");
+}
+
 //===========================================================
 
 /*
@@ -488,5 +645,9 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("devmap", SV_Map_f);
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
 	Cmd_AddCommand ("redirectClient", SV_RedirectClient_f);
+	Cmd_AddCommand ("demo_record", SV_Demo_Record_f);
+	Cmd_AddCommand ("demo_stoprecord", SV_Demo_StopRecord_f);
+	Cmd_AddCommand ("demo_play", SV_Demo_Play_f);
+	Cmd_AddCommand ("demo_stop", SV_Demo_Stop_f);
 }
 

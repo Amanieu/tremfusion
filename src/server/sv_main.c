@@ -38,6 +38,7 @@ cvar_t	*sv_rconPassword;		// password for remote server commands
 cvar_t	*sv_privatePassword;	// password for the privateClient slots
 cvar_t	*sv_allowDownload;
 cvar_t	*sv_maxclients;
+cvar_t	*sv_democlients;		// number of slots reserved for playing a demo
 
 cvar_t	*sv_privateClients;		// number of clients reserved for password
 cvar_t	*sv_hostname;
@@ -189,6 +190,10 @@ void QDECL SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
 	if ( com_dedicated->integer && !strncmp( (char *)message, "print", 5) ) {
 		Com_Printf ("broadcast: %s\n", SV_ExpandNewlines((char *)message) );
 	}
+
+	// save broadcasts to demo
+	if ( sv.demoState == DS_RECORDING )
+		SV_DemoWriteServerCommand( (char *)message );
 
 	// send the data to all relevent clients
 	for (j = 0, client = svs.clients; j < sv_maxclients->integer ; j++, client++) {
@@ -412,7 +417,7 @@ void SVC_Info( netadr_t from ) {
 	Info_SetValueForKey( infostring, "mapname", sv_mapname->string );
 	Info_SetValueForKey( infostring, "clients", va("%i", count) );
 	Info_SetValueForKey( infostring, "sv_maxclients", 
-		va("%i", sv_maxclients->integer - sv_privateClients->integer ) );
+		va("%i", sv_maxclients->integer - sv_privateClients->integer - sv_democlients->integer ) );
 	Info_SetValueForKey( infostring, "pure", "0" );
 	Info_SetValueForKey( infostring, "unlagged", Cvar_VariableString( "g_unlagged" ) );
 
@@ -863,6 +868,10 @@ void SV_Frame( int msec ) {
 
 		// let everything in the world think and move
 		VM_Call (gvm, GAME_RUN_FRAME, sv.time);
+		if (sv.demoState == DS_RECORDING)
+			SV_DemoWriteFrame();
+		else if (sv.demoState == DS_PLAYBACK)
+			SV_DemoReadFrame();
 	}
 
 	if ( com_speeds->integer ) {

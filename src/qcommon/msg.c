@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "q_shared.h"
 #include "qcommon.h"
+#include "../game/g_public.h"
 
 static huffman_t		msgHuff;
 
@@ -1053,6 +1054,274 @@ void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
 		}
 	}
 	for ( i = lc, field = &entityStateFields[lc] ; i < numFields ; i++, field++ ) {
+		fromF = (int *)( (byte *)from + field->offset );
+		toF = (int *)( (byte *)to + field->offset );
+		// no change
+		*toF = *fromF;
+	}
+
+	if ( print ) {
+		if ( msg->bit == 0 ) {
+			endBit = msg->readcount * 8 - GENTITYNUM_BITS;
+		} else {
+			endBit = ( msg->readcount - 1 ) * 8 + msg->bit - GENTITYNUM_BITS;
+		}
+		Com_Printf( " (%i bits)\n", endBit - startBit  );
+	}
+}
+
+
+/*
+============================================================================
+
+enitityShared_t communication
+
+============================================================================
+*/
+
+// using the stringizing operator to save typing...
+#define	ESF(x) #x,(size_t)&((entityShared_t*)0)->x
+
+netField_t	entitySharedFields[] = 
+{
+{ ESF(linked), 1 },
+{ ESF(linkcount), 8 }, // enough to see whether the linkcount has changed
+                       // (assuming it doesn't change 256 times in 1 frame)
+{ ESF(bmodel), 1 },
+{ ESF(svFlags), 12 },
+{ ESF(singleClient), CLIENTNUM_BITS },
+{ ESF(contents), 32 },
+{ ESF(ownerNum), GENTITYNUM_BITS },
+{ ESF(mins[0]), 0 },
+{ ESF(mins[1]), 0 },
+{ ESF(mins[2]), 0 },
+{ ESF(maxs[0]), 0 },
+{ ESF(maxs[1]), 0 },
+{ ESF(maxs[2]), 0 },
+{ ESF(absmin[0]), 0 },
+{ ESF(absmin[1]), 0 },
+{ ESF(absmin[2]), 0 },
+{ ESF(absmax[0]), 0 },
+{ ESF(absmax[1]), 0 },
+{ ESF(absmax[2]), 0 },
+{ ESF(currentOrigin[0]), 0 },
+{ ESF(currentOrigin[1]), 0 },
+{ ESF(currentOrigin[2]), 0 },
+{ ESF(currentAngles[0]), 0 },
+{ ESF(currentAngles[1]), 0 },
+{ ESF(currentAngles[2]), 0 }
+};
+
+
+/*
+==================
+MSG_WriteDeltaSharedEntity
+==================
+*/
+void MSG_WriteDeltaSharedEntity( msg_t *msg, void *from, void *to, 
+						   qboolean force, int number ) {
+	int			i, lc;
+	int			numFields;
+	netField_t	*field;
+	int			trunc;
+	float		fullFloat;
+	int			*fromF, *toF;
+
+	numFields = sizeof(entitySharedFields)/sizeof(entitySharedFields[0]);
+
+	// all fields should be 32 bits to avoid any compiler packing issues
+	// the "linkcount" field is not part of the field list
+	// if this assert fails, someone added a field to the entityShared_t
+	// struct without updating the message fields
+	assert( numFields + 1 == sizeof( entityShared_t )/4 );
+
+	// a NULL to is a delta remove message
+	if ( to == NULL ) {
+		if ( from == NULL ) {
+			return;
+		}
+		MSG_WriteBits( msg, number, GENTITYNUM_BITS );
+		MSG_WriteBits( msg, 1, 1 );
+		return;
+	}
+
+	if ( number < 0 || number >= MAX_GENTITIES ) {
+		Com_Error (ERR_FATAL, "MSG_WriteDeltaSharedEntity: Bad entity number: %i", number );
+	}
+
+	lc = 0;
+	// build the change vector as bytes so it is endien independent
+	for ( i = 0, field = entitySharedFields ; i < numFields ; i++, field++ ) {
+		fromF = (int *)( (byte *)from + field->offset );
+		toF = (int *)( (byte *)to + field->offset );
+		if ( *fromF != *toF ) {
+			lc = i+1;
+		}
+	}
+
+	if ( lc == 0 ) {
+		// nothing at all changed
+		if ( !force ) {
+			return;		// nothing at all
+		}
+		// write two bits for no change
+		MSG_WriteBits( msg, number, GENTITYNUM_BITS );
+		MSG_WriteBits( msg, 0, 1 );		// not removed
+		MSG_WriteBits( msg, 0, 1 );		// no delta
+		return;
+	}
+
+	MSG_WriteBits( msg, number, GENTITYNUM_BITS );
+	MSG_WriteBits( msg, 0, 1 );			// not removed
+	MSG_WriteBits( msg, 1, 1 );			// we have a delta
+
+	MSG_WriteByte( msg, lc );	// # of changes
+
+	oldsize += numFields;
+
+	for ( i = 0, field = entitySharedFields ; i < lc ; i++, field++ ) {
+		fromF = (int *)( (byte *)from + field->offset );
+		toF = (int *)( (byte *)to + field->offset );
+
+		if ( *fromF == *toF ) {
+			MSG_WriteBits( msg, 0, 1 );	// no change
+			continue;
+		}
+
+		MSG_WriteBits( msg, 1, 1 );	// changed
+
+		if ( field->bits == 0 ) {
+			// float
+			fullFloat = *(float *)toF;
+			trunc = (int)fullFloat;
+
+			if (fullFloat == 0.0f) {
+					MSG_WriteBits( msg, 0, 1 );
+					oldsize += FLOAT_INT_BITS;
+			} else {
+				MSG_WriteBits( msg, 1, 1 );
+				if ( trunc == fullFloat && trunc + FLOAT_INT_BIAS >= 0 && 
+					trunc + FLOAT_INT_BIAS < ( 1 << FLOAT_INT_BITS ) ) {
+					// send as small integer
+					MSG_WriteBits( msg, 0, 1 );
+					MSG_WriteBits( msg, trunc + FLOAT_INT_BIAS, FLOAT_INT_BITS );
+				} else {
+					// send as full floating point value
+					MSG_WriteBits( msg, 1, 1 );
+					MSG_WriteBits( msg, *toF, 32 );
+				}
+			}
+		} else {
+			if (*toF == 0) {
+				MSG_WriteBits( msg, 0, 1 );
+			} else {
+				MSG_WriteBits( msg, 1, 1 );
+				// integer
+				MSG_WriteBits( msg, *toF, field->bits );
+			}
+		}
+	}
+}
+
+/*
+==================
+MSG_ReadDeltaSharedEntity
+==================
+*/
+extern	cvar_t	*cl_shownet;
+
+void MSG_ReadDeltaSharedEntity( msg_t *msg, void *from, void *to, 
+						 int number) {
+	int			i, lc;
+	int			numFields;
+	netField_t	*field;
+	int			*fromF, *toF;
+	int			print;
+	int			trunc;
+	int			startBit, endBit;
+
+	if ( number < 0 || number >= MAX_GENTITIES) {
+		Com_Error( ERR_DROP, "Bad delta entity number: %i", number );
+	}
+
+	if ( msg->bit == 0 ) {
+		startBit = msg->readcount * 8 - GENTITYNUM_BITS;
+	} else {
+		startBit = ( msg->readcount - 1 ) * 8 + msg->bit - GENTITYNUM_BITS;
+	}
+
+	// check for a remove
+	if ( MSG_ReadBits( msg, 1 ) == 1 ) {
+		Com_Memset( to, 0, sizeof( *to ) );
+		if ( cl_shownet->integer >= 2 || cl_shownet->integer == -1 ) {
+			Com_Printf( "%3i: #%-3i remove\n", msg->readcount, number );
+		}
+		return;
+	}
+
+	// check for no delta
+	if ( MSG_ReadBits( msg, 1 ) == 0 ) {
+		*(entityShared_t*)to = *(entityShared_t*)from;
+		return;
+	}
+
+	numFields = sizeof(entitySharedFields)/sizeof(entitySharedFields[0]);
+	lc = MSG_ReadByte(msg);
+
+	// shownet 2/3 will interleave with other printed info, -1 will
+	// just print the delta records`
+	if ( cl_shownet->integer >= 2 || cl_shownet->integer == -1 ) {
+		print = 1;
+		Com_Printf( "%3i: #%-3i ", msg->readcount, number );
+	} else {
+		print = 0;
+	}
+
+	for ( i = 0, field = entitySharedFields ; i < lc ; i++, field++ ) {
+		fromF = (int *)( (byte *)from + field->offset );
+		toF = (int *)( (byte *)to + field->offset );
+
+		if ( ! MSG_ReadBits( msg, 1 ) ) {
+			// no change
+			*toF = *fromF;
+		} else {
+			if ( field->bits == 0 ) {
+				// float
+				if ( MSG_ReadBits( msg, 1 ) == 0 ) {
+						*(float *)toF = 0.0f; 
+				} else {
+					if ( MSG_ReadBits( msg, 1 ) == 0 ) {
+						// integral float
+						trunc = MSG_ReadBits( msg, FLOAT_INT_BITS );
+						// bias to allow equal parts positive and negative
+						trunc -= FLOAT_INT_BIAS;
+						*(float *)toF = trunc; 
+						if ( print ) {
+							Com_Printf( "%s:%i ", field->name, trunc );
+						}
+					} else {
+						// full floating point value
+						*toF = MSG_ReadBits( msg, 32 );
+						if ( print ) {
+							Com_Printf( "%s:%f ", field->name, *(float *)toF );
+						}
+					}
+				}
+			} else {
+				if ( MSG_ReadBits( msg, 1 ) == 0 ) {
+					*toF = 0;
+				} else {
+					// integer
+					*toF = MSG_ReadBits( msg, field->bits );
+					if ( print ) {
+						Com_Printf( "%s:%i ", field->name, *toF );
+					}
+				}
+			}
+//			pcount[i]++;
+		}
+	}
+	for ( i = lc, field = &entitySharedFields[lc] ; i < numFields ; i++, field++ ) {
 		fromF = (int *)( (byte *)from + field->offset );
 		toF = (int *)( (byte *)to + field->offset );
 		// no change
