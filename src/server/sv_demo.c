@@ -152,7 +152,7 @@ Play a frame from the demo file
 void SV_DemoReadFrame(void)
 {
 	msg_t msg;
-	int cmd, r, num;
+	int cmd, r, num, i;
 	playerState_t *player;
 	sharedEntity_t *entity;
 
@@ -197,10 +197,19 @@ exit_loop:
 				MSG_Clear(&msg);
 				goto exit_loop;
 			case demo_endFrame:
+				// overwrite anything the game may have changed
+				for (i = 0; i < MAX_GENTITIES; i++)
+				{
+					if (i >= sv_democlients->integer && i < MAX_CLIENTS)
+						continue;
+					*SV_GentityNum(i) = sv.demoEntities[i];
+				}
+				for (i = 0; i < sv_democlients->integer; i++)
+					*SV_GameClientNum(i) = sv.demoPlayerStates[i];
 				return;
 			case demo_configString:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
-				SV_SetConfigstring(CS_PLAYERS + num, MSG_ReadString(&msg));
+				SV_SetConfigstring(CS_PLAYERS + num, MSG_ReadString(&msg), qtrue);
 				break;
 			case demo_serverCommand:
 				SV_SendServerCommand(NULL, "%s", MSG_ReadString(&msg));
