@@ -521,7 +521,7 @@ static int newindex_metamethod(lua_State *L)
   type = lua_tointeger(L, -1);
   lua_pop(L, 1);
 
-  pop_value(L, &value, TYPE_OBJECT);
+  pop_value(L, &value, TYPE_ANY);
 
   switch(type)
   {
@@ -919,14 +919,13 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
       if(lua_getmetatable(L, -1))
       {
         // Metatable, could be any type
-        lua_pop(L, 1);
-        lua_getfield(L, -1, "_type");
+        lua_getfield(L, -2, "_type");
         gtype = lua_tointeger(L, -1);
 
-        lua_getfield(L, -1, "_ref");
+        lua_getfield(L, -3, "_ref");
         value->type = gtype;
         value->data.any = lua_touserdata(L, -1);
-        lua_pop(L, 3);
+        lua_pop(L, 4);
       }
       else
       {
@@ -1431,13 +1430,13 @@ qboolean SC_Lua_RunScript( const char *filename )
 
   if(luaL_loadbuffer(g_luaState, buf, strlen(buf), filename))
   {
-    Com_Printf("SC_Lua_RunScript: cannot load lua file: %s\n", lua_tostring(g_luaState, -1));
+    Com_Printf("cannot load lua file `%s': %s\n", filename, lua_tostring(g_luaState, -1));
     return qfalse;
   }
 
   if(lua_pcall(g_luaState, 0, 0, 0))
   {
-    Com_Printf("SC_Lua_RunScript: cannot pcall: %s\n", lua_tostring(g_luaState, -1));
+    Com_Printf("cannot run lua file `%s': %s\n", filename, lua_tostring(g_luaState, -1));
     return qfalse;
   }
 
