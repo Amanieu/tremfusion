@@ -203,7 +203,7 @@ exit_loop:
 				SV_SetConfigstring(CS_PLAYERS + num, MSG_ReadString(&msg));
 				break;
 			case demo_serverCommand:
-				SV_SendServerCommand(NULL, "%s", MSG_ReadString);
+				SV_SendServerCommand(NULL, "%s", MSG_ReadString(&msg));
 				break;
 			case demo_playerState:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
@@ -232,8 +232,8 @@ exit_loop:
 					MSG_ReadDeltaSharedEntity(&msg, &sv.demoEntities[num].r, &entity->r, num);
 
 					// Link/unlink the entity
-					if ((entity->r.linked && !sv.demoEntities[num].r.linked) ||
-					    (entity->r.linkcount != sv.demoEntities[num].r.linkcount))
+					if (entity->r.linked && (!sv.demoEntities[num].r.linked ||
+					    entity->r.linkcount != sv.demoEntities[num].r.linkcount))
 						SV_LinkEntity(entity);
 					else if (!entity->r.linked && sv.demoEntities[num].r.linked)
 						SV_UnlinkEntity(entity);
@@ -278,7 +278,7 @@ void SV_DemoStartRecord(void)
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoWriteFrame();
-	Com_Printf("Recording demo %s", sv.demoName);
+	Com_Printf("Recording demo %s.\n", sv.demoName);
 }
 
 /*
@@ -299,7 +299,7 @@ void SV_DemoStopRecord(void)
 
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
-	Com_Printf("Stopped recording %s", sv.demoName);
+	Com_Printf("Stopped recording %s.\n", sv.demoName);
 }
 
 /*
@@ -359,7 +359,7 @@ void SV_DemoStartPlayback(void)
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoReadFrame();
-	Com_Printf("Playing demo %s", sv.demoName);
+	Com_Printf("Playing demo %s.\n", sv.demoName);
 }
 
 /*
@@ -373,5 +373,5 @@ void SV_DemoStopPlayback(void)
 {
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
-	Com_Printf("Stopped playing %s", sv.demoName);
+	Com_Printf("Stopped playing %s.\n", sv.demoName);
 }

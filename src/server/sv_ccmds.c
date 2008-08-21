@@ -547,7 +547,6 @@ static void SV_Demo_StopRecord_f( void ) {
 
 	// Close the demo file
 	SV_DemoStopRecord();
-	Com_Printf("Stopped recording demo.\n");
 }
 
 
@@ -616,7 +615,6 @@ static void SV_Demo_Stop_f( void ) {
 
 	// Close the demo file
 	SV_DemoStopPlayback();
-	Com_Printf("Stopped playing demo.\n");
 }
 
 //===========================================================
