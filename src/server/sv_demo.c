@@ -194,6 +194,7 @@ exit_loop:
 				Com_Error(ERR_DROP, "SV_DemoReadFrame: Illegible demo message\n");
 				return;	
 			case demo_EOF:
+				MSG_Clear(&msg);
 				goto exit_loop;
 			case demo_endFrame:
 				return;
@@ -275,7 +276,9 @@ void SV_DemoStartRecord(void)
 
 	// Write entities and players
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
+	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoWriteFrame();
+	Com_Printf("Recording demo %s", sv.demoName);
 }
 
 /*
@@ -296,6 +299,7 @@ void SV_DemoStopRecord(void)
 
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
+	Com_Printf("Stopped recording %s", sv.demoName);
 }
 
 /*
@@ -353,7 +357,9 @@ void SV_DemoStartPlayback(void)
 
 	// Initialize our stuff
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
+	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoReadFrame();
+	Com_Printf("Playing demo %s", sv.demoName);
 }
 
 /*
@@ -367,4 +373,5 @@ void SV_DemoStopPlayback(void)
 {
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
+	Com_Printf("Stopped playing %s", sv.demoName);
 }
