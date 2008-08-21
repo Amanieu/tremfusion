@@ -1132,7 +1132,7 @@ void MSG_WriteDeltaSharedEntity( msg_t *msg, void *from, void *to,
 	// all fields should be 32 bits to avoid any compiler packing issues
 	// if this assert fails, someone added a field to the entityShared_t
 	// struct without updating the message fields
-	assert( numFields + 2 == sizeof( entityShared_t )/4 );
+	assert( numFields == (sizeof( entityShared_t )-sizeof( entityState_t ))/4 );
 
 	// a NULL to is a delta remove message
 	if ( to == NULL ) {
