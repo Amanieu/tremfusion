@@ -350,9 +350,10 @@ void SV_DemoStartPlayback(void)
 	}
 
 	// Check slots and map
-	if (sv_democlients->integer < MSG_ReadBits(&msg, CLIENTNUM_BITS))
+	r = MSG_ReadBits(&msg, CLIENTNUM_BITS);
+	if (sv_democlients->integer < r)
 	{
-		Com_Printf("Not enough demo slots, increase sv_democlients.\n");
+		Com_Printf("Not enough demo slots, increase sv_democlients to %d.\n", r);
 		SV_DemoStopPlayback();
 		return;
 	}
