@@ -160,6 +160,7 @@ void SV_DemoReadFrame(void)
 
 	while (1)
 	{
+exit_loop:
 		// Get a message
 		r = FS_Read(&msg.cursize, 4, sv.demoFile);
 		if (r != 4)
@@ -241,7 +242,6 @@ void SV_DemoReadFrame(void)
 				break;
 			}
 		}
-		exit_loop:
 	}
 }
 
