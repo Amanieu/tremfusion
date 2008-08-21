@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - Add methods to make scripting registered data under lua
  * - Make lua type for TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN (and metamethod)
  * - Bad GC when pop a value ?
+ * - Error messages should always show script line
  */
 
 #ifdef USE_LUA
@@ -257,10 +258,9 @@ static int pairs_method(lua_State *L)
     lua_pushcclosure(L, pairs_closure, 1);
 
     // Push table as first argument
-    lua_pushvalue(L, -2);
+    lua_pushvalue(L, 1);
 
-    // FIXME: is third argument always 0 ?
-    lua_pushinteger(L, 0);
+    lua_pushnil(L);
 
     return 3;
   }
