@@ -245,6 +245,9 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 	if( *key == '~' )
 		*buf = '\0';
 
+	if( in_keyboardDebug->integer )
+		IN_PrintKey( keysym, *key, down );
+
 	return buf;
 }
 
