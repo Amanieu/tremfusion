@@ -193,9 +193,8 @@ void SV_DemoReadFrame(void)
 				Com_Error(ERR_DROP, "SV_DemoReadFrame: Illegible demo message\n");
 				return;	
 			case demo_EOF:
-				break;
+				goto exit_loop;
 			case demo_endFrame:
-				MSG_ReadByte(&msg); // Skip demo_EOF
 				return;
 			case demo_configString:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
@@ -242,6 +241,7 @@ void SV_DemoReadFrame(void)
 				break;
 			}
 		}
+		exit_loop:
 	}
 }
 
@@ -350,7 +350,6 @@ void SV_DemoStartPlayback(void)
 		SV_DemoStopPlayback();
 		return;
 	}
-	MSG_ReadByte(&msg); // Skip demo_EOF
 
 	// Initialize our stuff
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
