@@ -837,7 +837,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_GREEN;
-      trap_DemoCommand( DC_SERVER_COMMAND, va( "chat %s^2%s", name, text ) );
+      trap_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, text ) );
       break;
 
     case SAY_TEAM:
@@ -849,7 +849,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
         Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ",
           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_CYAN;
-      trap_DemoCommand( DC_SERVER_COMMAND, va( "tchat %s^5%s", name, text ) );
+      trap_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^5%s\"", name, text ) );
       break;
 
     case SAY_TELL:
