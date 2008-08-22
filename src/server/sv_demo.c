@@ -288,6 +288,7 @@ void SV_DemoStartRecord(void)
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoWriteFrame();
 	Com_Printf("Recording demo %s.\n", sv.demoName);
+	Cvar_SetValue("sv_demoState", DS_RECORDING);
 }
 
 /*
@@ -308,7 +309,8 @@ void SV_DemoStopRecord(void)
 
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
-	Com_Printf("Stopped recording %s.\n", sv.demoName);
+	Cvar_SetValue("sv_demoState", DS_NONE);
+	Com_Printf("Stopped recording demo %s.\n", sv.demoName);
 }
 
 /*
@@ -360,7 +362,8 @@ void SV_DemoStartPlayback(void)
 	s = MSG_ReadString(&msg);
 	if (strcmp(sv_mapname->string, s))
 	{
-		Com_Printf("Map does not match demo map: %s.\n", s);
+		// Change to the right map and start the demo
+		Cbuf_AddText(va("map %s\n%s\n", s, Cmd_Cmd()));
 		SV_DemoStopPlayback();
 		return;
 	}
@@ -370,18 +373,21 @@ void SV_DemoStartPlayback(void)
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoReadFrame();
 	Com_Printf("Playing demo %s.\n", sv.demoName);
+	Cvar_SetValue("sv_demoState", DS_PLAYBACK);
 }
 
 /*
 ====================
 SV_DemoStopPlayback
 
-Close the demo file
+Close the demo file and restart the map
 ====================
 */
 void SV_DemoStopPlayback(void)
 {
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
-	Com_Printf("Stopped playing %s.\n", sv.demoName);
+	Cvar_SetValue("sv_demoState", DS_NONE);
+	Com_Printf("Stopped playing demo %s.\n", sv.demoName);
+	Cbuf_AddText("map_restart\n");
 }

@@ -55,6 +55,8 @@ cvar_t	*sv_maxRate;
 cvar_t	*sv_maxPing;
 cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_dequeuePeriod;
+cvar_t	*sv_demoState;
+cvar_t	*sv_autoDemo;
 
 /*
 =============================================================================
