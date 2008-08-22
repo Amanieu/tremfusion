@@ -131,6 +131,8 @@ void SV_DemoWriteFrame(void)
 	MSG_WriteByte(&msg, demo_entityState);
 	for (i = 0; i < MAX_GENTITIES; i++)
 	{
+		if (i >= sv_maxclients->integer && i < MAX_CLIENTS)
+			continue;
 		entity = SV_GentityNum(i);
 		MSG_WriteDeltaEntity(&msg, &sv.demoEntities[i].s, &entity->s, qfalse);
 		sv.demoEntities[i].s = entity->s;
@@ -139,6 +141,8 @@ void SV_DemoWriteFrame(void)
 	MSG_WriteByte(&msg, demo_entityShared);
 	for (i = 0; i < MAX_GENTITIES; i++)
 	{
+		if (i >= sv_maxclients->integer && i < MAX_CLIENTS)
+			continue;
 		entity = SV_GentityNum(i);
 		MSG_WriteDeltaSharedEntity(&msg, &sv.demoEntities[i].r, &entity->r, qfalse, i);
 		sv.demoEntities[i].r = entity->r;
@@ -147,7 +151,7 @@ void SV_DemoWriteFrame(void)
 	SV_DemoWriteMessage(&msg);
 
 	// Write clients
-	for (i = 0; i < MAX_CLIENTS; i++)
+	for (i = 0; i < sv_maxclients->integer; i++)
 	{
 		if (svs.clients[i].state < CS_ACTIVE)
 			continue;
