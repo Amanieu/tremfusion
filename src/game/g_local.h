@@ -333,6 +333,7 @@ typedef struct
   char                ip[ 16 ];
   qboolean            muted;
   qboolean            denyBuild;
+  qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 } clientPersistant_t;

@@ -256,6 +256,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
 void G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
+void G_DemoAddClient( void );
+void G_DemoRemoveClient( void );
 
 void G_CountSpawns( void );
 void G_CalculateBuildPoints( void );
@@ -313,7 +315,15 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
       return ConsoleCommand( );
 
     case GAME_DEMO_COMMAND:
-      // TODO
+      switch ( arg0 )
+      {
+      case DC_CLIENT_ADD:
+        G_DemoAddClient( );
+        break;
+      case DC_CLIENT_REMOVE:
+        G_DemoRemoveClient( );
+        break;
+      }
       return 0;
   }
 
@@ -414,44 +424,6 @@ void G_FindTeams( void )
 
 void G_RemapTeamShaders( void )
 {
-}
-
-void G_CheckDemo( void )
-{
-  int i;
-
-  // Don't do anything if no change
-  if ( g_demoState.integer == level.demoState )
-    return;
-
-  // log all connected clients
-  if ( g_demoState.integer == DS_RECORDING )
-  {
-    char buffer[ MAX_INFO_STRING ] = "";
-    for ( i = 0; i < level.maxclients; i++ )
-    {
-      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
-      {
-        Info_SetValueForKey( buffer, "num", va( "%d", i ) );
-        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
-        Info_SetValueForKey( buffer, "guid", level.clients[ i ].pers.guid );
-        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
-        trap_DemoCommand( DC_CLIENT_ADD, buffer );
-      }
-    }
-  }
-
-  // empty teams and display a message
-  else if ( g_demoState.integer == DS_PLAYBACK )
-  {
-    trap_SendServerCommand( -1, "print \"A demo has been started on the server.\n\"" );
-    for ( i = 0; i < level.maxclients; i++ )
-    {
-      if ( level.clients[ i ].pers.teamSelection != TEAM_NONE )
-        G_ChangeTeam( g_entities + i, TEAM_NONE );
-    }
-  }
-  level.demoState = g_demoState.integer;
 }
 
 
@@ -1430,6 +1402,41 @@ void CalculateRanks( void )
     SendScoreboardMessageToAllClients( );
 }
 
+/*
+============
+G_DemoAddClient
+
+Mark a client as a demo client and load info into it
+============
+*/
+void G_DemoAddClient( void )
+{
+    char buffer[ MAX_INFO_STRING ];
+    gclient_t *client;
+    trap_Argv( 0, buffer, sizeof( buffer ) );
+    client = level.clients + atoi( Info_ValueForKey( buffer, "num" ) );
+    client->pers.demoClient = qtrue;
+    Q_strncpyz( client->pers.netname, Info_ValueForKey( buffer, "name" ), sizeof( client->pers.netname ) );
+    Q_strncpyz( client->pers.guid, Info_ValueForKey( buffer, "guid" ), sizeof( client->pers.guid ) );
+    Q_strncpyz( client->pers.ip, Info_ValueForKey( buffer, "ip" ), sizeof( client->pers.ip ) );
+}
+
+/*
+============
+G_DemoRemoveClient
+
+Unmark a client as a demo client
+============
+*/
+void G_DemoRemoveClient( void )
+{
+    char buffer[ 3 ];
+    gclient_t *client;
+    trap_Argv( 0, buffer, sizeof( buffer ) );
+    client = level.clients + atoi( buffer );
+    client->pers.demoClient = qfalse;
+}
+
 
 /*
 ========================================================================
@@ -2232,6 +2239,44 @@ void CheckCvars( void )
       ent->deconstruct = qfalse;
     }
   }
+}
+
+void G_CheckDemo( void )
+{
+  int i;
+
+  // Don't do anything if no change
+  if ( g_demoState.integer == level.demoState )
+    return;
+
+  // log all connected clients
+  if ( g_demoState.integer == DS_RECORDING )
+  {
+    char buffer[ MAX_INFO_STRING ] = "";
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
+      {
+        Info_SetValueForKey( buffer, "num", va( "%d", i ) );
+        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
+        Info_SetValueForKey( buffer, "guid", level.clients[ i ].pers.guid );
+        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
+        trap_DemoCommand( DC_CLIENT_ADD, buffer );
+      }
+    }
+  }
+
+  // empty teams and display a message
+  else if ( g_demoState.integer == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( -1, "print \"A demo has been started on the server.\n\"" );
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.teamSelection != TEAM_NONE )
+        G_ChangeTeam( g_entities + i, TEAM_NONE );
+    }
+  }
+  level.demoState = g_demoState.integer;
 }
 
 /*

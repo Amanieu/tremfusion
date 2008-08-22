@@ -239,7 +239,10 @@ exit_loop:
 				break;
 			case demo_gameCommand:
 				num = MSG_ReadByte(&msg);
-				VM_Call(gvm, GAME_DEMO_COMMAND, num, MSG_ReadString(&msg));
+				Cmd_SaveCmdContext();
+				Cmd_TokenizeString(MSG_ReadString(&msg));
+				VM_Call(gvm, GAME_DEMO_COMMAND, num);
+				Cmd_RestoreCmdContext();
 				break;
 			case demo_playerState:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
