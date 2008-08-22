@@ -216,11 +216,16 @@ __asm__(
 	"0:\n\t" // system call
 	"notl  %eax\n\t"
 	"pushl %ecx\n\t"
+	"movl  %esp, %ecx\n\t"
+	"andl  $-16, %esp\n\t"
+	"pushl %ecx\n\t"
 	"pushl %edi\n\t" // opStack
 	"pushl %esi\n\t" // programStack
 	"pushl %eax\n\t" // syscallNum
 	"call  " CMANG(CallAsmCall) "\n\t"
 	"addl  $12, %esp\n\t"
+	"popl  %ecx\n\t"
+	"movl  %ecx, %esp\n\t"
 	"popl  %ecx\n\t"
 	"addl  $4, %edi\n\t"
 	"ret\n\t"
