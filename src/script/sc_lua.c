@@ -29,7 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - Bad GC when pop a value ?
  * - Error messages should always show script line
  * - Check number of arguments for (non metamethods) lua functions
- * - replace `luastring2string' by `lua_typename' / `luaL_typename'
  * - review errors with functions `luaL_argerror' / 'luaL_opterror'
  * - explode lua stuff in many files
  */
@@ -87,24 +86,6 @@ static int sctype2luatype(scDataType_t sctype)
   }
 }
 
-static const char* luatype2string(int luatype)
-{
-  switch(luatype)
-  {
-    case LUA_TNIL: return "nil";
-    case LUA_TNUMBER: return "number";
-    case LUA_TBOOLEAN: return "boolean";
-    case LUA_TSTRING: return "string";
-    case LUA_TTABLE: return "table";
-    case LUA_TFUNCTION: return "function";
-    case LUA_TUSERDATA:
-    case LUA_TLIGHTUSERDATA: return "userdata";
-    case LUA_TTHREAD: return "thread";
-  }
-
-  return NULL;
-}
-
 static int print_method(lua_State *L)
 {
   int top, i;
@@ -142,7 +123,7 @@ static int type_method(lua_State *L)
   {
     lua_getfield(L, -1, "_type");
     type = lua_tointeger(L, -1);
-    lua_pushstring(L, luatype2string(sctype2luatype(type)));
+    lua_pushstring(L, lua_typename(L, sctype2luatype(type)));
   }
   else
   {
@@ -287,7 +268,7 @@ static int invalid_index_metamethod(lua_State *L)
   lua_getfield(L, -top, "_type");
   type = lua_tointeger(L, -1);
 
-  luaL_error(L, "attempt to index a %s value", luatype2string(sctype2luatype(type)));
+  luaL_error(L, "attempt to index a %s value", lua_typename(L, sctype2luatype(type)));
 
   return 0;
 }
@@ -302,7 +283,7 @@ static int invalid_length_metamethod(lua_State *L)
   lua_getfield(L, -top, "_type");
   type = lua_tointeger(L, -1);
 
-  luaL_error(L, "attempt to get length of a %s value", luatype2string(sctype2luatype(type)));
+  luaL_error(L, "attempt to get length of a %s value", lua_typename(L, sctype2luatype(type)));
 
   return 0;
 }
@@ -353,9 +334,9 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
     if(sctype != TYPE_STRING)
     {
       if(left)
-        luaL_error(L, "attempt to compare %s with string", luatype2string(sctype2luatype(sctype)));
+        luaL_error(L, "attempt to compare %s with string", lua_typename(L, sctype2luatype(sctype)));
       else
-        luaL_error(L, "attempt to compare string with %s", luatype2string(sctype2luatype(sctype)));
+        luaL_error(L, "attempt to compare string with %s", lua_typename(L, sctype2luatype(sctype)));
     }
 
     string = lua_touserdata(L, -1);
@@ -366,9 +347,9 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
   else
   {
     if(left)
-      luaL_error(L, "attempt to compare %s with string", luatype2string(ltype));
+      luaL_error(L, "attempt to compare %s with string", lua_typename(L, ltype));
     else
-      luaL_error(L, "attempt to compare string with %s", luatype2string(ltype));
+      luaL_error(L, "attempt to compare string with %s", lua_typename(L, ltype));
   }
 
   return str;
@@ -439,7 +420,7 @@ static int len_metamethod(lua_State *L)
       return hash->size;
 
     default:
-      luaL_error(L, "attempt to get length of a %s value", luatype2string(sctype2luatype(type)));
+      luaL_error(L, "attempt to get length of a %s value", lua_typename(L, sctype2luatype(type)));
   }
 
   return 0;
