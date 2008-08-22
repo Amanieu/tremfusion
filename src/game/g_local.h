@@ -477,8 +477,9 @@ typedef struct damageRegion_s
 // demo commands
 typedef enum
 {
-    DC_SERVER_COMMAND = -1
-    // TODO
+    DC_SERVER_COMMAND = -1,
+    DC_CLIENT_ADD = 0,
+    DC_CLIENT_REMOVE
 } demoCommand_t;
 
 //status of the warning of certain events
@@ -633,6 +634,8 @@ typedef struct
 
   char              emoticons[ MAX_EMOTICONS ][ MAX_EMOTICON_NAME_LEN ];
   int               emoticonCount;
+
+  demoState_t       demoState;
 } level_locals_t;
 
 #define CMD_CHEAT         0x01

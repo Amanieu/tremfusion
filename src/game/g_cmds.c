@@ -651,6 +651,12 @@ void Cmd_Team_f( gentity_t *ent )
 
   if( !Q_stricmp( s, "spectate" ) )
     team = TEAM_NONE;
+  else if( level.demoState == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
+      "while a demo is being played\n\"" );
+    return;
+  }
   else if( !force && oldteam == TEAM_NONE && g_maxGameClients.integer &&
            level.numPlayingClients >= g_maxGameClients.integer )
   {

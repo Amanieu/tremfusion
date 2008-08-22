@@ -1277,6 +1277,7 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+  char      buffer[ MAX_INFO_STRING ] = "";
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -1327,6 +1328,13 @@ void ClientBegin( int clientNum )
   trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
+
+  // log to demo
+  Info_SetValueForKey( buffer, "num", va( "%d", clientNum ) );
+  Info_SetValueForKey( buffer, "name", client->pers.netname );
+  Info_SetValueForKey( buffer, "guid", client->pers.guid );
+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
+  trap_DemoCommand( DC_CLIENT_ADD, buffer );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
@@ -1706,6 +1714,8 @@ void ClientDisconnect( int clientNum )
       ent->client->ps.persistant[ PERS_SPECSTATE ] = SPECTATOR_NOT;
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
+
+  trap_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
 
   CalculateRanks( );
 }

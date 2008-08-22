@@ -53,6 +53,7 @@ vmCvar_t  g_dedicated;
 vmCvar_t  g_speed;
 vmCvar_t  g_gravity;
 vmCvar_t  g_cheats;
+vmCvar_t  g_demoState;
 vmCvar_t  g_knockback;
 vmCvar_t  g_inactivity;
 vmCvar_t  g_debugMove;
@@ -133,6 +134,9 @@ static cvarTable_t   gameCvarTable[ ] =
 {
   // don't override the cheat state set by the system
   { &g_cheats, "sv_cheats", "", 0, 0, qfalse },
+
+  // demo state
+  { &g_demoState, "sv_demoState", "", 0, 0, qfalse },
 
   // noset vars
   { NULL, "gamename", GAME_VERSION , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
@@ -410,6 +414,44 @@ void G_FindTeams( void )
 
 void G_RemapTeamShaders( void )
 {
+}
+
+void G_CheckDemo( void )
+{
+  int i;
+
+  // Don't do anything if no change
+  if ( g_demoState.integer == level.demoState )
+    return;
+
+  // log all connected clients
+  if ( g_demoState.integer == DS_RECORDING )
+  {
+    char buffer[ MAX_INFO_STRING ] = "";
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
+      {
+        Info_SetValueForKey( buffer, "num", va( "%d", i ) );
+        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
+        Info_SetValueForKey( buffer, "guid", level.clients[ i ].pers.guid );
+        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
+        trap_DemoCommand( DC_CLIENT_ADD, buffer );
+      }
+    }
+  }
+
+  // empty teams and display a message
+  else if ( g_demoState.integer == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( -1, "print \"A demo has been started on the server.\n\"" );
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.teamSelection != TEAM_NONE )
+        G_ChangeTeam( g_entities + i, TEAM_NONE );
+    }
+  }
+  level.demoState = g_demoState.integer;
 }
 
 
@@ -2267,6 +2309,9 @@ void G_RunFrame( int levelTime )
 
   // get any cvar changes
   G_UpdateCvars( );
+
+  // check demo state
+  G_CheckDemo( );
 
   //
   // go through all allocated objects

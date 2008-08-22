@@ -303,7 +303,7 @@ void SV_DemoStartRecord(void)
 	SV_DemoWriteMessage(&msg);
 
 	// Write client configstrings
-	for (i = 0; i < MAX_CLIENTS; i++)
+	for (i = 0; i < sv_maxclients->integer; i++)
 	{
 		if (svs.clients[i].state == CS_ACTIVE && sv.configstrings[CS_PLAYERS + i])
 			SV_DemoWriteConfigString(i);
@@ -350,7 +350,7 @@ sv.demo* have already been set and the demo file opened, start reading gamestate
 void SV_DemoStartPlayback(void)
 {
 	msg_t msg;
-	int r;
+	int r, i;
 	char *s;
 
 	MSG_Init(&msg, buf, sizeof(buf));
@@ -398,6 +398,8 @@ void SV_DemoStartPlayback(void)
 	// Initialize our stuff
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
+	for (i = 0; i < sv_democlients->integer; i++)
+		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
 	SV_DemoReadFrame();
 	Com_Printf("Playing demo %s.\n", sv.demoName);
 	Cvar_SetValue("sv_demoState", DS_PLAYBACK);
