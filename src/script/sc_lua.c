@@ -25,13 +25,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - Make all metatables as userdata only instead of table with _ref as userdata (see luaL_newmetatable and luaL_checkudata
  * - Add methods to make scripting registered data under lua
  * - `lua.registered' lua function
  * - Disable metatable access from lua
  * - Make lua type for TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN (and metamethod)
  * - Bad GC when pop a value ?
  * - Error messages should always show script line
+ * - Check number of arguments for (non metamethods) lua functions
+ * - replace `luastring2string' by `lua_typename' / `luaL_typename'
+ * - review errors with functions `luaL_argerror' / 'luaL_opterror'
+ * - explode lua stuff in many files
  */
 
 #ifdef USE_LUA
@@ -1020,9 +1023,146 @@ static void pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
       break;
 
     default:
-      luaL_error(L, "internal error : attempt to pop an unknow value (%d) in %s (%d)", ltype, __FILE__, __LINE__);
+      luaL_error(L, "internal error : attempt to pop an unknow value (%s) in %s (%d)", lua_typename(L, ltype), __FILE__, __LINE__);
       break;
   }
+}
+
+static void push_boolean(lua_State *L, char boolean)
+{
+  // maintable (empty, has only a metatable)
+  lua_newtable(L);
+
+  // TODO: metatable
+  // metatable
+  lua_newtable(L);
+  /*lua_pushcfunction(L, concat_metamethod);
+  lua_setfield(L, -2, "__concat");
+  lua_pushcfunction(L, len_metamethod);
+  lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, eq_string_metamethod);
+  lua_setfield(L, -2, "__eq");
+  lua_pushcfunction(L, lt_string_metamethod);
+  lua_setfield(L, -2, "__lt");
+  lua_pushcfunction(L, le_string_metamethod);
+  lua_setfield(L, -2, "__le");*/
+  lua_pushcfunction(L, tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, invalid_length_metamethod);
+  lua_setfield(L, -2, "__len");
+
+  lua_pushinteger(L, TYPE_BOOLEAN);
+  lua_setfield(L, -2, "_type");
+
+  // push object
+  lua_pushboolean(L, boolean);
+  lua_setfield(L, -2, "_ref");
+
+  lua_setmetatable(L, -2);
+}
+
+static void push_integer(lua_State *L, int integer)
+{
+  // maintable (empty, has only a metatable)
+  lua_newtable(L);
+
+  // TODO: metatable
+  // metatable
+  lua_newtable(L);
+  /*lua_pushcfunction(L, concat_metamethod);
+  lua_setfield(L, -2, "__concat");
+  lua_pushcfunction(L, len_metamethod);
+  lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, eq_string_metamethod);
+  lua_setfield(L, -2, "__eq");
+  lua_pushcfunction(L, lt_string_metamethod);
+  lua_setfield(L, -2, "__lt");
+  lua_pushcfunction(L, le_string_metamethod);
+  lua_setfield(L, -2, "__le");*/
+  lua_pushcfunction(L, tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, invalid_length_metamethod);
+  lua_setfield(L, -2, "__len");
+
+  lua_pushinteger(L, TYPE_INTEGER);
+  lua_setfield(L, -2, "_type");
+
+  // push object
+  lua_pushinteger(L, integer);
+  lua_setfield(L, -2, "_ref");
+
+  lua_setmetatable(L, -2);
+}
+
+static void push_float(lua_State *L, float floating)
+{
+  // maintable (empty, has only a metatable)
+  lua_newtable(L);
+
+  // TODO: metatable
+  // metatable
+  lua_newtable(L);
+  /*lua_pushcfunction(L, concat_metamethod);
+  lua_setfield(L, -2, "__concat");
+  lua_pushcfunction(L, len_metamethod);
+  lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, eq_string_metamethod);
+  lua_setfield(L, -2, "__eq");
+  lua_pushcfunction(L, lt_string_metamethod);
+  lua_setfield(L, -2, "__lt");
+  lua_pushcfunction(L, le_string_metamethod);
+  lua_setfield(L, -2, "__le");*/
+  lua_pushcfunction(L, tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, invalid_length_metamethod);
+  lua_setfield(L, -2, "__len");
+
+  lua_pushinteger(L, TYPE_FLOAT);
+  lua_setfield(L, -2, "_type");
+
+  // push object
+  lua_pushnumber(L, floating);
+  lua_setfield(L, -2, "_ref");
+
+  lua_setmetatable(L, -2);
+}
+
+static void push_userdata(lua_State *L, void* userdata)
+{
+  // maintable (empty, has only a metatable)
+  lua_newtable(L);
+
+  // metatable
+  lua_newtable(L);
+  lua_pushcfunction(L, tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, invalid_index_metamethod);
+  lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, invalid_length_metamethod);
+  lua_setfield(L, -2, "__len");
+
+  lua_pushinteger(L, TYPE_USERDATA);
+  lua_setfield(L, -2, "_type");
+
+  // push object
+  lua_pushlightuserdata(L, userdata);
+  lua_setfield(L, -2, "_ref");
+
+  lua_setmetatable(L, -2);
 }
 
 static void push_string(lua_State *L, scDataTypeString_t *string)
@@ -1122,7 +1262,7 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
   lua_pushcfunction(L, len_metamethod);
   lua_setfield(L, -2, "__len");
 
-  lua_pushinteger(L, TYPE_HASH);
+  lua_pushinteger(L, type);
   lua_setfield(L, -2, "_type");
 
   // push object
@@ -1251,16 +1391,16 @@ static void push_value( lua_State *L, scDataTypeValue_t *value )
       lua_pushnil(L);
       break;
     case TYPE_BOOLEAN:
-      lua_pushboolean(L, value->data.boolean);
+      push_boolean(L, value->data.boolean);
       break;
     case TYPE_INTEGER:
-      lua_pushinteger(L, value->data.integer);
+      push_integer(L, value->data.integer);
       break;
     case TYPE_FLOAT:
-      lua_pushnumber(L, value->data.floating);
+      push_float(L, value->data.floating);
       break;
     case TYPE_USERDATA:
-      lua_pushlightuserdata(L, value->data.userdata);
+      push_userdata(L, value->data.userdata);
       break;
     case TYPE_STRING:
 	  push_string(L, value->data.string);
@@ -1326,14 +1466,142 @@ static void push_path(lua_State *L, const char *path)
 SC_Lua_Init
 ============
 */
+
+static int is_registered_type(lua_State *L, int index, scDataType_t type)
+{
+  if(lua_getmetatable(L, index))
+  {
+    lua_getfield(L, -1, "_type");
+    if(lua_tointeger(L, -1) != type)
+    {
+      // luaL_typeerror
+    }
+    lua_pop(L, 2);
+    return 1;
+  }
+  else
+  {
+    if(lua_type(L, index) != sctype2luatype(type))
+    {
+      // luaL_typeerror
+    }
+    return 0;
+  }
+}
+
 static int stack_dump( lua_State *L )
 {
   SC_Lua_DumpStack();
   return 0;
 }
 
+static int register_boolean(lua_State *L)
+{
+  char boolean;
+
+  if(!is_registered_type(L, 1, TYPE_BOOLEAN))
+  {
+    boolean = lua_toboolean(L, 1);
+    push_boolean(L, boolean);
+  }
+  return 1;
+}
+
+static int register_integer(lua_State *L)
+{
+  int integer;
+
+  if(!is_registered_type(L, 1, TYPE_INTEGER))
+  {
+    integer = lua_tointeger(L, 1);
+    push_integer(L, integer);
+  }
+  return 1;
+}
+
+static int register_float(lua_State *L)
+{
+  float floating;
+
+  if(!is_registered_type(L, 1, TYPE_FLOAT))
+  {
+    floating = lua_tonumber(L, 1);
+    push_float(L, floating);
+  }
+  return 1;
+}
+
+static int register_string(lua_State *L)
+{
+  scDataTypeString_t *string;
+
+  if(!is_registered_type(L, 1, TYPE_STRING))
+  {
+    string = pop_lua_string(L);
+    push_string(L, string);
+  }
+  return 1;
+}
+
+static int register_function(lua_State *L)
+{
+  scDataTypeFunction_t *function;
+
+  if(!is_registered_type(L, 1, TYPE_FUNCTION))
+  {
+    function = pop_lua_function(L);
+    push_function(L, function);
+  }
+  return 1;
+}
+
+static int register_array(lua_State *L)
+{
+  scDataTypeArray_t *array;
+
+  if(!is_registered_type(L, 1, TYPE_ARRAY))
+  {
+    array = pop_lua_array(L);
+    push_array(L, array);
+  }
+  return 1;
+}
+
+static int register_hash(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+
+  if(!is_registered_type(L, 1, TYPE_HASH))
+  {
+    hash = pop_lua_hash(L);
+    push_hash(L, hash, TYPE_HASH);
+  }
+  return 1;
+}
+
+static int register_namespace(lua_State *L)
+{
+  scDataTypeHash_t *namespace;
+
+  if(!is_registered_type(L, 1, TYPE_NAMESPACE))
+  {
+    namespace = pop_lua_hash(L);
+    push_hash(L, namespace, TYPE_NAMESPACE);
+  }
+  return 1;
+}
+
 static const struct luaL_reg stacklib [] = {
-  {"dump", stack_dump},
+  { "dump", stack_dump },
+  // scripting data registeration
+  { "boolean", register_boolean },
+  { "integer", register_integer },
+  { "floating", register_float },
+  { "string", register_string },
+  { "function", register_function },
+  { "array", register_array },
+  { "hash", register_hash },
+  { "namespace", register_namespace },
   {NULL, NULL}
 };
 
