@@ -25,10 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - Add methods to make scripting registered data under lua
- * - `lua.registered' lua function
- * - Disable metatable access from lua
- * - Make lua type for TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN (and metamethod)
+ * - Make metamethod with types TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN
  * - Bad GC when pop a value ?
  * - Error messages should always show script line
  * - Check number of arguments for (non metamethods) lua functions
@@ -271,6 +268,13 @@ static int pairs_method(lua_State *L)
 
     return 3;
   }
+}
+
+static int invalid_metatable_metamethod(lua_State *L)
+{
+  luaL_error(L, "you can't access metatable at Lua side");
+
+  return 0;
 }
 
 static int invalid_index_metamethod(lua_State *L)
@@ -1054,6 +1058,8 @@ static void push_boolean(lua_State *L, char boolean)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_BOOLEAN);
   lua_setfield(L, -2, "_type");
@@ -1091,6 +1097,8 @@ static void push_integer(lua_State *L, int integer)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_INTEGER);
   lua_setfield(L, -2, "_type");
@@ -1128,6 +1136,8 @@ static void push_float(lua_State *L, float floating)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_FLOAT);
   lua_setfield(L, -2, "_type");
@@ -1154,6 +1164,8 @@ static void push_userdata(lua_State *L, void* userdata)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_USERDATA);
   lua_setfield(L, -2, "_type");
@@ -1193,6 +1205,8 @@ static void push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_STRING);
   lua_setfield(L, -2, "_type");
@@ -1227,6 +1241,8 @@ static void push_array( lua_State *L, scDataTypeArray_t *array )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, len_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_ARRAY);
   lua_setfield(L, -2, "_type");
@@ -1261,6 +1277,8 @@ static void push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, len_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, type);
   lua_setfield(L, -2, "_type");
@@ -1297,6 +1315,8 @@ static void push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_FUNCTION);
   lua_setfield(L, -2, "_type");
@@ -1333,6 +1353,8 @@ static void push_class(lua_State *L, scClass_t *class)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
   
   lua_pushinteger(L, TYPE_CLASS);
   lua_setfield(L, -2, "_type");
@@ -1365,6 +1387,8 @@ static void push_object(lua_State *L, scObject_t *object)
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, object_newindex_metamethod);
   lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, invalid_metatable_metamethod);
+  lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_OBJECT);
   lua_setfield(L, -2, "_type");
