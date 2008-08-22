@@ -362,6 +362,7 @@ void SV_DemoStopPlayback(void);
 void SV_DemoReadFrame(void);
 void SV_DemoWriteFrame(void);
 void SV_DemoWriteServerCommand(const char *str);
+void SV_DemoWriteGameCommand(int cmd, const char *str);
 void SV_DemoWriteConfigString(int client);
 
 //

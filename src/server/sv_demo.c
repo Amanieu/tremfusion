@@ -29,6 +29,7 @@ typedef enum {
 	demo_endFrame,
 	demo_configString,
 	demo_serverCommand,
+	demo_gameCommand,
 	demo_entityState,
 	demo_entityShared,
 	demo_playerState,
@@ -70,6 +71,24 @@ void SV_DemoWriteServerCommand(const char *str)
 
 	MSG_Init(&msg, buf, sizeof(buf));
 	MSG_WriteByte(&msg, demo_serverCommand);
+	MSG_WriteString(&msg, str);
+	SV_DemoWriteMessage(&msg);
+}
+
+/*
+====================
+SV_DemoWriteGameCommand
+
+Write a game command to the demo file
+====================
+*/
+void SV_DemoWriteGameCommand(int cmd, const char *str)
+{
+	msg_t msg;
+
+	MSG_Init(&msg, buf, sizeof(buf));
+	MSG_WriteByte(&msg, demo_gameCommand);
+	MSG_WriteByte(&msg, cmd);
 	MSG_WriteString(&msg, str);
 	SV_DemoWriteMessage(&msg);
 }
@@ -213,6 +232,10 @@ exit_loop:
 				break;
 			case demo_serverCommand:
 				SV_SendServerCommand(NULL, "%s", MSG_ReadString(&msg));
+				break;
+			case demo_gameCommand:
+				num = MSG_ReadByte(&msg);
+				VM_Call(gvm, GAME_DEMO_COMMAND, num, MSG_ReadString(&msg));
 				break;
 			case demo_playerState:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);

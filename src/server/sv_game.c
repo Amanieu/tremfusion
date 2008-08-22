@@ -435,6 +435,16 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		SV_MasterGameStat( VMA(1) );
 		return 0;
 
+	case G_DEMO_COMMAND:
+		if ( sv.demoState == DS_RECORDING )
+		{
+			if ( args[1] == -1 )
+				SV_DemoWriteServerCommand( VMA(2) );
+			else
+				SV_DemoWriteGameCommand( args[1], VMA(2) );
+		}
+		return 0;
+
 	//====================================
 
 	case G_PARSE_ADD_GLOBAL_DEFINE:

@@ -474,6 +474,13 @@ typedef struct damageRegion_s
   qboolean  crouch;
 } damageRegion_t;
 
+// demo commands
+typedef enum
+{
+    DC_SERVER_COMMAND = -1
+    // TODO
+} demoCommand_t;
+
 //status of the warning of certain events
 typedef enum
 {
@@ -1200,3 +1207,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+void      trap_DemoCommand( demoCommand_t cmd, const char *string );
