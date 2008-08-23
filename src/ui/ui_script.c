@@ -138,6 +138,16 @@ static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   SC_ArraySet( draw_func_arg_array, current_draw_func_index, &in[1]);
   SC_BuildValue(out, "i", current_draw_func_index);
   current_draw_func_index++;
+  return 0;
+}
+#define REMOVE_DRAW_FUNC_DESC "ui.RemoveDrawFunc(index) \n\n Deletes the function that was added " \
+                           "that will be called every UI_Refresh\n Returns: None"
+static int remove_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+{
+  int func_index;
+  func_index = in[0].data.integer;
+  SC_ArrayDelete( draw_func_array, func_index);
+  SC_ArrayDelete( draw_func_arg_array, func_index);
   out->type = TYPE_UNDEF;
   return 0;
 }
@@ -210,6 +220,7 @@ static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   rect = BG_Alloc(sizeof(rectDef_t));
   memset(rect, 0x00, sizeof(rectDef_t));
   
+  data->sc_created = qtrue;
   data->rect = rect;
   self->data.data.userdata = data;
 
@@ -535,6 +546,7 @@ static scLibObjectDef_t window_def = {
 
 static scLibFunction_t ui_lib[] = {
   { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
+  { "RemoveDrawFunc", REMOVE_DRAW_FUNC_DESC, remove_draw_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
   { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
                                 TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },

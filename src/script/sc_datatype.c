@@ -810,7 +810,7 @@ static void objectFree(scObject_t *object)
 void SC_ObjectGCInc(scObject_t *object)
 {
   object->gc.count++;
-#if SC_GC_DEBUG
+#if SC_GC_DEBUG == 2
   Com_Printf("SC_ObjectGCInc called on object of class %s count now = %d\n", object->class->name, object->gc.count);
 #endif
 }
@@ -818,7 +818,7 @@ void SC_ObjectGCInc(scObject_t *object)
 void SC_ObjectGCDec(scObject_t *object)
 {
   object->gc.count--;
-#if SC_GC_DEBUG
+#if SC_GC_DEBUG == 2
   Com_Printf("SC_ObjectGCDec called on object of class %s count now = %d\n", object->class->name, object->gc.count);
 #endif
   if(object->gc.count == 0)

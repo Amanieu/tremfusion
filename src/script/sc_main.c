@@ -150,7 +150,8 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
 
     narg++;
   }
-
+  if(out)
+    memset(out, 0x00, sizeof(scDataTypeValue_t)); // Memset out to 0 to prevent weird things from happening 
   // Redirect call to langage specific functions
   switch( func->langage )
   {
