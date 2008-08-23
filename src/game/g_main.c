@@ -1345,13 +1345,15 @@ void CalculateRanks( void )
   for( i = 0; i < level.maxclients; i++ )
   {
     P[ i ] = '-';
-    if ( level.clients[ i ].pers.connected != CON_DISCONNECTED )
+    if ( level.clients[ i ].pers.connected != CON_DISCONNECTED ||
+         level.clients[ i ].pers.demoClient )
     {
       level.sortedClients[ level.numConnectedClients ] = i;
       level.numConnectedClients++;
       P[ i ] = (char)'0' + level.clients[ i ].pers.teamSelection;
 
-      if( level.clients[ i ].pers.connected != CON_CONNECTED )
+      if( level.clients[ i ].pers.connected != CON_CONNECTED &&
+         !level.clients[ i ].pers.demoClient )
         continue;
 
       level.numVotingClients++;
