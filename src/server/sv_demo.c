@@ -216,6 +216,9 @@ exit_loop:
 			case demo_EOF:
 				MSG_Clear(&msg);
 				goto exit_loop;
+			case demo_endDemo:
+				SV_DemoStopPlayback();
+				return;
 			case demo_endFrame:
 				// Overwrite anything the game may have changed
 				for (i = 0; i < MAX_GENTITIES; i++)
