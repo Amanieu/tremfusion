@@ -25,43 +25,53 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../script/sc_public.h"
 #include "../script/sc_python.h"
 
+static PyObject *PyScHash_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+  PyScHash *self;
+
+  self = (PyScHash *)type->tp_alloc(type, 0);
+  if (self != NULL) {
+    self->hash = NULL;
+  }
+
+  return (PyObject *)self;
+}
+
+
 static int PyScHash_init(PyScHash *self, PyObject *args, PyObject *kwds)
 {
-//  PyObject *arg = NULL;
-//  scDataTypeValue_t val;
-//  int index;
-//  
-//  static char *kwlist[] = {"sequence", 0};
-//
-//  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:list", kwlist, &arg))
-//    return -1;
+  PyObject *arg = NULL;
+  
+  static char *kwlist[] = {"dict", 0};
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:dict", kwlist, &arg))
+    return -1;
   
   self->hash = SC_HashNew();
   SC_HashGCInc(self->hash);
   
-//  PyObject *iterator = PyObject_GetIter(args);
-//  PyObject *item;
-//
-//  if (iterator == NULL) {
-//    return -1;
-//  }
-//
-//  index = 0;
-//  while ( (item = PyIter_Next(iterator) ) ) {
-//    convert_to_value( item, &val, TYPE_ANY );
-//    SC_ArraySet(self->array, index, &val);
-//    Py_DECREF(item);
-//    index++;
-//  }
-//
-//  Py_DECREF(iterator);
-//
-//  if (PyErr_Occurred()) {
-//      /* propagate error */
-//  }
-//  else {
-//      /* continue doing useful work */
-//  }
+  if(arg)
+  {
+    PyObject *key, *value;
+    scDataTypeValue_t val;
+    char *keystring;
+    Py_ssize_t pos = 0;
+
+    if (!PyDict_Check(arg)) {
+      return -1;
+    }
+    
+    while (PyDict_Next(arg, &pos, &key, &value)) {
+      if(!PyString_Check(key))
+      {
+        PyErr_SetString(PyExc_TypeError, "sc_hash's keys must be strings");
+        return -1;
+      }
+      keystring = PyString_AsString(key);
+      convert_to_value( value, &val, TYPE_ANY );
+      SC_HashSet(self->hash, keystring, &val);
+    }
+  }
 
   return 0;
 }
@@ -241,7 +251,7 @@ PyTypeObject PyScHash_Type = {
   0,                             /* tp_dictoffset */
   (initproc)PyScHash_init,       /* tp_init */
   0,                             /* tp_alloc */
-  0,                             /* tp_new */
+  PyScHash_new,                  /* tp_new */
 };
 
 PyScHash *PyScHashFrom_ScHash( scDataTypeHash_t *hash)

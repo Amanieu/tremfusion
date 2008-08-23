@@ -313,6 +313,7 @@ static void loadconstants(void)
 void SC_Python_Init( void )
 {
 //  scDataTypeValue_t *value;
+  PyObject *python_module;
   
   Com_Printf("Python initializing... ");
   Py_Initialize();
@@ -324,6 +325,8 @@ void SC_Python_Init( void )
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ..
+  
+  python_module = PyImport_AddModule("python");
   
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
@@ -337,6 +340,7 @@ void SC_Python_Init( void )
   if (PyType_Ready(&PyScHash_Type) < 0)
     return;
   Py_INCREF(&PyScHash_Type);
+  PyModule_AddObject(python_module, "ScHash", (PyObject*)&PyScHash_Type);
   
   loadconstants();
 //  if (PyType_Ready(&PyScObject_Type) < 0)

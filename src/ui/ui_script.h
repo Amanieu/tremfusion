@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void UI_ScriptInit( void );
 void UI_ScriptShutdown( void );
-void SC_UIRefresh ( void );
+void SC_UIMove( void );
+void SC_UIDraw( void );
 
 #endif /*UI_SCRIPT_H*/

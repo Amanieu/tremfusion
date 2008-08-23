@@ -25,8 +25,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 extern displayContextDef_t *DC;
 
 int               current_draw_func_index=0;
+int               current_move_func_index=0;
 scDataTypeArray_t *draw_func_array;
 scDataTypeArray_t *draw_func_arg_array;
+scDataTypeArray_t *move_func_array;
+scDataTypeArray_t *move_func_arg_array;
 
 extern menuDef_t Menus[MAX_MENUS];
 extern int menuCount;
@@ -55,8 +58,13 @@ void UI_ScriptInit( void )
 #endif
   draw_func_array     = SC_ArrayNew();
   draw_func_arg_array = SC_ArrayNew();
+  move_func_array     = SC_ArrayNew();
+  move_func_arg_array = SC_ArrayNew();
   SC_ArrayGCInc( draw_func_array );
   SC_ArrayGCInc( draw_func_arg_array );
+  SC_ArrayGCInc( move_func_array );
+  SC_ArrayGCInc( move_func_arg_array ); 
+  
   Com_Printf("-----------------------------------\n");
 }
 
@@ -72,6 +80,8 @@ void UI_ScriptShutdown( void )
   Com_Printf("------- UI Scripting System Shutdown -------\n");
   SC_ArrayGCDec( draw_func_array );
   SC_ArrayGCDec( draw_func_arg_array );
+  SC_ArrayGCDec( move_func_array );
+  SC_ArrayGCDec( move_func_arg_array );
   SC_Shutdown( );
   Com_Printf("-----------------------------------\n");
 }
@@ -103,7 +113,33 @@ static void UI_Script_f(void)
   SC_RunScript( SC_LangageFromFilename(va("scripts/%s", filename) ), va("scripts/%s", filename) );
 }
 
-void SC_UIRefresh ( void )
+void SC_UIMove( void )
+{
+  int i;
+  for( i = 0; i < move_func_array->size; i++ )
+  {
+    scDataTypeValue_t ret;
+    scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+    scDataTypeValue_t function;
+    SC_ArrayGet(move_func_array, i, &function);
+    SC_ArrayGet(move_func_arg_array, i, &args[0]);
+    args[1].type = TYPE_UNDEF;
+    if(function.type != TYPE_FUNCTION) continue;
+    function.data.function->argument[0] = TYPE_ANY;
+    function.data.function->return_type = TYPE_ANY;
+    if(SC_RunFunction( function.data.function, args, &ret ) )
+    {
+      // Error running function, remove draw func to prevent repeat errors
+      SC_ArrayDelete(move_func_array, i);
+      SC_ArrayDelete(move_func_arg_array, i);
+      continue;
+    }
+    if(args[0].type != TYPE_UNDEF && ret.type != TYPE_UNDEF)
+      SC_ArraySet( move_func_arg_array, i, &ret);
+  }
+}
+
+void SC_UIDraw( void )
 {
   int i;
   for( i = 0; i < draw_func_array->size; i++ )
@@ -130,7 +166,7 @@ void SC_UIRefresh ( void )
 }
 
 #define ADD_DRAW_FUNC_DESC "index = ui.AddDrawFunc(function) \n\n Adds function to an array of functions " \
-                           "that will be called every UI_Refresh\n Returns index of function in " \
+                           "that will be called every UI_Refresh after the Menus have been drawn\n Returns index of function in " \
                            "array for ui.RemoveDrawFunc(index)"
 static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
@@ -148,6 +184,29 @@ static int remove_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void
   func_index = in[0].data.integer;
   SC_ArrayDelete( draw_func_array, func_index);
   SC_ArrayDelete( draw_func_arg_array, func_index);
+  out->type = TYPE_UNDEF;
+  return 0;
+}
+
+#define ADD_MOVE_FUNC_DESC "index = ui.AddDrawFunc(function) \n\n Adds function to an array of functions " \
+                           "that will be called every UI_Refresh before the Menus have been drawn\n Returns index of function in " \
+                           "array for ui.RemoveMoveFunc(index)"
+static int add_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+{
+  SC_ArraySet( move_func_array, current_move_func_index, &in[0]);
+  SC_ArraySet( move_func_arg_array, current_move_func_index, &in[1]);
+  SC_BuildValue(out, "i", current_move_func_index);
+  current_move_func_index++;
+  return 0;
+}
+#define REMOVE_MOVE_FUNC_DESC "ui.RemoveMoveFunc(index) \n\n Deletes the function that was added " \
+                           "that will be called every UI_Refresh\n Returns: None"
+static int remove_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+{
+  int func_index;
+  func_index = in[0].data.integer;
+  SC_ArrayDelete( move_func_array, func_index);
+  SC_ArrayDelete( move_func_arg_array, func_index);
   out->type = TYPE_UNDEF;
   return 0;
 }
@@ -547,6 +606,8 @@ static scLibObjectDef_t window_def = {
 static scLibFunction_t ui_lib[] = {
   { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
   { "RemoveDrawFunc", REMOVE_DRAW_FUNC_DESC, remove_draw_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "AddMoveFunc", ADD_MOVE_FUNC_DESC, add_move_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
+  { "RemoveMoveFunc", REMOVE_MOVE_FUNC_DESC, remove_move_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
   { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
                                 TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },

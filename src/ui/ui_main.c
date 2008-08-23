@@ -1115,6 +1115,10 @@ void UI_Refresh( int realtime )
 
   UI_UpdateCvars();
 
+#ifdef ENABLE_SCRIPT_UI
+  SC_UIMove();
+#endif
+  
   if( Menu_Count() > 0 )
   {
     // paint all the menus
@@ -1141,7 +1145,7 @@ void UI_Refresh( int realtime )
                       32.0f * uiInfo.uiDC.aspectScale, 32.0f, uiInfo.uiDC.Assets.cursor );
   }
 #ifdef ENABLE_SCRIPT_UI
-  SC_UIRefresh();
+  SC_UIDraw();
 #endif
 }
 
