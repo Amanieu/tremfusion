@@ -401,7 +401,7 @@ void SV_DemoStartPlayback(void)
 		return;
 	}
 	s = MSG_ReadString(&msg);
-	if (!FS_FileExists(va("maps/%s.bsp", s)))
+	if (!FS_FOpenFileRead(va("maps/%s.bsp", s), NULL, qfalse))
 	{
 		Com_Printf("Map does not exist: %s.\n", s);
 		SV_DemoStopPlayback();
