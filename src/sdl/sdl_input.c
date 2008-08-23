@@ -60,9 +60,9 @@ static qboolean keyRepeatEnabled = qfalse;
 
 qboolean fullscreen_minimized = qfalse;
 
-static cvar_t *in_mouse;
+static cvar_t *in_mouse             = NULL;
 #ifdef MACOS_X_ACCELERATION_HACK
-static cvar_t *in_disablemacosxmouseaccel;
+static cvar_t *in_disablemacosxmouseaccel = NULL;
 static double originalMouseSpeed = -1.0;
 #endif
 static cvar_t *in_nograb;
@@ -171,7 +171,7 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 			case SDLK_F14:          *key = K_F14;           break;
 			case SDLK_F15:          *key = K_F15;           break;
 
-			case SDLK_BACKSPACE:    *key = K_BACKSPACE;     break; // ctrl-h
+			case SDLK_BACKSPACE:    *key = K_BACKSPACE;     break;
 			case SDLK_KP_PERIOD:    *key = K_KP_DEL;        break;
 			case SDLK_DELETE:       *key = K_DEL;           break;
 			case SDLK_PAUSE:        *key = K_PAUSE;         break;
@@ -229,19 +229,20 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 			// So the key marked ~ always drops the console
 			case '~': *key = '~'; break;
 
-			case 8: // backspace
+			case 127: // ASCII delete
 				if( *key != K_DEL )
 				{
 					// ctrl-h
-					*key = CTRL('h');
-					*buf = *key;
+					*buf = CTRL('h');
+					break;
 				}
-				break;
+				// fallthrough
 
 			default: *buf = ch; break;
 		}
 	}
 
+	// Never allow a '~' SE_CHAR event to be generated
 	if( *key == '~' )
 		*buf = '\0';
 
@@ -393,7 +394,10 @@ void IN_DeactivateMouse( void )
 	if( mouseActive )
 	{
 		SDL_WM_GrabInput( SDL_GRAB_OFF );
-		SDL_WarpMouse( glConfig.vidWidth / 2, glConfig.vidHeight / 2 );
+
+		// Don't warp the mouse unless the cursor is within the window
+		if( SDL_GetAppState( ) & SDL_APPMOUSEFOCUS )
+			SDL_WarpMouse( glConfig.vidWidth / 2, glConfig.vidHeight / 2 );
 
 		mouseActive = qfalse;
 	}
@@ -796,19 +800,38 @@ static void IN_ProcessEvents( void )
 IN_Frame
 ===============
 */
-void IN_Frame (void)
+void IN_Frame( void )
 {
-	IN_JoyMove( );
+	qboolean loading;
 
-	// Release the mouse if the console is down in windowed mode
-	// or if the window loses focus due to task switching
-	if( ( ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) && !r_fullscreen->integer ) ||
-	    com_minimized->integer || !( SDL_GetAppState() & SDL_APPINPUTFOCUS ) )
+	IN_JoyMove( );
+	IN_ProcessEvents( );
+
+	// If not DISCONNECTED (main menu) or ACTIVE (in game), we're loading
+	loading = !!( cls.state != CA_DISCONNECTED && cls.state != CA_ACTIVE );
+
+	if( !r_fullscreen->integer && ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) )
+	{
+		// Console is down in windowed mode
 		IN_DeactivateMouse( );
+	}
+	else if( !r_fullscreen->integer && loading )
+	{
+		// Loading in windowed mode
+		IN_DeactivateMouse( );
+	}
+	else if( !( SDL_GetAppState() & SDL_APPINPUTFOCUS ) )
+	{
+		// Window not got focus
+		IN_DeactivateMouse( );
+	}
+	else if( com_minimized->integer )
+	{
+		// Minimized
+		IN_DeactivateMouse( );
+	}
 	else
 		IN_ActivateMouse( );
-
-	IN_ProcessEvents( );
 }
 
 /*
@@ -816,7 +839,7 @@ void IN_Frame (void)
 IN_Init
 ===============
 */
-void IN_Init(void)
+void IN_Init( void )
 {
 	if( !SDL_WasInit( SDL_INIT_VIDEO ) )
 	{
@@ -824,24 +847,24 @@ void IN_Init(void)
 		return;
 	}
 
-	Com_DPrintf ("\n------- Input Initialization -------\n");
+	Com_DPrintf( "\n------- Input Initialization -------\n" );
 
 	in_keyboardDebug = Cvar_Get( "in_keyboardDebug", "0", CVAR_ARCHIVE );
 
 	// mouse variables
-	in_mouse = Cvar_Get ("in_mouse", "1", CVAR_ARCHIVE);
-	in_nograb = Cvar_Get ("in_nograb", "0", CVAR_ARCHIVE);
+	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
+	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE );
 
-	in_joystick = Cvar_Get ("in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH);
-	in_joystickDebug = Cvar_Get ("in_joystickDebug", "0", CVAR_TEMP);
-	in_joystickThreshold = Cvar_Get ("in_joystickThreshold", "0.15", CVAR_ARCHIVE);
+	in_joystick = Cvar_Get( "in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH );
+	in_joystickDebug = Cvar_Get( "in_joystickDebug", "0", CVAR_TEMP );
+	in_joystickThreshold = Cvar_Get( "in_joystickThreshold", "0.15", CVAR_ARCHIVE );
 
 #ifdef MACOS_X_ACCELERATION_HACK
-	in_disablemacosxmouseaccel = Cvar_Get ("in_disablemacosxmouseaccel", "0", CVAR_ARCHIVE);
+	in_disablemacosxmouseaccel = Cvar_Get( "in_disablemacosxmouseaccel", "0", CVAR_ARCHIVE );
 #endif
 
-	SDL_EnableUNICODE(1);
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+	SDL_EnableUNICODE( 1 );
+	SDL_EnableKeyRepeat( SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL );
 	keyRepeatEnabled = qtrue;
 
 	if( in_mouse->value )
@@ -856,7 +879,7 @@ void IN_Init(void)
 	}
 
 	IN_InitJoystick( );
-	Com_DPrintf ("------------------------------------\n");
+	Com_DPrintf( "------------------------------------\n" );
 }
 
 /*
