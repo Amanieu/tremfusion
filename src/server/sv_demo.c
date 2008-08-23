@@ -421,5 +421,9 @@ void SV_DemoStopPlayback(void)
 	sv.demoState = DS_NONE;
 	Cvar_SetValue("sv_demoState", DS_NONE);
 	Com_Printf("Stopped playing demo %s.\n", sv.demoName);
+#ifdef DEDICATED
 	Cbuf_AddText("map_restart\n");
+#else
+	Cbuf_AddText("killserver\n");
+#endif
 }

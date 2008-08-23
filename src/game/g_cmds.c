@@ -2689,7 +2689,7 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       clientnum = level.maxclients - 1;
 
     // can't follow self
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( &level.clients[ i ] == ent->client )
       continue;
 
     // avoid selecting existing follow target
@@ -2697,11 +2697,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       continue; //effectively break;
 
     // can only follow connected clients
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
 
     // can't follow a spectator
-    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE )
+    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
     
     // if stickyspec is disabled, can't follow someone in queue either

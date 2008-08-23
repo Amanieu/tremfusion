@@ -547,12 +547,6 @@ SV_Demo_StopRecord_f
 =================
 */
 static void SV_Demo_StopRecord_f( void ) {
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		Com_Printf( "Server is not running.\n" );
-		return;
-	}
-
 	if (sv.demoState != DS_RECORDING) {
 		Com_Printf("No demo is currently being recorded.\n");
 		return;
@@ -570,12 +564,6 @@ SV_Demo_Play_f
 */
 static void SV_Demo_Play_f( void ) {
 	char *arg;
-
-	// make sure server is running
-	if (!com_sv_running->integer) {
-		Com_Printf("Server is not running.\n");
-		return;
-	}
 
 	if (Cmd_Argc() != 2) {
 		Com_Printf("Usage: demo_play <demoname>\n");
@@ -615,12 +603,6 @@ SV_Demo_Stop_f
 =================
 */
 static void SV_Demo_Stop_f( void ) {
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		Com_Printf( "Server is not running.\n" );
-		return;
-	}
-
 	if (sv.demoState != DS_PLAYBACK) {
 		Com_Printf("No demo is currently being played.\n");
 		return;
