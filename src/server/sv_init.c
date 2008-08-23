@@ -608,6 +608,20 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	Hunk_SetMark();
 
 	Com_Printf ("-----------------------------------\n");
+
+	// start recording a demo
+	if ( sv_autoDemo->integer ) {
+		qtime_t	now;
+		Com_RealTime( &now );
+		Cbuf_AddText( va( "demo_record %04d%02d%02d%02d%02d%02d-%s\n",
+			1900 + now.tm_year,
+			1 + now.tm_mon,
+			now.tm_mday,
+			now.tm_hour,
+			now.tm_min,
+			now.tm_sec,
+			server ) );
+	}
 }
 
 /*

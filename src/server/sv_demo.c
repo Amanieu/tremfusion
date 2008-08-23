@@ -303,6 +303,8 @@ void SV_DemoStartRecord(void)
 
 	// Write number of clients (sv_maxclients < MAX_CLIENTS or else we can't playback)
 	MSG_WriteBits(&msg, sv_maxclients->integer, CLIENTNUM_BITS);
+	// Write current time
+	MSG_WriteLong(&msg, sv.time);
 	// Write map name
 	MSG_WriteString(&msg, sv_mapname->string);
 	SV_DemoWriteMessage(&msg);
@@ -383,7 +385,7 @@ void SV_DemoStartPlayback(void)
 		return;
 	}
 
-	// Check slots and map
+	// Check slots, time and map
 	r = MSG_ReadBits(&msg, CLIENTNUM_BITS);
 	if (sv_democlients->integer < r)
 	{
@@ -391,8 +393,21 @@ void SV_DemoStartPlayback(void)
 		SV_DemoStopPlayback();
 		return;
 	}
+	r = MSG_ReadLong(&msg);
+	if (r < 400)
+	{
+		Com_Printf("Demo time too small: %d.\n", r);
+		SV_DemoStopPlayback();
+		return;
+	}
 	s = MSG_ReadString(&msg);
-	if (!com_sv_running->integer || strcmp(sv_mapname->string, s))
+	if (!FS_FileExists(va("maps/%s.bsp", s)))
+	{
+		Com_Printf("Map does not exist: %s.\n", s);
+		SV_DemoStopPlayback();
+		return;
+	}
+	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) || r < sv.time)
 	{
 		// Change to the right map and start the demo
 		Cbuf_AddText(va("map %s\n%s\n", s, Cmd_Cmd()));
