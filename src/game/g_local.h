@@ -479,7 +479,7 @@ typedef struct damageRegion_s
 typedef enum
 {
     DC_SERVER_COMMAND = -1,
-    DC_CLIENT_ADD = 0,
+    DC_CLIENT_SET = 0,
     DC_CLIENT_REMOVE
 } demoCommand_t;
 

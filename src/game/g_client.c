@@ -989,6 +989,7 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
+  char      buf[ MAX_INFO_STRING ];
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1058,6 +1059,13 @@ void ClientUserinfoChanged( int clientNum )
       {
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
+        // log renames to demo
+        Info_SetValueForKey( buf, "num", va( "%d", clientNum ) );
+        Info_SetValueForKey( buf, "name", client->pers.netname );
+        Info_SetValueForKey( buf, "guid", client->pers.guid );
+        Info_SetValueForKey( buf, "ip", client->pers.ip );
+        Info_SetValueForKey( buf, "team", va( "%d", client->pers.teamSelection ) );
+        trap_DemoCommand( DC_CLIENT_SET, buf );
       }
     }
   }
@@ -1334,7 +1342,8 @@ void ClientBegin( int clientNum )
   Info_SetValueForKey( buffer, "name", client->pers.netname );
   Info_SetValueForKey( buffer, "guid", client->pers.guid );
   Info_SetValueForKey( buffer, "ip", client->pers.ip );
-  trap_DemoCommand( DC_CLIENT_ADD, buffer );
+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
+  trap_DemoCommand( DC_CLIENT_SET, buffer );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );

@@ -2689,7 +2689,7 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       clientnum = level.maxclients - 1;
 
     // can't follow self
-    if( &level.clients[ i ] == ent->client )
+    if( &level.clients[ clientnum ] == ent->client )
       continue;
 
     // avoid selecting existing follow target

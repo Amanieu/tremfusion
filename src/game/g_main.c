@@ -256,7 +256,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
 void G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
-void G_DemoAddClient( void );
+void G_DemoSetClient( void );
 void G_DemoRemoveClient( void );
 
 void G_CountSpawns( void );
@@ -317,8 +317,8 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
     case GAME_DEMO_COMMAND:
       switch ( arg0 )
       {
-      case DC_CLIENT_ADD:
-        G_DemoAddClient( );
+      case DC_CLIENT_SET:
+        G_DemoSetClient( );
         break;
       case DC_CLIENT_REMOVE:
         G_DemoRemoveClient( );
@@ -1404,12 +1404,12 @@ void CalculateRanks( void )
 
 /*
 ============
-G_DemoAddClient
+G_DemoSetClient
 
 Mark a client as a demo client and load info into it
 ============
 */
-void G_DemoAddClient( void )
+void G_DemoSetClient( void )
 {
     char buffer[ MAX_INFO_STRING ];
     gclient_t *client;
@@ -2261,7 +2261,8 @@ void G_CheckDemo( void )
         Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
         Info_SetValueForKey( buffer, "guid", level.clients[ i ].pers.guid );
         Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
-        trap_DemoCommand( DC_CLIENT_ADD, buffer );
+        Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
+        trap_DemoCommand( DC_CLIENT_SET, buffer );
       }
     }
   }
