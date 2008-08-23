@@ -579,6 +579,7 @@ G_ChangeTeam
 void G_ChangeTeam( gentity_t *ent, team_t newTeam )
 {
   team_t  oldTeam = ent->client->pers.teamSelection;
+  char    buf[ MAX_INFO_STRING ];
 
   if( oldTeam == newTeam )
     return;
@@ -614,7 +615,13 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
     
   ClientUserinfoChanged( ent->client->ps.clientNum );
 
-
+  // log renames to demo
+  Info_SetValueForKey( buf, "num", va( "%d", clientNum ) );
+  Info_SetValueForKey( buf, "name", client->pers.netname );
+  Info_SetValueForKey( buf, "guid", client->pers.guid );
+  Info_SetValueForKey( buf, "ip", client->pers.ip );
+  Info_SetValueForKey( buf, "team", va( "%d", client->pers.teamSelection ) );
+  trap_DemoCommand( DC_CLIENT_SET, buf );
 }
 
 /*
