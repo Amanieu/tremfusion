@@ -651,6 +651,12 @@ void Cmd_Team_f( gentity_t *ent )
 
   if( !Q_stricmp( s, "spectate" ) )
     team = TEAM_NONE;
+  else if( level.demoState == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
+      "while a demo is being played\n\"" );
+    return;
+  }
   else if( !force && oldteam == TEAM_NONE && g_maxGameClients.integer &&
            level.numPlayingClients >= g_maxGameClients.integer )
   {
@@ -837,6 +843,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_GREEN;
+      trap_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
       break;
 
     case SAY_TEAM:
@@ -848,6 +855,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
         Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ",
           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_CYAN;
+      trap_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^5%s\"", name, chatText ) );
       break;
 
     case SAY_TELL:
@@ -2681,7 +2689,7 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       clientnum = level.maxclients - 1;
 
     // can't follow self
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( &level.clients[ clientnum ] == ent->client )
       continue;
 
     // avoid selecting existing follow target
@@ -2689,11 +2697,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       continue; //effectively break;
 
     // can only follow connected clients
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
 
     // can't follow a spectator
-    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE )
+    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
     
     // if stickyspec is disabled, can't follow someone in queue either

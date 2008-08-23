@@ -989,6 +989,7 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
+  char      buf[ MAX_INFO_STRING ];
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1058,6 +1059,13 @@ void ClientUserinfoChanged( int clientNum )
       {
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
+        // log renames to demo
+        Info_SetValueForKey( buf, "num", va( "%d", clientNum ) );
+        Info_SetValueForKey( buf, "name", client->pers.netname );
+        Info_SetValueForKey( buf, "guid", client->pers.guid );
+        Info_SetValueForKey( buf, "ip", client->pers.ip );
+        Info_SetValueForKey( buf, "team", va( "%d", client->pers.teamSelection ) );
+        trap_DemoCommand( DC_CLIENT_SET, buf );
       }
     }
   }
@@ -1277,6 +1285,7 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+  char      buffer[ MAX_INFO_STRING ] = "";
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -1327,6 +1336,14 @@ void ClientBegin( int clientNum )
   trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
+
+  // log to demo
+  Info_SetValueForKey( buffer, "num", va( "%d", clientNum ) );
+  Info_SetValueForKey( buffer, "name", client->pers.netname );
+  Info_SetValueForKey( buffer, "guid", client->pers.guid );
+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
+  trap_DemoCommand( DC_CLIENT_SET, buffer );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
@@ -1706,6 +1723,8 @@ void ClientDisconnect( int clientNum )
       ent->client->ps.persistant[ PERS_SPECSTATE ] = SPECTATOR_NOT;
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
+
+  trap_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
 
   CalculateRanks( );
 }

@@ -2698,6 +2698,7 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
   char oldname[ MAX_NAME_LENGTH ];
   char err[ MAX_STRING_CHARS ];
   char userinfo[ MAX_INFO_STRING ];
+  char buf[ MAX_INFO_STRING ];
   char *s;
   gentity_t *victim = NULL;
 
@@ -2739,6 +2740,13 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
           oldname,
           newname,
           ( ent ) ? ent->client->pers.netname : "console" ) );
+  // log renames to demo
+  Info_SetValueForKey( buf, "num", va( "%d", (int)(victim - g_entities) ) );
+  Info_SetValueForKey( buf, "name", newname );
+  Info_SetValueForKey( buf, "guid", victim->client->pers.guid );
+  Info_SetValueForKey( buf, "ip", victim->client->pers.ip );
+  Info_SetValueForKey( buf, "team", va( "%d", victim->client->pers.teamSelection ) );
+  trap_DemoCommand( DC_CLIENT_SET, buf );
   return qtrue;
 }
 

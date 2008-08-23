@@ -3155,6 +3155,13 @@ static void Field_CompleteCommand( char *cmd,
 				if( p > cmd )
 					Field_CompleteCommand( p, qfalse, qtrue );
 			}
+			else if( !Q_stricmp( baseCmd, "demo_play" ) && completionArgument == 2 )
+			{
+				char demoExt[ 16 ];
+
+				Com_sprintf( demoExt, sizeof( demoExt ), ".svdm_%d", PROTOCOL_VERSION );
+				Field_CompleteFilename( "svdemos", demoExt, qtrue );
+			}
 #ifndef DEDICATED
 			else if( !Q_stricmp( baseCmd, "demo" ) && completionArgument == 2 )
 			{

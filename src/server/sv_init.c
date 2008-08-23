@@ -104,13 +104,17 @@ SV_SetConfigstring
 
 ===============
 */
-void SV_SetConfigstring (int index, const char *val) {
+void SV_SetConfigstring (int index, const char *val, qboolean force) {
 	int		len, i;
 	client_t	*client;
 
 	if ( index < 0 || index >= MAX_CONFIGSTRINGS ) {
 		Com_Error (ERR_DROP, "SV_SetConfigstring: bad index %i\n", index);
 	}
+
+	// Don't allow the game to overwrite demo player configstrings
+	if ( !force && sv.demoState == DS_PLAYBACK && index >= CS_PLAYERS && index < CS_PLAYERS + sv_democlients->integer )
+		return;
 
 	if ( !val ) {
 		val = "";
@@ -124,6 +128,10 @@ void SV_SetConfigstring (int index, const char *val) {
 	// change the string in sv
 	Z_Free( sv.configstrings[index] );
 	sv.configstrings[index] = CopyString( val );
+
+	// save client strings to demo
+	if ( index >= CS_PLAYERS && index < CS_PLAYERS + MAX_CLIENTS && sv.demoState == DS_RECORDING )
+		SV_DemoWriteConfigString( index - CS_PLAYERS );
 
 	// send it to all the clients if we aren't
 	// spawning a new server
@@ -258,6 +266,26 @@ void SV_BoundMaxClients( int minimum ) {
 
 /*
 ===============
+SV_BoundDemoClients
+
+===============
+*/
+void SV_BoundDemoClients( int maximum ) {
+	// get the current democlients value
+	Cvar_Get( "sv_democlients", "0", 0 );
+
+	sv_democlients->modified = qfalse;
+
+	if ( sv_democlients->integer > maximum ) {
+		Cvar_Set( "sv_democlients", va("%i", maximum) );
+	} else if ( sv_democlients->integer >= sv_maxclients->integer ) {
+		Cvar_Set( "sv_democlients", va("%i", sv_maxclients->integer - 1) );
+	}
+}
+
+
+/*
+===============
 SV_Startup
 
 Called when a host starts a map when it wasn't running
@@ -303,6 +331,7 @@ void SV_ChangeMaxClients( void ) {
 	int		i;
 	client_t	*oldClients;
 	int		count;
+	int		lowest;
 
 	// get the highest client number in use
 	count = 0;
@@ -314,9 +343,20 @@ void SV_ChangeMaxClients( void ) {
 	}
 	count++;
 
+	// get the lowest client number in use
+	lowest = MAX_CLIENTS;
+	for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
+		if ( svs.clients[i].state >= CS_CONNECTED ) {
+			lowest = i;
+			break;
+		}
+	}
+
 	oldMaxClients = sv_maxclients->integer;
 	// never go below the highest client number in use
 	SV_BoundMaxClients( count );
+	// never go above the lowest client number in use
+	SV_BoundDemoClients( lowest );
 	// if still the same
 	if ( sv_maxclients->integer == oldMaxClients ) {
 		return;
@@ -434,8 +474,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	if ( !Cvar_VariableValue("sv_running") ) {
 		SV_Startup();
 	} else {
-		// check for maxclients change
-		if ( sv_maxclients->modified ) {
+		// check for maxclients or democlients change
+		if ( sv_maxclients->modified || sv_democlients->modified ) {
 			SV_ChangeMaxClients();
 		}
 	}
@@ -552,9 +592,9 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	// save systeminfo and serverinfo strings
 	Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
 	cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
-	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo );
+	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo, qtrue );
 
-	SV_SetConfigstring( CS_SERVERINFO, Cvar_InfoString( CVAR_SERVERINFO ) );
+	SV_SetConfigstring( CS_SERVERINFO, Cvar_InfoString( CVAR_SERVERINFO ), qtrue );
 	cvar_modifiedFlags &= ~CVAR_SERVERINFO;
 
 	// any media configstring setting now should issue a warning
@@ -588,6 +628,7 @@ void SV_Init (void) {
 	sv_privateClients = Cvar_Get ("sv_privateClients", "0", CVAR_SERVERINFO);
 	sv_hostname = Cvar_Get ("sv_hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE );
 	sv_maxclients = Cvar_Get ("sv_maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);
+	sv_democlients = Cvar_Get ("sv_democlients", "0", CVAR_SERVERINFO | CVAR_LATCH | CVAR_ARCHIVE);
 
 	sv_minRate = Cvar_Get ("sv_minRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
 	sv_maxRate = Cvar_Get ("sv_maxRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
@@ -628,6 +669,8 @@ void SV_Init (void) {
 	sv_mapChecksum = Cvar_Get ("sv_mapChecksum", "", CVAR_ROM);
 	sv_lanForceRate = Cvar_Get ("sv_lanForceRate", "1", CVAR_ARCHIVE );
 	sv_dequeuePeriod = Cvar_Get ("sv_dequeuePeriod", "500", CVAR_ARCHIVE );
+	sv_demoState = Cvar_Get ("sv_demoState", "0", CVAR_ROM );
+	sv_autoDemo = Cvar_Get ("sv_autoDemo", "0", CVAR_ARCHIVE );
 }
 
 
@@ -686,6 +729,12 @@ void SV_Shutdown( char *finalmsg ) {
 
 	SV_MasterShutdown();
 	SV_ShutdownGameProgs();
+
+	// stop any demos
+	if (sv.demoState == DS_RECORDING)
+		SV_DemoStopRecord();
+	if (sv.demoState == DS_PLAYBACK)
+		SV_DemoStopPlayback();
 
 	// free current level
 	SV_ClearServer();
