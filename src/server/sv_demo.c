@@ -392,7 +392,7 @@ void SV_DemoStartPlayback(void)
 		return;
 	}
 	s = MSG_ReadString(&msg);
-	if (strcmp(sv_mapname->string, s))
+	if (!com_sv_running->integer || strcmp(sv_mapname->string, s))
 	{
 		// Change to the right map and start the demo
 		Cbuf_AddText(va("map %s\n%s\n", s, Cmd_Cmd()));
@@ -419,6 +419,11 @@ Close the demo file and restart the map
 */
 void SV_DemoStopPlayback(void)
 {
+	// Clear client configstrings
+	int i;
+	for (i = 0; i < sv_democlients->integer; i++)
+		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
+
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
 	Cvar_SetValue("sv_demoState", DS_NONE);
