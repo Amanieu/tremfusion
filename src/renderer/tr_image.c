@@ -110,7 +110,21 @@ void GL_TextureMode( const char *string ) {
 
 	gl_filter_min = modes[i].minimize;
 	gl_filter_max = modes[i].maximize;
-
+    
+    // bound texture anisotropy
+    
+    if(glConfig.textureFilterAnisotropic)
+    {
+        if(r_ext_texture_filter_anisotropic->value > glConfig.maxAnisotropy)
+        {
+            ri.Cvar_Set("r_ext_texture_filter_anisotropic", va("%d", glConfig.maxAnisotropy));
+        }
+        else if(r_ext_texture_filter_anisotropic->value < 1.0)
+        {
+             ri.Cvar_Set("r_ext_texture_filter_anisotropic", "1.0");
+        }
+    }
+    
 	// change all the existing mipmap texture objects
 	for ( i = 0 ; i < tr.numImages ; i++ ) {
 		glt = tr.images[ i ];
@@ -118,6 +132,10 @@ void GL_TextureMode( const char *string ) {
 			GL_Bind (glt);
 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+            
+            // set texture anisotropy
+            if(glConfig.textureFilterAnisotropic)
+                qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value);
 		}
 	}
 }
