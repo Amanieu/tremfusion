@@ -2518,6 +2518,8 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
   }
 }
 
+void Script_ScRun( itemDef_t *item, char **args );
+
 commandDef_t commandList[] =
   {
     {"fadein", &Script_FadeIn},                   // group/name
@@ -2540,7 +2542,10 @@ commandDef_t commandList[] =
     {"exec", &Script_Exec},           // group/name
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit}                      // group/name
+    {"orbit", &Script_Orbit},                      // group/name
+#ifdef ENABLE_SCRIPT_UI
+    {"sc_run", &Script_ScRun},
+#endif
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );

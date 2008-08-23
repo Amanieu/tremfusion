@@ -22,6 +22,10 @@
     style WINDOW_STYLE_FILLED
     border WINDOW_BORDER_FULL
     popup
+    onOpen
+    {
+      sc_run "simple_options.py"
+    }
     onEsc
     {
       play "sound/misc/menu1.wav";

@@ -28,8 +28,12 @@ int               current_draw_func_index=0;
 scDataTypeArray_t *draw_func_array;
 scDataTypeArray_t *draw_func_arg_array;
 
+extern menuDef_t Menus[MAX_MENUS];
+extern int menuCount;
+
 static void UI_Script_f(void);
 static void SC_UIModuleInit( void );
+static scObject_t *WindowObjFromWindowDef_t( windowDef_t *windowptr);
 
 /*
 ================
@@ -71,7 +75,22 @@ void UI_ScriptShutdown( void )
   SC_Shutdown( );
   Com_Printf("-----------------------------------\n");
 }
+/*
+================
+Script_ScRun
 
+Run a sc_script for a ui_script
+================
+*/
+void Script_ScRun( itemDef_t *item, char **args )
+{
+  const char *filename;
+
+  if( String_Parse( args, &filename ) )
+  {
+    SC_RunScript( SC_LangageFromFilename(va("scripts/ui/%s", filename) ), va("scripts/ui/%s", filename) );
+  }
+}
 /*  
 =================
 UI_Script_f
@@ -152,28 +171,47 @@ static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-// Rectangle class
+/*
+======================================================================
+
+Rectangle
+
+======================================================================
+*/
 
 scClass_t *rect_class;
 
 typedef struct
 {
+  qboolean  sc_created; // qtrue if created from python or lua, false if created by SC_Vec3FromVec3_t
+                       // Prevents call of BG_Free on a vec3_t 
   rectDef_t *rect;
-  qboolean sc_created;
 } sc_rect_t;
+
+typedef enum 
+{
+  RECT_X,
+  RECT_Y,
+  RECT_W,
+  RECT_H,
+} sc_rect_closures;
 
 static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   // TODO: error management
   scObject_t *self;
+  sc_rect_t *data;
   rectDef_t *rect;
+  
   SC_Common_Constructor(in, out, closure);
   self = out[0].data.object;
-  Com_Printf("offsetof(sc_rect_t, rect) = %d\n", offsetof(sc_rect_t, rect));
   self->data.type = TYPE_USERDATA;
+  data = BG_Alloc(sizeof(sc_rect_t));
   rect = BG_Alloc(sizeof(rectDef_t));
   memset(rect, 0x00, sizeof(rectDef_t));
-  self->data.data.userdata = rect;
+  
+  data->rect = rect;
+  self->data.data.userdata = data;
 
   return 0;
 }
@@ -182,12 +220,86 @@ static int rect_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 {
   // TODO: error management
   scObject_t *self;
+  sc_rect_t *data;
   rectDef_t *rect;
   
   self = in[0].data.object;
-  rect =  self->data.data.userdata;
+  data = self->data.data.userdata;
+  rect = data->rect;
   
-  BG_Free(rect);
+  if(data->sc_created)
+    BG_Free(rect);
+  
+  BG_Free(data);
+
+  return 0;
+}
+
+static int rect_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  int settype = (int)closure;
+  scObject_t *self;
+  sc_rect_t *data;
+  rectDef_t *rect;
+  
+  self = in[0].data.object;
+  data = self->data.data.userdata;
+  rect = data->rect;
+  
+  switch (settype)
+  {
+    case RECT_X:
+      rect->x = in[1].data.floating;
+      break;
+    case RECT_Y:
+      rect->y = in[1].data.floating;
+      break;
+    case RECT_W:
+      rect->w = in[1].data.floating;
+      break;
+    case RECT_H:
+      rect->h = in[1].data.floating;
+      break;
+    default:
+      return -1;
+  }
+
+  return 0;
+}
+
+static int rect_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  int gettype = (int)closure;
+  scObject_t *self;
+  sc_rect_t *data;
+  rectDef_t *rect;
+  
+  self = in[0].data.object;
+  data = self->data.data.userdata;
+  rect = data->rect;
+  out[0].type = TYPE_FLOAT;
+  
+  switch (gettype)
+  {
+    case RECT_X:
+      out[0].data.floating = rect->x;
+      break;
+    case RECT_Y:
+      out[0].data.floating = rect->y;
+      break;
+    case RECT_W:
+      out[0].data.floating = rect->w;
+      break;
+    case RECT_H:
+      out[0].data.floating = rect->h;
+      break;
+    default:
+      out[0].type = TYPE_UNDEF;
+      return -1;
+      // Error
+  }
 
   return 0;
 }
@@ -196,10 +308,12 @@ static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 {
   float x, y;
   scObject_t *self;
+  sc_rect_t *data;
   rectDef_t *rect;
   
   self = in[0].data.object;
-  rect =  self->data.data.userdata;
+  data = self->data.data.userdata;
+  rect = data->rect;
  
   x      = in[1].data.floating;
   y      = in[2].data.floating;
@@ -209,26 +323,213 @@ static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   return 0;
 }
 
-static scField_t rect_fields[] = {
-  { "x", "", TYPE_FLOAT, offsetof(rectDef_t, x) },
-  { "y", "", TYPE_FLOAT, offsetof(rectDef_t, y) },
-  { "h", "", TYPE_FLOAT, offsetof(rectDef_t, h) },
-  { "w", "", TYPE_FLOAT, offsetof(rectDef_t, w) },
-  { "" },
+static scLibObjectMember_t rect_members[] = {
+    { "x", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_X },
+    { "y", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_Y },
+    { "w", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_W },
+    { "h", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_H },
+    { "" },
 };
 
 static scLibObjectMethod_t rect_methods[] = {
   { "ContainsPoint", "", rect_containspoint, {TYPE_FLOAT, TYPE_FLOAT, TYPE_UNDEF}, TYPE_BOOLEAN, NULL },
-  { "" }, //Rect_ContainsPoint
+  { "" },
 };
+static scObject_t *RectObjFromRectDef_t(rectDef_t *rectptr)
+{
+  scObject_t *rectobj;
+  sc_rect_t  *data;
+  
+  rectobj = SC_ObjectNew( rect_class );
+  data    = BG_Alloc(sizeof(sc_rect_t));
+  
+  data->sc_created = qfalse;
+  data->rect       = rectptr;
+  
+  rectobj->data.type = TYPE_USERDATA;
+  rectobj->data.data.userdata = (void*)data;
+  
+  return rectobj;
+}
+// menuDef_t class
+
+scClass_t *menu_class;
+
+static int menu_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+   
+  self->data.type = TYPE_USERDATA;
+  if(in[1].type == TYPE_INTEGER)
+    self->data.data.userdata = (void*)&Menus[ in[1].data.integer ];
+  else if (in[1].type == TYPE_FLOAT) // damm you lua!!
+    self->data.data.userdata = (void*)&Menus[ atoi( va("%.0f",in[1].data.floating) ) ];
+  else
+    return 1;
+  
+  return 0;
+}
+
+static int menu_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 0;
+}
+
+typedef enum 
+{
+  MENU_WINDOW,
+} menu_closures;
+
+static int menu_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  menu_closures gettype = (int)closure;
+  menuDef_t *menu;
+  
+  self = in[0].data.object;
+  menu =  self->data.data.userdata;
+  switch (gettype)
+  {
+    case MENU_WINDOW:
+      out[0].type = TYPE_OBJECT;
+      out[0].data.object = WindowObjFromWindowDef_t(&menu->window);
+      break;
+    default:
+      out[0].type = TYPE_UNDEF;
+      return 1;
+  }
+  return 0;
+}
+
+static int menu_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 1;
+}
+
+static int menu_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  menuDef_t *menu;
+  
+  self = in[0].data.object;
+  menu =  self->data.data.userdata;
+  
+  Menu_UpdatePosition( menu );
+  return 0;
+}
+
+static scLibObjectMember_t menu_members[] = {
+  { "window", "", TYPE_OBJECT, menu_set, menu_get, (void*)MENU_WINDOW },
+};
+
+static scField_t menu_fields[] = {
+  { "name", "", TYPE_STRING, offsetof(menuDef_t, window.name) },
+  { "" },
+};
+
+static scLibObjectMethod_t menu_methods[] = {
+  { "UpdatePosition", "", menu_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "" },
+};
+
+// Window Class
+
+scClass_t *window_class;
+
+static int window_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 0;
+}
+
+typedef enum 
+{
+  WINDOW_RECT,
+} window_closures;
+
+static int window_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  window_closures gettype = (int)closure;
+  windowDef_t *window;
+  
+  self = in[0].data.object;
+  window =  self->data.data.userdata;
+  switch (gettype)
+  {
+    case WINDOW_RECT:
+      out[0].type = TYPE_OBJECT;
+      out[0].data.object = RectObjFromRectDef_t(&window->rect);
+      break;
+    default:
+      out[0].type = TYPE_UNDEF;
+      return 1;
+  }
+  return 0;
+}
+
+static int window_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 1;
+}
+
+static scLibObjectMember_t window_members[] = {
+  { "rect", "", TYPE_OBJECT, window_set, window_get, (void*)WINDOW_RECT },
+};
+
+static scField_t window_fields[] = {
+  { "name", "", TYPE_STRING, offsetof(windowDef_t, name) },
+  { "" },
+};
+
+static scLibObjectMethod_t window_methods[] = {
+  { "" },
+};
+
+
+static scObject_t *WindowObjFromWindowDef_t(windowDef_t *windowptr)
+{
+  scObject_t *windowobj;
+  scDataTypeValue_t *data;
+  
+  windowobj = SC_ObjectNew( window_class );
+  data = &windowobj->data;
+  
+  data->type = TYPE_USERDATA;
+  data->data.userdata = (void*)windowptr;
+  
+  return windowobj;
+}
 
 static scLibObjectDef_t rect_def = { 
   "Rect", "",
   rect_constructor, { TYPE_UNDEF },
   rect_destructor,
-  NULL, 
+  rect_members, 
   rect_methods, 
-  rect_fields,
+  NULL,
+  NULL
+};
+
+static scLibObjectDef_t menu_def = { 
+  "Menu", "",
+  menu_constructor, { TYPE_INTEGER, TYPE_UNDEF },
+  menu_destructor,
+  menu_members, 
+  menu_methods, 
+  menu_fields,
+  NULL
+};
+
+static scLibObjectDef_t window_def = { 
+  "Window", "",
+  0, { TYPE_UNDEF },
+  window_destructor,
+  window_members, 
+  window_methods, 
+  window_fields,
   NULL
 };
 
@@ -243,6 +544,8 @@ static scLibFunction_t ui_lib[] = {
 static void SC_UIModuleInit( void )
 {
   SC_AddLibrary( "ui", ui_lib );
-  rect_class =  SC_AddClass( "ui", &rect_def);
+  rect_class = SC_AddClass( "ui", &rect_def);
+  menu_class = SC_AddClass( "ui", &menu_def);
+  window_class = SC_AddClass( "ui", &window_def);
 }
 
