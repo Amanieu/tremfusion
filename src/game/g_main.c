@@ -1421,6 +1421,7 @@ void G_DemoSetClient( void )
     Q_strncpyz( client->pers.netname, Info_ValueForKey( buffer, "name" ), sizeof( client->pers.netname ) );
     Q_strncpyz( client->pers.guid, Info_ValueForKey( buffer, "guid" ), sizeof( client->pers.guid ) );
     Q_strncpyz( client->pers.ip, Info_ValueForKey( buffer, "ip" ), sizeof( client->pers.ip ) );
+    client->pers.teamSelection = atoi( Info_ValueForKey( buffer, "team" ) );
 }
 
 /*
