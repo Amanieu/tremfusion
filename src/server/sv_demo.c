@@ -33,6 +33,7 @@ typedef enum {
 	demo_entityState,
 	demo_entityShared,
 	demo_playerState,
+	demo_endDemo,
 	demo_EOF
 } demo_ops_e;
 
@@ -162,6 +163,7 @@ void SV_DemoWriteFrame(void)
 		sv.demoPlayerStates[i] = *player;
 	}
 	MSG_WriteByte(&msg, demo_endFrame);
+	MSG_WriteLong(&msg, sv.time);
 	SV_DemoWriteMessage(&msg);
 }
 
@@ -192,11 +194,6 @@ exit_loop:
 			return;
 		}
 		msg.cursize = LittleLong(msg.cursize);
-		if (msg.cursize == -1)
-		{
-			SV_DemoStopPlayback();
-			return;
-		}
 		if (msg.cursize > msg.maxsize)
 			Com_Error(ERR_DROP, "SV_DemoReadFrame: demo message too long");
 		r = FS_Read(msg.data, msg.cursize, sv.demoFile);
@@ -220,7 +217,7 @@ exit_loop:
 				MSG_Clear(&msg);
 				goto exit_loop;
 			case demo_endFrame:
-				// overwrite anything the game may have changed
+				// Overwrite anything the game may have changed
 				for (i = 0; i < MAX_GENTITIES; i++)
 				{
 					if (i >= sv_democlients->integer && i < MAX_CLIENTS)
@@ -229,6 +226,8 @@ exit_loop:
 				}
 				for (i = 0; i < sv_democlients->integer; i++)
 					*SV_GameClientNum(i) = sv.demoPlayerStates[i];
+				// Set the server time
+				sv.time = MSG_ReadLong(&msg);
 				return;
 			case demo_configString:
 				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
@@ -332,9 +331,9 @@ void SV_DemoStopRecord(void)
 {
 	msg_t msg;
 
-	// End the frame
+	// End the demo
 	MSG_Init(&msg, buf, sizeof(buf));
-	MSG_WriteByte(&msg, demo_endFrame);
+	MSG_WriteByte(&msg, demo_endDemo);
 	SV_DemoWriteMessage(&msg);
 
 	FS_FCloseFile(sv.demoFile);
