@@ -24,12 +24,12 @@
     popup
     onOpen
     {
-      sc_run "simple_options.py"
+      sc_run "simple_options_open.py"
     }
     onEsc
     {
+      sc_run "simple_options_close.py"
       play "sound/misc/menu1.wav";
-      close simple_options
     }
 
     itemDef
@@ -286,7 +286,10 @@
       action
       {
         play "sound/misc/menu1.wav";
-        close simple_options
+        sc_run "simple_options_close.py"
+        /* TODO: Need a way to have the menu still close if
+         * script execution fails */
+        
       }
     }
   }

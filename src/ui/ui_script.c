@@ -491,6 +491,18 @@ static int menu_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, 
   return 0;
 }
 
+static int menu_close( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  menuDef_t *menu;
+  
+  self = in[0].data.object;
+  menu =  self->data.data.userdata;
+  
+  Menus_Close( menu );
+  return 0;
+}
+
 static scLibObjectMember_t menu_members[] = {
   { "window", "", TYPE_OBJECT, menu_set, menu_get, (void*)MENU_WINDOW },
 };
@@ -502,6 +514,7 @@ static scField_t menu_fields[] = {
 
 static scLibObjectMethod_t menu_methods[] = {
   { "UpdatePosition", "", menu_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "Close", "", menu_close, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" },
 };
 

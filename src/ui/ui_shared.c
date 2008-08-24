@@ -1574,7 +1574,7 @@ static void Menu_RunCloseScript( menuDef_t *menu )
   }
 }
 
-static void Menus_Close( menuDef_t *menu )
+void Menus_Close( menuDef_t *menu )
 {
   if( menu != NULL )
   {
