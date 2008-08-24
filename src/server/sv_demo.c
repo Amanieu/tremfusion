@@ -237,7 +237,10 @@ exit_loop:
 				SV_SetConfigstring(CS_PLAYERS + num, MSG_ReadString(&msg), qtrue);
 				break;
 			case demo_serverCommand:
-				SV_SendServerCommand(NULL, "%s", MSG_ReadString(&msg));
+				Cmd_SaveCmdContext();
+				Cmd_TokenizeString(MSG_ReadString(&msg));
+				SV_SendServerCommand(NULL, "%s \"^3(DEMO) ^7%s\"", Cmd_Argv(0), Cmd_ArgsFrom(1));
+				Cmd_RestoreCmdContext();
 				break;
 			case demo_gameCommand:
 				num = MSG_ReadByte(&msg);
@@ -407,10 +410,11 @@ void SV_DemoStartPlayback(void)
 		SV_DemoStopPlayback();
 		return;
 	}
-	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) || r < sv.time)
+	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) ||
+	    !Cvar_VariableIntegerValue("sv_cheats") || r < sv.time)
 	{
 		// Change to the right map and start the demo
-		Cbuf_AddText(va("map %s\n%s\n", s, Cmd_Cmd()));
+		Cbuf_AddText(va("devmap %s\n%s\n", s, Cmd_Cmd()));
 		SV_DemoStopPlayback();
 		return;
 	}
