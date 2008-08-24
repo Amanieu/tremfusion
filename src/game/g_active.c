@@ -414,7 +414,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
     clientNum = client->sess.spectatorClient;
     if( clientNum < 0 || clientNum > level.maxclients ||
         ( !g_entities[ clientNum ].client && !level.clients[ clientNum ].pers.demoClient ) ||
-        level.clients[ clientNum ]->sess.spectatorState != SPECTATOR_NOT )
+        level.clients[ clientNum ].sess.spectatorState != SPECTATOR_NOT )
       following = qfalse;
   }
   
