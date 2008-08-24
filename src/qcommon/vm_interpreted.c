@@ -481,7 +481,7 @@ nextInstruction2:
 		case OP_BLOCK_COPY:
 			{
 				int		*src, *dest;
-				int		i, count, srci, desti;
+				int		count, srci, desti;
 
 				count = r2;
 				// MrE: copy range check
