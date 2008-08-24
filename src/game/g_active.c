@@ -413,8 +413,8 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
   {
     clientNum = client->sess.spectatorClient;
     if( clientNum < 0 || clientNum > level.maxclients ||
-        !g_entities[ clientNum ].client ||
-        g_entities[ clientNum ].client->sess.spectatorState != SPECTATOR_NOT )
+        ( !g_entities[ clientNum ].client && !level.clients[ clientNum ].pers.demoClient ) ||
+        level.clients[ clientNum ]->sess.spectatorState != SPECTATOR_NOT )
       following = qfalse;
   }
   
@@ -1800,7 +1800,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
     if( clientNum >= 0 )
     {
       cl = &level.clients[ clientNum ];
-      if( cl->pers.connected == CON_CONNECTED )
+      if( cl->pers.connected == CON_CONNECTED || cl->pers.demoClient )
       {
         flags = ( cl->ps.eFlags & ~( EF_VOTED | EF_TEAMVOTED ) ) |
                 ( ent->client->ps.eFlags & ( EF_VOTED | EF_TEAMVOTED ) );

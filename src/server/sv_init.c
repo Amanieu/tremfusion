@@ -130,7 +130,7 @@ void SV_SetConfigstring (int index, const char *val, qboolean force) {
 	sv.configstrings[index] = CopyString( val );
 
 	// save client strings to demo
-	if ( index >= CS_PLAYERS && index < CS_PLAYERS + MAX_CLIENTS && sv.demoState == DS_RECORDING )
+	if ( index >= CS_PLAYERS && index < CS_PLAYERS + sv_maxclients->integer && sv.demoState == DS_RECORDING )
 		SV_DemoWriteConfigString( index - CS_PLAYERS );
 
 	// send it to all the clients if we aren't
