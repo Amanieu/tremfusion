@@ -194,7 +194,7 @@ static int pairs_method(lua_State *L)
 
 static int stack_dump( lua_State *L )
 {
-  SC_Lua_DumpStack();
+  SC_Lua_StackDump(L);
   return 0;
 }
 

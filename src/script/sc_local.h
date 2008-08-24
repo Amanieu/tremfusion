@@ -42,7 +42,7 @@ void        SC_Lua_Init( void );
 void        SC_Lua_Shutdown( void );
 qboolean    SC_Lua_RunScript( const char *filename );
 int         SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret );
-void        SC_Lua_DumpStack( void );
+void        SC_Lua_StackDump(lua_State *L);
 
 int         SC_Lua_sctype2luatype(scDataType_t sctype);
 const char  *SC_Lua_to_comparable_string(lua_State *L, int index, int left);
@@ -68,32 +68,58 @@ scDataTypeFunction_t* SC_Lua_pop_lua_function(lua_State *L);
 void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 
 const char* SC_Lua_get_string(lua_State *L, int index);
+int SC_Lua_get_boolean(lua_State *L, int index);
 int SC_Lua_get_integer(lua_State *L, int index);
+lua_Number SC_Lua_get_number(lua_State *L, int index);
 
-// sc_lua_method.c
-int SC_Lua_print_method(lua_State *L);
-int SC_Lua_type_method(lua_State *L);
-int SC_Lua_pairs_method(lua_State *L);
+// sc_lua_metamethod.c
 int SC_Lua_invalid_metatable_metamethod(lua_State *L);
 int SC_Lua_invalid_index_metamethod(lua_State *L);
 int SC_Lua_invalid_length_metamethod(lua_State *L);
-int SC_Lua_tostring_metamethod(lua_State *L);
+
+int SC_Lua_concat_metamethod(lua_State *L);
+int SC_Lua_call_metamethod( lua_State *L );
+int SC_Lua_tostring_metamethod( lua_State *L );
+
+int SC_Lua_eq_boolean_metamethod(lua_State *L);
+int SC_Lua_tostring_boolean_metamethod(lua_State *L);
+
+int SC_Lua_add_number_metamethod(lua_State *L);
+int SC_Lua_sub_number_metamethod(lua_State *L);
+int SC_Lua_mul_number_metamethod(lua_State *L);
+int SC_Lua_div_number_metamethod(lua_State *L);
+int SC_Lua_mod_number_metamethod(lua_State *L);
+int SC_Lua_pow_number_metamethod(lua_State *L);
+int SC_Lua_unm_number_metamethod(lua_State *L);
+int SC_Lua_eq_number_metamethod(lua_State *L);
+int SC_Lua_lt_number_metamethod(lua_State *L);
+int SC_Lua_le_number_metamethod(lua_State *L);
+int SC_Lua_tostring_number_metamethod(lua_State *L);
+
 int SC_Lua_le_string_metamethod(lua_State *L);
 int SC_Lua_lt_string_metamethod(lua_State *L);
 int SC_Lua_eq_string_metamethod(lua_State *L);
-int SC_Lua_len_metamethod(lua_State *L);
-int SC_Lua_concat_metamethod(lua_State *L);
-int SC_Lua_index_metamethod(lua_State *L);
-int SC_Lua_newindex_metamethod(lua_State *L);
-int SC_Lua_call_metamethod( lua_State *L );
+int SC_Lua_tostring_string_metamethod(lua_State *L);
+int SC_Lua_len_string_metamethod(lua_State *L);
+int SC_Lua_gc_string_metamethod(lua_State *L);
+
+int SC_Lua_index_array_metamethod(lua_State *L);
+int SC_Lua_newindex_array_metamethod(lua_State *L);
+int SC_Lua_len_array_metamethod(lua_State *L);
+int SC_Lua_gc_array_metamethod(lua_State *L);
+
+int SC_Lua_len_hash_metamethod(lua_State *L);
+int SC_Lua_index_hash_metamethod(lua_State *L);
+int SC_Lua_newindex_hash_metamethod(lua_State *L);
+int SC_Lua_gc_hash_metamethod(lua_State *L);
+
+int SC_Lua_gc_function_metamethod(lua_State *L);
+
+int SC_Lua_gc_class_metamethod(lua_State *L);
+
+int SC_Lua_gc_object_metamethod(lua_State *L);
 int SC_Lua_object_index_metamethod(lua_State *L);
 int SC_Lua_object_newindex_metamethod(lua_State *L);
-int SC_Lua_gc_string_metamethod(lua_State *L);
-int SC_Lua_gc_array_metamethod(lua_State *L);
-int SC_Lua_gc_hash_metamethod(lua_State *L);
-int SC_Lua_gc_function_metamethod(lua_State *L);
-int SC_Lua_gc_class_metamethod(lua_State *L);
-int SC_Lua_gc_object_metamethod(lua_State *L);
 
 // sc_lua_lib.c
 void SC_Lua_loadlib(lua_State *L);

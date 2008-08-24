@@ -25,10 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - Make metamethod with types TYPE_FLOAT, TYPE_INTEGER, TYPE_BOOLEAN
+ * - Check number of arguments for (non metamethods) lua functions
  * - Bad GC when pop a value ?
  * - Error messages should always show script line
- * - Check number of arguments for (non metamethods) lua functions
  * - review errors with functions `luaL_argerror' / 'luaL_opterror'
  */
 
@@ -170,11 +169,11 @@ void SC_Lua_Init( void )
   lua_pushinteger(L, TYPE_NAMESPACE);
   lua_setfield(L, -2, "_type");
 
-  lua_pushcfunction(L, SC_Lua_index_metamethod);
+  lua_pushcfunction(L, SC_Lua_index_hash_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, SC_Lua_newindex_metamethod);
+  lua_pushcfunction(L, SC_Lua_newindex_hash_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, SC_Lua_len_metamethod);
+  lua_pushcfunction(L, SC_Lua_len_hash_metamethod);
   lua_setfield(L, -2, "__len");
   lua_setmetatable(L, LUA_GLOBALSINDEX);
 
@@ -278,16 +277,15 @@ int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, 
 
 /*
 =================
-SC_Lua_DumpStack
+SC_Lua_StackDump
 =================
 */
-void SC_Lua_DumpStack( void )
+void SC_Lua_StackDump(lua_State *L)
 {
   int             i;
-  lua_State      *L = g_luaState;
   int             top = lua_gettop(L);
 
-  Com_Printf("--------- SC_Lua_DumpStack ----------\n");
+  Com_Printf("--------- SC_Lua_StackDump ----------\n");
   for(i = 1; i <= top; i++)
   {
     // repeat for each level

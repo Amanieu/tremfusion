@@ -42,20 +42,11 @@ void SC_Lua_push_boolean(lua_State *L, char boolean)
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
-  // TODO: metatable
   // metatable
   lua_newtable(L);
-  /*lua_pushcfunction(L, concat_metamethod);
-  lua_setfield(L, -2, "__concat");
-  lua_pushcfunction(L, len_metamethod);
-  lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, eq_string_metamethod);
+  lua_pushcfunction(L, SC_Lua_eq_boolean_metamethod);
   lua_setfield(L, -2, "__eq");
-  lua_pushcfunction(L, lt_string_metamethod);
-  lua_setfield(L, -2, "__lt");
-  lua_pushcfunction(L, le_string_metamethod);
-  lua_setfield(L, -2, "__le");*/
-  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_pushcfunction(L, SC_Lua_tostring_boolean_metamethod);
   lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
@@ -81,20 +72,31 @@ void SC_Lua_push_integer(lua_State *L, int integer)
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
-  // TODO: metatable
   // metatable
   lua_newtable(L);
-  /*lua_pushcfunction(L, concat_metamethod);
+  lua_pushcfunction(L, SC_Lua_add_number_metamethod);
+  lua_setfield(L, -2, "__add");
+  lua_pushcfunction(L, SC_Lua_sub_number_metamethod);
+  lua_setfield(L, -2, "__sub");
+  lua_pushcfunction(L, SC_Lua_mul_number_metamethod);
+  lua_setfield(L, -2, "__mul");
+  lua_pushcfunction(L, SC_Lua_div_number_metamethod);
+  lua_setfield(L, -2, "__div");
+  lua_pushcfunction(L, SC_Lua_mod_number_metamethod);
+  lua_setfield(L, -2, "__mod");
+  lua_pushcfunction(L, SC_Lua_pow_number_metamethod);
+  lua_setfield(L, -2, "__pow");
+  lua_pushcfunction(L, SC_Lua_unm_number_metamethod);
+  lua_setfield(L, -2, "__unm");
+  lua_pushcfunction(L, SC_Lua_concat_metamethod);
   lua_setfield(L, -2, "__concat");
-  lua_pushcfunction(L, len_metamethod);
-  lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, eq_string_metamethod);
+  lua_pushcfunction(L, SC_Lua_eq_number_metamethod);
   lua_setfield(L, -2, "__eq");
-  lua_pushcfunction(L, lt_string_metamethod);
+  lua_pushcfunction(L, SC_Lua_lt_number_metamethod);
   lua_setfield(L, -2, "__lt");
-  lua_pushcfunction(L, le_string_metamethod);
-  lua_setfield(L, -2, "__le");*/
-  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_pushcfunction(L, SC_Lua_le_number_metamethod);
+  lua_setfield(L, -2, "__le");
+  lua_pushcfunction(L, SC_Lua_tostring_number_metamethod);
   lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
@@ -120,20 +122,31 @@ void SC_Lua_push_float(lua_State *L, float floating)
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
-  // TODO: metatable
   // metatable
   lua_newtable(L);
-  /*lua_pushcfunction(L, concat_metamethod);
+  lua_pushcfunction(L, SC_Lua_add_number_metamethod);
+  lua_setfield(L, -2, "__add");
+  lua_pushcfunction(L, SC_Lua_sub_number_metamethod);
+  lua_setfield(L, -2, "__sub");
+  lua_pushcfunction(L, SC_Lua_mul_number_metamethod);
+  lua_setfield(L, -2, "__mul");
+  lua_pushcfunction(L, SC_Lua_div_number_metamethod);
+  lua_setfield(L, -2, "__div");
+  lua_pushcfunction(L, SC_Lua_mod_number_metamethod);
+  lua_setfield(L, -2, "__mod");
+  lua_pushcfunction(L, SC_Lua_pow_number_metamethod);
+  lua_setfield(L, -2, "__pow");
+  lua_pushcfunction(L, SC_Lua_unm_number_metamethod);
+  lua_setfield(L, -2, "__unm");
+  lua_pushcfunction(L, SC_Lua_concat_metamethod);
   lua_setfield(L, -2, "__concat");
-  lua_pushcfunction(L, len_metamethod);
-  lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, eq_string_metamethod);
+  lua_pushcfunction(L, SC_Lua_eq_number_metamethod);
   lua_setfield(L, -2, "__eq");
-  lua_pushcfunction(L, lt_string_metamethod);
+  lua_pushcfunction(L, SC_Lua_lt_number_metamethod);
   lua_setfield(L, -2, "__lt");
-  lua_pushcfunction(L, le_string_metamethod);
-  lua_setfield(L, -2, "__le");*/
-  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_pushcfunction(L, SC_Lua_le_number_metamethod);
+  lua_setfield(L, -2, "__le");
+  lua_pushcfunction(L, SC_Lua_tostring_number_metamethod);
   lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
@@ -194,7 +207,7 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
   lua_newtable(L);
   lua_pushcfunction(L, SC_Lua_concat_metamethod);
   lua_setfield(L, -2, "__concat");
-  lua_pushcfunction(L, SC_Lua_len_metamethod);
+  lua_pushcfunction(L, SC_Lua_len_string_metamethod);
   lua_setfield(L, -2, "__len");
   lua_pushcfunction(L, SC_Lua_eq_string_metamethod);
   lua_setfield(L, -2, "__eq");
@@ -202,7 +215,7 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__lt");
   lua_pushcfunction(L, SC_Lua_le_string_metamethod);
   lua_setfield(L, -2, "__le");
-  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_pushcfunction(L, SC_Lua_tostring_string_metamethod);
   lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
   lua_setfield(L, -2, "__index");
@@ -240,11 +253,13 @@ void SC_Lua_push_array( lua_State *L, scDataTypeArray_t *array )
 
   // metatable
   lua_newtable(L);
-  lua_pushcfunction(L, SC_Lua_index_metamethod);
+  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, SC_Lua_index_array_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, SC_Lua_newindex_metamethod);
+  lua_pushcfunction(L, SC_Lua_newindex_array_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, SC_Lua_len_metamethod);
+  lua_pushcfunction(L, SC_Lua_len_array_metamethod);
   lua_setfield(L, -2, "__len");
   lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
   lua_setfield(L, -2, "__metatable");
@@ -276,11 +291,13 @@ void SC_Lua_push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
 
   // metatable
   lua_newtable(L);
-  lua_pushcfunction(L, SC_Lua_index_metamethod);
+  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
+  lua_pushcfunction(L, SC_Lua_index_hash_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, SC_Lua_newindex_metamethod);
+  lua_pushcfunction(L, SC_Lua_newindex_hash_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, SC_Lua_len_metamethod);
+  lua_pushcfunction(L, SC_Lua_len_hash_metamethod);
   lua_setfield(L, -2, "__len");
   lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
   lua_setfield(L, -2, "__metatable");
@@ -312,6 +329,8 @@ void SC_Lua_push_function( lua_State *L, scDataTypeFunction_t *function )
 
   // metatable
   lua_newtable(L);
+  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_call_metamethod);
   lua_setfield(L, -2, "__call");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
@@ -350,6 +369,8 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class)
 
   // metatable
   lua_newtable(L);
+  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_call_metamethod);
   lua_setfield(L, -2, "__call");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
@@ -388,6 +409,8 @@ void SC_Lua_push_object(lua_State *L, scObject_t *object)
 
   // metatable
   lua_newtable(L);
+  lua_pushcfunction(L, SC_Lua_tostring_metamethod);
+  lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_object_index_metamethod);
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, SC_Lua_object_newindex_metamethod);
@@ -659,6 +682,25 @@ const char* SC_Lua_get_string(lua_State *L, int index)
     return lua_tostring(L, index);
 }
 
+int SC_Lua_get_boolean(lua_State *L, int index)
+{
+  // TODO: check errors
+
+  if(lua_istable(L, index))
+  {
+    union { void* v; int n; } ud;
+
+    lua_getmetatable(L, index);
+    lua_getfield(L, -1, "_ref");
+    ud.v = lua_touserdata(L, -1);
+    
+    lua_pop(L, 2);
+    return ud.n;
+  }
+  else
+    return lua_toboolean(L, index);
+}
+
 int SC_Lua_get_integer(lua_State *L, int index)
 {
   // TODO: check errors
@@ -676,6 +718,45 @@ int SC_Lua_get_integer(lua_State *L, int index)
   }
   else
     return lua_tointeger(L, index);
+}
+
+lua_Number SC_Lua_get_number(lua_State *L, int index)
+{
+  // TODO: check errors
+  int type;
+  lua_Number number = 0.;
+
+  if(lua_istable(L, index))
+  {
+    union { void* v; int n; float f; } ud;
+
+    lua_getmetatable(L, index);
+    lua_getfield(L, -1, "_type");
+    type = lua_tointeger(L, -1);
+    lua_getfield(L, -1, "_ref");
+    
+    switch(type)
+    {
+      case TYPE_INTEGER:
+        ud.v = lua_touserdata(L, -1);
+        number = ud.n;
+        break;
+
+      case TYPE_FLOAT:
+        ud.v = lua_touserdata(L, -1);
+        number = ud.f;
+        break;
+
+      default:
+        // TODO: error
+        break;
+    }
+    
+    lua_pop(L, 3);
+    return number;
+  }
+  else
+    return lua_tonumber(L, index);
 }
 
 #endif

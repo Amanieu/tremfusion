@@ -66,6 +66,12 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
   return str;
 }
 
+/*
+========================
+invalid metamethods
+========================
+*/
+
 int SC_Lua_invalid_metatable_metamethod(lua_State *L)
 {
   luaL_error(L, "you can't access metatable at Lua side");
@@ -103,123 +109,35 @@ int SC_Lua_invalid_length_metamethod(lua_State *L)
   return 0;
 }
 
-int SC_Lua_tostring_metamethod(lua_State *L)
-{
-  // TODO: test me
-  int type;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_type");
-  type = lua_tointeger(L, -1);
-
-  if(type == TYPE_STRING)
-  {
-    scDataTypeString_t *string;
-
-    lua_getfield(L, -2, "_ref");
-    string = lua_touserdata(L, -1);
-
-    lua_pushstring(L, SC_StringToChar(string));
-  }
-  else
-  {
-    // TODO: tostring for other values
-    lua_pop(L, 1);
-    lua_pushstring(L, "");
-  }
-
-  return 1;
-}
-
-int SC_Lua_le_string_metamethod(lua_State *L)
-{
-  // TODO: test me
-  const char *str1, *str2;
-
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
-
-  return strcmp(str1, str2) <= 0;
-}
-
-int SC_Lua_lt_string_metamethod(lua_State *L)
-{
-  // TODO: test me
-  const char *str1, *str2;
-
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
-
-  return strcmp(str1, str2) < 0;
-}
-
-int SC_Lua_eq_string_metamethod(lua_State *L)
-{
-  // TODO: test me
-  const char *str1, *str2;
-
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
-
-  return strcmp(str1, str2) == 0;
-}
-
-int SC_Lua_len_metamethod(lua_State *L)
-{
-  // TODO: test me
-  int type;
-  scDataTypeString_t *string;
-  scDataTypeArray_t *array;
-  scDataTypeHash_t *hash;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_type");
-  type = lua_tointeger(L, -1);
-  lua_getfield(L, -2, "_ref");
-
-  switch(type)
-  {
-    case TYPE_STRING:
-      string = lua_touserdata(L, -1);
-
-      return string->length;
-
-    case TYPE_ARRAY:
-      array = lua_touserdata(L, -1);
-
-      return array->size;
-
-    case TYPE_HASH:
-    case TYPE_NAMESPACE:
-      hash = lua_touserdata(L, -1);
-
-      return hash->size;
-
-    default:
-      luaL_error(L, "attempt to get length of a %s value", lua_typename(L, SC_Lua_sctype2luatype(type)));
-  }
-
-  return 0;
-}
+/*
+========================
+generic metamethods
+========================
+*/
 
 int SC_Lua_concat_metamethod(lua_State *L)
 {
-  // TODO: test me
   lua_getglobal(L, "tostring");
   if(!lua_isstring(L, 1))
   {
+    scDataTypeValue_t value;
     lua_pushvalue(L, -1);
     lua_pushvalue(L, 1);
     lua_call(L, 1, 1);
+    SC_Lua_pop_value(L, &value, TYPE_STRING);
+    lua_pushstring(L, SC_StringToChar(value.data.string));
   }
   else
     lua_pushvalue(L, 1);
 
   if(!lua_isstring(L, 2))
   {
+    scDataTypeValue_t value;
     lua_pushvalue(L, -2);
     lua_pushvalue(L, 2);
     lua_call(L, 1, 1);
+    SC_Lua_pop_value(L, &value, TYPE_STRING);
+    lua_pushstring(L, SC_StringToChar(value.data.string));
   }
   else
     lua_pushvalue(L, 2);
@@ -227,91 +145,6 @@ int SC_Lua_concat_metamethod(lua_State *L)
   lua_concat(L, 2);
 
   return 1;
-}
-
-int SC_Lua_index_metamethod(lua_State *L)
-{
-  // TODO: test me
-  int type;
-  scDataTypeHash_t *hash;
-  scDataTypeArray_t *array;
-  scDataTypeValue_t value;
-  const char *sidx;
-  int nidx;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_type");
-  type = lua_tointeger(L, -1);
-  lua_getfield(L, -2, "_ref");
-
-  switch(type)
-  {
-    case TYPE_HASH:
-    case TYPE_NAMESPACE:
-      hash = lua_touserdata(L, -1);
-
-      value.type = TYPE_HASH;
-      value.data.hash = hash;
-
-      sidx = SC_Lua_get_string(L, 2);
-      SC_HashGet(hash, sidx, &value);
-      break;
-
-    case TYPE_ARRAY:
-      array = lua_touserdata(L, -1);
-
-      nidx = SC_Lua_get_integer(L, 2);
-      SC_ArrayGet(array, nidx-1, &value);
-      break;
-    default:
-      luaL_error(L, va("internal error: unexpected datatype in `index_metamethod' at %s (%d)", __FILE__, __LINE__));
-      break;
-  }
-
-  SC_Lua_push_value(L, &value);
-
-  return 1;
-}
-
-int SC_Lua_newindex_metamethod(lua_State *L)
-{
-  // TODO: test me
-  int type;
-  scDataTypeHash_t *hash;
-  scDataTypeArray_t *array;
-  scDataTypeValue_t value;
-  const char *sidx;
-  int nidx;
-
-  SC_Lua_pop_value(L, &value, TYPE_ANY);
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_type");
-  type = lua_tointeger(L, -1);
-  lua_getfield(L, -2, "_ref");
-
-  switch(type)
-  {
-    case TYPE_HASH:
-    case TYPE_NAMESPACE:
-      hash = lua_touserdata(L, -1);
-
-      sidx = SC_Lua_get_string(L, 2);
-      SC_HashSet(hash, sidx, &value);
-      break;
-
-    case TYPE_ARRAY:
-      array = lua_touserdata(L, -1);
-
-      nidx = SC_Lua_get_integer(L, 2);
-      SC_ArraySet(array, nidx-1, &value);
-      break;
-    default:
-      luaL_error(L, va("internal error: unexpected datatype (%d) in `newindex_metamethod' at %s (%d)", type, __FILE__, __LINE__));
-      break;
-  }
-
-  return 0;
 }
 
 int SC_Lua_call_metamethod( lua_State *L )
@@ -372,6 +205,406 @@ int SC_Lua_call_metamethod( lua_State *L )
     SC_Lua_push_value(L, &ret);
     return 1;
   }
+
+  return 0;
+}
+
+int SC_Lua_tostring_metamethod( lua_State *L )
+{
+  int type;
+  void *ref;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_type");
+  type = lua_tointeger(L, -1);
+  lua_getfield(L, -2, "_ref");
+  ref = lua_touserdata(L, -1);
+
+  lua_pushstring(L, va("%s: %p(c)",
+      lua_typename(L, SC_Lua_sctype2luatype(type)),
+      ref));
+  return 1;
+}
+
+/*
+========================
+boolean metamethods
+========================
+*/
+
+int SC_Lua_eq_boolean_metamethod(lua_State *L)
+{
+  int b1 = SC_Lua_get_boolean(L, 1);
+  int b2 = SC_Lua_get_boolean(L, 2);
+  lua_pushboolean(L, b1 == b2);
+  return 1;
+}
+
+int SC_Lua_tostring_boolean_metamethod(lua_State *L)
+{
+  int b1 = SC_Lua_get_boolean(L, 1);
+  if(b1)
+    lua_pushstring(L, "true");
+  else
+    lua_pushstring(L, "false");
+  return 1;
+}
+
+
+/*
+========================
+number metamethods
+========================
+*/
+
+int SC_Lua_add_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_integer(L, 1);
+  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_pushnumber(L, n1 + n2);
+  return 1;
+}
+
+int SC_Lua_sub_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_integer(L, 1);
+  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_pushnumber(L, n1 - n2);
+  return 1;
+}
+
+int SC_Lua_mul_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_integer(L, 1);
+  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_pushnumber(L, n1 * n2);
+  return 1;
+}
+
+int SC_Lua_div_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_integer(L, 1);
+  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  if(n2 == 0)
+    lua_pushnumber(L, INFINITY);
+  else
+    lua_pushnumber(L, n1 / n2);
+  return 1;
+}
+
+int SC_Lua_mod_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_integer(L, 1);
+  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  if(n2 == 0)
+    lua_pushnumber(L, NAN);
+  else
+    lua_pushnumber(L, n1 - floor(n1/n2) * n2);
+  return 1;
+}
+
+int SC_Lua_pow_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_pushnumber(L, pow(n1, n2));
+  return 1;
+}
+
+int SC_Lua_unm_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_pushnumber(L, -n1);
+  return 1;
+}
+
+int SC_Lua_eq_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_pushboolean(L, n1 == n2);
+  return 1;
+}
+
+int SC_Lua_lt_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_pushboolean(L, n1 < n2);
+  return 1;
+}
+
+int SC_Lua_le_number_metamethod(lua_State *L)
+{
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_pushboolean(L, n1 <= n2);
+  return 1;
+}
+
+int SC_Lua_tostring_number_metamethod(lua_State *L)
+{
+  lua_Number b1 = SC_Lua_get_number(L, 1);
+  lua_pushstring(L, va("%.14g", b1));
+  return 1;
+}
+
+/*
+========================
+string metamethods
+========================
+*/
+
+int SC_Lua_le_string_metamethod(lua_State *L)
+{
+  // TODO: test me
+  const char *str1, *str2;
+
+  str1 = to_comparable_string(L, 1, 1);
+  str2 = to_comparable_string(L, 2, 0);
+
+  lua_pushboolean(L, strcmp(str1, str2) <= 0);
+  return 1;
+}
+
+int SC_Lua_lt_string_metamethod(lua_State *L)
+{
+  // TODO: test me
+  const char *str1, *str2;
+
+  str1 = to_comparable_string(L, 1, 1);
+  str2 = to_comparable_string(L, 2, 0);
+
+  lua_pushboolean(L, strcmp(str1, str2) < 0);
+  return 1;
+}
+
+int SC_Lua_eq_string_metamethod(lua_State *L)
+{
+  // TODO: test me
+  const char *str1, *str2;
+
+  str1 = to_comparable_string(L, 1, 1);
+  str2 = to_comparable_string(L, 2, 0);
+
+  lua_pushboolean(L, strcmp(str1, str2) == 0);
+  return 1;
+}
+
+int SC_Lua_tostring_string_metamethod(lua_State *L)
+{
+  // tostring metamethod on string do nothing, return the string
+  return 1;
+}
+
+int SC_Lua_len_string_metamethod(lua_State *L)
+{
+  scDataTypeString_t *string;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  string = lua_touserdata(L, -1);
+
+  lua_pushinteger(L, string->length);
+  return 1;
+}
+
+int SC_Lua_gc_string_metamethod(lua_State *L)
+{
+  scDataTypeString_t *string;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  string = lua_touserdata(L, -1);
+  SC_StringGCDec(string);
+
+  return 0;
+}
+
+/*
+========================
+array metamethods
+========================
+*/
+
+int SC_Lua_index_array_metamethod(lua_State *L)
+{
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+  int nidx;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  array = lua_touserdata(L, -1);
+
+  nidx = SC_Lua_get_integer(L, 2);
+
+  SC_ArrayGet(array, nidx-1, &value);
+  SC_Lua_push_value(L, &value);
+
+  return 1;
+}
+
+int SC_Lua_newindex_array_metamethod(lua_State *L)
+{
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+  int nidx;
+
+  SC_Lua_pop_value(L, &value, TYPE_ANY);
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  array = lua_touserdata(L, -1);
+
+  nidx = SC_Lua_get_integer(L, 2);
+  SC_ArraySet(array, nidx-1, &value);
+
+  return 0;
+}
+
+int SC_Lua_len_array_metamethod(lua_State *L)
+{
+  scDataTypeArray_t *array;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  array = lua_touserdata(L, -1);
+
+  lua_pushinteger(L, array->size);
+  return 1;
+}
+
+int SC_Lua_gc_array_metamethod(lua_State *L)
+{
+  scDataTypeArray_t *array;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  array = lua_touserdata(L, -1);
+  SC_ArrayGCDec(array);
+
+  return 0;
+}
+
+/*
+========================
+hash metamethods
+========================
+*/
+
+int SC_Lua_len_hash_metamethod(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  hash = lua_touserdata(L, -1);
+
+  lua_pushinteger(L, hash->size);
+  return 1;
+}
+
+int SC_Lua_index_hash_metamethod(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+  scDataTypeValue_t value;
+  const char *sidx;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  hash = lua_touserdata(L, -1);
+
+  value.type = TYPE_HASH;
+  value.data.hash = hash;
+
+  sidx = SC_Lua_get_string(L, 2);
+  SC_HashGet(hash, sidx, &value);
+  SC_Lua_push_value(L, &value);
+
+  return 1;
+}
+
+int SC_Lua_newindex_hash_metamethod(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+  scDataTypeValue_t value;
+  const char *sidx;
+
+  SC_Lua_pop_value(L, &value, TYPE_ANY);
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  hash = lua_touserdata(L, -1);
+
+  sidx = SC_Lua_get_string(L, 2);
+  SC_HashSet(hash, sidx, &value);
+
+  return 0;
+}
+
+int SC_Lua_gc_hash_metamethod(lua_State *L)
+{
+  scDataTypeHash_t *hash;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  hash = lua_touserdata(L, -1);
+  SC_HashGCDec(hash);
+
+  return 0;
+}
+
+/*
+========================
+function metamethods
+========================
+*/
+
+int SC_Lua_gc_function_metamethod(lua_State *L)
+{
+  scDataTypeFunction_t *function;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  function = lua_touserdata(L, -1);
+  SC_FunctionGCDec(function);
+
+  return 0;
+}
+
+/*
+========================
+class metamethods
+========================
+*/
+
+int SC_Lua_gc_class_metamethod(lua_State *L)
+{
+  scClass_t *class;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  class = lua_touserdata(L, -1);
+  //SC_ClassGCDec(class);
+
+  return 0;
+}
+
+/*
+========================
+object metamethods
+========================
+*/
+
+int SC_Lua_gc_object_metamethod(lua_State *L)
+{
+  scObject_t *object;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  object = lua_touserdata(L, -1);
+  SC_ObjectGCDec(object);
 
   return 0;
 }
@@ -486,78 +719,6 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
   }
 
   luaL_error(L, va("can't index `%s' field : unknow member", name));
-  return 0;
-}
-
-int SC_Lua_gc_string_metamethod(lua_State *L)
-{
-  scDataTypeString_t *string;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  string = lua_touserdata(L, -1);
-  SC_StringGCDec(string);
-
-  return 0;
-}
-
-int SC_Lua_gc_array_metamethod(lua_State *L)
-{
-  scDataTypeArray_t *array;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  array = lua_touserdata(L, -1);
-  SC_ArrayGCDec(array);
-
-  return 0;
-}
-
-int SC_Lua_gc_hash_metamethod(lua_State *L)
-{
-  scDataTypeHash_t *hash;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  hash = lua_touserdata(L, -1);
-  SC_HashGCDec(hash);
-
-  return 0;
-}
-
-int SC_Lua_gc_function_metamethod(lua_State *L)
-{
-  scDataTypeFunction_t *function;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  function = lua_touserdata(L, -1);
-  SC_FunctionGCDec(function);
-
-  return 0;
-}
-
-int SC_Lua_gc_class_metamethod(lua_State *L)
-{
-  scClass_t *class;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  class = lua_touserdata(L, -1);
-  //SC_ClassGCDec(class);
-
-  return 0;
-}
-
-int SC_Lua_gc_object_metamethod(lua_State *L)
-{
-  scObject_t *object;
-
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  object = lua_touserdata(L, -1);
-  SC_ObjectGCDec(object);
-
   return 0;
 }
 
