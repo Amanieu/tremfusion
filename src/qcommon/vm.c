@@ -40,6 +40,8 @@ and one exported function: Perform
 #include <windows.h>
 #else
 #include <sys/mman.h>
+#include <limits.h>
+#include <unistd.h>
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
 #endif
@@ -463,7 +465,8 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		DWORD _unused = 0;
 		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
 #else
-		mprotect( vm->dataBase, 4096, PROT_NONE );
+		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
+			mprotect( vm->dataBase, 4096, PROT_NONE );
 #endif
 	}
 
