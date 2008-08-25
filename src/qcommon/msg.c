@@ -1216,13 +1216,6 @@ void MSG_ReadDeltaSharedEntity( msg_t *msg, void *from, void *to,
 	netField_t	*field;
 	int			*fromF, *toF;
 	int			trunc;
-	int			startBit, endBit;
-
-	if ( msg->bit == 0 ) {
-		startBit = msg->readcount * 8 - GENTITYNUM_BITS;
-	} else {
-		startBit = ( msg->readcount - 1 ) * 8 + msg->bit - GENTITYNUM_BITS;
-	}
 
 	// check for no delta
 	if ( MSG_ReadBits( msg, 1 ) == 0 ) {
