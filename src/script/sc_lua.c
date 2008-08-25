@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - Error messages should always show script line
  * - review errors with functions `luaL_argerror' / 'luaL_opterror'
  * - call/pcall ? when use what ?
+ * - string has metatable by default ! get metatable is not enough to see if data is registered
  */
 
 #include "sc_public.h"
@@ -76,21 +77,24 @@ int SC_Lua_is_registered(lua_State *L, int index, scDataType_t type)
   if(lua_getmetatable(L, index))
   {
     lua_getfield(L, -1, "_type");
-    if(type != TYPE_ANY && lua_tointeger(L, -1) != type)
+    if(lua_isnumber(L, -1))
     {
-      // luaL_typeerror
+      if(type != TYPE_ANY && lua_tointeger(L, -1) != type)
+      {
+        // luaL_typeerror
+      }
+      lua_pop(L, 2);
+      return 1;
     }
-    lua_pop(L, 2);
-    return 1;
+    else
+      lua_pop(L, 2);
   }
-  else
+
+  if(type != TYPE_ANY && lua_type(L, index) != SC_Lua_sctype2luatype(type))
   {
-    if(type != TYPE_ANY && lua_type(L, index) != SC_Lua_sctype2luatype(type))
-    {
-      // luaL_typeerror
-    }
-    return 0;
+    // luaL_typeerror
   }
+  return 0;
 }
 
 /*

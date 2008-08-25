@@ -636,13 +636,14 @@ void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
           lua_pushnil(L);
           while(lua_next(L, -2) != 0)
           {
-            if(lua_type(L, -2) != LUA_TNUMBER && lua_tointeger(L, -2) != n)
+            lua_pop(L, 1);
+            if(lua_type(L, -1) != LUA_TNUMBER)
             {
               type = TYPE_HASH;
+              lua_pop(L, 1);
               break;
             }
             n++;
-            lua_pop(L, 1);
           }
 
           if(type == TYPE_ARRAY)

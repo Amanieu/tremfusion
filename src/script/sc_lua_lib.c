@@ -301,6 +301,31 @@ static int registered(lua_State *L)
   return 1;
 }
 
+static int sctype(lua_State *L)
+{
+  const char *str;
+
+  if(!lua_getmetatable(L, 1))
+    lua_pushstring(L, SC_DataTypeToString(TYPE_UNDEF));
+  else
+  {
+    lua_getfield(L, -1, "_type");
+    if(!lua_isnumber(L, -1))
+    {
+      lua_pushstring(L, SC_DataTypeToString(TYPE_UNDEF));
+      lua_pop(L, 2);
+    }
+    else
+    {
+      str = SC_DataTypeToString(lua_tointeger(L, -1));
+      lua_pop(L, 2);
+      lua_pushstring(L, str);
+    }
+  }
+
+  return 1;
+}
+
 static const struct luaL_reg lualib[] = {
   { "dump", stack_dump },
   // scripting data registeration
@@ -313,6 +338,7 @@ static const struct luaL_reg lualib[] = {
   { "hash", register_hash },
   { "namespace", register_namespace },
   { "registered", registered },
+  { "sctype", sctype },
   {NULL, NULL}
 };
 
