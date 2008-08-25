@@ -528,19 +528,22 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L)
 {
   scDataTypeValue_t val;
   scDataTypeString_t *key;
-  const char *lstr;
+  const char *lstr = NULL;
 
   scDataTypeHash_t *hash = SC_HashNew();
 
   lua_pushnil(L);
   while(lua_next(L, -2) != 0)
   {
+    lua_pushvalue(L, -2);
     lstr = lua_tostring(L, -2);
+    lua_pop(L, 1);
+
     key = SC_StringNewFromChar(lstr);
     SC_Lua_pop_value(L, &val, TYPE_ANY);
     SC_HashSet(hash, SC_StringToChar(key), &val);
   }
-
+  
   lua_pop(L, 1);
 
   return hash;

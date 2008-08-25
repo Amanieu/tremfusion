@@ -333,7 +333,7 @@ static const struct luaL_reg lualib[] = {
   { "integer", register_integer },
   { "float", register_float },
   { "string", register_string },
-  { "function", register_function },
+  { "func", register_function },
   { "array", register_array },
   { "hash", register_hash },
   { "namespace", register_namespace },
