@@ -240,7 +240,7 @@ exit_loop:
 			case demo_serverCommand:
 				Cmd_SaveCmdContext();
 				Cmd_TokenizeString(MSG_ReadString(&msg));
-				SV_SendServerCommand(NULL, "%s \"^3(DEMO) ^7%s\"", Cmd_Argv(0), Cmd_ArgsFrom(1));
+				SV_SendServerCommand(NULL, "%s \"^3[DEMO] ^7%s\"", Cmd_Argv(0), Cmd_ArgsFrom(1));
 				Cmd_RestoreCmdContext();
 				break;
 			case demo_gameCommand:

@@ -1931,6 +1931,10 @@ can see the last frag.
 */
 void CheckExitRules( void )
 {
+  // don't exit in demos
+  if( level.demoState == DS_PLAYBACK )
+    return;
+
   // if at the intermission, wait for all non-bots to
   // signal ready, then go to next level
   if( level.intermissiontime )
