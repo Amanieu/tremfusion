@@ -528,6 +528,8 @@ G_InitGame
 void G_InitGame( int levelTime, int randomSeed, int restart )
 {
   int i;
+  char buffer[ MAX_CVAR_VALUE_STRING ];
+  int a, b;
 
   srand( randomSeed );
 
@@ -544,7 +546,12 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   level.time = levelTime;
   level.startTime = levelTime;
   level.alienStage2Time = level.alienStage3Time =
-    level.humanStage2Time = level.humanStage3Time = level.startTime;
+  level.humanStage2Time = level.humanStage3Time = level.startTime;
+  trap_Cvar_VariableStringBuffer( "session", buffer, sizeof( buffer ) );
+  sscanf( buffer, "%i %i", &a, &b );
+  if ( a != trap_Cvar_VariableIntegerValue( "sv_maxclients" ) ||
+       b != trap_Cvar_VariableIntegerValue( "sv_democlients" ) )
+    level.newSession = qtrue;
 
   level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
 

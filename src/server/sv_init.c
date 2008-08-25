@@ -246,46 +246,6 @@ void SV_CreateBaseline( void ) {
 
 /*
 ===============
-SV_BoundMaxClients
-
-===============
-*/
-void SV_BoundMaxClients( int minimum ) {
-	// get the current maxclients value
-	Cvar_Get( "sv_maxclients", "8", 0 );
-
-	sv_maxclients->modified = qfalse;
-
-	if ( sv_maxclients->integer < minimum ) {
-		Cvar_Set( "sv_maxclients", va("%i", minimum) );
-	} else if ( sv_maxclients->integer > MAX_CLIENTS ) {
-		Cvar_Set( "sv_maxclients", va("%i", MAX_CLIENTS) );
-	}
-}
-
-
-/*
-===============
-SV_BoundDemoClients
-
-===============
-*/
-void SV_BoundDemoClients( int maximum ) {
-	// get the current democlients value
-	Cvar_Get( "sv_democlients", "0", 0 );
-
-	sv_democlients->modified = qfalse;
-
-	if ( sv_democlients->integer > maximum ) {
-		Cvar_Set( "sv_democlients", va("%i", maximum) );
-	} else if ( sv_democlients->integer >= sv_maxclients->integer ) {
-		Cvar_Set( "sv_democlients", va("%i", sv_maxclients->integer - 1) );
-	}
-}
-
-
-/*
-===============
 SV_Startup
 
 Called when a host starts a map when it wasn't running
@@ -298,15 +258,8 @@ void SV_Startup( void ) {
 	if ( svs.initialized ) {
 		Com_Error( ERR_FATAL, "SV_Startup: svs.initialized" );
 	}
-	SV_BoundMaxClients( 1 );
 
-	svs.clients = Z_Malloc (sizeof(client_t) * sv_maxclients->integer );
-	if ( com_dedicated->integer ) {
-		svs.numSnapshotEntities = sv_maxclients->integer * PACKET_BACKUP * 64;
-	} else {
-		// we don't need nearly as many when playing locally
-		svs.numSnapshotEntities = sv_maxclients->integer * 4 * 64;
-	}
+	SV_ChangeMaxClients();
 	svs.initialized = qtrue;
 
 	// Don't respect sv_killserver unless a server is actually running
@@ -328,68 +281,70 @@ SV_ChangeMaxClients
 */
 void SV_ChangeMaxClients( void ) {
 	int		oldMaxClients;
-	int		i;
+	int		i, j;
 	client_t	*oldClients;
-	int		count;
-	int		lowest;
+	int		count = 0;
+	qboolean firstTime = svs.clients == NULL;
 
-	// get the highest client number in use
-	count = 0;
-	for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
-		if ( svs.clients[i].state >= CS_CONNECTED ) {
-			if (i > count)
-				count = i;
-		}
-	}
-	count++;
-
-	// get the lowest client number in use
-	lowest = MAX_CLIENTS;
-	for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
-		if ( svs.clients[i].state >= CS_CONNECTED ) {
-			lowest = i;
-			break;
+	if ( !firstTime ) {
+		// get the number of clients in use
+		for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
+			if ( svs.clients[i].state >= CS_CONNECTED ) {
+				count++;
+			}
 		}
 	}
 
 	oldMaxClients = sv_maxclients->integer;
-	// never go below the highest client number in use
-	SV_BoundMaxClients( count );
-	// never go above the lowest client number in use
-	SV_BoundDemoClients( lowest );
+	// update the cvars
+	Cvar_Get( "sv_maxclients", "8", 0 );
+	Cvar_Get( "sv_democlients", "0", 0 );
+	// make sure we have enough room for all clients
+	if ( sv_maxclients->integer < sv_democlients->integer + count ) {
+		Cvar_SetValue( "sv_maxclients", sv_democlients->integer + count );
+	}
 	// if still the same
-	if ( sv_maxclients->integer == oldMaxClients ) {
+	if ( !firstTime && sv_maxclients->integer == oldMaxClients ) {
+		// move people who are below sv_democlients up
+		for ( i = 0; i < sv_democlients->integer; i++ ) {
+			if ( svs.clients[i].state >= CS_CONNECTED ) {
+				for ( j = sv_democlients->integer; j < sv_maxclients->integer; j++ ) {
+					if ( svs.clients[j].state < CS_CONNECTED ) {
+						svs.clients[j] = svs.clients[i];
+						break;
+					}
+				}
+				Com_Memset( svs.clients + i, 0, sizeof(client_t) );
+			}
+		}
 		return;
 	}
 
-	oldClients = Hunk_AllocateTempMemory( count * sizeof(client_t) );
-	// copy the clients to hunk memory
-	for ( i = 0 ; i < count ; i++ ) {
-		if ( svs.clients[i].state >= CS_CONNECTED ) {
-			oldClients[i] = svs.clients[i];
+	if ( !firstTime ) {
+		// copy the clients to hunk memory
+		oldClients = Hunk_AllocateTempMemory( count * sizeof(client_t) );
+		for ( i = 0, j = 0 ; i < oldMaxClients ; i++ ) {
+			if ( svs.clients[i].state >= CS_CONNECTED ) {
+				oldClients[j++] = svs.clients[i];
+			}
 		}
-		else {
-			Com_Memset(&oldClients[i], 0, sizeof(client_t));
-		}
-	}
 
-	// free old clients arrays
-	Z_Free( svs.clients );
+		// free old clients arrays
+		Z_Free( svs.clients );
+	}
 
 	// allocate new clients
-	svs.clients = Z_Malloc ( sv_maxclients->integer * sizeof(client_t) );
+	svs.clients = Z_Malloc( sv_maxclients->integer * sizeof(client_t) );
 	Com_Memset( svs.clients, 0, sv_maxclients->integer * sizeof(client_t) );
 
-	// copy the clients over
-	for ( i = 0 ; i < count ; i++ ) {
-		if ( oldClients[i].state >= CS_CONNECTED ) {
-			svs.clients[i] = oldClients[i];
-		}
+	if ( !firstTime ) {
+		// copy the clients over
+		Com_Memcpy( svs.clients + sv_democlients->integer, oldClients, count * sizeof(client_t) );
+
+		// free the old clients on the hunk
+		Hunk_FreeTempMemory( oldClients );
 	}
 
-	// free the old clients on the hunk
-	Hunk_FreeTempMemory( oldClients );
-	
 	// allocate new snapshot entities
 	if ( com_dedicated->integer ) {
 		svs.numSnapshotEntities = sv_maxclients->integer * PACKET_BACKUP * 64;
