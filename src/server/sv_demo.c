@@ -135,6 +135,7 @@ void SV_DemoWriteFrame(void)
 		if (i >= sv_maxclients->integer && i < MAX_CLIENTS)
 			continue;
 		entity = SV_GentityNum(i);
+		entity->s.number = i;
 		MSG_WriteDeltaEntity(&msg, &sv.demoEntities[i].s, &entity->s, qfalse);
 		sv.demoEntities[i].s = entity->s;
 	}
@@ -360,7 +361,7 @@ sv.demo* have already been set and the demo file opened, start reading gamestate
 void SV_DemoStartPlayback(void)
 {
 	msg_t msg;
-	int r, i;
+	int r, i, clients;
 	char *s;
 
 	MSG_Init(&msg, buf, sizeof(buf));
@@ -389,10 +390,10 @@ void SV_DemoStartPlayback(void)
 	}
 
 	// Check slots, time and map
-	r = MSG_ReadBits(&msg, CLIENTNUM_BITS);
-	if (sv_democlients->integer < r)
+	clients = MSG_ReadBits(&msg, CLIENTNUM_BITS);
+	if (sv_democlients->integer < clients)
 	{
-		Com_Printf("Not enough demo slots, increase sv_democlients to %d.\n", r);
+		Com_Printf("Not enough demo slots, increase sv_democlients to %d.\n", clients);
 		SV_DemoStopPlayback();
 		return;
 	}
@@ -422,6 +423,7 @@ void SV_DemoStartPlayback(void)
 	// Initialize our stuff
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
+	Cvar_SetValue("sv_democlients", clients);
 	for (i = 0; i < sv_democlients->integer; i++)
 		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
 	SV_DemoReadFrame();
