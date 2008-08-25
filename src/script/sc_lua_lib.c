@@ -47,7 +47,7 @@ static int print_method(lua_State *L)
     if(i > 1)
       Com_Printf("\t");
 
-    Com_Printf(s);
+    Com_Printf("%s", s);
     lua_pop(L, 1);
   }
   Com_Printf("\n");
@@ -306,7 +306,7 @@ static const struct luaL_reg lualib[] = {
   // scripting data registeration
   { "boolean", register_boolean },
   { "integer", register_integer },
-  { "floating", register_float },
+  { "float", register_float },
   { "string", register_string },
   { "function", register_function },
   { "array", register_array },
@@ -332,7 +332,7 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "type", type_method);
   map_luamethod(L, "print", print_method);
 
-  luaL_register(L, "", lualib);
+  luaL_register(L, "lua", lualib);
   lua_pop(L, 1);
 }
 

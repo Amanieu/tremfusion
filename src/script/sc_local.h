@@ -49,7 +49,7 @@ const char  *SC_Lua_to_comparable_string(lua_State *L, int index, int left);
 int         SC_Lua_is_registered(lua_State *L, int index, scDataType_t type);
 
 // sc_lua_stack.c
-void SC_Lua_push_boolean(lua_State *L, char boolean);
+void SC_Lua_push_boolean(lua_State *L, int boolean);
 void SC_Lua_push_integer(lua_State *L, int integer);
 void SC_Lua_push_float(lua_State *L, float floating);
 void SC_Lua_push_userdata(lua_State *L, void* userdata);

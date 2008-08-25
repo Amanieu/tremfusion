@@ -37,8 +37,12 @@ void fregister(scDataTypeFunction_t *function)
   luaFunc_id++;
 }
 
-void SC_Lua_push_boolean(lua_State *L, char boolean)
+void SC_Lua_push_boolean(lua_State *L, int boolean)
 {
+  union { void* v; int b; } u;
+
+  u.b = boolean;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -61,7 +65,7 @@ void SC_Lua_push_boolean(lua_State *L, char boolean)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushboolean(L, boolean);
+  lua_pushlightuserdata(L, u.v);
   lua_setfield(L, -2, "_ref");
 
   lua_setmetatable(L, -2);
@@ -69,6 +73,10 @@ void SC_Lua_push_boolean(lua_State *L, char boolean)
 
 void SC_Lua_push_integer(lua_State *L, int integer)
 {
+  union { void* v; int i; } u;
+
+  u.i = integer;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -111,7 +119,7 @@ void SC_Lua_push_integer(lua_State *L, int integer)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushinteger(L, integer);
+  lua_pushlightuserdata(L, u.v);
   lua_setfield(L, -2, "_ref");
 
   lua_setmetatable(L, -2);
@@ -119,6 +127,10 @@ void SC_Lua_push_integer(lua_State *L, int integer)
 
 void SC_Lua_push_float(lua_State *L, float floating)
 {
+  union { void* v; float f; } u;
+
+  u.f = floating;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -161,7 +173,7 @@ void SC_Lua_push_float(lua_State *L, float floating)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushnumber(L, floating);
+  lua_pushlightuserdata(L, u.v);
   lua_setfield(L, -2, "_ref");
 
   lua_setmetatable(L, -2);
@@ -726,14 +738,13 @@ lua_Number SC_Lua_get_number(lua_State *L, int index)
   int type;
   lua_Number number = 0.;
 
-  if(lua_istable(L, index))
+  if(lua_getmetatable(L, index))
   {
     union { void* v; int n; float f; } ud;
 
-    lua_getmetatable(L, index);
     lua_getfield(L, -1, "_type");
     type = lua_tointeger(L, -1);
-    lua_getfield(L, -1, "_ref");
+    lua_getfield(L, -2, "_ref");
     
     switch(type)
     {

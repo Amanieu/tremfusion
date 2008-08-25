@@ -259,32 +259,32 @@ number metamethods
 
 int SC_Lua_add_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_integer(L, 1);
-  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
   lua_pushnumber(L, n1 + n2);
   return 1;
 }
 
 int SC_Lua_sub_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_integer(L, 1);
-  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
   lua_pushnumber(L, n1 - n2);
   return 1;
 }
 
 int SC_Lua_mul_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_integer(L, 1);
-  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
   lua_pushnumber(L, n1 * n2);
   return 1;
 }
 
 int SC_Lua_div_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_integer(L, 1);
-  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
   if(n2 == 0)
     lua_pushnumber(L, INFINITY);
   else
@@ -294,8 +294,8 @@ int SC_Lua_div_number_metamethod(lua_State *L)
 
 int SC_Lua_mod_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_integer(L, 1);
-  lua_Number n2 = SC_Lua_get_integer(L, 2);
+  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n2 = SC_Lua_get_number(L, 2);
   if(n2 == 0)
     lua_pushnumber(L, NAN);
   else
