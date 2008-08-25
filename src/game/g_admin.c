@@ -1911,6 +1911,11 @@ qboolean G_admin_putteam( gentity_t *ent, int skiparg )
   }
   if( vic->client->pers.teamSelection == teamnum )
     return qfalse;
+  if( level.demoState == DS_PLAYBACK )
+  {
+    ADMP( "^3!putteam: ^7cannot join a team while a demo is playing\n" );
+    return qfalse;
+  }
   G_ChangeTeam( vic, teamnum );
 
   AP( va( "print \"^3!putteam: ^7%s^7 put %s^7 on to the %s team\n\"",
