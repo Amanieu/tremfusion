@@ -1060,12 +1060,8 @@ void ClientUserinfoChanged( int clientNum )
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
         // log renames to demo
-        Info_SetValueForKey( buf, "num", va( "%d", clientNum ) );
         Info_SetValueForKey( buf, "name", client->pers.netname );
-        Info_SetValueForKey( buf, "guid", client->pers.guid );
-        Info_SetValueForKey( buf, "ip", client->pers.ip );
-        Info_SetValueForKey( buf, "team", va( "%d", client->pers.teamSelection ) );
-        trap_DemoCommand( DC_CLIENT_SET, buf );
+        trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
       }
     }
   }
@@ -1338,12 +1334,10 @@ void ClientBegin( int clientNum )
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 
   // log to demo
-  Info_SetValueForKey( buffer, "num", va( "%d", clientNum ) );
   Info_SetValueForKey( buffer, "name", client->pers.netname );
-  Info_SetValueForKey( buffer, "guid", client->pers.guid );
   Info_SetValueForKey( buffer, "ip", client->pers.ip );
   Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
-  trap_DemoCommand( DC_CLIENT_SET, buffer );
+  trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );

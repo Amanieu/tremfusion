@@ -615,13 +615,9 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
     
   ClientUserinfoChanged( ent->client->ps.clientNum );
 
-  // log renames to demo
-  Info_SetValueForKey( buf, "num", va( "%d", (int)(ent - g_entities) ) );
-  Info_SetValueForKey( buf, "name", ent->client->pers.netname );
-  Info_SetValueForKey( buf, "guid", ent->client->pers.guid );
-  Info_SetValueForKey( buf, "ip", ent->client->pers.ip );
+  // log team changes to demo
   Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
-  trap_DemoCommand( DC_CLIENT_SET, buf );
+  trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
 }
 
 /*

@@ -1420,16 +1420,25 @@ Mark a client as a demo client and load info into it
 */
 void G_DemoSetClient( void )
 {
-    char buffer[ MAX_INFO_STRING ];
-    gclient_t *client;
-    trap_Argv( 0, buffer, sizeof( buffer ) );
-    client = level.clients + atoi( Info_ValueForKey( buffer, "num" ) );
-    client->pers.demoClient = qtrue;
-    Q_strncpyz( client->pers.netname, Info_ValueForKey( buffer, "name" ), sizeof( client->pers.netname ) );
-    Q_strncpyz( client->pers.guid, Info_ValueForKey( buffer, "guid" ), sizeof( client->pers.guid ) );
-    Q_strncpyz( client->pers.ip, Info_ValueForKey( buffer, "ip" ), sizeof( client->pers.ip ) );
-    client->pers.teamSelection = atoi( Info_ValueForKey( buffer, "team" ) );
-    client->sess.spectatorState = SPECTATOR_NOT;
+  char buffer[ MAX_INFO_STRING ];
+  gclient_t *client;
+  char *s;
+
+  trap_Argv( 0, buffer, sizeof( buffer ) );
+  client = level.clients + atoi( buffer );
+  client->pers.demoClient = qtrue;
+
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  s = Info_ValueForKey( buffer, "name" );
+  if( *s )
+    Q_strncpyz( client->pers.netname, s, sizeof( client->pers.netname ) );
+  s = Info_ValueForKey( buffer, "ip" );
+  if( *s )
+    Q_strncpyz( client->pers.ip, s, sizeof( client->pers.ip ) );
+  s = Info_ValueForKey( buffer, "team" );
+  if( *s )
+    client->pers.teamSelection = atoi( s );
+  client->sess.spectatorState = SPECTATOR_NOT;
 }
 
 /*
@@ -1441,11 +1450,12 @@ Unmark a client as a demo client
 */
 void G_DemoRemoveClient( void )
 {
-    char buffer[ 3 ];
-    gclient_t *client;
-    trap_Argv( 0, buffer, sizeof( buffer ) );
-    client = level.clients + atoi( buffer );
-    client->pers.demoClient = qfalse;
+  char buffer[ 3 ];
+  gclient_t *client;
+
+  trap_Argv( 0, buffer, sizeof( buffer ) );
+  client = level.clients + atoi( buffer );
+  client->pers.demoClient = qfalse;
 }
 
 
@@ -2272,12 +2282,10 @@ void G_CheckDemo( void )
     {
       if ( level.clients[ i ].pers.connected == CON_CONNECTED )
       {
-        Info_SetValueForKey( buffer, "num", va( "%d", i ) );
         Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
-        Info_SetValueForKey( buffer, "guid", level.clients[ i ].pers.guid );
         Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
         Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
-        trap_DemoCommand( DC_CLIENT_SET, buffer );
+        trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
       }
     }
   }
