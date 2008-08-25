@@ -1665,7 +1665,10 @@ ifeq ($(USE_LUA),1)
     $(B)/base/lua/lvm.o \
     $(B)/base/lua/lzio.o \
     $(B)/base/lua/print.o \
-    $(B)/base/game/sc_lua.o
+    $(B)/base/game/sc_lua.o \
+    $(B)/base/game/sc_lua_stack.o \
+    $(B)/base/game/sc_lua_metamethod.o \
+    $(B)/base/game/sc_lua_lib.o
 endif
 
 ifeq ($(USE_PYTHON),1)
@@ -1748,7 +1751,10 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
       $(B)/base/lua/lvm.o \
       $(B)/base/lua/lzio.o \
       $(B)/base/lua/print.o \
-      $(B)/base/ui/sc_lua.o
+      $(B)/base/ui/sc_lua.o \
+      $(B)/base/ui/sc_lua_stack.o \
+      $(B)/base/ui/sc_lua_metamethod.o \
+      $(B)/base/ui/sc_lua_lib.o
   endif
   ifeq ($(USE_PYTHON),1)
     UIOBJ += \

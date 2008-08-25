@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 
 #include "sc_public.h"
-#include "sc_lua.h"
+#include "sc_local.h"
 #include "sc_python.h"
 
 static void SC_script_module_init( void );
