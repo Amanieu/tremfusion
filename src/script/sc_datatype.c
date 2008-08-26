@@ -669,8 +669,7 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
 
 qboolean SC_NamespaceDelete( const char *path )
 {
-  const char *idx;
-  const char *base = path;
+  char *idx;
   char tmp[ MAX_NAMESPACE_LENGTH ];
   scNamespace_t *namespace = namespace_root;
   scDataTypeValue_t value;
@@ -678,10 +677,10 @@ qboolean SC_NamespaceDelete( const char *path )
   if( strcmp( path, "" ) == 0 )
     return qfalse;
   
-  while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
+  Q_strncpyz(tmp, path, MAX_NAMESPACE_LENGTH);
+  while( ( idx = Q_strrchr( tmp, '.' ) ) != NULL )
   {
-    Q_strncpyz( tmp, base, idx - base + 1 );
-	tmp[idx-base] = '\0';
+	*idx = '\0';
 
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, & value ) )
 	{
@@ -692,11 +691,9 @@ qboolean SC_NamespaceDelete( const char *path )
       return qfalse;
 
     namespace = value.data.namespace;
-    base = idx + 1;
   }
 
-  return SC_HashDelete( (scDataTypeHash_t*) namespace, base );
-  // TODO : reaffect namespace variable
+  return SC_HashDelete( (scDataTypeHash_t*) namespace, tmp );
 }
 
 qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )

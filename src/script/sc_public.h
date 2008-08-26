@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef _SCRIPT_SC_PUBLIC_H_
 #define _SCRIPT_SC_PUBLIC_H_
 
+#include "../qcommon/q_shared.h"
+
 #define MAX_TAG_LENGTH          16
 #define MAX_FUNCTION_ARGUMENTS  16
 #define MAX_OBJECT_MEMBERS      32
