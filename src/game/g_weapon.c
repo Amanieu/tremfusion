@@ -1380,8 +1380,7 @@ FireWeapon3
 */
 void FireWeapon3( gentity_t *ent )
 {
-  if( ! SC_CallHooks("player.on_third_attack", ent) )
-    return;
+  // TODO: Call event here: player.on_third_attack
 
   if( ent->client )
   {
@@ -1418,8 +1417,7 @@ FireWeapon2
 */
 void FireWeapon2( gentity_t *ent )
 {
-  if( ! SC_CallHooks("player.on_secondary_attack", ent) )
-    return;
+  // TODO: Call event here: player.on_secondary_attack
 
   if( ent->client )
   {
@@ -1461,8 +1459,7 @@ FireWeapon
 */
 void FireWeapon( gentity_t *ent )
 {
-  if( ! SC_CallHooks("player.on_primary_attack", ent) )
-    return;
+  // TODO: Call event here: player.on_primary_attack
 
   if( ent->client )
   {

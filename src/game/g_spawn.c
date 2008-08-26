@@ -331,8 +331,7 @@ qboolean G_CallSpawn( gentity_t *ent )
     if( level.layout[ 0 ] && Q_stricmp( level.layout, "*BUILTIN*" ) )
       return qtrue;
 
-    if( ! SC_CallHooks("buildable.on_spawn", ent) )
-      return qfalse;
+    // TODO: Call event here: buildable.on_spawn
 
     if( buildable == BA_A_SPAWN || buildable == BA_H_SPAWN )
     {

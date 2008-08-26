@@ -349,7 +349,7 @@ qboolean  ConsoleCommand( void )
     trap_SetConfigstring( CS_WINNER, "Evacuation" );
     LogExit( "Evacuation." );
     
-    SC_CallHooks( "game.on_exit", NULL );
+    // TODO: Call event here: game.on_exit
 
     return qtrue;
   }

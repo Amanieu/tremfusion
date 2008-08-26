@@ -326,9 +326,6 @@ void SC_AutoLoad( void );
 void SC_Shutdown( void );
 int  SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
 int SC_RunScript( scLangage_t langage, const char *filename );
-#ifdef GAME //TODO: this should be moved to sc_game.h and sc_game.c
-int SC_CallHooks( const char *path, gentity_t *entity );
-#endif
 scLangage_t SC_LangageFromFilename(const char* filename);
 void SC_InitClass( scClass_t *class );
 

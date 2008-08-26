@@ -2782,7 +2782,7 @@ qboolean G_admin_nextmap( gentity_t *ent, int skiparg )
   LogExit( va( "nextmap was run by %s",
     ( ent ) ? ent->client->pers.netname : "console" ) );
 
-  SC_CallHooks( "game.on_exit", NULL );
+  // TODO: Call event here: game.on_exit
 
   return qtrue;
 }

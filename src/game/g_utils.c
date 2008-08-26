@@ -414,7 +414,7 @@ void G_InitGentity( gentity_t *e )
   e->s.number = e - g_entities;
   e->r.ownerNum = ENTITYNUM_NONE;
 
-  SC_CallHooks("entity.on_init", e);
+  // TODO: Call event here: entity.on_init
 }
 
 /*

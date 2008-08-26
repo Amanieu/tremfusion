@@ -647,7 +647,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   G_ResetPTRConnections( );
 
-  SC_CallHooks( "game.on_init", NULL );
+  // TODO: Call event here: game.on_init
 }
 
 /*
@@ -693,7 +693,7 @@ void G_ShutdownGame( int restart )
 
   G_Printf( "==== ShutdownGame ====\n" );
 
-  SC_CallHooks( "game.on_shutdown", NULL );
+  // TODO: Call event here: game.on_shutdown
 
   if( level.logFile )
   {
@@ -1100,7 +1100,7 @@ void G_CalculateBuildPoints( void )
       localHTP = 0;
       localATP = 0;
 
-      SC_CallHooks( "game.on_sudden_death", NULL );
+      // TODO: Call event here: game.on_sudden_death
 
       //warn about sudden death
       if( level.suddenDeathWarning < TW_PASSED )
@@ -1246,7 +1246,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S2 ) );
     level.alienStage2Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
-    SC_CallHooks( "game.on_stage_up", NULL );
+    // TODO: Call event here: game.on_stage_up
   }
 
   if( g_alienCredits.integer >=
@@ -1256,7 +1256,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", S3 ) );
     level.alienStage3Time = level.time;
     lastAlienStageModCount = g_alienStage.modificationCount;
-    SC_CallHooks( "game.on_stage_up", NULL );
+    // TODO: Call event here: game.on_stage_up
   }
 
   if( g_humanCredits.integer >=
@@ -1266,7 +1266,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S2 ) );
     level.humanStage2Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
-    SC_CallHooks( "game.on_stage_up", NULL );
+    // TODO: Call event here: game.on_stage_up
   }
 
   if( g_humanCredits.integer >=
@@ -1276,7 +1276,7 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", S3 ) );
     level.humanStage3Time = level.time;
     lastHumanStageModCount = g_humanStage.modificationCount;
-    SC_CallHooks( "game.on_stage_up", NULL );
+    // TODO: Call event here: game.on_stage_up
   }
 
   if( g_alienStage.modificationCount > lastAlienStageModCount )
@@ -1937,7 +1937,7 @@ void CheckExitRules( void )
 
       LogExit( "Timelimit hit." );
 
-      SC_CallHooks( "game.on_exit", NULL );
+      // TODO: Call event here: game.on_exit
 
       return;
     }
@@ -1967,7 +1967,7 @@ void CheckExitRules( void )
 
     LogExit( "Humans win." );
 
-    SC_CallHooks( "game.on_exit", NULL );
+    // TODO: Call event here: game.on_exit
   }
   else if( level.uncondAlienWin ||
            ( ( level.time > level.startTime + 1000 ) &&
@@ -1980,7 +1980,7 @@ void CheckExitRules( void )
     trap_SetConfigstring( CS_WINNER, "Aliens Win" );
     LogExit( "Aliens win." );
 
-    SC_CallHooks( "game.on_exit", NULL );
+    // TODO: Call event here: game.on_exit
   }
 }
 
@@ -2260,18 +2260,15 @@ void G_RunThink( gentity_t *ent )
   if( !ent->think )
     G_Error( "NULL ent->think" );
 
-  if( ! SC_CallHooks("entity.on_think", ent) )
-	  return;
+  // TODO: Call event here: entity.on_think
 
   if( ent->s.eType == ET_BUILDABLE )
   {
-	  if( SC_CallHooks("buildable.on_think", ent) == 0 )
-		  return;
+    // TODO: Call event here: buildable.on_think
   }
   else if( ent->s.eType == ET_PLAYER )
   {
-	  if( SC_CallHooks("player.on_think", ent) == 0 )
-		  return;
+    // TODO: Call event here: player.on_think
   }
 
   ent->think( ent );
@@ -2460,7 +2457,7 @@ void G_RunFrame( int levelTime )
     trap_Cvar_Set( "g_listEntity", "0" );
   }
 
-  SC_CallHooks( "game.on_think", NULL );
+  // TODO: Call event here: game.on_think
 
   level.frameMsec = trap_Milliseconds();
 }
