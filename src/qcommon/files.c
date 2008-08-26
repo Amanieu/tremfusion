@@ -2735,7 +2735,7 @@ static void FS_ReorderExtraPaks( void )
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
 			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "@" ) && !Q_stricmp( s->dir->gamedir, fs_basegame->string ) && Q_stricmp( fs_basegame->string, fs_gamedir )) ||
+			    (s->dir && !Q_stricmp( fs_extraPaks[i], "@" ) && !Q_stricmp( s->dir->gamedir, BASEGAME )) ||
 			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ) && !Q_stricmp( s->dir->gamedir, fs_gamedir ))) {
 				// move this element to the insert list
 				*p_previous = s->next;
@@ -2744,11 +2744,12 @@ static void FS_ReorderExtraPaks( void )
 				// increment insert list
 				p_insert_index = &s->next;
 
-				if (s->dir)
+				if (s->dir) {
 					fs_unpureAllowed = qtrue;
-				else
+				} else {
 					s->pack->referenced |= FS_EXTRA_REF;
-				break; // iterate to next server pack
+					break; // iterate to next server pack
+				}
 			}
 			p_previous = &s->next;
 		}
