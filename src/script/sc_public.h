@@ -31,7 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_PATH_LENGTH         64
 #define MAX_DESC_LENGTH         1024
 
-#define offsetof(st, m)   ( (char *)&((st *)(0))->m)
+#ifndef offsetof
+#define offsetof(st, m)   ( (int)&((st *)(0))->m)
+#endif
 
 /* SC_GC_DEBUG controls debug infomation about reference counting
  * 1 = Printouts of object creation and deletion
@@ -39,7 +41,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 #define SC_GC_DEBUG 0
 
-#ifdef USE_PYTHON
+#if defined(USE_PYTHON) && !defined(Q3_VM)
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
 #include <Python.h>
 #include "structmember.h"
@@ -50,6 +52,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #ifdef UI
 #include "../ui/ui_local.h"
+#endif
+#ifdef CLIENT
+#include "../qcommon/q_shared.h"
+#include "../qcommon/qcommon.h"
+#include "../game/bg_public.h"
+extern  cvar_t  *py_initialized;
+extern  cvar_t  *sc_python;
 #endif
 
 // Langages
@@ -114,8 +123,12 @@ typedef unsigned int scLuaFunc_t;
 #endif
 
 #ifdef USE_PYTHON
+#ifdef Q3_VM
+typedef int scPYFunc_t;
+#else /* Q3_VM */
 typedef PyObject *scPYFunc_t;
-#endif
+#endif /* Q3_VM */
+#endif /* USE_PYTHON */
 
 struct scDataTypeFunction_s
 {
@@ -197,8 +210,12 @@ struct scClass_s
   scField_t             *fields;
   int                   fieldcount;
 #ifdef USE_PYTHON
+#ifdef Q3_VM
+  int                   python_type;
+#else /* Q3_VM */
   PyObject              *python_type;
-#endif
+#endif /* Q3_VM */
+#endif /* USE_PYTHON */
 };
 
 struct scObject_s

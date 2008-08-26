@@ -24,20 +24,25 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/q_shared.h"
 
+
 #include "sc_public.h"
 #include "sc_local.h"
 #include "sc_python.h"
 
+#ifndef CLIENT
+
 static void SC_script_module_init( void );
+
+#define CALLING(x) Com_Printf(#x"..."); x; Com_Printf("\n")
 
 void SC_Init( void )
 {
-  SC_NamespaceInit( );
-  SC_Constant_Init();
+  CALLING(SC_NamespaceInit( ));
+  CALLING(SC_Constant_Init());
 
-  SC_script_module_init();
-  SC_Common_Init();
-  SC_Event_Init();
+  CALLING(SC_script_module_init());
+  CALLING(SC_Common_Init());
+  CALLING(SC_Event_Init());
 }
 
 void SC_LoadLangages(void)
@@ -132,6 +137,8 @@ void SC_Shutdown( void )
     SC_Python_Shutdown( );
 #endif
 }
+
+#endif
 
 int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scDataTypeValue_t *out)
 {
@@ -243,6 +250,8 @@ scLangage_t SC_LangageFromFilename(const char* filename)
   return LANGAGE_INVALID;
 }
 
+#ifndef CLIENT
+
 void SC_InitClass( scClass_t *class )
 {
 #ifdef USE_LUA
@@ -273,3 +282,4 @@ static void SC_script_module_init( void )
   SC_AddLibrary( "script", script_lib );
 }
 
+#endif

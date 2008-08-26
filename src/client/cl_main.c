@@ -109,6 +109,9 @@ cvar_t  *cl_defaultUI;
 
 cvar_t  *cl_persistantConsole;
 
+cvar_t  *py_initialized;
+cvar_t  *sc_python;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -3125,6 +3128,9 @@ void CL_Init( void ) {
 	FS_ConditionalRestart (clc.checksumFeed);
 
 	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
+	
+	py_initialized = Cvar_Get ("py_initialized", "0", CVAR_ROM);
+	sc_python      = Cvar_Get ("sc_python", "1", CVAR_LATCH);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );
@@ -3222,7 +3228,11 @@ void CL_Init( void ) {
 	CL_GenerateQKey();
 	Cvar_Get( "cl_guid", "", CVAR_USERINFO | CVAR_ROM );
 	CL_UpdateGUID( NULL, 0 );
-
+	
+#ifdef USE_PYTHON
+	BG_InitMemory();
+#endif
+	
 	Com_Printf( "----- Client Initialization Complete -----\n" );
 }
 

@@ -2518,7 +2518,9 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
   }
 }
 
+#if defined(ENABLE_SCRIPT_UI) && defined(UI)
 void Script_ScRun( itemDef_t *item, char **args );
+#endif
 
 commandDef_t commandList[] =
   {
@@ -2543,8 +2545,8 @@ commandDef_t commandList[] =
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
     {"orbit", &Script_Orbit},                      // group/name
-#ifdef ENABLE_SCRIPT_UI
-    {"sc_run", &Script_ScRun},
+#if defined(ENABLE_SCRIPT_UI) && defined(UI)
+//    {"sc_run", &Script_ScRun},
 #endif
   };
 

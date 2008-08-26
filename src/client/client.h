@@ -40,6 +40,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "speex/speex_preprocess.h"
 #endif
 
+#ifdef USE_PYTHON
+#include "../script/sc_public.h"
+#include "../script/sc_python.h"
+#endif
+
 // file full of random crap that gets used to create cl_guid
 #define QKEY_FILE "qkey"
 #define QKEY_FILE_FALLBACK "base/qkey"

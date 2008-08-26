@@ -375,6 +375,7 @@ static int set_method(PyScBaseObject *self, PyObject *pyvalue, void *closure)
   return -1;
 }
 
+#ifndef Q3_VM
 /* Create a copy of PyScObjectType and make it work somehow */
 void SC_Python_InitClass( scClass_t *class )
 {
@@ -440,5 +441,6 @@ void SC_Python_InitClass( scClass_t *class )
   class->python_type = (PyObject*)newtype;
   
 }
+#endif /* Q3_VM */
 
 #endif

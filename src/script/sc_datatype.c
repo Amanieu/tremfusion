@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // sc_datatype.c
 // contain scripting datatypes
 
-#include "../game/g_local.h"
 #include "../qcommon/q_shared.h"
 
 #include "sc_public.h"

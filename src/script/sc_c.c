@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
+#ifndef CLIENT
+
 void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] )
 {
   scLibFunction_t *l = lib;
@@ -159,6 +161,9 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   SC_InitClass(class);
   return class;
 }
+
+#endif 
+
 int SC_Field_Set( scObject_t *object, scField_t *field, scDataTypeValue_t *value)
 {
   byte    *b;
