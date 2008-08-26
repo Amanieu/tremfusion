@@ -250,7 +250,6 @@ void BotCheckEvents(bot_state_t *bs, entityState_t *state) {
 
 			target = state->otherEntityNum;
 			attacker = state->otherEntityNum2;
-			Bot_Print(BPERROR, "%d killed me\n", attacker);
 			mod = state->eventParm;
 			//
 			if (target == bs->client) {

@@ -568,7 +568,7 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 		//if it's the current enemy
 		//if (i == curenemy) return i;
 		
-		trap_AAS_EntityInfo(i, &entinfo);
+		BotEntityInfo(i, &entinfo);
 		//
 		if (!entinfo.valid) continue;
 		//if the enemy isn't dead and the enemy isn't the bot self
@@ -590,7 +590,7 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 		}
 	}
 	if(closest < 0) return -1; //No emenys within distance
-	trap_AAS_EntityInfo(closest, &closestentinfo);	
+	BotEntityInfo(closest, &closestentinfo);	
 	closesttarget =  &g_entities[ closest ];
 //	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);	
 	return closest;
@@ -617,7 +617,7 @@ qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal){
 		//if it's the current enemy
 		//if (i == curenemy) return i;
 		
-		trap_AAS_EntityInfo(i, &entinfo);
+		BotEntityInfo(i, &entinfo);
 		//
 		if (!entinfo.valid) continue;
 		//if the enemy isn't dead and the enemy isn't the bot self
@@ -639,7 +639,7 @@ qboolean BotGoalForEnemy(bot_state_t *bs, bot_goal_t* goal){
 		}
 	}
 	if(closest < 0) return qfalse; //No emenys within distance
-	trap_AAS_EntityInfo(closest, &closestentinfo);	
+	BotEntityInfo(closest, &closestentinfo);	
 	closesttarget =  &g_entities[ closest ];
 //	BotAddInfo(bs, "closest enemy", closesttarget->client->pers.netname);
 	
@@ -727,7 +727,7 @@ float BotEntityVisible(int viewer, vec3_t eye, vec3_t viewangles, float fov, int
 	vec3_t dir, entangles, start, end, middle;
 
 	//calculate middle of bounding box
-	trap_AAS_EntityInfo(ent, &entinfo);
+	BotEntityInfo(ent, &entinfo);
 	VectorAdd(entinfo.mins, entinfo.maxs, middle);
 	VectorScale(middle, 0.5, middle);
 	VectorAdd(entinfo.origin, middle, middle);

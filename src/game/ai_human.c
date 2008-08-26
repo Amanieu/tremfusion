@@ -407,7 +407,7 @@ void HBotCheckAttack(bot_state_t *bs, int attackentity) {
 
         //attackentity = bs->enemy;
         //
-        trap_AAS_EntityInfo(attackentity, &entinfo);
+        BotEntityInfo(attackentity, &entinfo);
         
         // if not attacking a player
         if (attackentity >= MAX_CLIENTS) {
@@ -1011,7 +1011,7 @@ qboolean HBotAttack(bot_state_t* bs){
 	HBotCheckReload(bs);
 	
 	// find target
-	if( !HBotFindEnemy(bs) )
+	if( !HBotFindEnemy(bs) || bs->enemy == -1 )
 		return qtrue;
 	
 	BotEntityInfo(bs->enemy, &entinfo);

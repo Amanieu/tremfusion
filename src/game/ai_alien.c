@@ -131,7 +131,7 @@ void ABotAimAtEnemy(bot_state_t *bs) {
 		return;
 	}
 	//get the enemy entity information
-	trap_AAS_EntityInfo(bs->enemy, &entinfo);
+	BotEntityInfo(bs->enemy, &entinfo);
 	//if this is not a player
 	if (bs->enemy >= MAX_CLIENTS) {
 		
@@ -150,7 +150,7 @@ void ABotAimAtEnemy(bot_state_t *bs) {
 	// todo: add reaction delay (enemysight time)
 
 	//get the enemy entity information
-	trap_AAS_EntityInfo(bs->enemy, &entinfo);
+	BotEntityInfo(bs->enemy, &entinfo);
 
 	// todo, predict enemy movement (velocity... lastvisorigin)
 
@@ -205,7 +205,7 @@ void ABotCheckAttack(bot_state_t *bs) {
 
   attackentity = bs->enemy;
   //
-  trap_AAS_EntityInfo(attackentity, &entinfo);
+  BotEntityInfo(attackentity, &entinfo);
   
   // if not attacking a player
   if (attackentity >= MAX_CLIENTS) {

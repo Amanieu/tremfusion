@@ -138,7 +138,7 @@ void EA_Command(int client, char *command)
 {
 //  if (bot_developer)
 //  {
-    botimport.Print(PRT_MESSAGE, "bot %d sending command \"%s\"\n", client, command);
+//    botimport.Print(PRT_MESSAGE, "bot %d sending command \"%s\"\n", client, command);
 //  }
 	botimport.BotClientCommand(client, command);
 } //end of the function EA_Command
