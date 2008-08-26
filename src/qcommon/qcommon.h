@@ -1053,8 +1053,7 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-void  Sys_SetDefaultHomePath(const char *path);
-char	*Sys_DefaultHomePath(void);
+char	*Sys_DefaultHomePath(const char **path2);
 const char *Sys_Dirname( char *path );
 const char *Sys_Basename( char *path );
 char *Sys_ConsoleInput(void);
