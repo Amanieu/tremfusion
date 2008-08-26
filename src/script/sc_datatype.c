@@ -728,7 +728,6 @@ qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )
   }
 
   return SC_HashSet((scDataTypeHash_t*) namespace, base, value );
-  // TODO : reaffect namespace variable
 }
 
 void SC_NamespaceInit( void )

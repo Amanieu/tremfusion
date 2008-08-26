@@ -44,7 +44,6 @@ typedef enum
 
 static int event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   out[0].type = TYPE_INTEGER;
   out[0].data.integer = (int) closure;
   return 0;
@@ -52,7 +51,6 @@ static int event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
 
 static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scEvent_t *event;
 
   SC_Common_Constructor(in, out, closure);
@@ -66,7 +64,6 @@ static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 
 static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scEvent_t *event;
   scEventNode_t *node;
   scEventNode_t *parent;
@@ -108,16 +105,16 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
     case EVENT_AFTER:
       SC_Event_AddNode(parent->parent, parent, node);
       break;
+    default:
+      SC_EXEC_ERROR(va("can't add hook: %d: unknow location", pos));
   }
 
   out->type = TYPE_UNDEF;
-
   return 0;
 }
 
 static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scEvent_t *event;
   const char *tag;
   scEventNode_t *node;
@@ -126,30 +123,28 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   tag = SC_StringToChar(in[1].data.string);
 
   node = SC_Event_FindChild(event->root, tag);
+  if(!node)
+    SC_EXEC_ERROR(va("Can't delete hook: Can't find hook %s", tag));
+
   SC_Event_DeleteNode(node);
 
   out->type = TYPE_UNDEF;
-
   return 0;
 }
 
 static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   SC_Event_Call(in[0].data.object, in[1].data.hash);
 
   out[0].type = TYPE_UNDEF;
-
   return 0;
 }
 
 static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
   SC_Event_Skip(event, SC_StringToChar(in[1].data.string));
-
   out[0].type = TYPE_UNDEF;
 
   return 0;
@@ -157,13 +152,11 @@ static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
 static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
   SC_Event_Dump(event);
 
   out->type = TYPE_UNDEF;
-
   return 0;
 }
 

@@ -255,7 +255,6 @@ void SC_InitClass( scClass_t *class )
 
 static int script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
 {
-  // TODO: error management
   SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );
   ret->type = TYPE_UNDEF;
 
