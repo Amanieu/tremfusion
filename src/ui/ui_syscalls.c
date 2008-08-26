@@ -493,3 +493,33 @@ void trap_RemoveCommand( const char *cmd_name)
   syscall( UI_REMOVE_COMMAND, cmd_name);
   return;
 }
+
+#if defined(ENABLE_SCRIPT_UI) && defined(USE_PYTHON)
+void trap_PythonInit( scNamespace_t *namespace, scConstant_t *constants)
+{
+  syscall( UI_PYTHON_INIT, namespace, constants);
+  return;
+}
+
+qboolean trap_PythonRunFile( const char *filename )
+{
+  return syscall( UI_PYTHON_RUNFILE, filename );
+}
+
+qboolean trap_PythonRunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
+{
+  return syscall( UI_PYTHON_RUNFUNCTION, func, args, ret );
+}
+
+void trap_PythonInitClass( scClass_t *class )
+{
+  syscall( UI_PYTHON_INITCLASS, class );
+  return;
+}
+
+void trap_PythonShutdown( void )
+{
+  syscall( UI_PYTHON_SHUTDOWN );
+  return;
+}
+#endif

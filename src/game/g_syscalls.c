@@ -297,3 +297,33 @@ void trap_RemoveCommand( const char *cmd_name)
   syscall( G_REMOVE_COMMAND, cmd_name);
   return;
 }
+
+#ifdef USE_PYTHON
+void trap_PythonInit( scNamespace_t *namespace, scConstant_t *constants)
+{
+  syscall( G_PYTHON_INIT, namespace, constants);
+  return;
+}
+
+qboolean trap_PythonRunFile( const char *filename )
+{
+  return syscall( G_PYTHON_RUNFILE, filename );
+}
+
+qboolean trap_PythonRunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
+{
+  return syscall( G_PYTHON_RUNFUNCTION, func, args, ret );
+}
+
+void trap_PythonInitClass( scClass_t *class )
+{
+  syscall( G_PYTHON_INITCLASS, class );
+  return;
+}
+
+void trap_PythonShutdown( void )
+{
+  syscall( G_PYTHON_SHUTDOWN );
+  return;
+}
+#endif

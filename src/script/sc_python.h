@@ -24,10 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_PYTHON
 
-PyTypeObject EntityType;
-PyTypeObject EntityStateType;
-PyTypeObject Vec3dType;
-
+#ifndef Q3_VM
 typedef struct _scpytypeobject {
   PyObject_VAR_HEAD
   const char *tp_name; /* For printing, in format "<module>.<name>" */
@@ -152,6 +149,8 @@ PyScHash *PyScHashFrom_ScHash( scDataTypeHash_t *hash);
 
 PyObject *convert_from_value( scDataTypeValue_t *value );
 int convert_to_value ( PyObject *pyvalue, scDataTypeValue_t *value, scDataType_t type );
+
+#endif /* Q3_VM */
 
 void                SC_Python_Init( void );
 void                SC_Python_Shutdown( void );

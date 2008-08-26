@@ -100,3 +100,9 @@ equ sqrt                              -107
 equ floor                             -108
 equ ceil                              -109
 
+equ trap_PythonInit                   -112
+equ trap_PythonRunFile                -113
+equ trap_PythonRunFunction            -114
+equ trap_PythonInitClass              -115
+equ trap_PythonShutdown               -116
+

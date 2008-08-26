@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // sc_datatype.c
 // contain scripting datatypes
 
-#include "../game/g_local.h"
 #include "../qcommon/q_shared.h"
 
 #include "sc_public.h"
@@ -403,7 +402,7 @@ static unsigned int getHash(const char *key)
   return hash;
 }
 
-static unsigned int findSlot(const scDataTypeHash_t *hash, const char *key)
+static unsigned int findSlot(scDataTypeHash_t *hash, const char *key)
 {
   unsigned int i;
 
@@ -465,34 +464,6 @@ qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t 
 
     return qtrue;
   }
-}
-
-const char *SC_HashFirst(scDataTypeHash_t *hash, scDataTypeValue_t *value)
-{
-  unsigned int iHash;
-  for(iHash = 0; iHash < hash->buflen; iHash++)
-  {
-    if(!SC_StringIsEmpty(&hash->data[iHash].key))
-    {
-      memcpy(value, &hash->data[iHash].value, sizeof(scDataTypeValue_t));
-      return SC_StringToChar(&hash->data[iHash].key);
-    }
-  }
-  return NULL;
-}
-
-const char *SC_HashNext(const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value)
-{
-  unsigned int iHash = findSlot(hash, key) + 1;
-  for( ; iHash < hash->buflen; iHash++)
-  {
-    if(!SC_StringIsEmpty(&hash->data[iHash].key))
-    {
-      memcpy(value, &hash->data[iHash].value, sizeof(scDataTypeValue_t));
-      return SC_StringToChar(&hash->data[iHash].key);
-    }
-  }
-  return NULL;
 }
 
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
@@ -649,6 +620,7 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
     Q_strncpyz( tmp, base, idx - base + 1 );
 	tmp[idx-base] = '\0';
 
+	Com_Printf("SC_HashGet: %s\n", tmp);
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, value ) )
 	{
       if( value->type != TYPE_NAMESPACE )
@@ -669,7 +641,8 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
 
 qboolean SC_NamespaceDelete( const char *path )
 {
-  char *idx;
+  const char *idx;
+  const char *base = path;
   char tmp[ MAX_NAMESPACE_LENGTH ];
   scNamespace_t *namespace = namespace_root;
   scDataTypeValue_t value;
@@ -677,10 +650,10 @@ qboolean SC_NamespaceDelete( const char *path )
   if( strcmp( path, "" ) == 0 )
     return qfalse;
   
-  Q_strncpyz(tmp, path, MAX_NAMESPACE_LENGTH);
-  while( ( idx = Q_strrchr( tmp, '.' ) ) != NULL )
+  while( ( idx = Q_strrchr( base, '.' ) ) != NULL )
   {
-	*idx = '\0';
+    Q_strncpyz( tmp, base, idx - base + 1 );
+	tmp[idx-base] = '\0';
 
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, & value ) )
 	{
@@ -691,9 +664,11 @@ qboolean SC_NamespaceDelete( const char *path )
       return qfalse;
 
     namespace = value.data.namespace;
+    base = idx + 1;
   }
 
-  return SC_HashDelete( (scDataTypeHash_t*) namespace, tmp );
+  return SC_HashDelete( (scDataTypeHash_t*) namespace, base );
+  // TODO : reaffect namespace variable
 }
 
 qboolean SC_NamespaceSet( const char *path, scDataTypeValue_t *value )

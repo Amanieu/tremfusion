@@ -48,11 +48,23 @@ Initialize scripting system and load libraries
 void UI_ScriptInit( void )
 {
   Com_Printf("------- UI Scripting System Initializing -------\n");
+  Com_Printf("Calling BG_InitMemory()..."); 
   BG_InitMemory(); // scripting system needs BG_Alloc to work
+  Com_Printf("done\n");
+  Com_Printf("Calling SC_Init()..."); 
   SC_Init();
+  Com_Printf("done\n");
+  Com_Printf("Calling SC_UIModuleInit()..."); 
   SC_UIModuleInit();
+  Com_Printf("done\n");
+  Com_Printf("Calling SC_LoadLangages()..."); 
   SC_LoadLangages();
+  Com_Printf("done\n");
+  
+  Com_Printf("Calling SC_LoadLangages()..."); 
   SC_AutoLoad();
+  Com_Printf("done\n");
+  
 #ifndef Q3_VM
   trap_AddCommand( "script", UI_Script_f );
 #endif

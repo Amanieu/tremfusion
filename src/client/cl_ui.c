@@ -25,6 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 vm_t *uivm;
 
+scConstant_t *sc_constants;
+
 /*
 ====================
 GetClientState
@@ -1069,7 +1071,33 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
   case UI_REMOVE_COMMAND:
     Cmd_RemoveCommand( VMA(1) );
     return 0;
-		
+    
+#ifdef USE_PYTHON
+  case UI_PYTHON_INIT:
+    namespace_root = (scNamespace_t*)VMA(1);
+    sc_constants   = VMA(2);
+    SC_Python_Init();
+    return 0;
+  case UI_PYTHON_RUNFILE:
+    SC_Python_RunScript( VMA(1) );
+    return 0;
+  case UI_PYTHON_RUNFUNCTION:
+    return SC_Python_RunScript( VMA(1) );
+  case UI_PYTHON_INITCLASS:
+    SC_Python_InitClass( VMA(1));
+    return 0;
+  case UI_PYTHON_SHUTDOWN:
+    SC_Python_Shutdown();
+    return 0;
+#else
+    // TODO: Some printouts saying python is disabled?
+  case UI_PYTHON_INIT:
+  case UI_PYTHON_RUNFILE:
+  case UI_PYTHON_RUNFUNCTION:
+  case UI_PYTHON_INITCLASS:
+  case UI_PYTHON_SHUTDOWN:
+    return 0;
+#endif
 	default:
 		Com_Error( ERR_DROP, "Bad UI system trap: %ld", (long int) args[0] );
 

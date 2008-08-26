@@ -23,8 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef _SCRIPT_SC_PUBLIC_H_
 #define _SCRIPT_SC_PUBLIC_H_
 
-#include "../qcommon/q_shared.h"
-
 #define MAX_TAG_LENGTH          16
 #define MAX_FUNCTION_ARGUMENTS  16
 #define MAX_OBJECT_MEMBERS      32
@@ -33,7 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_PATH_LENGTH         64
 #define MAX_DESC_LENGTH         1024
 
-#define offsetof(st, m)   ( (char *)&((st *)(0))->m)
+#ifndef offsetof
+#define offsetof(st, m)   ( (int)&((st *)(0))->m)
+#endif
 
 /* SC_GC_DEBUG controls debug infomation about reference counting
  * 1 = Printouts of object creation and deletion
@@ -41,7 +41,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 #define SC_GC_DEBUG 0
 
-#ifdef USE_PYTHON
+#if defined(USE_PYTHON) && !defined(Q3_VM)
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
 #include <Python.h>
 #include "structmember.h"
@@ -52,6 +52,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #ifdef UI
 #include "../ui/ui_local.h"
+#endif
+#ifdef CLIENT
+#include "../qcommon/q_shared.h"
+#include "../qcommon/qcommon.h"
+#include "../game/bg_public.h"
+extern  cvar_t  *py_initialized;
+extern  cvar_t  *sc_python;
 #endif
 
 // Langages
@@ -116,8 +123,12 @@ typedef unsigned int scLuaFunc_t;
 #endif
 
 #ifdef USE_PYTHON
+#ifdef Q3_VM
+typedef int scPYFunc_t;
+#else /* Q3_VM */
 typedef PyObject *scPYFunc_t;
-#endif
+#endif /* Q3_VM */
+#endif /* USE_PYTHON */
 
 struct scDataTypeFunction_s
 {
@@ -199,8 +210,12 @@ struct scClass_s
   scField_t             *fields;
   int                   fieldcount;
 #ifdef USE_PYTHON
+#ifdef Q3_VM
+  int                   python_type;
+#else /* Q3_VM */
   PyObject              *python_type;
-#endif
+#endif /* Q3_VM */
+#endif /* USE_PYTHON */
 };
 
 struct scObject_s
@@ -280,8 +295,6 @@ void SC_ArrayGCDec(scDataTypeArray_t *array);
 scDataTypeHash_t* SC_HashNew( void );
 qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
 qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
-const char *SC_HashFirst(scDataTypeHash_t *hash, scDataTypeValue_t *value);
-const char *SC_HashNext(const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash);
 scDataTypeArray_t *SC_HashToArray(scDataTypeHash_t *hash);
 qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key);
@@ -326,6 +339,9 @@ void SC_AutoLoad( void );
 void SC_Shutdown( void );
 int  SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
 int SC_RunScript( scLangage_t langage, const char *filename );
+#ifdef GAME //TODO: this should be moved to sc_game.h and sc_game.c
+int SC_CallHooks( const char *path, gentity_t *entity );
+#endif
 scLangage_t SC_LangageFromFilename(const char* filename);
 void SC_InitClass( scClass_t *class );
 
@@ -413,10 +429,10 @@ vec4_t     *SC_Vec4t_from_Vec4( scObject_t *vectobject );
 void SC_Common_Init( void );
 
 // modules
-int SC_Module_Init(scObject_t *self);
-int SC_Module_Register(scObject_t *self, scObject_t *toregister);
-int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out);
-int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force);
+void SC_Module_Init(scObject_t *self);
+void SC_Module_Register(scObject_t *self, scObject_t *toregister);
+void SC_Module_Load(scObject_t *self);
+void SC_Module_Unload(scObject_t *self);
 
 
 // sc_event.c
@@ -437,7 +453,7 @@ struct scEventNode_s
 {
   char                  tag[MAX_TAG_SIZE+1];
 
-  scEventNode_t         *parent; // Parent node in tree.
+  scEventNode_t         *parent; // Parent node in tree. TODO: Maybe useless ?
 
   scEventNode_t         *next; // Next node in linked list
   scEventNode_t         *previous; // Previous node in linked list

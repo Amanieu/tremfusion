@@ -319,9 +319,12 @@ void SC_Python_Init( void )
   Py_Initialize();
   // Make python threads work at all
 //  PyEval_InitThreads( );
-  
+#ifndef CLIENT
   trap_Cvar_Set( "py_initialized", "1" );
   trap_Cvar_Update( &py_initialized ); 
+#else
+  Cvar_Set( "py_initialized", "1");
+#endif
   
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ..
@@ -359,8 +362,13 @@ void SC_Python_Shutdown( void )
   Com_Printf("Python shutting down... ");
   Py_DECREF( mainModule );
   Py_DECREF( mainDict );
-
+  
+#ifndef CLIENT
   trap_Cvar_Set( "py_initialized", "0" );
+#else
+  Cvar_Set( "py_initialized", "0");
+#endif
+  
   Py_Finalize();
   Com_Printf("done\n");
 }
@@ -408,6 +416,12 @@ static void update_context( void )
   }
 }
 
+#ifdef CLIENT
+#define trap_FS_FOpenFile  FS_FOpenFileByMode
+#define trap_FS_Read       FS_Read2
+#define trap_FS_FCloseFile FS_FCloseFile
+#endif
+
 /*
 =================
 SC_Python_RunScript
@@ -435,17 +449,23 @@ qboolean SC_Python_RunScript( const char *filename )
     trap_FS_FCloseFile(f);
     return qfalse;
   }
-#ifndef UNITTEST
+#ifndef CLIENT
   if (!sc_python.integer){
+#else
+  if (!sc_python->integer){
+#endif
     Com_Printf(S_COLOR_RED "Cannot load %s: python disabled\n", filename);
     return qfalse;
   }
   
+#ifndef CLIENT
   if (!py_initialized.integer){
+#else
+  if (!py_initialized->integer){
+#endif
     Com_Printf(S_COLOR_RED "Cannot load %s: python not initilized\n", filename);
     return qfalse;
   }
-#endif
   trap_FS_Read(buf, len, f);
   buf[len] = 0;
   trap_FS_FCloseFile(f);
@@ -468,19 +488,27 @@ qboolean SC_Python_RunScript( const char *filename )
   return qtrue;
 }
 
-#endif /*#ifndef UNITTEST*/
+#endif /* UNITTEST */
 
 int SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
   PyObject *ArgsTuple, *ReturnValue;
   
 #ifndef UNITTEST
+#ifndef CLIENT
   if (!sc_python.integer){
+#else
+  if (!sc_python->integer){
+#endif
     Com_Printf(S_COLOR_RED "Cannot run function: python disabled\n");
     return -1;
   }
   
+#ifndef CLIENT
   if (!py_initialized.integer){
+#else
+  if (!py_initialized->integer){
+#endif
     Com_Printf(S_COLOR_RED "Cannot run function: python not initilized\n");
     return -1;
   }

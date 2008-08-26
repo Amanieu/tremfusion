@@ -891,6 +891,22 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
   CFLAGS += -DENABLE_SCRIPT_UI
 endif
 
+CGAME_LCCFLAGS =
+GAME_LCCFLAGS =
+UI_LCCFLAGS =
+ifeq ($(USE_LUA),1)
+  GAME_LCCFLAGS += -DUSE_LUA=1 -I$(LUADIR)
+  UI_LCCFLAGS += -DUSE_LUA=1 -I$(LUADIR)
+endif
+
+ifeq ($(USE_PYTHON),1)
+  UI_LCCFLAGS += -DUSE_PYTHON=1
+endif
+
+ifeq ($(ENABLE_SCRIPT_UI),1)
+  UI_LCCFLAGS += -DENABLE_SCRIPT_UI
+endif
+
 ifeq ($(V),1)
 echo_cmd=@:
 Q=
@@ -901,12 +917,12 @@ endif
 
 define DO_CC
 $(echo_cmd) "CC $<"
-$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
+$(Q)$(CC) $(NOTSHLIBCFLAGS) -DCLIENT $(CFLAGS) -o $@ -c $<
 endef
 
 define DO_SMP_CC
 $(echo_cmd) "SMP_CC $<"
-$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
+$(Q)$(CC) $(NOTSHLIBCFLAGS) -DCLIENT $(CFLAGS) -DSMP -o $@ -c $<
 endef
 
 define DO_BOT_CC
@@ -1159,17 +1175,17 @@ endef
 
 define DO_CGAME_Q3LCC
 $(echo_cmd) "CGAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME $(CGAME_LCCFLAGS) -o $@ $<
 endef
 
 define DO_GAME_Q3LCC
 $(echo_cmd) "GAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME $(GAME_LCCFLAGS) -o $@ $<
 endef
 
 define DO_UI_Q3LCC
 $(echo_cmd) "UI_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI $(UI_LCCFLAGS) -o $@ $<
 endef
 
 
@@ -1423,6 +1439,19 @@ ifneq ($(USE_TTY_CLIENT),1)
 
   Q3POBJ_SMP = \
     $(B)/clientsmp/sdl_glimp.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+  Q3OBJ += \
+    $(B)/client/sc_datatype.o \
+    $(B)/client/sc_main.o \
+    $(B)/client/sc_c.o \
+    $(B)/client/bg_alloc.o \
+    $(B)/client/sc_python_func.o \
+    $(B)/client/sc_python_object.o \
+    $(B)/client/sc_python_array.o \
+    $(B)/client/sc_python_hash.o \
+    $(B)/client/sc_python.o
 endif
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN)
@@ -1705,11 +1734,8 @@ UIOBJ_ = \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o
 
-UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
-UIVMOBJ = $(UIOBJ_:%.o=%.asm)
-
 ifeq ($(ENABLE_SCRIPT_UI),1)
-  UIOBJ +=  \
+  UIOBJ_ +=  \
     $(B)/base/ui/sc_datatype.o \
     $(B)/base/ui/sc_main.o \
     $(B)/base/ui/sc_c.o \
@@ -1719,7 +1745,7 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
     $(B)/base/ui/ui_script.o \
     $(B)/base/game/bg_alloc.o 
   ifeq ($(USE_LUA),1)
-    UIOBJ +=  \
+    UIOBJ_ +=  \
       $(B)/base/lua/lapi.o \
       $(B)/base/lua/lauxlib.o \
       $(B)/base/lua/lbaselib.o \
@@ -1756,13 +1782,20 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
       $(B)/base/ui/sc_lua_metamethod.o \
       $(B)/base/ui/sc_lua_lib.o
   endif
+endif
+
+UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
+UIVMOBJ = $(UIOBJ_:%.o=%.asm)
+
+ifeq ($(ENABLE_SCRIPT_UI),1) # To get python working in a qvm, dlls and qvms need to have different targets
   ifeq ($(USE_PYTHON),1)
-    UIOBJ += \
-      $(B)/base/ui/sc_python_func.o \
+    UIOBJ   +=  \
+    	$(B)/base/ui/sc_python_func.o \
       $(B)/base/ui/sc_python_object.o \
       $(B)/base/ui/sc_python_array.o \
       $(B)/base/ui/sc_python_hash.o \
       $(B)/base/ui/sc_python.o
+    UIVMOBJ += $(B)/base/ui/sc_python_qvm.asm
   endif
 endif
 
@@ -1819,6 +1852,11 @@ $(B)/client/%.o: $(SYSDIR)/%.rc
 $(B)/client/%.o: $(NDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_CC)
+	
+$(B)/client/bg_%.o: $(GDIR)/bg_%.c
+	$(DO_CC)
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1875,14 +1913,20 @@ $(B)/base/cgame/%.o: $(CGDIR)/%.c
 
 $(B)/base/cgame/sc_%.o: $(SCRIPTDIR)/sc_%.c
 	$(DO_CGAME_CC)
+	
+$(B)/base/cgame/ui_%.o: $(UIDIR)/ui_%.c
+	$(DO_CGAME_CC)
 
 $(B)/base/cgame/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
-
+	
 $(B)/base/cgame/%.asm: $(CGDIR)/%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
 $(B)/base/cgame/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
+	$(DO_CGAME_Q3LCC)
+	
+$(B)/base/cgame/ui_%.asm: $(UIDIR)/ui_%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
 
@@ -1915,7 +1959,7 @@ $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
 $(B)/base/ui/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
-	$(DO_ui_Q3LCC)
+	$(DO_UI_Q3LCC)
 
 
 $(B)/base/python/%.o: $(PYTHONDIR)/%.c
