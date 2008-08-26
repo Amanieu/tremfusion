@@ -52,60 +52,63 @@ void SC_LoadLangages(void)
 #endif 
 }
 
-static void autoload_global(void)
+static int autoload_dir(const char *dirname)
 {
   int             numdirs;
-  int             numFiles;
-  char            filename[128];
   char            dirlist[1024];
-  char           *dirptr;
-  int             i;
-  int             dirlen;
+  char            *dirptr;
+  char            filename[128];
+  char            *fnptr;
+  int             i, dirlen = 0, numFiles = 0;
 
-  numFiles = 0;
+  strcpy(filename, dirname);
+  fnptr = filename + strlen(filename);
 
-  numdirs = trap_FS_GetFileList("scripts/global/", "", dirlist, 1024);
+  numdirs = trap_FS_GetFileList(dirname, "", dirlist, 1024);
   dirptr = dirlist;
   for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
   {
     dirlen = strlen(dirptr);
-    strcpy(filename, "scripts/global/");
-    strcat(filename, dirptr);
+    strcpy(fnptr, dirptr);
 
     // load the file
     if (SC_RunScript(SC_LangageFromFilename(filename), filename) != -1 )
       numFiles++;
   }
 
+  numdirs = trap_FS_GetFileList(dirname, "/", dirlist, 1024);
+  dirptr = dirlist;
+  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
+  {
+    // ignore hidden directories
+    if(dirptr[0] != '.')
+    /*// ignore . and .. directories
+    if(strcmp(dirptr, ".") != 0 && strcmp(dirptr, "..") != 0)*/
+    {
+      strcpy(fnptr, va("%s/", dirptr));
+
+      // load recursively
+      numFiles += autoload_dir(filename);
+    }
+    dirlen = strlen(dirptr);
+  }
+
+  return numFiles;
+}
+
+static void autoload_global(void)
+{
+  int             numFiles;
+
+  numFiles = autoload_dir("scripts/global/");
   Com_Printf("%i global files parsed\n", numFiles);
 }
 
 static void autoload_local(char mapname[MAX_STRING_CHARS])
 {
-  int             numdirs;
   int             numFiles;
-  char            filename[128];
-  char            dirlist[1024];
-  char           *dirptr;
-  int             i;
-  int             dirlen;
 
-  numFiles = 0;
-
-  numdirs = trap_FS_GetFileList(va("scripts/%s", mapname), "", dirlist, 1024);
-  dirptr = dirlist;
-  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
-  {
-    dirlen = strlen(dirptr);
-    strcpy(filename, va("scripts/%s/", mapname));
-    strcat(filename, dirptr);
-    Com_Printf("***find file to parse***\n");
-
-    // load the file
-    if (SC_RunScript(SC_LangageFromFilename(filename), filename) != -1 )
-      numFiles++;
-  }
-
+  numFiles = autoload_dir(va("scripts/%s/", mapname));
   Com_Printf("%i local files parsed\n", numFiles);
 }
 

@@ -114,7 +114,7 @@ static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       vec3[2] = in[1].data.floating ;
       break;
     default:
-      SC_EXEC_ERROR(va("internal error running `vec3.set' function in %s (%d) : %d: unknow closure", __FILE__, __LINE__, settype));
+      SC_EXEC_ERROR(va("internal error running `vec3.set' function in %s (%d) : %d: unknown closure", __FILE__, __LINE__, settype));
   }
 
   out->type = TYPE_UNDEF;
