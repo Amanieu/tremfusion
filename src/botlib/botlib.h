@@ -59,6 +59,8 @@ struct weaponinfo_s;
 #define PRT_ERROR				3
 #define PRT_FATAL				4
 #define PRT_EXIT				5
+#define PRT_DEBUG       6
+#define PRT_DEVELOPER   7
 
 //console message types
 #define CMS_NORMAL				0

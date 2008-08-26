@@ -561,7 +561,8 @@ void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo
   char  *teamstring, *teamstr;
   gentity_t *bot;
   
-  G_Printf("Trying to add bot '%s'...\n", name);
+  if(bot_developer.integer)
+    G_Printf("Trying to add bot '%s'...\n", name);
   reservedSlots = trap_Cvar_VariableIntegerValue( "sv_privateclients" );
   /*
   // get the botinfo from bots.txt

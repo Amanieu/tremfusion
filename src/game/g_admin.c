@@ -2996,12 +2996,11 @@ qboolean G_admin_bot( gentity_t *ent, int skiparg ){
         ADMP( "^3!bot: ^7usage: !bot add [name] [h/a] (character) (skill)\n" );
         return qfalse;
       }
-      ADMP( va( "%d - %d = %d\n" , G_SayArgc(), skiparg, G_SayArgc() - skiparg) );
       //if( team_int == TEAM_HUMANS){
       switch(G_SayArgc() - skiparg)
       {
         case 4: //no skill or charactor name
-          ADMP( "^3!bot add: ^7bot charater not specified using random\n" );
+          ADMP( "^3!bot add: ^7bot charater not specified, using random\n" );
           skill_float = 2;
           G_AddRandomBot(ent, team_int, name , &skill_float);
           return qtrue;

@@ -1040,7 +1040,7 @@ bot_randomlist_t *BotLoadRandomStrings(char *filename)
 		//free the source after one pass
 		FreeSource(source);
 	} //end for
-	botimport.Print(PRT_MESSAGE, "loaded %s\n", filename);
+	botimport.Print(PRT_DEVELOPER, "loaded %s\n", filename);
 	//
 #ifdef DEBUG
 	botimport.Print(PRT_MESSAGE, "random strings %d msec\n", Sys_MilliSeconds() - starttime);
@@ -1352,7 +1352,7 @@ bot_matchtemplate_t *BotLoadMatchTemplates(char *matchfile)
 	} //end while
 	//free the source
 	FreeSource(source);
-	botimport.Print(PRT_MESSAGE, "loaded %s\n", matchfile);
+	botimport.Print(PRT_DEVELOPER, "loaded %s\n", matchfile);
 	//
 	//BotDumpMatchTemplates(matches);
 	//
@@ -1977,7 +1977,7 @@ bot_replychat_t *BotLoadReplyChat(char *filename)
 		} //end while
 	} //end while
 	FreeSource(source);
-	botimport.Print(PRT_MESSAGE, "loaded %s\n", filename);
+	botimport.Print(PRT_DEVELOPER, "loaded %s\n", filename);
 	//
 	//BotDumpReplyChat(replychatlist);
 	if (bot_developer)
@@ -2176,7 +2176,7 @@ bot_chat_t *BotLoadInitialChat(char *chatfile, char *chatname)
 		} //end if
 	} //end for
 	//
-	botimport.Print(PRT_MESSAGE, "loaded %s from %s\n", chatname, chatfile);
+	botimport.Print(PRT_DEVELOPER, "loaded %s from %s\n", chatname, chatfile);
 	//
 	//BotDumpInitialChat(chat);
 	if (bot_developer)

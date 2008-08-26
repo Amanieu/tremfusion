@@ -38,6 +38,8 @@ int bot_maxdebugpolys;
 extern botlib_export_t	*botlib_export;
 int	bot_enable;
 
+static cvar_t *bot_debug;
+static cvar_t *bot_developer;
 
 /*
 ==================
@@ -94,7 +96,7 @@ BotDrawDebugPolygons
 ==================
 */
 void BotDrawDebugPolygons(void (*drawPoly)(int color, int numPoints, float *points), int value) {
-	static cvar_t *bot_debug, *bot_groundonly, *bot_reachability, *bot_highlightarea, *bot_flood;
+	static cvar_t *bot_groundonly, *bot_reachability, *bot_highlightarea, *bot_flood;
 	bot_debugpoly_t *poly;
 	int i, parm0;
 
@@ -168,6 +170,16 @@ void QDECL BotImport_Print(int type, char *fmt, ...)
 		case PRT_EXIT: {
 			Com_Error(ERR_DROP, S_COLOR_RED "Exit: %s", str);
 			break;
+		}
+		case PRT_DEBUG: {
+		  if(bot_debug->integer)
+		    Com_Printf("Botdebug: %s", str);
+		  break;
+		}
+		case PRT_DEVELOPER: {
+		  if(bot_developer->integer)
+		    Com_Printf("Botdev: %s", str);
+		  break;
 		}
 		default: {
 			Com_Printf("unknown print type\n");
@@ -485,8 +497,8 @@ SV_BotInitCvars
 void SV_BotInitCvars(void) {
 
 	Cvar_Get("bot_enable", "1", 0);						//enable the bot
-	Cvar_Get("bot_developer", "0", CVAR_CHEAT);			//bot developer mode
-	Cvar_Get("bot_debug", "0", CVAR_CHEAT);				//enable bot debugging
+	bot_developer = Cvar_Get("bot_developer", "0", CVAR_CHEAT);			//bot developer mode
+	bot_debug = Cvar_Get("bot_debug", "0", CVAR_CHEAT);				//enable bot debugging
 	Cvar_Get("bot_maxdebugpolys", "100", 0);				//maximum number of debug polys
 	Cvar_Get("bot_groundonly", "1", 0);					//only show ground faces of areas
 	Cvar_Get("bot_reachability", "0", 0);				//show all reachabilities to other areas
