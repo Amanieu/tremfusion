@@ -39,8 +39,12 @@ Global Functions
 
 static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
 {
-  while(in->type != TYPE_UNDEF)
+  scDataTypeValue_t *args = in;
+
+  while(args->type != TYPE_UNDEF)
   {
+    if(in->type != TYPE_STRING)
+      SC_EXEC_ERROR(va("argument #%d need a string, but have a %s", args-in, SC_DataTypeToString(in->type)));
     Com_Printf(SC_StringToChar(in->data.string));
     in++;
   }
@@ -68,7 +72,7 @@ typedef struct
 {
   qboolean sc_created; // qtrue if created from python or lua, false if created by SC_Vec3FromVec3_t
                        // Prevents call of BG_Free on a vec3_t 
-  float   *vect;       
+  vec_t   *vect;       
 }sc_vec3_t;
 
 typedef enum 
@@ -88,16 +92,15 @@ void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 
 static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   int settype = (int)closure;
   sc_vec3_t *data;
-  vec3_t vec3;
+  vec_t *vec3;
   
   self = in[0].data.object;
-  data =  self->data.data.userdata;
+  data = self->data.data.userdata;
     
-  memcpy( vec3, data->vect, sizeof( vec3 ) );
+  vec3 = data->vect;
   
   switch (settype)
   {
@@ -111,25 +114,24 @@ static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       vec3[2] = in[1].data.floating ;
       break;
     default:
-      return -1;
+      SC_EXEC_ERROR(va("internal error running `vec3.set' function in %s (%d) : %d: unknow closure", __FILE__, __LINE__, settype));
   }
-  memcpy( data->vect, vec3, sizeof( vec3 ) );
 
+  out->type = TYPE_UNDEF;
   return 0;
 }
 
 static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   int gettype = (int)closure;
   sc_vec3_t *data;
-  vec3_t vec3;
+  vec_t *vec3;
   
   self = in[0].data.object;
-  data =  self->data.data.userdata;
+  data = self->data.data.userdata;
   
-  memcpy( vec3, data->vect, sizeof( vec3 ) );
+  vec3 = data->vect;
   out[0].type = TYPE_FLOAT;
   
   switch (gettype)
@@ -144,9 +146,7 @@ static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       out[0].data.floating = vec3[2];
       break;
     default:
-      out[0].type = TYPE_UNDEF;
-      break;
-      // Error
+      SC_EXEC_ERROR(va("internal error running `vec3.get' function in %s (%d) : %d: unknow closure", __FILE__, __LINE__, gettype));
   }
 
   return 0;
@@ -154,7 +154,6 @@ static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
 static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   sc_vec3_t *data;
   SC_Common_Constructor(in, out, closure);
@@ -163,8 +162,8 @@ static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   self->data.type = TYPE_USERDATA;
   data = BG_Alloc(sizeof(sc_vec3_t));
   data->sc_created = qtrue;
-  data->vect = BG_Alloc(sizeof(float) * 3);
-  memset(data->vect, 0x00, sizeof(float) * 3);
+  data->vect = BG_Alloc(sizeof(vec3_t));
+  memset(data->vect, 0x00, sizeof(vec3_t));
   self->data.data.userdata = data;
 
   return 0;
@@ -172,7 +171,6 @@ static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
 
 static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   sc_vec3_t *data;
   
@@ -184,6 +182,7 @@ static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   
   BG_Free(data);
 
+  out->type = TYPE_UNDEF;
   return 0;
 }
 
@@ -237,7 +236,7 @@ typedef struct
 {
   qboolean sc_created; // qtrue if created from python or lua, false if created by SC_Vec4FromVec4_t
                        // Prevents call of BG_Free on a vec3_t 
-  float   *vect;       
+  vec_t   *vect;       
 }sc_vec4_t;
 
 typedef enum 
@@ -250,16 +249,15 @@ typedef enum
 
 static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   int settype = (int)closure;
   sc_vec4_t *data;
-  vec4_t vec4;
+  vec_t *vec4;
   
   self = in[0].data.object;
   data =  self->data.data.userdata;
     
-  memcpy( vec4, data->vect, sizeof( vec4 ) );
+  vec4 = data->vect;
   
   switch (settype)
   {
@@ -276,25 +274,23 @@ static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       vec4[3] = in[1].data.floating ;
       break;
     default:
-      return -1;
+      SC_EXEC_ERROR(va("internal error running `vec4.set' function in %s (%d) : %d: unknow closure", __FILE__, __LINE__, settype));
   }
-  memcpy( data->vect, vec4, sizeof( vec4 ) );
   out[0].type = TYPE_UNDEF;
   return 0;
 }
 
 static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   int gettype = (int)closure;
   sc_vec3_t *data;
-  vec4_t vec4;
+  vec_t *vec4;
   
   self = in[0].data.object;
   data =  self->data.data.userdata;
   
-  memcpy( vec4, data->vect, sizeof( vec4 ) );
+  vec4 = data->vect;
   out[0].type = TYPE_FLOAT;
   
   switch (gettype)
@@ -312,9 +308,7 @@ static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
       out[0].data.floating = vec4[3];
       break;
     default:
-      out[0].type = TYPE_UNDEF;
-      break;
-      // Error
+      SC_EXEC_ERROR(va("internal error running `vec4.get' function in %s (%d) : %d: unknow closure", __FILE__, __LINE__, gettype));
   }
 
   return 0;
@@ -322,7 +316,6 @@ static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
 static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   sc_vec4_t *data;
   SC_Common_Constructor(in, out, closure);
@@ -335,12 +328,12 @@ static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   memset(data->vect, 0x00, sizeof(float) * 4);
   self->data.data.userdata = data;
 
+  out->type = TYPE_UNDEF;
   return 0;
 }
 
 static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
   sc_vec4_t *data;
   
@@ -352,6 +345,7 @@ static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   
   BG_Free(data);
 
+  out->type = TYPE_UNDEF;
   return 0;
 }
 
@@ -411,7 +405,7 @@ Modules
 
 scClass_t *module_class;
 
-static void add_autohooks(scDataTypeArray_t *autohook)
+static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
 {
   int i;
   scDataTypeValue_t value;
@@ -428,34 +422,44 @@ static void add_autohooks(scDataTypeArray_t *autohook)
   {
     SC_ArrayGet(autohook, i, &value);
     if(value.type != TYPE_ARRAY)
-    {
-      // TODO: error
-      continue;
-    }
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt an array but having a %s", SC_DataTypeToString(value.type)));
 
     h = value.data.array;
 
-    // TODO: check all types
     SC_ArrayGet(h, 0, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     name = SC_StringToChar(value.data.string);
 
     SC_ArrayGet(h, 2, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     location = SC_StringToChar(value.data.string);
 
     SC_ArrayGet(h, 3, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     tag = SC_StringToChar(value.data.string);
 
     SC_ArrayGet(h, 4, &value);
     if(value.type == TYPE_UNDEF)
       function = NULL;
     else
+    {
+      if(value.type != TYPE_FUNCTION)
+        SC_EXEC_ERROR(va("invalid format in argument. Attempt a function but having a %s", SC_DataTypeToString(value.type)));
       function = value.data.function;
+    }
 
     parent = SC_Event_FindChild(event->root, tag);
+    if(!parent)
+      SC_EXEC_ERROR(va("can't load autohooks: unable to find hook by tag %s", tag));
 
     node = SC_Event_NewNode(name);
     if(function)
@@ -473,13 +477,14 @@ static void add_autohooks(scDataTypeArray_t *autohook)
     else if(strcmp(location, "after") == 0)
       SC_Event_AddNode(parent->parent, parent, node);
     else
-    {
-      // Error: invalid location
-    }
+      SC_EXEC_ERROR(va("invalid location in argument. Location should be `inside', `before' or `after', but having `%s'", location));
   }
+
+  out->type = TYPE_UNDEF;
+  return 0;
 }
 
-static void remove_autohooks(scDataTypeArray_t *autohook)
+static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
 {
   int i;
   scDataTypeValue_t value;
@@ -492,27 +497,32 @@ static void remove_autohooks(scDataTypeArray_t *autohook)
   {
     SC_ArrayGet(autohook, i, &value);
     if(value.type != TYPE_ARRAY)
-    {
-      // TODO: error
-      continue;
-    }
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt an array but having a %s", SC_DataTypeToString(value.type)));
 
     h = value.data.array;
 
-    // TODO: check all types
     SC_ArrayGet(h, 0, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     name = SC_StringToChar(value.data.string);
 
     node = SC_Event_FindChild(event->root, name);
+    if(!node)
+      SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
+
     SC_Event_DeleteNode(node);
   }
+
+  return 0;
 }
 
-void SC_Module_Init(scObject_t *self)
+int SC_Module_Init(scObject_t *self)
 {
   scDataTypeValue_t value;
   scDataTypeHash_t *hash;
@@ -529,9 +539,11 @@ void SC_Module_Init(scObject_t *self)
 
   self->data.type = TYPE_HASH;
   self->data.data.hash = hash;
+
+  return 0;
 }
 
-void SC_Module_Register(scObject_t *self, scObject_t *toregister)
+int SC_Module_Register(scObject_t *self, scObject_t *toregister)
 {
   scDataTypeValue_t value;
   scDataTypeArray_t *array;
@@ -543,9 +555,11 @@ void SC_Module_Register(scObject_t *self, scObject_t *toregister)
   value.type = TYPE_OBJECT;
   value.data.object = toregister;
   SC_ArraySet(array, array->size, &value);
+
+  return 0;
 }
 
-void SC_Module_Load(scObject_t *self)
+int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
 {
   scDataTypeHash_t *hash;
   scDataTypeFunction_t *autoload = NULL;
@@ -562,6 +576,10 @@ void SC_Module_Load(scObject_t *self)
 
   SC_HashGet(hash, "name", &value);
   name = SC_StringToChar(value.data.string);
+
+  SC_HashGet(hash, "loaded", &value);
+  if(value.data.boolean)
+    SC_EXEC_ERROR(va("can't load module %s: allready loaded", name));
 
   SC_HashGet(hash, "conflict", &value);
   if(value.type == TYPE_ARRAY)
@@ -584,20 +602,17 @@ void SC_Module_Load(scObject_t *self)
   {
     for(i = 0; i < conflict->size; i++)
     {
-      SC_ArrayGet(conflict, i, &value);
-      if(value.type != TYPE_STRING)
-      {
-        // TODO: error
-      }
+      const char *name;
 
-      SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
+      SC_ArrayGet(conflict, i, &value);
+
+      name = SC_StringToChar(value.data.string);
+      SC_NamespaceGet(va("module.%s", name), &value2);
       if(value2.type != TYPE_UNDEF)
       {
         SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
         if(value.data.boolean)
-        {
-          // TODO: conflict error
-        }
+          SC_EXEC_ERROR(va("can't load module: conflicting with %s", name));
       }
     }
   }
@@ -607,26 +622,25 @@ void SC_Module_Load(scObject_t *self)
   {
     for(i = 0; i < depend->size; i++)
     {
-      SC_ArrayGet(depend, i, &value);
-      if(value.type != TYPE_STRING)
-      {
-        // TODO: error
-      }
+      int ret;
+      const char *name = SC_StringToChar(value.data.string);
 
-      SC_NamespaceGet(va("module.%s", SC_StringToChar(value.data.string)), &value2);
+      SC_ArrayGet(depend, i, &value);
+
+      SC_NamespaceGet(va("module.%s", name), &value2);
       if(value2.type != TYPE_UNDEF)
       {
         SC_HashGet(value2.data.object->data.data.hash, "loaded", &value);
         if(!value.data.boolean)
         {
           SC_Module_Register(value2.data.object, self);
-          SC_Module_Load(value2.data.object);
+          ret = SC_Module_Load(value2.data.object, out);
+          if(ret == -1)
+            return -1;
         }
       }
       else
-      {
-        // TODO: error : can't autoload unknow module
-      }
+        SC_EXEC_ERROR(va("can't load module: unknow depends (%s)", name));
     }
   }
 
@@ -637,11 +651,17 @@ void SC_Module_Load(scObject_t *self)
     fin[0].data.object = self;
     fin[1].type = TYPE_UNDEF;
     SC_RunFunction(autoload, fin, &fout);
+    if(fout.data.boolean == qfalse)
+      return 0;
   }
 
   // Add autohooks
   if(autohook)
-    add_autohooks(autohook);
+  {
+    int ret = add_autohooks(autohook, out);
+    if(ret == -1)
+      return -1;
+  }
 
   // copy all module stuff to root namespace
   value.type = TYPE_OBJECT;
@@ -652,9 +672,11 @@ void SC_Module_Load(scObject_t *self)
   value.type = TYPE_BOOLEAN;
   value.data.boolean = qtrue;
   SC_HashSet(hash, "loaded", &value);
+
+  return 1;
 }
 
-void SC_Module_Unload(scObject_t *self)
+int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force)
 {
   scDataTypeHash_t *hash;
   scDataTypeFunction_t *autounload = NULL;
@@ -670,6 +692,13 @@ void SC_Module_Unload(scObject_t *self)
   SC_HashGet(hash, "name", &value);
   name = SC_StringToChar(value.data.string);
 
+  if(!force)
+  {
+    SC_HashGet(hash, "loaded", &value);
+    if(value.data.boolean == qfalse)
+      SC_EXEC_ERROR(va("can't unload module %s: not unloaded", name));
+  }
+
   SC_HashGet(hash, "registered", &value);
   using = value.data.array;
 
@@ -682,15 +711,15 @@ void SC_Module_Unload(scObject_t *self)
     autohook = value.data.array;
 
   // Check if able to unload (must not have dependent module loaded)
-  if(using->size > 0)
+  if(!force)
   {
-    // TODO: can't unload module : other modules depend on it
+    if(using->size > 0)
+    {
+      SC_ArrayGet(using, 0, &value);
+      SC_EXEC_ERROR(va("can't unload module %s: module %s depend on it", name, SC_StringToChar(value.data.string)));
+    }
   }
  
-  // Remove autohooks
-  if(autohook)
-    remove_autohooks(autohook);
-
   // Call "autounload" function
   if(autounload)
   {
@@ -698,6 +727,16 @@ void SC_Module_Unload(scObject_t *self)
     fin[0].data.object = self;
     fin[1].type = TYPE_UNDEF;
     SC_RunFunction(autounload, fin, &fout);
+    if(force == qfalse && fout.data.boolean == qfalse)
+      return 0;
+  }
+
+  // Remove autohooks
+  if(autohook)
+  {
+    int ret = remove_autohooks(autohook, out);
+    if(ret == -1)
+      return -1;
   }
 
   // remove all module stuff in root namespace
@@ -707,6 +746,8 @@ void SC_Module_Unload(scObject_t *self)
   value.type = TYPE_BOOLEAN;
   value.data.boolean = qfalse;
   SC_HashGet(hash, "loaded", &value);
+
+  return 1;
 }
 
 typedef enum
@@ -724,21 +765,53 @@ typedef enum
 
 static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scObject_t *self;
+  scDataTypeHash_t *args, *hash;
+  scDataTypeValue_t value;
+  const char *key;
+  const char *name;
 
   SC_Common_Constructor(in, out, closure);
   self = out[0].data.object;
-
   SC_Module_Init(self);
-  SC_HashSet(self->data.data.hash, "name", &in[1]);
+
+  hash = self->data.data.hash;
+
+  args = in[1].data.hash;
+  key = SC_HashFirst(args, &value);
+  while(key)
+  {
+    // if it's a valid key
+    if( strcmp(key, "name") == 0 ||
+        strcmp(key, "version") == 0 ||
+        strcmp(key, "description") == 0 ||
+        strcmp(key, "author") == 0 ||
+        strcmp(key, "depend") == 0 ||
+        strcmp(key, "conflict") == 0)
+      SC_HashSet(hash, key, &value);
+    key = SC_HashNext(args, key, &value);
+  }
+
+  SC_HashGet(hash, "name", &value);
+  name = va("module.%s", SC_StringToChar(value.data.string));
+  SC_NamespaceGet(name, &value);
+  if(value.type != TYPE_UNDEF)
+    SC_EXEC_ERROR(va("Can't create module %s: a module with this name allready exist", name));
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet(name, &value);
 
   return 0;
 }
 
+static int null_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  SC_EXEC_ERROR(va("Can't access field `%s' to write: access denied", (char*) closure));
+}
+
 static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
@@ -751,7 +824,6 @@ static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 
 static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
@@ -764,40 +836,45 @@ static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 
 static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, (char*)closure, out);
+  if(out->type == TYPE_UNDEF)
+    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", (char*)closure));
 
   return 0;
 }
 
 static int module_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, SC_StringToChar(in[1].data.string), out);
+  if(out->type == TYPE_UNDEF)
+    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", (char*)closure));
 
   return 0;
 }
 
 static int module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
-  SC_Module_Load(in[0].data.object);
+  int ret = SC_Module_Load(in[0].data.object, out);
+  if(ret == -1)
+    return -1;
 
-  out[0].type = TYPE_UNDEF;
+  out->type = TYPE_BOOLEAN;
+  out->data.boolean = ret;
 
   return 0;
 }
 
 static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
-  SC_Module_Register(in[0].data.object, in[1].data.object);
+  int ret = SC_Module_Register(in[0].data.object, in[1].data.object);
+  if(ret == -1)
+    return -1;
 
   out[0].type = TYPE_UNDEF;
 
@@ -806,17 +883,18 @@ static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 
 static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
-  SC_Module_Unload(in[0].data.object);
+  int ret = SC_Module_Unload(in[0].data.object, out, (int)closure);
+  if(ret == -1)
+    return -1;
 
-  out[0].type = TYPE_UNDEF;
+  out->type = TYPE_BOOLEAN;
+  out->data.boolean = ret;
 
   return 0;
 }
 
 static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  // TODO: error management
   SC_ValueDump(&in[0].data.object->data);
 
   out[0].type = TYPE_UNDEF;
@@ -825,23 +903,24 @@ static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 }
 
 static scLibObjectMember_t module_members[] = {
-  { "name", "", TYPE_STRING, module_set, module_get, (void*) "name" },
-  { "version", "", TYPE_STRING, module_set, module_get, (void*) "version" },
-  { "description", "", TYPE_STRING, module_set, module_get, (void*) "description" },
-  { "author", "", TYPE_STRING, module_set, module_get, (void*) "author" },
-  { "depend", "", TYPE_ARRAY, module_set, module_get, (void*) "depend" },
-  { "conflict", "", TYPE_ARRAY, module_set, module_get, (void*) "conflict" },
+  { "name", "", TYPE_STRING, null_set, module_get, (void*) "name" },
+  { "version", "", TYPE_STRING, null_set, module_get, (void*) "version" },
+  { "description", "", TYPE_STRING, null_set, module_get, (void*) "description" },
+  { "author", "", TYPE_STRING, null_set, module_get, (void*) "author" },
+  { "depend", "", TYPE_ARRAY, null_set, module_get, (void*) "depend" },
+  { "conflict", "", TYPE_ARRAY, null_set, module_get, (void*) "conflict" },
   { "autoload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autoload" },
   { "autounload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autounload" },
   { "autohooks", "", TYPE_ARRAY, module_set, module_get, (void*) "autohooks" },
-  { "loaded", "", TYPE_BOOLEAN, 0, module_get, (void*) "loaded" },
+  { "loaded", "", TYPE_BOOLEAN, null_set, module_get, (void*) "loaded" },
   { "_", "", TYPE_ANY, module_metaset, module_metaget, NULL },
   { "" }
 };
 
 static scLibObjectMethod_t module_methods[] = {
-  { "load", "", module_load, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "load", "", module_load, { TYPE_UNDEF }, TYPE_BOOLEAN, NULL },
+  { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, (void*) 0 },
+  { "kill", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, (void*) 1 },
   { "register", "", module_register, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "" }
@@ -849,7 +928,7 @@ static scLibObjectMethod_t module_methods[] = {
 
 static scLibObjectDef_t module_def = {
   "Module", "",
-  module_constructor, { TYPE_STRING },
+  module_constructor, { TYPE_HASH },
   0, // a module should never be destroyed
   module_members,
   module_methods,

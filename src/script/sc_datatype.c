@@ -403,7 +403,7 @@ static unsigned int getHash(const char *key)
   return hash;
 }
 
-static unsigned int findSlot(scDataTypeHash_t *hash, const char *key)
+static unsigned int findSlot(const scDataTypeHash_t *hash, const char *key)
 {
   unsigned int i;
 
@@ -465,6 +465,34 @@ qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t 
 
     return qtrue;
   }
+}
+
+const char *SC_HashFirst(scDataTypeHash_t *hash, scDataTypeValue_t *value)
+{
+  unsigned int iHash;
+  for(iHash = 0; iHash < hash->buflen; iHash++)
+  {
+    if(!SC_StringIsEmpty(&hash->data[iHash].key))
+    {
+      memcpy(value, &hash->data[iHash].value, sizeof(scDataTypeValue_t));
+      return SC_StringToChar(&hash->data[iHash].key);
+    }
+  }
+  return NULL;
+}
+
+const char *SC_HashNext(const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value)
+{
+  unsigned int iHash = findSlot(hash, key) + 1;
+  for( ; iHash < hash->buflen; iHash++)
+  {
+    if(!SC_StringIsEmpty(&hash->data[iHash].key))
+    {
+      memcpy(value, &hash->data[iHash].value, sizeof(scDataTypeValue_t));
+      return SC_StringToChar(&hash->data[iHash].key);
+    }
+  }
+  return NULL;
 }
 
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash)
@@ -621,7 +649,6 @@ qboolean SC_NamespaceGet( const char *path, scDataTypeValue_t *value )
     Q_strncpyz( tmp, base, idx - base + 1 );
 	tmp[idx-base] = '\0';
 
-	Com_Printf("SC_HashGet: %s\n", tmp);
     if( SC_HashGet( (scDataTypeHash_t*) namespace, tmp, value ) )
 	{
       if( value->type != TYPE_NAMESPACE )

@@ -138,6 +138,10 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
   int narg = 0;
   int ret;
 
+  // null function, do nothing
+  if(func->langage == LANGAGE_INVALID)
+    return 0;
+
   // Check parameters type
   while(in[narg].type != TYPE_UNDEF && func->argument[narg] != TYPE_UNDEF)
   {

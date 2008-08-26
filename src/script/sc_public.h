@@ -278,6 +278,8 @@ void SC_ArrayGCDec(scDataTypeArray_t *array);
 scDataTypeHash_t* SC_HashNew( void );
 qboolean SC_HashGet(scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
 qboolean SC_HashSet( scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value );
+const char *SC_HashFirst(scDataTypeHash_t *hash, scDataTypeValue_t *value);
+const char *SC_HashNext(const scDataTypeHash_t *hash, const char *key, scDataTypeValue_t *value);
 scDataTypeArray_t *SC_HashGetKeys(const scDataTypeHash_t *hash);
 scDataTypeArray_t *SC_HashToArray(scDataTypeHash_t *hash);
 qboolean SC_HashDelete(scDataTypeHash_t *hash, const char *key);
@@ -412,10 +414,10 @@ vec4_t     *SC_Vec4t_from_Vec4( scObject_t *vectobject );
 void SC_Common_Init( void );
 
 // modules
-void SC_Module_Init(scObject_t *self);
-void SC_Module_Register(scObject_t *self, scObject_t *toregister);
-void SC_Module_Load(scObject_t *self);
-void SC_Module_Unload(scObject_t *self);
+int SC_Module_Init(scObject_t *self);
+int SC_Module_Register(scObject_t *self, scObject_t *toregister);
+int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out);
+int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force);
 
 
 // sc_event.c
@@ -436,7 +438,7 @@ struct scEventNode_s
 {
   char                  tag[MAX_TAG_SIZE+1];
 
-  scEventNode_t         *parent; // Parent node in tree. TODO: Maybe useless ?
+  scEventNode_t         *parent; // Parent node in tree.
 
   scEventNode_t         *next; // Next node in linked list
   scEventNode_t         *previous; // Previous node in linked list

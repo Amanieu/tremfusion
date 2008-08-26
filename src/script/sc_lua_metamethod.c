@@ -155,8 +155,8 @@ int SC_Lua_call_metamethod( lua_State *L )
   int type;
   int mod = 0;
   scClass_t *class;
-  scDataTypeValue_t ret;
-  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t out;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
   
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_type");
@@ -169,8 +169,8 @@ int SC_Lua_call_metamethod( lua_State *L )
   {
     class = lua_touserdata(L, -1);
     function = &class->constructor;
-    args[0].type = TYPE_CLASS;
-    args[0].data.class = class;
+    in[0].type = TYPE_CLASS;
+    in[0].data.class = class;
     mod = 1;
   }
   else
@@ -182,27 +182,27 @@ int SC_Lua_call_metamethod( lua_State *L )
   for(i = top-2; i >= 0; i--)
   {
     int idx = i + mod;
-    SC_Lua_pop_value(L, &args[idx], function->argument[idx]);
-    SC_ValueGCInc(&args[idx]);
+    SC_Lua_pop_value(L, &in[idx], function->argument[idx]);
+    SC_ValueGCInc(&in[idx]);
   }
 
-  args[top-1+mod].type = TYPE_UNDEF;
+  in[top-1+mod].type = TYPE_UNDEF;
 
-  if(SC_RunFunction(function, args, &ret) != 0)
-    luaL_error(L, SC_StringToChar(ret.data.string));
+  if(SC_RunFunction(function, in, &out) != 0)
+    luaL_error(L, SC_StringToChar(out.data.string));
 
   i--;
   while(i >= 0)
   {
-    SC_ValueGCDec(&args[i]);
+    SC_ValueGCDec(&in[i]);
     i--;
   }
 
   // TODO: garbage collection with return value
 
-  if(ret.type != TYPE_UNDEF)
+  if(out.type != TYPE_UNDEF)
   {
-    SC_Lua_push_value(L, &ret);
+    SC_Lua_push_value(L, &out);
     return 1;
   }
 
@@ -656,7 +656,8 @@ int SC_Lua_object_index_metamethod(lua_State *L)
     else
       in[1].type = TYPE_UNDEF;
 
-    SC_RunFunction(&member->get, in, &out);
+    if(SC_RunFunction(&member->get, in, &out) != 0)
+      luaL_error(L, SC_StringToChar(out.data.string));
 
     SC_Lua_push_value(L, &out);
     return 1;
@@ -682,6 +683,17 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
 
   name = luaL_checkstring(L, 2);
 
+  field  = SC_ClassGetField(object->class, name);
+  if(field)
+  {
+    // Call SC_Field_Set with popped value
+    SC_Lua_pop_value(L, &in[1], field->type);
+    
+    SC_Field_Set( object, field, &in[1] );
+
+    return 0;
+  }
+
   member = SC_ClassGetMember(object->class, name);
   if(member)
   {
@@ -702,18 +714,8 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
       in[2].type = TYPE_UNDEF;
     }
 
-    SC_RunFunction(&member->set, in, &out);
-
-    return 0;
-  }
-
-  field  = SC_ClassGetField(object->class, name);
-  if(field)
-  {
-    // Call SC_Field_Set with popped value
-    SC_Lua_pop_value(L, &in[1], field->type);
-    
-    SC_Field_Set( object, field, &in[1] );
+    if(SC_RunFunction(&member->set, in, &out) != 0)
+      luaL_error(L, SC_StringToChar(out.data.string));
 
     return 0;
   }

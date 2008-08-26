@@ -91,22 +91,32 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
     strcpy(class->members[i].desc, def->members[i].desc);
     class->members[i].type = def->members[i].type;
 
-    class->members[i].set.gc.count = 0;
-    class->members[i].set.langage = LANGAGE_C;
-    class->members[i].set.data.ref = def->members[i].set;
-    class->members[i].set.argument[0] = TYPE_OBJECT;
-    class->members[i].set.argument[1] = class->members[i].type;
-    class->members[i].set.argument[2] = TYPE_UNDEF;
-    class->members[i].set.return_type = TYPE_UNDEF;
-    class->members[i].set.closure = def->members[i].closure;
+    if(def->members[i].set)
+    {
+      class->members[i].set.gc.count = 0;
+      class->members[i].set.langage = LANGAGE_C;
+      class->members[i].set.data.ref = def->members[i].set;
+      class->members[i].set.argument[0] = TYPE_OBJECT;
+      class->members[i].set.argument[1] = class->members[i].type;
+      class->members[i].set.argument[2] = TYPE_UNDEF;
+      class->members[i].set.return_type = TYPE_UNDEF;
+      class->members[i].set.closure = def->members[i].closure;
+    }
+    else
+      class->members[i].set.langage = LANGAGE_INVALID;
 
-    class->members[i].get.gc.count = 0;
-    class->members[i].get.langage = LANGAGE_C;
-    class->members[i].get.data.ref = def->members[i].get;
-    class->members[i].get.argument[0] = TYPE_OBJECT;
-    class->members[i].get.argument[1] = TYPE_UNDEF;
-    class->members[i].get.return_type = class->members[i].type;
-    class->members[i].get.closure = def->members[i].closure;
+    if(def->members[i].get)
+    {
+      class->members[i].get.gc.count = 0;
+      class->members[i].get.langage = LANGAGE_C;
+      class->members[i].get.data.ref = def->members[i].get;
+      class->members[i].get.argument[0] = TYPE_OBJECT;
+      class->members[i].get.argument[1] = TYPE_UNDEF;
+      class->members[i].get.return_type = class->members[i].type;
+      class->members[i].get.closure = def->members[i].closure;
+    }
+    else
+      class->members[i].get.langage = LANGAGE_INVALID;
   }
   class->members[i].name[0] = '\0';
 

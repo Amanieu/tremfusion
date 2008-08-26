@@ -536,7 +536,7 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L)
   while(lua_next(L, -2) != 0)
   {
     lua_pushvalue(L, -2);
-    lstr = lua_tostring(L, -2);
+    lstr = lua_tostring(L, -1);
     lua_pop(L, 1);
 
     key = SC_StringNewFromChar(lstr);

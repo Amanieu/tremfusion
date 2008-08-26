@@ -29,7 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - Bad GC when pop a value ?
  * - Error messages should always show script line
  * - review errors with functions `luaL_argerror' / 'luaL_opterror'
- * - call/pcall ? when use what ?
  * - string has metatable by default ! get metatable is not enough to see if data is registered
  */
 

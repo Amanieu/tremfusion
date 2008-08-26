@@ -357,14 +357,14 @@ qboolean  ConsoleCommand( void )
   if( !Q_stricmp( cmd, "load" ) )
   {
     char name[MAX_NAMESPACE_LENGTH+1];
-    scDataTypeValue_t value;
+    scDataTypeValue_t value, value2;
 
     trap_Argv( 0, name, sizeof( name ) );
 
     SC_NamespaceGet(va("module.%s", name), &value);
 
     if(value.type == TYPE_OBJECT)
-      SC_Module_Load(value.data.object);
+      SC_Module_Load(value.data.object, &value2);
     else
     {
       // TODO: Error
@@ -374,14 +374,28 @@ qboolean  ConsoleCommand( void )
   if( !Q_stricmp( cmd, "unload" ) )
   {
     char name[MAX_NAMESPACE_LENGTH+1];
-    scDataTypeValue_t value;
+    char force[5+1];
+    scDataTypeValue_t value, value2;
 
     trap_Argv( 0, name, sizeof( name ) );
+    trap_Argv( 1, force, sizeof( force ) );
 
     SC_NamespaceGet(va("module.%s", name), &value);
 
     if(value.type == TYPE_OBJECT)
-      SC_Module_Unload(value.data.object);
+    {
+      int ret;
+
+      if(strcmp(force, "force") == 0)
+        ret = SC_Module_Unload(value.data.object, &value2, 1);
+      else
+        ret = SC_Module_Unload(value.data.object, &value2, 0);
+
+      if(ret == -1)
+      {
+        // TODO: Error
+      }
+    }
     else
     {
       // TODO: Error
