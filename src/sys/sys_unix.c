@@ -44,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(const char **path2)
 {
 	char *p;
 
@@ -69,6 +69,7 @@ char *Sys_DefaultHomePath(void)
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
 }
 

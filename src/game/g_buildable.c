@@ -40,7 +40,14 @@ void G_SetBuildableAnim( gentity_t *ent, buildableAnimNumber_t anim, qboolean fo
   if( force )
     localAnim |= ANIM_FORCEBIT;
 
-  localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+  // don't toggle the togglebit more than once per frame
+  if( ent->animTime != level.time )
+  {
+    localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+    ent->animTime = level.time;
+  }
+  else
+    localAnim |= ent->s.legsAnim & ANIM_TOGGLEBIT;
 
   ent->s.legsAnim = localAnim;
 }

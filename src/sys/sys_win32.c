@@ -39,13 +39,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
+static char homePath2[ MAX_OSPATH ] = { 0 };
 
 /*
 ================
 Sys_DefaultHomePath
 ================
 */
-char *Sys_DefaultHomePath( void )
+char *Sys_DefaultHomePath( const char **path2 )
 {
 	TCHAR szPath[MAX_PATH];
 	FARPROC qSHGetFolderPath;
@@ -76,7 +77,26 @@ char *Sys_DefaultHomePath( void )
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
+
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
+						NULL, 0, szPath ) ) )
+		{
+			Com_Printf("Unable to detect CSIDL_APPDATA\n");
+			FreeLibrary(shfolder);
+			return NULL;
+		}
+		Q_strncpyz( homePath2, szPath, sizeof( homePath ) );
+		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremulous" );
+		*path2 = homePath2;
 		FreeLibrary(shfolder);
+		if( !CreateDirectory( homePath2, NULL ) )
+		{
+			if( GetLastError() != ERROR_ALREADY_EXISTS )
+			{
+				Com_Printf("Unable to create directory \"%s\"\n", homePath2 );
+				*path2 = NULL;
+			}
+		}
 		if( !CreateDirectory( homePath, NULL ) )
 		{
 			if( GetLastError() != ERROR_ALREADY_EXISTS )
