@@ -361,20 +361,23 @@ static void ABotUpdateInventory(bot_state_t* bs){
 // if enemy is found: set bs->goal and bs->enemy and return qtrue
 
 static qboolean ABotFindEnemy(bot_state_t* bs){
-  // return 0 if no alien building can be found
+  // return 0 if no human building can be found
   
-  //find alien in FOV
-  if(BotGoalForEnemy( bs, &bs->goal ) ) return qtrue;
   //see if there's an enemy in range, and go for it
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_MGTURRET, Nullcheckfuct ) ) return qtrue;	
-  // go for eggs
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_SPAWN, Nullcheckfuct ) ) return qtrue;	
-  // go for OM
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_REACTOR, Nullcheckfuct ) )return qtrue;	
+  if(BotGoalForEnemy( bs, &bs->goal ) ) goto gotenemy;
+  // go for turrets
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_MGTURRET, Nullcheckfuct ) ) goto gotenemy;	
+  // go for telenodes
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_SPAWN, Nullcheckfuct ) ) goto gotenemy;	
+  // go for reactor
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_REACTOR, Nullcheckfuct ) ) goto gotenemy;	
   // haven't returned yet so no enemy found > dont do anything
   BotAddInfo(bs, "enemy", "none");
   return qfalse;
-  
+  gotenemy:	
+  bs->enemy = bs->goal.entitynum;
+  BotAddInfo(bs, "enemy", va("# %d", bs->enemy) );
+  return qtrue;
 }
 
 qboolean ABotAttack(bot_state_t* bs){
