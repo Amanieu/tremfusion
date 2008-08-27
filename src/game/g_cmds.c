@@ -2681,7 +2681,7 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       clientnum = level.maxclients - 1;
 
     // can't follow self
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( &g_entities[ clientnum ] == ent )
       continue;
 
     // avoid selecting existing follow target
