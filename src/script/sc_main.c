@@ -245,9 +245,6 @@ scLangage_t SC_LangageFromFilename(const char* filename)
 
 void SC_InitClass( scClass_t *class )
 {
-#ifdef USE_LUA
-//  SC_Lua_InitClass( class );
-#endif
 #ifdef USE_PYTHON
   SC_Python_InitClass( class );
 #endif

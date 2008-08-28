@@ -233,7 +233,7 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
+  lua_pushcfunction(L, SC_Lua_len_string_metamethod);
   lua_setfield(L, -2, "__len");
   lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
   lua_setfield(L, -2, "__metatable");

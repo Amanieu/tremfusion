@@ -650,7 +650,9 @@ int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
     fin[0].type = TYPE_OBJECT;
     fin[0].data.object = self;
     fin[1].type = TYPE_UNDEF;
-    SC_RunFunction(autoload, fin, &fout);
+    if(SC_RunFunction(autoload, fin, &fout) == -1)
+      SC_EXEC_ERROR(SC_StringToChar(fout.data.string))
+
     if(fout.data.boolean == qfalse)
       return 0;
   }

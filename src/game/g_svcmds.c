@@ -364,7 +364,13 @@ qboolean  ConsoleCommand( void )
     SC_NamespaceGet(va("module.%s", name), &value);
 
     if(value.type == TYPE_OBJECT)
-      SC_Module_Load(value.data.object, &value2);
+    {
+      if(SC_Module_Load(value.data.object, &value2) == -1)
+      {
+        Com_Printf("Can't load module `%s': %s\n", name, SC_StringToChar(value2.data.string));
+        return qfalse;
+      }
+    }
     else
     {
       Com_Printf("Can't load module `%s': unknown module\n", name);
@@ -396,12 +402,14 @@ qboolean  ConsoleCommand( void )
 
       if(ret == -1)
       {
-        // TODO: Error
+        Com_Printf("Can't unload module `%s': %s\n", name, SC_StringToChar(value2.data.string));
+        return qfalse;
       }
     }
     else
     {
-      // TODO: Error
+      Com_Printf("Can't load module `%s': unknown module\n", name);
+      return qfalse;
     }
 
     return qtrue;

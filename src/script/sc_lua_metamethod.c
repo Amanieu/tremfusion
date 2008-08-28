@@ -50,6 +50,7 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
         luaL_error(L, "attempt to compare string with %s", lua_typename(L, SC_Lua_sctype2luatype(sctype)));
     }
 
+	lua_getfield(L, -2, "_ref");
     string = lua_touserdata(L, -1);
     str = SC_StringToChar(string);
 
@@ -82,11 +83,9 @@ int SC_Lua_invalid_metatable_metamethod(lua_State *L)
 int SC_Lua_invalid_index_metamethod(lua_State *L)
 {
   int type;
-  int top;
 
-  top = lua_gettop(L);
-
-  lua_getfield(L, -top, "_type");
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_type");
   type = lua_tointeger(L, -1);
 
   luaL_error(L, "attempt to index a %s value", lua_typename(L, SC_Lua_sctype2luatype(type)));
@@ -97,11 +96,9 @@ int SC_Lua_invalid_index_metamethod(lua_State *L)
 int SC_Lua_invalid_length_metamethod(lua_State *L)
 {
   int type;
-  int top;
 
-  top = lua_gettop(L);
-
-  lua_getfield(L, -top, "_type");
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_type");
   type = lua_tointeger(L, -1);
 
   luaL_error(L, "attempt to get length of a %s value", lua_typename(L, SC_Lua_sctype2luatype(type)));
@@ -220,8 +217,8 @@ int SC_Lua_tostring_metamethod( lua_State *L )
   lua_getfield(L, -2, "_ref");
   ref = lua_touserdata(L, -1);
 
-  lua_pushstring(L, va("%s: %p(c)",
-      lua_typename(L, SC_Lua_sctype2luatype(type)),
+  lua_pushstring(L, va("%s: %p(C)",
+      SC_DataTypeToString(type),
       ref));
   return 1;
 }
