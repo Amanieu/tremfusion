@@ -160,7 +160,7 @@ void		NET_Shutdown( void );
 void		NET_Restart( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
-void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
+void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, int delay);
 void		QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 void		QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
@@ -215,8 +215,8 @@ typedef struct {
 void Netchan_Init( int qport );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
 
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data );
-void Netchan_TransmitNextFragment( netchan_t *chan );
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data, int delay );
+void Netchan_TransmitNextFragment( netchan_t *chan, int delay );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
 
