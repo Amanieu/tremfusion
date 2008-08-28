@@ -61,6 +61,12 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class);
 void SC_Lua_push_object(lua_State *L, scObject_t *object);
 void SC_Lua_push_value(lua_State *L, scDataTypeValue_t *value);
 
+scDataTypeString_t* SC_Lua_get_lua_string(lua_State *L, int index);
+scDataTypeArray_t* SC_Lua_get_lua_array(lua_State *L, int index);
+scDataTypeHash_t* SC_Lua_get_lua_hash(lua_State *L, int index);
+scDataTypeFunction_t* SC_Lua_get_lua_function(lua_State *L, int index);
+void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataType_t type);
+
 scDataTypeString_t* SC_Lua_pop_lua_string(lua_State *L);
 scDataTypeArray_t* SC_Lua_pop_lua_array(lua_State *L);
 scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L);

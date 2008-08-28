@@ -29,9 +29,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static scLuaFunc_t luaFunc_id = 0;
 
-void fregister(scDataTypeFunction_t *function)
+static void fregister(lua_State *L, scDataTypeFunction_t *function, int index)
 {
-  lua_setfield(g_luaState, LUA_REGISTRYINDEX, va("func_%d", luaFunc_id));
+  lua_pushvalue(L, index);
+  lua_setfield(L, LUA_REGISTRYINDEX, va("func_%d", luaFunc_id));
   function->data.luafunc = luaFunc_id;
 
   luaFunc_id++;
@@ -491,21 +492,38 @@ void SC_Lua_push_value( lua_State *L, scDataTypeValue_t *value )
       luaL_error(L, "internal error : attempt to push an unknow value (%d) in %s (%d)", value->type, __FILE__, __LINE__);
       break;
   }
+
+  SC_ValueGCInc(value);
 }
 
 scDataTypeString_t* SC_Lua_pop_lua_string(lua_State *L)
 {
-  const char *lstr;
-  scDataTypeString_t *string;
-
-  lstr = lua_tostring(L, -1);
-  string = SC_StringNewFromChar(lstr);
+  scDataTypeString_t *string = SC_Lua_get_lua_string(L, -1);
   lua_pop(L, 1);
 
   return string;
 }
 
+scDataTypeString_t* SC_Lua_get_lua_string(lua_State *L, int index)
+{
+  const char *lstr;
+  scDataTypeString_t *string;
+
+  lstr = lua_tostring(L, index);
+  string = SC_StringNewFromChar(lstr);
+
+  return string;
+}
+
 scDataTypeArray_t* SC_Lua_pop_lua_array(lua_State *L)
+{
+  scDataTypeArray_t *array = SC_Lua_get_lua_array(L, -1);
+  lua_pop(L, 1);
+
+  return array;
+}
+
+scDataTypeArray_t* SC_Lua_get_lua_array(lua_State *L, int index)
 {
   scDataTypeValue_t val;
   scDataTypeArray_t *array;
@@ -513,18 +531,24 @@ scDataTypeArray_t* SC_Lua_pop_lua_array(lua_State *L)
   array = SC_ArrayNew();
 
   lua_pushnil(L);
-  while(lua_next(L, -2) != 0)
+  while(lua_next(L, index-1) != 0)
   {
     SC_Lua_pop_value(L, &val, TYPE_ANY);
     SC_ArraySet(array, lua_tointeger(L, -1) - 1, &val);
   }
 
-  lua_pop(L, 1);
-
   return array;
 }
 
 scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L)
+{
+  scDataTypeHash_t *hash = SC_Lua_get_lua_hash(L, -1);
+  lua_pop(L, 1);
+
+  return hash;
+}
+
+scDataTypeHash_t* SC_Lua_get_lua_hash(lua_State *L, int index)
 {
   scDataTypeValue_t val;
   scDataTypeString_t *key;
@@ -533,7 +557,7 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L)
   scDataTypeHash_t *hash = SC_HashNew();
 
   lua_pushnil(L);
-  while(lua_next(L, -2) != 0)
+  while(lua_next(L, index-1) != 0)
   {
     lua_pushvalue(L, -2);
     lstr = lua_tostring(L, -1);
@@ -544,12 +568,18 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L)
     SC_HashSet(hash, SC_StringToChar(key), &val);
   }
   
-  lua_pop(L, 1);
-
   return hash;
 }
 
 scDataTypeFunction_t* SC_Lua_pop_lua_function(lua_State *L)
+{
+  scDataTypeFunction_t *function = SC_Lua_get_lua_function(L, -1);
+  lua_pop(L, 1);
+
+  return function;
+}
+
+scDataTypeFunction_t* SC_Lua_get_lua_function(lua_State *L, int index)
 {
   scDataTypeFunction_t *function;
 
@@ -560,55 +590,57 @@ scDataTypeFunction_t* SC_Lua_pop_lua_function(lua_State *L)
   function->argument[1] = TYPE_UNDEF;
   function->return_type = TYPE_ANY;
   function->closure = NULL;
-  fregister(function);
+  fregister(L, function, index);
 
   return function;
 }
 
 void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
 {
-  int ltype = lua_type(L, -1);
+  SC_Lua_get_value(L, -1, value, type);
+  lua_pop(L, 1);
+}
+
+void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataType_t type)
+{
+  int ltype = lua_type(L, index);
 
   switch(ltype)
   {
     case LUA_TNIL:
       value->type = TYPE_UNDEF;
-      lua_pop(L, 1);
       break;
 
     case LUA_TNUMBER:
       if(type == TYPE_INTEGER)
       {
         value->type = TYPE_INTEGER;
-        value->data.integer = lua_tointeger(L, -1);
+        value->data.integer = lua_tointeger(L, index);
       }
       else
       {
         value->type = TYPE_FLOAT;
-        value->data.floating = lua_tonumber(L, -1);
+        value->data.floating = lua_tonumber(L, index);
       }
-      lua_pop(L, 1);
       break;
 
     case LUA_TBOOLEAN:
       value->type = TYPE_BOOLEAN;
-      value->data.boolean = lua_toboolean(L, -1);
-      lua_pop(L, 1);
+      value->data.boolean = lua_toboolean(L, index);
       break;
 
     case LUA_TUSERDATA:
       value->type = TYPE_USERDATA;
-      value->data.userdata = lua_touserdata(L, -1);
-      lua_pop(L, 1);
+      value->data.userdata = lua_touserdata(L, index);
       break;
 
     case LUA_TSTRING:
       value->type = TYPE_STRING;
-      value->data.string = SC_Lua_pop_lua_string(L);
+      value->data.string = SC_Lua_get_lua_string(L, index);
       break;
 
     case LUA_TTABLE:
-      if(lua_getmetatable(L, -1))
+      if(lua_getmetatable(L, index))
       {
         lua_getfield(L, -1, "_type");
         value->type = lua_tointeger(L, -1);
@@ -616,19 +648,19 @@ void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
         lua_getfield(L, -2, "_ref");
         value->data.any = lua_touserdata(L, -1);
 
-        lua_pop(L, 4);
+        lua_pop(L, 3);
       }
       else
       {
         if(type == TYPE_ARRAY)
         {
           value->type = TYPE_ARRAY;
-          value->data.array = SC_Lua_pop_lua_array(L);
+          value->data.array = SC_Lua_get_lua_array(L, index);
         }
         else if(type == TYPE_NAMESPACE)
         {
           value->type = TYPE_NAMESPACE;
-          value->data.hash = SC_Lua_pop_lua_hash(L);
+          value->data.hash = SC_Lua_get_lua_hash(L, index);
         }
         else if(type == TYPE_ANY)
         {
@@ -652,25 +684,25 @@ void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type)
           if(type == TYPE_ARRAY)
           {
             value->type = TYPE_ARRAY;
-            value->data.array = SC_Lua_pop_lua_array(L);
+            value->data.array = SC_Lua_get_lua_array(L, index);
           }
           else
           {
             value->type = TYPE_HASH;
-            value->data.hash = SC_Lua_pop_lua_hash(L);
+            value->data.hash = SC_Lua_get_lua_hash(L, index);
           }
         }
         else
         {
           value->type = TYPE_HASH;
-          value->data.hash = SC_Lua_pop_lua_hash(L);
+          value->data.hash = SC_Lua_get_lua_hash(L, index);
         }
       }
       break;
 
     case LUA_TFUNCTION:
       value->type = TYPE_FUNCTION;
-      value->data.function = SC_Lua_pop_lua_function(L);
+      value->data.function = SC_Lua_get_lua_function(L, index);
       break;
 
     default:

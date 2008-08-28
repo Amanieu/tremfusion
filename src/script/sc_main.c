@@ -153,7 +153,7 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
       break;
 
     if(in[narg].type != func->argument[narg])
-      SC_EXEC_ERROR(va("error running function : argument %d not match (waiting for %s but having %s", narg, SC_DataTypeToString(func->argument[narg]), SC_DataTypeToString(in[narg].type)));
+      SC_EXEC_ERROR(va("error running function : argument %d not match (waiting for %s but having %s)", narg+1, SC_DataTypeToString(func->argument[narg]), SC_DataTypeToString(in[narg].type)));
 
     narg++;
   }
@@ -190,7 +190,7 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
   // Check return value type
   if( out && out->type != func->return_type && func->return_type != TYPE_ANY)
     SC_EXEC_ERROR(
-        va("error running function : return value not match (waiting for %s but having %s", 
+        va("error running function : return value not match (waiting for %s but having %s)", 
           SC_DataTypeToString(func->return_type),
           SC_DataTypeToString(out->type)));
 

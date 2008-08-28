@@ -265,6 +265,7 @@ int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, 
 
   while( in[narg].type != TYPE_UNDEF )
   {
+    Com_Printf("push lua value\n");
     SC_Lua_push_value( L, &in[narg] );
 
     narg++;

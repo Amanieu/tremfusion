@@ -930,7 +930,7 @@ static scLibObjectMethod_t module_methods[] = {
 
 static scLibObjectDef_t module_def = {
   "Module", "",
-  module_constructor, { TYPE_HASH },
+  module_constructor, { TYPE_HASH, TYPE_UNDEF },
   0, // a module should never be destroyed
   module_members,
   module_methods,

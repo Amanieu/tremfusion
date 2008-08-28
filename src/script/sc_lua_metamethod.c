@@ -151,10 +151,11 @@ int SC_Lua_call_metamethod( lua_State *L )
   int i;
   int type;
   int mod = 0;
+  int any;
   scClass_t *class;
   scDataTypeValue_t out;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
-  
+
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_type");
   type = lua_tointeger(L, -1);
@@ -168,22 +169,41 @@ int SC_Lua_call_metamethod( lua_State *L )
     function = &class->constructor;
     in[0].type = TYPE_CLASS;
     in[0].data.class = class;
+    SC_ValueGCInc(&in[0]);
     mod = 1;
   }
   else
-    luaL_error(L, va("internal error: %d datatype can't be called at %s (%d)", type, __FILE__, __LINE__));
+    luaL_error(L, "internal error: %d datatype can't be called at %s (%d)", type, __FILE__, __LINE__);
 
   lua_pop(L, 3);
 
   top = lua_gettop(L);
-  for(i = top-2; i >= 0; i--)
+  any = 0;
+  for(i = 0; i < top-1; i++)
   {
-    int idx = i + mod;
-    SC_Lua_pop_value(L, &in[idx], function->argument[idx]);
-    SC_ValueGCInc(&in[idx]);
-  }
+    int index = i + mod;
+    if(function->argument[index] == TYPE_ANY)
+      any = 1;
+    if(any == 0 && function->argument[index] == TYPE_UNDEF)
+      luaL_error(L, "can't call function: too many arguments. attempt %d but %d given", i, top-1);
+    if(any)
+      SC_Lua_get_value(L, i-top+1, &in[index], TYPE_ANY);
+    else
+      SC_Lua_get_value(L, i-top+1, &in[index], function->argument[index]);
 
-  in[top-1+mod].type = TYPE_UNDEF;
+    SC_ValueGCInc(&in[index]);
+  }
+  
+  if(function->argument[i+mod] != TYPE_UNDEF)
+  {
+    while(function->argument[i+mod] != TYPE_UNDEF && function->argument[i+mod] != TYPE_ANY)
+      i++;
+
+    luaL_error(L, "can't call function: not enough arguments. attempt %d but %d given", i, top-1);
+  }
+  lua_pop(L, i);
+
+  in[i+mod].type = TYPE_UNDEF;
 
   if(SC_RunFunction(function, in, &out) != 0)
     luaL_error(L, SC_StringToChar(out.data.string));
@@ -194,8 +214,6 @@ int SC_Lua_call_metamethod( lua_State *L )
     SC_ValueGCDec(&in[i]);
     i--;
   }
-
-  // TODO: garbage collection with return value
 
   if(out.type != TYPE_UNDEF)
   {
