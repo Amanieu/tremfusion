@@ -427,9 +427,7 @@ static int sctype(lua_State *L)
 {
   const char *str;
 
-  if(!lua_getmetatable(L, 1))
-    lua_pushstring(L, SC_DataTypeToString(TYPE_UNDEF));
-  else
+  if(lua_istable(L, 1) && lua_getmetatable(L, 1))
   {
     lua_getfield(L, -1, "_type");
     if(!lua_isnumber(L, -1))
@@ -444,6 +442,8 @@ static int sctype(lua_State *L)
       lua_pushstring(L, str);
     }
   }
+  else
+    lua_pushstring(L, SC_DataTypeToString(TYPE_UNDEF));
 
   return 1;
 }
@@ -484,6 +484,7 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "setfenv", method_disabled);
   map_luamethod(L, "gcinfo", method_disabled);
   map_luamethod(L, "collectgarbage", method_disabled);
+  map_luamethod(L, "newproxy", method_disabled);
 
   luaL_register(L, "lua", lualib);
   lua_pop(L, 1);

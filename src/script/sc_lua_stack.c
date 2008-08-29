@@ -809,7 +809,6 @@ int SC_Lua_get_arg_integer(lua_State *L, int index)
       luaL_error(L, "bad argument %d to '%s' (integer expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
     }
 
-    lua_getmetatable(L, index);
     lua_getfield(L, -2, "_ref");
     ud.v = lua_touserdata(L, -1);
     

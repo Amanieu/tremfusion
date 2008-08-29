@@ -25,11 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - string has metatable by default ! get metatable is not enough to see if data is registered
  * - Test GC (and check GC with popped values)
- * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack
+ * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
  * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
- * - select, newproxy: what is it ?
  * - module and require integration in scripting module engine
  */
 
@@ -74,15 +72,17 @@ SC_Lua_is_registered_type
 
 int SC_Lua_is_registered(lua_State *L, int index, scDataType_t type)
 {
+  int stype;
+
   if(lua_getmetatable(L, index))
   {
     lua_getfield(L, -1, "_type");
     if(lua_isnumber(L, -1))
     {
-      if(type != TYPE_ANY && lua_tointeger(L, -1) != type)
-      {
-        // luaL_typeerror
-      }
+      stype = lua_tointeger(L, -1);
+      if(type != TYPE_ANY && stype != type)
+        luaL_argerror(L, index, va("%s expected, got %s", SC_DataTypeToString(type), SC_DataTypeToString(stype)));
+
       lua_pop(L, 2);
       return 1;
     }
@@ -91,9 +91,8 @@ int SC_Lua_is_registered(lua_State *L, int index, scDataType_t type)
   }
 
   if(type != TYPE_ANY && lua_type(L, index) != SC_Lua_sctype2luatype(type))
-  {
-    // luaL_typeerror
-  }
+    luaL_argerror(L, index, va("%s expected, got %s", lua_typename(L, SC_Lua_sctype2luatype(type)), luaL_typename(L, index)));
+
   return 0;
 }
 
