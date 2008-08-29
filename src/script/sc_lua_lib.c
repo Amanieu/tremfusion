@@ -69,7 +69,7 @@ static int type_method(lua_State *L)
   else
   {
     // get original `type' method
-    lua_getglobal(L, "_type");
+    lua_getfield(L, LUA_REGISTRYINDEX, "_type");
     lua_insert(L, -2);
 
     lua_call(L, 1, 1);
@@ -78,9 +78,100 @@ static int type_method(lua_State *L)
   return 1;
 }
 
-static int pairs_closure(lua_State *L)
+static int next_method(lua_State *L)
 {
-  // TODO: test me
+  int type, keystate;
+  scDataTypeHash_t *hash;
+  scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+  const char *key;
+
+  lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
+  luaL_checktype(L, 1, LUA_TTABLE);
+
+  if(lua_getmetatable(L, 1))
+  {
+    lua_getfield(L, -1, "_type");
+    type = lua_tointeger(L, -1);
+    lua_getfield(L, -2, "_ref");
+
+    switch(type)
+    {
+      case TYPE_ARRAY:
+        array = lua_touserdata(L, -1);
+
+        if(lua_isnil(L, 2))
+          keystate = 0;
+        else
+          keystate = SC_Lua_get_arg_integer(L, 2);
+
+        while(keystate < array->buflen)
+        {
+          SC_ArrayGet(array, keystate, &value);
+          if(value.type == TYPE_UNDEF)
+            keystate++;
+          else
+          {
+            // push index as return value
+            lua_pushinteger(L, keystate+1);
+
+            // push array value as return value
+            SC_Lua_push_value(L, &value);
+
+            return 2;
+          }
+        }
+
+        // no more entries, push nil
+        lua_pushnil(L);
+        return 1;
+
+      case TYPE_HASH:
+      case TYPE_NAMESPACE:
+        // get hash data
+        hash = lua_touserdata(L, -1);
+
+        if(lua_isnil(L, 2))
+          key = SC_HashFirst(hash, &value);
+        else
+          key = SC_HashNext(hash, SC_Lua_get_arg_string(L, 2), &value);
+
+        if(key)
+        {
+          // push key
+          lua_pushstring(L, key);
+
+          // push value
+          SC_Lua_push_value(L, &value);
+
+          return 2;
+        }
+        else
+        {
+          // no more values, push nil
+          lua_pushnil(L);
+          return 1;
+        }
+
+      default:
+        luaL_error(L, "lua internal error in %s (%d) : unknow datatype", __FILE__, __LINE__);
+    }
+  }
+  else
+  {
+    lua_getfield(L, LUA_REGISTRYINDEX, "_next");
+    lua_insert(L, 1);
+
+    lua_call(L, 2, 2);
+
+    return 2;
+  }
+
+  return 0;
+}
+
+static int ipairs_closure(lua_State *L)
+{
   int keystate;
   int type;
   scDataTypeHash_t *hash;
@@ -90,41 +181,40 @@ static int pairs_closure(lua_State *L)
   keystate = lua_tointeger(L, lua_upvalueindex(1));
 
   luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checktype(L, 2, LUA_TSTRING);
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_type");
   type = lua_tointeger(L, -1);
-  lua_getfield(L, -1, "_ref");
+  lua_getfield(L, -2, "_ref");
 
   switch(type)
   {
     case TYPE_ARRAY:
       array = lua_touserdata(L, -1);
 
-      if(keystate >= array->size)
-      {
-        // no more entries, push nil
-        lua_pushnil(L);
-        return 1;
-      }
-      else
+      if(keystate < array->buflen)
       {
         SC_ArrayGet(array, keystate, &value);
+        if(value.type != TYPE_UNDEF)
+        {
+          // push index as return value
+          lua_pushinteger(L, keystate+1);
 
-        // push index as return value
-        lua_pushinteger(L, keystate);
+          // update upvalue 
+          keystate++;
+          lua_pushinteger(L, keystate);
+          lua_replace(L, lua_upvalueindex(1));
 
-        // update upvalue 
-        keystate++;
-        lua_pushinteger(L, keystate);
-        lua_replace(L, lua_upvalueindex(1));
+          // push array value as return value
+          SC_Lua_push_value(L, &value);
 
-        // push array value as return value
-        SC_Lua_push_value(L, &value);
-
-        return 2;
+          return 2;
+        }
       }
+
+      // no more entries, push nil
+      lua_pushnil(L);
+      return 1;
 
     case TYPE_HASH:
     case TYPE_NAMESPACE:
@@ -132,22 +222,21 @@ static int pairs_closure(lua_State *L)
       hash = lua_touserdata(L, -1);
 
       // lookup in hashtable from current index to max hashtable size
-      while(keystate < hash->buflen)
+      if(keystate < hash->buflen)
       {
         // Find next used entry in hashtable
-        if(SC_StringIsEmpty(&hash->data[keystate].key))
-          keystate++;
-        else
+        if(!SC_StringIsEmpty(&hash->data[keystate].key))
         {
-          // update upvalue
-          lua_pushinteger(L, keystate);
-          lua_replace(L, lua_upvalueindex(1));
-
           // push key
           SC_Lua_push_string(L, &hash->data[keystate].key);
 
           // push value
           SC_Lua_push_value(L, &hash->data[keystate].value);
+
+          // update upvalue
+          keystate++;
+          lua_pushinteger(L, keystate);
+          lua_replace(L, lua_upvalueindex(1));
 
           return 2;
         }
@@ -165,14 +254,12 @@ static int pairs_closure(lua_State *L)
 
 static int pairs_method(lua_State *L)
 {
-  // TODO: test me
   luaL_checktype(L, 1, LUA_TTABLE);
 
   if(lua_getmetatable(L, 1))
   {
     // Push integer as closure upvalue
-    lua_pushinteger(L, 0);
-    lua_pushcclosure(L, pairs_closure, 1);
+    lua_pushcclosure(L, next_method, 0);
 
     // Push table as first argument
     lua_pushvalue(L, 1);
@@ -184,6 +271,34 @@ static int pairs_method(lua_State *L)
   else
   {
     lua_getfield(L, LUA_REGISTRYINDEX, "_pairs");
+    lua_replace(L, -3);
+
+    lua_call(L, 1, 3);
+
+    return 3;
+  }
+}
+
+static int ipairs_method(lua_State *L)
+{
+  luaL_checktype(L, 1, LUA_TTABLE);
+
+  if(lua_getmetatable(L, 1))
+  {
+    // Push integer as closure upvalue
+    lua_pushinteger(L, 0);
+    lua_pushcclosure(L, ipairs_closure, 1);
+
+    // Push table as first argument
+    lua_pushvalue(L, 1);
+
+    lua_pushnil(L);
+
+    return 3;
+  }
+  else
+  {
+    lua_getfield(L, LUA_REGISTRYINDEX, "_ipairs");
     lua_replace(L, -3);
 
     lua_call(L, 1, 3);
@@ -345,16 +460,16 @@ static const struct luaL_reg lualib[] = {
 static void map_luamethod(lua_State *L, const char *name, lua_CFunction func)
 {
   lua_getglobal(L, name);
-  lua_setglobal(L, va("_%s", name));
+  lua_setfield(L, LUA_REGISTRYINDEX, va("_%s", name));
   lua_pushcfunction(L, func);
   lua_setglobal(L, name);
 }
 
 void SC_Lua_loadlib(lua_State *L)
 {
-  // TODO: write ipairs metamethod
-  //map_luamethod(L, "ipairs", ipairs_method);
+  map_luamethod(L, "ipairs", ipairs_method);
   map_luamethod(L, "pairs", pairs_method);
+  map_luamethod(L, "next", next_method);
   map_luamethod(L, "type", type_method);
   map_luamethod(L, "print", print_method);
 

@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_LUA
 
-static const char *to_comparable_string(lua_State *L, int index, int left)
+static const char *to_comparable_string(lua_State *L, int index)
 {
   scDataTypeString_t *string;
   int ltype, sctype;
@@ -43,12 +43,7 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
 
     sctype = lua_tointeger(L, -1);
     if(sctype != TYPE_STRING)
-    {
-      if(left)
-        luaL_error(L, "attempt to compare %s with string", lua_typename(L, SC_Lua_sctype2luatype(sctype)));
-      else
-        luaL_error(L, "attempt to compare string with %s", lua_typename(L, SC_Lua_sctype2luatype(sctype)));
-    }
+      return NULL;
 
 	lua_getfield(L, -2, "_ref");
     string = lua_touserdata(L, -1);
@@ -57,12 +52,7 @@ static const char *to_comparable_string(lua_State *L, int index, int left)
     lua_pop(L, 3);
   }
   else
-  {
-    if(left)
-      luaL_error(L, "attempt to compare %s with string", lua_typename(L, ltype));
-    else
-      luaL_error(L, "attempt to compare string with %s", lua_typename(L, ltype));
-  }
+    return NULL;
 
   return str;
 }
@@ -382,10 +372,13 @@ int SC_Lua_le_string_metamethod(lua_State *L)
 {
   const char *str1, *str2;
 
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
+  str1 = to_comparable_string(L, 1);
+  str2 = to_comparable_string(L, 2);
 
-  lua_pushboolean(L, strcmp(str1, str2) <= 0);
+  if(!str1 || !str2)
+    lua_pushboolean(L, 0);
+  else
+    lua_pushboolean(L, strcmp(str1, str2) <= 0);
   return 1;
 }
 
@@ -393,10 +386,13 @@ int SC_Lua_lt_string_metamethod(lua_State *L)
 {
   const char *str1, *str2;
 
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
+  str1 = to_comparable_string(L, 1);
+  str2 = to_comparable_string(L, 2);
 
-  lua_pushboolean(L, strcmp(str1, str2) < 0);
+  if(!str1 || !str2)
+    lua_pushboolean(L, 0);
+  else
+    lua_pushboolean(L, strcmp(str1, str2) < 0);
   return 1;
 }
 
@@ -404,16 +400,25 @@ int SC_Lua_eq_string_metamethod(lua_State *L)
 {
   const char *str1, *str2;
 
-  str1 = to_comparable_string(L, 1, 1);
-  str2 = to_comparable_string(L, 2, 0);
+  str1 = to_comparable_string(L, 1);
+  str2 = to_comparable_string(L, 2);
 
-  lua_pushboolean(L, strcmp(str1, str2) == 0);
+  if(!str1 || !str2)
+    lua_pushboolean(L, 0);
+  else
+    lua_pushboolean(L, strcmp(str1, str2) == 0);
   return 1;
 }
 
 int SC_Lua_tostring_string_metamethod(lua_State *L)
 {
-  // tostring metamethod on string do nothing, return the string
+  scDataTypeString_t *string;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  string = lua_touserdata(L, -1);
+
+  lua_pushstring(L, SC_StringToChar(string));
   return 1;
 }
 
