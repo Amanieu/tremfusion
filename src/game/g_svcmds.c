@@ -25,6 +25,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
+#ifdef USE_LUA
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#endif
+
 /*
 ===================
 Svcmd_EntityList_f
@@ -414,7 +420,31 @@ qboolean  ConsoleCommand( void )
 
     return qtrue;
   }
-  
+
+#ifdef USE_LUA
+  if( !Q_stricmp( cmd, "lua") )
+  {
+    char cmd[257];
+    lua_State *L = g_luaState;
+
+    trap_Argv(1, cmd, sizeof(cmd));
+
+    if(luaL_loadbuffer(L, cmd, strlen(cmd), "stdin"))
+    {
+      Com_Printf("error: %s\n", lua_tostring(L, -1));
+      return qfalse;
+    }
+
+    if(lua_pcall(L, 0, 0, 0))
+    {
+      Com_Printf("error %s\n", lua_tostring(L, -1));
+      return qfalse;
+    }
+
+    return qtrue;
+  }
+#endif
+
   // see if this is a a admin command
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;

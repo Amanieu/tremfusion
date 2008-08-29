@@ -61,8 +61,6 @@ void SC_Common_Init( void );
 // sc_lua.c
 #define MAX_LUAFILE 32768
 
-extern lua_State *g_luaState;
-
 void        SC_Lua_Init( void );
 void        SC_Lua_Shutdown( void );
 qboolean    SC_Lua_RunScript( const char *filename );

@@ -213,6 +213,7 @@ qboolean SC_Lua_RunScript( const char *filename )
   int             len;
   fileHandle_t    f;
   char            buf[MAX_LUAFILE];
+  lua_State       *L = g_luaState;
 
   Com_Printf("...loading '%s'\n", filename);
 
@@ -234,15 +235,15 @@ qboolean SC_Lua_RunScript( const char *filename )
   buf[len] = 0;
   trap_FS_FCloseFile(f);
 
-  if(luaL_loadbuffer(g_luaState, buf, strlen(buf), filename))
+  if(luaL_loadbuffer(L, buf, strlen(buf), filename))
   {
-    Com_Printf("cannot load lua file `%s': %s\n", filename, lua_tostring(g_luaState, -1));
+    Com_Printf("cannot load lua file `%s': %s\n", filename, lua_tostring(L, -1));
     return qfalse;
   }
 
-  if(lua_pcall(g_luaState, 0, 0, 0))
+  if(lua_pcall(L, 0, 0, 0))
   {
-    Com_Printf("cannot run lua file `%s': %s\n", filename, lua_tostring(g_luaState, -1));
+    Com_Printf("cannot run lua file `%s': %s\n", filename, lua_tostring(L, -1));
     return qfalse;
   }
 

@@ -41,6 +41,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 #define SC_GC_DEBUG 0
 
+#ifdef USE_LUA
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#endif
+
 #ifdef USE_PYTHON
 #define _UNISTD_H 1 // Prevent syscall from being defined in unisd.h 
 #include <Python.h>
@@ -471,6 +477,12 @@ extern scConstant_t *sc_constants;
 void SC_Constant_Init(void);
 void SC_Constant_Add(scConstant_t *constants);
 scConstant_t *SC_Constant_Get(const char *name);
+
+// sc_lua.c
+#ifdef USE_LUA
+extern lua_State *g_luaState;
+#endif
+
 
 #endif
 
