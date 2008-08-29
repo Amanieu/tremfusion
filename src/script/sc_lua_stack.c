@@ -59,7 +59,7 @@ void SC_Lua_push_boolean(lua_State *L, int boolean)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_BOOLEAN);
@@ -113,7 +113,7 @@ void SC_Lua_push_integer(lua_State *L, int integer)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_INTEGER);
@@ -167,7 +167,7 @@ void SC_Lua_push_float(lua_State *L, float floating)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_FLOAT);
@@ -195,7 +195,7 @@ void SC_Lua_push_userdata(lua_State *L, void* userdata)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_USERDATA);
@@ -236,7 +236,7 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_len_string_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_STRING);
@@ -274,7 +274,7 @@ void SC_Lua_push_array( lua_State *L, scDataTypeArray_t *array )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_len_array_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_ARRAY);
@@ -312,7 +312,7 @@ void SC_Lua_push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_len_hash_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, type);
@@ -352,7 +352,7 @@ void SC_Lua_push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_FUNCTION);
@@ -392,7 +392,7 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class)
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
   
   lua_pushinteger(L, TYPE_CLASS);
@@ -428,7 +428,7 @@ void SC_Lua_push_object(lua_State *L, scObject_t *object)
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, SC_Lua_object_newindex_metamethod);
   lua_setfield(L, -2, "__newindex");
-  lua_pushcfunction(L, SC_Lua_invalid_metatable_metamethod);
+  lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
   lua_pushinteger(L, TYPE_OBJECT);
@@ -711,70 +711,132 @@ void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataT
   }
 }
 
-const char* SC_Lua_get_string(lua_State *L, int index)
+const char* SC_Lua_get_arg_string(lua_State *L, int index)
 {
-  // TODO: check errors
+  int type;
+  lua_Debug ar;
 
-  if(lua_istable(L, index))
+  if(lua_isstring(L, index))
+  {
+    return lua_tostring(L, index);
+  }
+  else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
     scDataTypeString_t *string;
 
-    lua_getmetatable(L, index);
-    lua_getfield(L, -1, "_ref");
+    lua_getfield(L, -1, "_type");
+    type = lua_tointeger(L, -1);
+    if(type != TYPE_STRING)
+    {
+      lua_getstack(L, 0, &ar);
+      lua_getinfo(L, "n", &ar);
+      luaL_error(L, "bad argument %d to '%s' (string expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
+    }
+
+    lua_getfield(L, -2, "_ref");
     string = lua_touserdata(L, -1);
     
-    lua_pop(L, 2);
+    lua_pop(L, 3);
     return SC_StringToChar(string);
   }
   else
-    return lua_tostring(L, index);
-}
-
-int SC_Lua_get_boolean(lua_State *L, int index)
-{
-  // TODO: check errors
-
-  if(lua_istable(L, index))
   {
-    union { void* v; int n; } ud;
-
-    lua_getmetatable(L, index);
-    lua_getfield(L, -1, "_ref");
-    ud.v = lua_touserdata(L, -1);
-    
-    lua_pop(L, 2);
-    return ud.n;
+    lua_getstack(L, 0, &ar);
+    lua_getinfo(L, "n", &ar);
+    luaL_error(L, "bad argument %d to '%s' (string expected, got %s)", index, ar.name, luaL_typename(L, index));
   }
-  else
-    return lua_toboolean(L, index);
+
+  return NULL;
 }
 
-int SC_Lua_get_integer(lua_State *L, int index)
+int SC_Lua_get_arg_boolean(lua_State *L, int index)
 {
-  // TODO: check errors
-
-  if(lua_istable(L, index))
-  {
-    union { void* v; int n; } ud;
-
-    lua_getmetatable(L, index);
-    lua_getfield(L, -1, "_ref");
-    ud.v = lua_touserdata(L, -1);
-    
-    lua_pop(L, 2);
-    return ud.n;
-  }
-  else
-    return lua_tointeger(L, index);
-}
-
-lua_Number SC_Lua_get_number(lua_State *L, int index)
-{
-  // TODO: check errors
   int type;
+  lua_Debug ar;
+
+  if(lua_isboolean(L, index))
+  {
+    return lua_toboolean(L, index);
+  }
+  else if(lua_istable(L, index) && lua_getmetatable(L, index))
+  {
+    union { void* v; int n; } ud;
+    
+    lua_getfield(L, -1, "_type");
+    type = lua_tointeger(L, -1);
+    if(type != TYPE_BOOLEAN)
+    {
+      lua_getstack(L, 0, &ar);
+      lua_getinfo(L, "n", &ar);
+      luaL_error(L, "bad argument %d to '%s' (boolean expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
+    }
+
+    lua_getfield(L, -2, "_ref");
+    ud.v = lua_touserdata(L, -1);
+    
+    lua_pop(L, 3);
+    return ud.n;
+  }
+  else
+  {
+    lua_getstack(L, 0, &ar);
+    lua_getinfo(L, "n", &ar);
+    luaL_error(L, "bad argument %d to '%s' (boolean expected, got %s)", index, ar.name, luaL_typename(L, index));
+  }
+
+  return 0;
+}
+
+int SC_Lua_get_arg_integer(lua_State *L, int index)
+{
+  int type;
+  lua_Debug ar;
+
+  if(lua_isnumber(L, index))
+  {
+    return lua_tointeger(L, index);
+  }
+  else if(lua_istable(L, index) && lua_getmetatable(L, index))
+  {
+    union { void* v; int n; } ud;
+
+    lua_getfield(L, -1, "_type");
+    type = lua_tointeger(L, -1);
+    if(type != TYPE_INTEGER)
+    {
+      lua_getstack(L, 0, &ar);
+      lua_getinfo(L, "n", &ar);
+      luaL_error(L, "bad argument %d to '%s' (integer expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
+    }
+
+    lua_getmetatable(L, index);
+    lua_getfield(L, -2, "_ref");
+    ud.v = lua_touserdata(L, -1);
+    
+    lua_pop(L, 3);
+    return ud.n;
+  }
+  else
+  {
+    lua_getstack(L, 0, &ar);
+    lua_getinfo(L, "n", &ar);
+    luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, luaL_typename(L, index));
+  }
+
+  return 0;
+}
+
+lua_Number SC_Lua_get_arg_number(lua_State *L, int index)
+{
+  int type;
+  lua_Debug ar;
   lua_Number number = 0.;
 
-  if(lua_getmetatable(L, index))
+  if(lua_isnumber(L, index))
+  {
+    return lua_tonumber(L, index);
+  }
+  else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
     union { void* v; int n; float f; } ud;
 
@@ -795,7 +857,9 @@ lua_Number SC_Lua_get_number(lua_State *L, int index)
         break;
 
       default:
-        // TODO: error
+        lua_getstack(L, 0, &ar);
+        lua_getinfo(L, "n", &ar);
+        luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
         break;
     }
     
@@ -803,7 +867,13 @@ lua_Number SC_Lua_get_number(lua_State *L, int index)
     return number;
   }
   else
-    return lua_tonumber(L, index);
+  {
+    lua_getstack(L, 0, &ar);
+    lua_getinfo(L, "n", &ar);
+    luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, luaL_typename(L, index));
+  }
+
+  return 0;
 }
 
 #endif

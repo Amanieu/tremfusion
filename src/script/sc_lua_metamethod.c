@@ -73,13 +73,6 @@ invalid metamethods
 ========================
 */
 
-int SC_Lua_invalid_metatable_metamethod(lua_State *L)
-{
-  luaL_error(L, "you can't access metatable at Lua side");
-
-  return 0;
-}
-
 int SC_Lua_invalid_index_metamethod(lua_State *L)
 {
   int type;
@@ -155,6 +148,7 @@ int SC_Lua_call_metamethod( lua_State *L )
   scClass_t *class;
   scDataTypeValue_t out;
   scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
+  lua_Debug ar;
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_type");
@@ -173,7 +167,7 @@ int SC_Lua_call_metamethod( lua_State *L )
     mod = 1;
   }
   else
-    luaL_error(L, "internal error: %d datatype can't be called at %s (%d)", type, __FILE__, __LINE__);
+    luaL_error(L, "internal error: can't call a %s (%s (%d))", SC_DataTypeToString(type), __FILE__, __LINE__);
 
   lua_pop(L, 3);
 
@@ -185,7 +179,15 @@ int SC_Lua_call_metamethod( lua_State *L )
     if(function->argument[index] == TYPE_ANY)
       any = 1;
     if(any == 0 && function->argument[index] == TYPE_UNDEF)
-      luaL_error(L, "can't call function: too many arguments. attempt %d but %d given", i, top-1);
+    {
+      if(lua_getstack(L, 0, &ar))
+      {
+        lua_getinfo(L, "n", &ar);
+        luaL_error(L, LUA_QS " takes %d arguments (%d given)", ar.name, i, top-1);
+      }
+      else
+        luaL_error(L, "function takes %d arguments (%d given)", i, top-1);
+    }
     if(any)
       SC_Lua_get_value(L, i-top+1, &in[index], TYPE_ANY);
     else
@@ -199,7 +201,13 @@ int SC_Lua_call_metamethod( lua_State *L )
     while(function->argument[i+mod] != TYPE_UNDEF && function->argument[i+mod] != TYPE_ANY)
       i++;
 
-    luaL_error(L, "can't call function: not enough arguments. attempt %d but %d given", i, top-1);
+    if(lua_getstack(L, 0, &ar))
+    {
+      lua_getinfo(L, "n", &ar);
+      luaL_error(L, LUA_QS " takes %d arguments (%d given)", ar.name, i, top-1);
+    }
+    else
+      luaL_error(L, "function takes %d arguments (%d given)", i, top-1);
   }
   lua_pop(L, i);
 
@@ -249,15 +257,15 @@ boolean metamethods
 
 int SC_Lua_eq_boolean_metamethod(lua_State *L)
 {
-  int b1 = SC_Lua_get_boolean(L, 1);
-  int b2 = SC_Lua_get_boolean(L, 2);
+  int b1 = SC_Lua_get_arg_boolean(L, 1);
+  int b2 = SC_Lua_get_arg_boolean(L, 2);
   lua_pushboolean(L, b1 == b2);
   return 1;
 }
 
 int SC_Lua_tostring_boolean_metamethod(lua_State *L)
 {
-  int b1 = SC_Lua_get_boolean(L, 1);
+  int b1 = SC_Lua_get_arg_boolean(L, 1);
   if(b1)
     lua_pushstring(L, "true");
   else
@@ -274,32 +282,32 @@ number metamethods
 
 int SC_Lua_add_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushnumber(L, n1 + n2);
   return 1;
 }
 
 int SC_Lua_sub_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushnumber(L, n1 - n2);
   return 1;
 }
 
 int SC_Lua_mul_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushnumber(L, n1 * n2);
   return 1;
 }
 
 int SC_Lua_div_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   if(n2 == 0)
     lua_pushnumber(L, INFINITY);
   else
@@ -309,8 +317,8 @@ int SC_Lua_div_number_metamethod(lua_State *L)
 
 int SC_Lua_mod_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   if(n2 == 0)
     lua_pushnumber(L, NAN);
   else
@@ -320,46 +328,46 @@ int SC_Lua_mod_number_metamethod(lua_State *L)
 
 int SC_Lua_pow_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushnumber(L, pow(n1, n2));
   return 1;
 }
 
 int SC_Lua_unm_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
   lua_pushnumber(L, -n1);
   return 1;
 }
 
 int SC_Lua_eq_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushboolean(L, n1 == n2);
   return 1;
 }
 
 int SC_Lua_lt_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushboolean(L, n1 < n2);
   return 1;
 }
 
 int SC_Lua_le_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_number(L, 1);
-  lua_Number n2 = SC_Lua_get_number(L, 2);
+  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
   lua_pushboolean(L, n1 <= n2);
   return 1;
 }
 
 int SC_Lua_tostring_number_metamethod(lua_State *L)
 {
-  lua_Number b1 = SC_Lua_get_number(L, 1);
+  lua_Number b1 = SC_Lua_get_arg_number(L, 1);
   lua_pushstring(L, va("%.14g", b1));
   return 1;
 }
@@ -372,7 +380,6 @@ string metamethods
 
 int SC_Lua_le_string_metamethod(lua_State *L)
 {
-  // TODO: test me
   const char *str1, *str2;
 
   str1 = to_comparable_string(L, 1, 1);
@@ -384,7 +391,6 @@ int SC_Lua_le_string_metamethod(lua_State *L)
 
 int SC_Lua_lt_string_metamethod(lua_State *L)
 {
-  // TODO: test me
   const char *str1, *str2;
 
   str1 = to_comparable_string(L, 1, 1);
@@ -396,7 +402,6 @@ int SC_Lua_lt_string_metamethod(lua_State *L)
 
 int SC_Lua_eq_string_metamethod(lua_State *L)
 {
-  // TODO: test me
   const char *str1, *str2;
 
   str1 = to_comparable_string(L, 1, 1);
@@ -452,7 +457,7 @@ int SC_Lua_index_array_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   array = lua_touserdata(L, -1);
 
-  nidx = SC_Lua_get_integer(L, 2);
+  nidx = SC_Lua_get_arg_integer(L, 2);
 
   SC_ArrayGet(array, nidx-1, &value);
   SC_Lua_push_value(L, &value);
@@ -472,7 +477,7 @@ int SC_Lua_newindex_array_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   array = lua_touserdata(L, -1);
 
-  nidx = SC_Lua_get_integer(L, 2);
+  nidx = SC_Lua_get_arg_integer(L, 2);
   SC_ArraySet(array, nidx-1, &value);
 
   return 0;
@@ -533,7 +538,7 @@ int SC_Lua_index_hash_metamethod(lua_State *L)
   value.type = TYPE_HASH;
   value.data.hash = hash;
 
-  sidx = SC_Lua_get_string(L, 2);
+  sidx = SC_Lua_get_arg_string(L, 2);
   SC_HashGet(hash, sidx, &value);
   SC_Lua_push_value(L, &value);
 
@@ -552,7 +557,7 @@ int SC_Lua_newindex_hash_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   hash = lua_touserdata(L, -1);
 
-  sidx = SC_Lua_get_string(L, 2);
+  sidx = SC_Lua_get_arg_string(L, 2);
   SC_HashSet(hash, sidx, &value);
 
   return 0;
@@ -678,7 +683,7 @@ int SC_Lua_object_index_metamethod(lua_State *L)
     return 1;
   }
 
-  luaL_error(L, va("can't index `%s' field : unknow member", name));
+  luaL_error(L, va("instance has no attribute `%s'", name));
   return 0;
 }
 
@@ -735,7 +740,7 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
     return 0;
   }
 
-  luaL_error(L, va("can't index `%s' field : unknow member", name));
+  luaL_error(L, va("instance has no attribute `%s'", name));
   return 0;
 }
 

@@ -25,11 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - Check number of arguments for (non metamethods) lua functions
- * - Bad GC when pop a value ?
- * - Error messages should always show script line
- * - review errors with functions `luaL_argerror' / 'luaL_opterror'
  * - string has metatable by default ! get metatable is not enough to see if data is registered
+ * - Test GC (and check GC with popped values)
  */
 
 #include "sc_public.h"
@@ -265,7 +262,6 @@ int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, 
 
   while( in[narg].type != TYPE_UNDEF )
   {
-    Com_Printf("push lua value\n");
     SC_Lua_push_value( L, &in[narg] );
 
     narg++;

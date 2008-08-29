@@ -73,10 +73,10 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L);
 scDataTypeFunction_t* SC_Lua_pop_lua_function(lua_State *L);
 void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 
-const char* SC_Lua_get_string(lua_State *L, int index);
-int SC_Lua_get_boolean(lua_State *L, int index);
-int SC_Lua_get_integer(lua_State *L, int index);
-lua_Number SC_Lua_get_number(lua_State *L, int index);
+const char* SC_Lua_get_arg_string(lua_State *L, int index);
+int SC_Lua_get_arg_boolean(lua_State *L, int index);
+int SC_Lua_get_arg_integer(lua_State *L, int index);
+lua_Number SC_Lua_get_arg_number(lua_State *L, int index);
 
 // sc_lua_metamethod.c
 int SC_Lua_invalid_metatable_metamethod(lua_State *L);
