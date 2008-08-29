@@ -415,6 +415,8 @@ extern  cvar_t  *cl_persistantConsole;
 
 extern	cvar_t	*cl_logs;
 
+extern	cvar_t	*cl_consoleKeys;
+
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
 extern	cvar_t	*cl_mumbleScale;
@@ -505,6 +507,7 @@ void IN_CenterView (void);
 void CL_VerifyCode( void );
 
 float CL_KeyState (kbutton_t *key);
+int Key_StringToKeynum( char *str );
 char *Key_KeynumToString (int keynum);
 
 //
