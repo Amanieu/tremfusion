@@ -25,7 +25,32 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sc_public.h"
 
-// TODO: move here some stuff from sc_python.h and sc_public.h
+// TODO: move here stuff from sc_python.h
+
+// sc_event.c
+
+typedef struct scnode_s scnode_t;
+typedef struct schook_s schook_t;
+
+struct scnode_s
+{
+  char                  name[ MAX_TAG_LENGTH + 1 ];
+  int                   leaf;
+
+  scnode_t              *before;
+  scnode_t              *in;
+  scnode_t              *after;
+
+  scDataTypeFunction_t  *hook;
+
+  scnode_t              *next;
+};
+
+extern scNamespace_t *namespace_root;
+
+// sc_common.c
+
+void SC_Common_Init( void );
 
 #ifdef USE_LUA
 
@@ -130,6 +155,7 @@ int SC_Lua_object_newindex_metamethod(lua_State *L);
 // sc_lua_lib.c
 void SC_Lua_loadlib(lua_State *L);
 
-#endif
+#endif // #ifdef USE_LUA
+
 #endif
 

@@ -165,10 +165,10 @@ typedef struct
 {
   char                  name[MAX_PATH_LENGTH+1];
   char                  desc[MAX_DESC_LENGTH+1];
-  scDataType_t          type; // useless ? (definded in set/get type)
+  scDataType_t          type;
   scDataTypeMethod_t    set;
   scDataTypeMethod_t    get;
-  void                  *closure; // useless ?
+  void                  *closure;
 } scObjectMember_t;
 
 typedef struct
@@ -230,27 +230,7 @@ struct scDataTypeHash_s
   } *data;
 };
 
-// Events data structure
-
-typedef struct scnode_s scnode_t;
-typedef struct schook_s schook_t;
-
-struct scnode_s
-{
-  char                  name[ MAX_TAG_LENGTH + 1 ];
-  int                   leaf;
-
-  scnode_t              *before;
-  scnode_t              *in;
-  scnode_t              *after;
-
-  scDataTypeFunction_t  *hook;
-
-  scnode_t              *next;
-  //scnode_t              *parent;
-};
-
-extern scNamespace_t *namespace_root;
+// sc_datatype.c
 
 scDataTypeString_t *SC_StringNew(void);
 scDataTypeString_t *SC_StringNewFromChar(const char* str);
@@ -410,7 +390,6 @@ void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 scObject_t *SC_Vec4FromVec4_t( float *vect );
 vec4_t     *SC_Vec4t_from_Vec4( scObject_t *vectobject );
-void SC_Common_Init( void );
 
 // modules
 int SC_Module_Init(scObject_t *self);
