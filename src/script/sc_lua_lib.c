@@ -27,6 +27,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_LUA
 
+static int method_disabled(lua_State *L)
+{
+  luaL_error(L, "function disabled");
+
+  return 0;
+}
+
 static int print_method(lua_State *L)
 {
   int top, i;
@@ -472,6 +479,11 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "next", next_method);
   map_luamethod(L, "type", type_method);
   map_luamethod(L, "print", print_method);
+
+  map_luamethod(L, "getfenv", method_disabled);
+  map_luamethod(L, "setfenv", method_disabled);
+  map_luamethod(L, "gcinfo", method_disabled);
+  map_luamethod(L, "collectgarbage", method_disabled);
 
   luaL_register(L, "lua", lualib);
   lua_pop(L, 1);

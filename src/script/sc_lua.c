@@ -28,7 +28,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - string has metatable by default ! get metatable is not enough to see if data is registered
  * - Test GC (and check GC with popped values)
  * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack
- * - Remove some basic lua functions : getfenv, setfenv, gcinfo, collectgarbage
  * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
  * - select, newproxy: what is it ?
  * - module and require integration in scripting module engine
