@@ -795,6 +795,9 @@ static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   }
 
   SC_HashGet(hash, "name", &value);
+  if(value.type == TYPE_UNDEF)
+    SC_EXEC_ERROR(va("Can't create module: no name"));
+
   name = va("module.%s", SC_StringToChar(value.data.string));
   SC_NamespaceGet(name, &value);
   if(value.type != TYPE_UNDEF)
