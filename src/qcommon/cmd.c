@@ -1150,7 +1150,7 @@ Escape all \$ in a string into \$$
 */
 char *Cmd_EscapeString(const char *in)
 {
-	static char buffer[MAX_STRING_LENGTH];
+	static char buffer[MAX_STRING_CHARS];
 	char *out = buffer;
 	while (*in) {
 		if (out + 3 - buffer >= sizeof(buffer)) {
