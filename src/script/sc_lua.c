@@ -25,12 +25,27 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
  * TODO:
- * - Test GC (and check GC with popped values)
+ * - metafloat hasn't same behaviour than lua numbers (ex: 12+lua.float(5.6))
  * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
  * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
  * - module and require integration in scripting module engine
- * - `equal' metamethods for all types
  * - optimize (exemple: make lua <=> lua function call faster)
+ * - registeration errors:
+ *   => (12+lua.integer(5.6)) ? 18
+ *   => lua.integer(3/2) ? 2
+ *   => lua.integer(3/0)) ? 0
+ *   => lua.integer(3%0)) ? 0
+ *   => lua.integer(2.5*3) ? 8
+ *   => (lua.integer(2.5)*3) ? 6
+ *
+ *   => true == lua.boolean(true) ? false
+ *   => lua.boolean(true) == true ? false
+ *   => lua.boolean(true) == lua.boolean(true) ? false
+ *   => lua.boolean(false) == lua.boolean(false) ? false
+ *   => lua.float(156) == lua.integer(156) ? false
+ *
+ *   => #{key1="coin", key2="meuh", key3="bouh"} ? 0
+ *   => #lua.hash({key1="coin", key2="meuh", key3="bouh"}) ? 3
  */
 
 #include "sc_public.h"
@@ -63,6 +78,29 @@ int SC_Lua_sctype2luatype(scDataType_t sctype)
     case TYPE_USERDATA: return LUA_TUSERDATA;
     case TYPE_UNDEF:
     default: return LUA_TNIL;
+  }
+}
+
+/*
+========================
+SC_Lua_luatype2sctype
+========================
+*/
+
+scDataType_t SC_Lua_luatype2sctype(int luatype)
+{
+  switch(luatype)
+  {
+    case LUA_TNUMBER: return TYPE_FLOAT;
+    case LUA_TBOOLEAN: return TYPE_BOOLEAN;
+    case LUA_TSTRING: return TYPE_STRING;
+    case LUA_TTABLE: return TYPE_HASH;
+    case LUA_TFUNCTION: return TYPE_FUNCTION;
+    case LUA_TUSERDATA:
+    case LUA_TLIGHTUSERDATA: return TYPE_USERDATA;
+    case LUA_TTHREAD:
+    case LUA_TNIL:
+    default: return TYPE_UNDEF;
   }
 }
 
@@ -327,6 +365,19 @@ void SC_Lua_StackDump(lua_State *L)
   }
   Com_Printf("\n");				// end the listing
   Com_Printf("-------------------------------------\n");
+}
+
+/*
+=================
+SC_Lua_arg_error
+=================
+*/
+void SC_Lua_arg_error(lua_State *L, int index, const char *expected, const char *got)
+{
+  lua_Debug ar;
+  lua_getstack(L, 0, &ar);
+  lua_getinfo(L, "n", &ar);
+  luaL_error(L, "bad argument %d to '%s' (%s expected, got %s)", index, ar.name, expected, got);
 }
 
 #endif

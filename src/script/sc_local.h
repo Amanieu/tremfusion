@@ -68,8 +68,10 @@ int         SC_Lua_RunFunction( const scDataTypeFunction_t *func, scDataTypeValu
 void        SC_Lua_StackDump(lua_State *L);
 
 int         SC_Lua_sctype2luatype(scDataType_t sctype);
+scDataType_t SC_Lua_luatype2sctype(int luatype);
 const char  *SC_Lua_to_comparable_string(lua_State *L, int index, int left);
 int         SC_Lua_is_registered(lua_State *L, int index, scDataType_t type);
+void        SC_Lua_arg_error(lua_State *L, int index, const char *expected, const char *got);
 
 // sc_lua_stack.c
 void SC_Lua_push_boolean(lua_State *L, int boolean);
@@ -96,10 +98,10 @@ scDataTypeHash_t* SC_Lua_pop_lua_hash(lua_State *L);
 scDataTypeFunction_t* SC_Lua_pop_lua_function(lua_State *L);
 void SC_Lua_pop_value(lua_State *L, scDataTypeValue_t *value, scDataType_t type);
 
-const char* SC_Lua_get_arg_string(lua_State *L, int index);
-int SC_Lua_get_arg_boolean(lua_State *L, int index);
-int SC_Lua_get_arg_integer(lua_State *L, int index);
-lua_Number SC_Lua_get_arg_number(lua_State *L, int index);
+scDataType_t SC_Lua_get_string(lua_State *L, int index, const char **string);
+scDataType_t SC_Lua_get_boolean(lua_State *L, int index, int *boolean);
+scDataType_t SC_Lua_get_integer(lua_State *L, int index, int *integer);
+scDataType_t SC_Lua_get_number(lua_State *L, int index, lua_Number *number);
 
 // sc_lua_metamethod.c
 int SC_Lua_invalid_metatable_metamethod(lua_State *L);

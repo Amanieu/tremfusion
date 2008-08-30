@@ -254,15 +254,23 @@ boolean metamethods
 
 int SC_Lua_eq_boolean_metamethod(lua_State *L)
 {
-  int b1 = SC_Lua_get_arg_boolean(L, 1);
-  int b2 = SC_Lua_get_arg_boolean(L, 2);
-  lua_pushboolean(L, b1 == b2);
+  int b1, b2;
+
+  if(SC_Lua_get_boolean(L, 1, &b1) != TYPE_BOOLEAN ||
+     !SC_Lua_get_boolean(L, 2, &b2) != TYPE_BOOLEAN)
+    lua_pushboolean(L, qfalse);
+  else
+    lua_pushboolean(L, b1 == b2);
   return 1;
 }
 
 int SC_Lua_tostring_boolean_metamethod(lua_State *L)
 {
-  int b1 = SC_Lua_get_arg_boolean(L, 1);
+  int b1, t;
+  t = SC_Lua_get_boolean(L, 1, &b1);
+  if(t != TYPE_BOOLEAN)
+    SC_Lua_arg_error(L, 1, "boolean", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   if(b1)
     lua_pushstring(L, "true");
   else
@@ -279,32 +287,60 @@ number metamethods
 
 int SC_Lua_add_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2, t;
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushnumber(L, n1 + n2);
   return 1;
 }
 
 int SC_Lua_sub_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2, t;
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushnumber(L, n1 - n2);
   return 1;
 }
 
 int SC_Lua_mul_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushnumber(L, n1 * n2);
   return 1;
 }
 
 int SC_Lua_div_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   if(n2 == 0)
     lua_pushnumber(L, INFINITY);
   else
@@ -314,8 +350,16 @@ int SC_Lua_div_number_metamethod(lua_State *L)
 
 int SC_Lua_mod_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   if(n2 == 0)
     lua_pushnumber(L, NAN);
   else
@@ -325,46 +369,85 @@ int SC_Lua_mod_number_metamethod(lua_State *L)
 
 int SC_Lua_pow_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushnumber(L, pow(n1, n2));
   return 1;
 }
 
 int SC_Lua_unm_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number n1;
+  SC_Lua_get_number(L, 1, &n1);
   lua_pushnumber(L, -n1);
   return 1;
 }
 
 int SC_Lua_eq_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER)
+  {
+    lua_pushboolean(L, qfalse);
+    return 1;
+  }
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_FLOAT)
+  {
+    lua_pushboolean(L, qfalse);
+    return 1;
+  }
+
   lua_pushboolean(L, n1 == n2);
   return 1;
 }
 
 int SC_Lua_lt_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushboolean(L, n1 < n2);
   return 1;
 }
 
 int SC_Lua_le_number_metamethod(lua_State *L)
 {
-  lua_Number n1 = SC_Lua_get_arg_number(L, 1);
-  lua_Number n2 = SC_Lua_get_arg_number(L, 2);
+  lua_Number n1, n2;
+  scDataType_t t;
+
+  t = SC_Lua_get_number(L, 1, &n1);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 1, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+  t = SC_Lua_get_number(L, 2, &n2);
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
+    SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   lua_pushboolean(L, n1 <= n2);
   return 1;
 }
 
 int SC_Lua_tostring_number_metamethod(lua_State *L)
 {
-  lua_Number b1 = SC_Lua_get_arg_number(L, 1);
+  lua_Number b1;
+  SC_Lua_get_number(L, 1, &b1);
   lua_pushstring(L, va("%.14g", b1));
   return 1;
 }
@@ -462,12 +545,15 @@ int SC_Lua_index_array_metamethod(lua_State *L)
   scDataTypeArray_t *array;
   scDataTypeValue_t value;
   int nidx;
+  scDataType_t t;
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
   array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
-  nidx = SC_Lua_get_arg_integer(L, 2);
+  t = SC_Lua_get_integer(L, 2, &nidx);
+  if(t != TYPE_INTEGER)
+    SC_Lua_arg_error(L, 2, "integer", lua_typename(L, SC_Lua_sctype2luatype(t)));
 
   SC_ArrayGet(array, nidx-1, &value);
   SC_Lua_push_value(L, &value);
@@ -480,6 +566,7 @@ int SC_Lua_newindex_array_metamethod(lua_State *L)
   scDataTypeArray_t *array;
   scDataTypeValue_t value;
   int nidx;
+  scDataType_t t;
 
   SC_Lua_pop_value(L, &value, TYPE_ANY);
 
@@ -487,7 +574,9 @@ int SC_Lua_newindex_array_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
-  nidx = SC_Lua_get_arg_integer(L, 2);
+  t = SC_Lua_get_integer(L, 2, &nidx);
+  if(t != TYPE_INTEGER)
+    SC_Lua_arg_error(L, 2, "integer", lua_typename(L, SC_Lua_sctype2luatype(t)));
   SC_ArraySet(array, nidx-1, &value);
 
   return 0;
@@ -538,6 +627,7 @@ int SC_Lua_index_hash_metamethod(lua_State *L)
   scDataTypeHash_t *hash;
   scDataTypeValue_t value;
   const char *sidx;
+  scDataType_t t;
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
@@ -546,7 +636,10 @@ int SC_Lua_index_hash_metamethod(lua_State *L)
   value.type = TYPE_HASH;
   value.data.hash = hash;
 
-  sidx = SC_Lua_get_arg_string(L, 2);
+  t = SC_Lua_get_string(L, 2, &sidx);
+  if(t != TYPE_STRING)
+    SC_Lua_arg_error(L, 2, "string", lua_typename(L, SC_Lua_sctype2luatype(t)));
+
   SC_HashGet(hash, sidx, &value);
   SC_Lua_push_value(L, &value);
 
@@ -558,6 +651,7 @@ int SC_Lua_newindex_hash_metamethod(lua_State *L)
   scDataTypeHash_t *hash;
   scDataTypeValue_t value;
   const char *sidx;
+  scDataType_t t;
 
   SC_Lua_pop_value(L, &value, TYPE_ANY);
 
@@ -565,7 +659,9 @@ int SC_Lua_newindex_hash_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
-  sidx = SC_Lua_get_arg_string(L, 2);
+  t = SC_Lua_get_string(L, 2, &sidx);
+  if(t != TYPE_STRING)
+    SC_Lua_arg_error(L, 2, "string", lua_typename(L, SC_Lua_sctype2luatype(t)));
   SC_HashSet(hash, sidx, &value);
 
   return 0;

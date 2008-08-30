@@ -92,6 +92,7 @@ static int next_method(lua_State *L)
   scDataTypeArray_t *array;
   scDataTypeValue_t value;
   const char *key;
+  const char *string;
 
   lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -110,7 +111,7 @@ static int next_method(lua_State *L)
         if(lua_isnil(L, 2))
           keystate = 0;
         else
-          keystate = SC_Lua_get_arg_integer(L, 2);
+          SC_Lua_get_integer(L, 2, &keystate);
 
         while(keystate < array->buflen)
         {
@@ -141,7 +142,10 @@ static int next_method(lua_State *L)
         if(lua_isnil(L, 2))
           key = SC_HashFirst(hash, &value);
         else
-          key = SC_HashNext(hash, SC_Lua_get_arg_string(L, 2), &value);
+        {
+          SC_Lua_get_string(L, 2, &string);
+          key = SC_HashNext(hash, string, &value);
+        }
 
         if(key)
         {

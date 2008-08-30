@@ -746,52 +746,43 @@ void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataT
   }
 }
 
-const char* SC_Lua_get_arg_string(lua_State *L, int index)
+scDataType_t SC_Lua_get_string(lua_State *L, int index, const char **string)
 {
   int type;
-  lua_Debug ar;
 
   if(lua_isstring(L, index))
   {
-    return lua_tostring(L, index);
+    *string = lua_tostring(L, index);
+    return TYPE_STRING;
   }
   else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
-    scDataTypeString_t *string;
+    scDataTypeString_t *scstring;
 
     lua_getfield(L, -1, "_type");
     type = lua_tointeger(L, -1);
     if(type != TYPE_STRING)
-    {
-      lua_getstack(L, 0, &ar);
-      lua_getinfo(L, "n", &ar);
-      luaL_error(L, "bad argument %d to '%s' (string expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
-    }
+      return type;
 
     lua_getfield(L, -2, "_ref");
-    string = *((scDataTypeString_t**) lua_touserdata(L, -1));
+    scstring = *((scDataTypeString_t**) lua_touserdata(L, -1));
+    *string = SC_StringToChar(scstring);
     
     lua_pop(L, 3);
-    return SC_StringToChar(string);
+    return TYPE_STRING;
   }
   else
-  {
-    lua_getstack(L, 0, &ar);
-    lua_getinfo(L, "n", &ar);
-    luaL_error(L, "bad argument %d to '%s' (string expected, got %s)", index, ar.name, luaL_typename(L, index));
-  }
-
-  return NULL;
+    return lua_type(L, index);
 }
 
-int SC_Lua_get_arg_boolean(lua_State *L, int index)
+scDataType_t SC_Lua_get_boolean(lua_State *L, int index, int *boolean)
 {
   int type;
-  lua_Debug ar;
 
   if(lua_isboolean(L, index))
   {
-    return lua_toboolean(L, index);
+    *boolean = lua_toboolean(L, index);
+    return TYPE_BOOLEAN;
   }
   else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
@@ -800,36 +791,27 @@ int SC_Lua_get_arg_boolean(lua_State *L, int index)
     lua_getfield(L, -1, "_type");
     type = lua_tointeger(L, -1);
     if(type != TYPE_BOOLEAN)
-    {
-      lua_getstack(L, 0, &ar);
-      lua_getinfo(L, "n", &ar);
-      luaL_error(L, "bad argument %d to '%s' (boolean expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
-    }
+      return type;
 
     lua_getfield(L, -2, "_ref");
     ud.v = lua_touserdata(L, -1);
     
     lua_pop(L, 3);
-    return ud.n;
+    *boolean = ud.n;
+    return TYPE_BOOLEAN;
   }
   else
-  {
-    lua_getstack(L, 0, &ar);
-    lua_getinfo(L, "n", &ar);
-    luaL_error(L, "bad argument %d to '%s' (boolean expected, got %s)", index, ar.name, luaL_typename(L, index));
-  }
-
-  return 0;
+    return SC_Lua_luatype2sctype(lua_type(L, index));
 }
 
-int SC_Lua_get_arg_integer(lua_State *L, int index)
+scDataType_t SC_Lua_get_integer(lua_State *L, int index, int *integer)
 {
   int type;
-  lua_Debug ar;
 
   if(lua_isnumber(L, index))
   {
-    return lua_tointeger(L, index);
+    *integer = lua_tointeger(L, index);
+    return TYPE_INTEGER;
   }
   else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
@@ -838,37 +820,29 @@ int SC_Lua_get_arg_integer(lua_State *L, int index)
     lua_getfield(L, -1, "_type");
     type = lua_tointeger(L, -1);
     if(type != TYPE_INTEGER)
-    {
-      lua_getstack(L, 0, &ar);
-      lua_getinfo(L, "n", &ar);
-      luaL_error(L, "bad argument %d to '%s' (integer expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
-    }
+      return type;
 
     lua_getfield(L, -2, "_ref");
     ud.v = lua_touserdata(L, -1);
     
     lua_pop(L, 3);
-    return ud.n;
+    *integer = ud.n;
+    return TYPE_INTEGER;
   }
   else
-  {
-    lua_getstack(L, 0, &ar);
-    lua_getinfo(L, "n", &ar);
-    luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, luaL_typename(L, index));
-  }
+    return SC_Lua_luatype2sctype(lua_type(L, index));
 
   return 0;
 }
 
-lua_Number SC_Lua_get_arg_number(lua_State *L, int index)
+scDataType_t SC_Lua_get_number(lua_State *L, int index, lua_Number *number)
 {
   int type;
-  lua_Debug ar;
-  lua_Number number = 0.;
 
   if(lua_isnumber(L, index))
   {
-    return lua_tonumber(L, index);
+    *number = lua_tonumber(L, index);
+    return TYPE_FLOAT;
   }
   else if(lua_istable(L, index) && lua_getmetatable(L, index))
   {
@@ -882,32 +856,23 @@ lua_Number SC_Lua_get_arg_number(lua_State *L, int index)
     {
       case TYPE_INTEGER:
         ud.v = lua_touserdata(L, -1);
-        number = ud.n;
+        *number = ud.n;
         break;
 
       case TYPE_FLOAT:
         ud.v = lua_touserdata(L, -1);
-        number = ud.f;
+        *number = ud.f;
         break;
 
       default:
-        lua_getstack(L, 0, &ar);
-        lua_getinfo(L, "n", &ar);
-        luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, lua_typename(L, SC_Lua_sctype2luatype(type)));
-        break;
+        return type;
     }
     
     lua_pop(L, 3);
-    return number;
+    return type;
   }
   else
-  {
-    lua_getstack(L, 0, &ar);
-    lua_getinfo(L, "n", &ar);
-    luaL_error(L, "bad argument %d to '%s' (number expected, got %s)", index, ar.name, luaL_typename(L, index));
-  }
-
-  return 0;
+    return SC_Lua_luatype2sctype(lua_type(L, index));
 }
 
 #endif
