@@ -121,4 +121,9 @@ void G_WriteSessionData( void )
     if( level.clients[ i ].pers.connected == CON_CONNECTED )
       G_WriteClientSessionData( &level.clients[ i ] );
   }
+
+  // write values for sv_maxclients and sv_democlients because they invalidate session data
+  trap_Cvar_Set( "session", va( "%i %i", 
+                 trap_Cvar_VariableIntegerValue( "sv_maxclients" ),
+                 trap_Cvar_VariableIntegerValue( "sv_democlients" ) ) );
 }

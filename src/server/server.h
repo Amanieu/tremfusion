@@ -87,6 +87,15 @@ typedef struct {
 	int				gentitySize;
 	int				num_entities;		// current number, <= MAX_GENTITIES
 
+	// demo recording
+	fileHandle_t	demoFile;
+	demoState_t		demoState;
+	char			demoName[MAX_QPATH];
+
+	// previous frame for delta compression
+	sharedEntity_t	demoEntities[MAX_GENTITIES];
+	playerState_t	demoPlayerStates[MAX_CLIENTS];
+
 	playerState_t	*gameClients;
 	int				gameClientSize;		// will be > sizeof(playerState_t) due to game private data
 
@@ -248,6 +257,7 @@ extern	cvar_t	*sv_rconPassword;
 extern	cvar_t	*sv_privatePassword;
 extern	cvar_t	*sv_allowDownload;
 extern	cvar_t	*sv_maxclients;
+extern	cvar_t	*sv_democlients;
 
 extern	cvar_t	*sv_privateClients;
 extern	cvar_t	*sv_hostname;
@@ -264,6 +274,8 @@ extern	cvar_t	*sv_maxRate;
 extern	cvar_t	*sv_maxPing;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_dequeuePeriod;
+extern	cvar_t	*sv_demoState;
+extern	cvar_t	*sv_autoDemo;
 
 extern	cvar_t	*sv_minPing;
 #ifdef USE_VOIP
@@ -293,7 +305,7 @@ void SV_MasterGameStat( const char *data );
 //
 // sv_init.c
 //
-void SV_SetConfigstring( int index, const char *val );
+void SV_SetConfigstring( int index, const char *val, qboolean force );
 void SV_GetConfigstring( int index, char *buffer, int bufferSize );
 void SV_UpdateConfigstrings( client_t *client );
 
@@ -342,6 +354,19 @@ void SV_WriteFrameToClient (client_t *client, msg_t *msg);
 void SV_SendMessageToClient( msg_t *msg, client_t *client );
 void SV_SendClientMessages( void );
 void SV_SendClientSnapshot( client_t *client );
+
+//
+// sv_demo.c
+//
+void SV_DemoStartRecord(void);
+void SV_DemoStopRecord(void);
+void SV_DemoStartPlayback(void);
+void SV_DemoStopPlayback(void);
+void SV_DemoReadFrame(void);
+void SV_DemoWriteFrame(void);
+void SV_DemoWriteServerCommand(const char *str);
+void SV_DemoWriteGameCommand(int cmd, const char *str);
+void SV_DemoWriteConfigString(int client);
 
 //
 // sv_game.c
