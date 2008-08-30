@@ -89,6 +89,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
     function->argument[1] = TYPE_HASH;
     function->argument[2] = TYPE_UNDEF;
     function->return_type = TYPE_UNDEF;
+    SC_FunctionGCInc(function);
     node->hook = function;
   }
 

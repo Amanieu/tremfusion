@@ -194,6 +194,7 @@ typedef struct
 
 struct scClass_s
 {
+  scGC_t                gc;
   char                  name[MAX_PATH_LENGTH+1];
   char                  desc[MAX_DESC_LENGTH+1];
   scDataTypeMethod_t    constructor;
@@ -250,10 +251,8 @@ void SC_StringClear(scDataTypeString_t *string);
 void SC_StringGCInc(scDataTypeString_t *string);
 void SC_StringGCDec(scDataTypeString_t *string);
 
-scDataTypeValue_t *SC_ValueNew( void );
 void SC_ValueGCInc(scDataTypeValue_t *value);
 void SC_ValueGCDec(scDataTypeValue_t *value);
-scDataTypeValue_t *SC_ValueStringFromChar( const char* str );
 
 scDataTypeArray_t *SC_ArrayNew( void );
 qboolean SC_ArrayGet(scDataTypeArray_t *array, int index, scDataTypeValue_t *value);
@@ -289,9 +288,12 @@ void SC_ObjectGCInc(scObject_t *object);
 void SC_ObjectGCDec(scObject_t *object);
 void SC_ObjectDestroy( scObject_t *object );
 
+scClass_t *SC_ClassNew(const char *name);
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
 scField_t *SC_ClassGetField(scClass_t *class, const char *name);
+void SC_ClassGCInc(scClass_t *class);
+void SC_ClassGCDec(scClass_t *class);
 
 const char* SC_LangageToString(scLangage_t langage);
 const char* SC_DataTypeToString(scDataType_t type);

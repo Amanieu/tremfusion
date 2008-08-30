@@ -60,6 +60,10 @@ static void strRealloc( scDataTypeString_t *string, int maxLen )
 scDataTypeString_t *SC_StringNew(void)
 {
   scDataTypeString_t *string = (scDataTypeString_t*) BG_Alloc(sizeof(scDataTypeString_t));
+
+#if SC_GC_DEBUG
+  Com_Printf("%p: SC_StringNew\n", string);
+#endif
   string->gc.count = 0;
   string->length = 0;
   string->buflen = 0;
@@ -90,6 +94,9 @@ const char* SC_StringToChar(scDataTypeString_t *string)
 
 static void stringFree(scDataTypeString_t *string)
 {
+#if SC_GC_DEBUG
+  Com_Printf("%p: stringFree\n", string);
+#endif
   if(string->data)
     BG_Free(string->data);
   BG_Free(string);
@@ -145,11 +152,17 @@ void SC_StringClear(scDataTypeString_t *string)
 void SC_StringGCInc(scDataTypeString_t *string)
 {
   string->gc.count++;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_StringGCInc: %d\n", string, string->gc.count);
+#endif
 }
 
 void SC_StringGCDec(scDataTypeString_t *string)
 {
   string->gc.count--;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_StringGCDec: %d\n", string, string->gc.count);
+#endif
   if(string->gc.count == 0)
     stringFree(string);
 }
@@ -194,6 +207,10 @@ void SC_ValueGCInc(scDataTypeValue_t *value)
       SC_ObjectGCInc( value->data.object );
       break;
 
+    case TYPE_CLASS:
+      SC_ClassGCInc( value->data.class );
+      break;
+
     default:
       break;
   }
@@ -227,19 +244,14 @@ void SC_ValueGCDec(scDataTypeValue_t *value)
       SC_ObjectGCDec( value->data.object );
       break;
 
+    case TYPE_CLASS:
+      SC_ClassGCDec( value->data.class );
+      break;
+
     default:
       break;
   }
   value->gc.count--;
-}
-
-scDataTypeValue_t *SC_ValueStringFromChar( const char* str )
-{
-  scDataTypeValue_t *value;
-  value = SC_ValueNew();
-  value->type = TYPE_STRING;
-  value->data.string = SC_StringNewFromChar( str );
-  return value;
 }
 
 // Array
@@ -265,6 +277,9 @@ scDataTypeArray_t *SC_ArrayNew(void)
   array->size = 0;
   array->data = NULL;
   arrayRealloc(array, 8);
+#if SC_GC_DEBUG
+  Com_Printf("%p: SC_ArrayNew\n", array);
+#endif
   return array;
 }
 
@@ -326,6 +341,9 @@ void SC_ArrayClear(scDataTypeArray_t *array)
 
 static void arrayFree(scDataTypeArray_t *array)
 {
+#if SC_GC_DEBUG
+  Com_Printf("%p: arrayFree\n", array);
+#endif
   SC_ArrayClear(array);
   BG_Free(array->data);
   BG_Free(array);
@@ -334,11 +352,17 @@ static void arrayFree(scDataTypeArray_t *array)
 void SC_ArrayGCInc(scDataTypeArray_t *array)
 {
   array->gc.count++;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_ArrayGCInc: %d\n", array, array->gc.count);
+#endif
 }
 
 void SC_ArrayGCDec(scDataTypeArray_t *array)
 {
   array->gc.count--;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_ArrayGCDec: %d\n", array, array->gc.count);
+#endif
   if(array->gc.count == 0)
     arrayFree(array);
 }
@@ -382,6 +406,9 @@ scDataTypeHash_t* SC_HashNew(void)
   hash->buflen = 16;
   hash->data = NULL;
   hashRealloc(hash);
+#if SC_GC_DEBUG
+  Com_Printf("%p: SC_HashNew\n", hash);
+#endif
   return hash;
 }
 
@@ -599,6 +626,9 @@ void SC_HashClear( scDataTypeHash_t *hash )
 static void hashFree( scDataTypeHash_t *hash )
 {
   int i;
+#if SC_GC_DEBUG
+  Com_Printf("%p: hashFree\n", hash);
+#endif
   SC_HashClear(hash);
   for( i = 0; i < hash->buflen; i++ )
   {
@@ -613,11 +643,17 @@ static void hashFree( scDataTypeHash_t *hash )
 void SC_HashGCInc(scDataTypeHash_t *hash)
 {
   hash->gc.count++;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_HashGCInc: %d\n", hash, hash->gc.count);
+#endif
 }
 
 void SC_HashGCDec(scDataTypeHash_t *hash)
 {
   hash->gc.count--;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_HashGCDec: %d\n", hash, hash->gc.count);
+#endif
   if(hash->gc.count == 0)
     hashFree(hash);
 }
@@ -742,27 +778,58 @@ scDataTypeFunction_t* SC_FunctionNew()
 {
   scDataTypeFunction_t *function = ( scDataTypeFunction_t* ) BG_Alloc( sizeof( scDataTypeFunction_t ) );
   function->gc.count = 0;
+#if SC_GC_DEBUG
+  Com_Printf("%p: SC_FunctionNew\n", function);
+#endif
   return function;
 }
 
 static void functionFree(scDataTypeFunction_t *function)
 {
+#if SC_GC_DEBUG
+  Com_Printf("%p: functionFree\n", function);
+#endif
   BG_Free(function);
 }
 
 void SC_FunctionGCInc(scDataTypeFunction_t *function)
 {
   function->gc.count++;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_FunctionGCInc: %d\n", function, function->gc.count);
+#endif
 }
 
 void SC_FunctionGCDec(scDataTypeFunction_t *function)
 {
   function->gc.count--;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_FunctionGCDec: %d\n", function, function->gc.count);
+#endif
   if(function->gc.count == 0)
     functionFree(function);
 }
 
 // Class
+
+scClass_t *SC_ClassNew(const char *name)
+{
+  scClass_t *class = BG_Alloc(sizeof(scClass_t));
+  class->gc.count = 0;
+  strcpy(class->name, name);
+#if SC_GC_DEBUG
+  Com_Printf("%p: SC_ClassNew: %d (%s)\n", class, class->gc.count, class->name);
+#endif
+  return class;
+}
+
+static void classFree(scClass_t *class)
+{
+#if SC_GC_DEBUG
+  Com_Printf("%p: classFree: %d (%s)\n", class, class->gc.count, class->name);
+#endif
+  BG_Free(class);
+}
 
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 {
@@ -810,6 +877,24 @@ scField_t *SC_ClassGetField(scClass_t *class, const char *name)
   return NULL;
 }
 
+void SC_ClassGCInc(scClass_t *class)
+{
+  class->gc.count++;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_ClassGCInc: %d (%s)\n", class, class->gc.count, class->name);
+#endif
+}
+
+void SC_ClassGCDec(scClass_t *class)
+{
+  class->gc.count--;
+#if SC_GC_DEBUG == 2
+  Com_Printf("%p: SC_ClassGCDec: %d (%s)\n", class, class->gc.count, class->name);
+#endif
+  if(class->gc.count == 0)
+    classFree(class);
+}
+
 // Object
 
 scObject_t *SC_ObjectNew(scClass_t *class)
@@ -819,13 +904,17 @@ scObject_t *SC_ObjectNew(scClass_t *class)
   object->data.type = TYPE_UNDEF;
   object->gc.count = 0;
 #if SC_GC_DEBUG
-  Com_Printf("SC_ObjectNew: created new object of class %s at %p\n", class->name, object);
+  Com_Printf("%p: SC_ObjectNew: (class %s)\n", object, object->class->name);
 #endif
   return object;
 }
 
 static void objectFree(scObject_t *object)
 {
+#if SC_GC_DEBUG
+  Com_Printf("%p: objectFree (class %s)\n", object, object->class->name);
+#endif
+
   SC_ValueGCDec(&object->data);
   BG_Free(object);
 }
@@ -834,7 +923,7 @@ void SC_ObjectGCInc(scObject_t *object)
 {
   object->gc.count++;
 #if SC_GC_DEBUG == 2
-  Com_Printf("SC_ObjectGCInc called on object of class %s count now = %d\n", object->class->name, object->gc.count);
+  Com_Printf("%p: SC_ObjectGCInc (class %s): %d\n", object, object->class->name, object->gc.count);
 #endif
 }
 
@@ -842,7 +931,7 @@ void SC_ObjectGCDec(scObject_t *object)
 {
   object->gc.count--;
 #if SC_GC_DEBUG == 2
-  Com_Printf("SC_ObjectGCDec called on object of class %s count now = %d\n", object->class->name, object->gc.count);
+  Com_Printf("%p: SC_ObjectGCDec (class %s): %d\n", object, object->class->name, object->gc.count);
 #endif
   if(object->gc.count == 0)
   {
@@ -853,14 +942,13 @@ void SC_ObjectGCDec(scObject_t *object)
 
 void SC_ObjectDestroy( scObject_t *object )
 {
-#if SC_GC_DEBUG
-  Com_Printf("SC_ObjectDestroy called on object of class %s at %p\n", object->class->name, object);
-#endif
-  scDataTypeValue_t args[MAX_FUNCTION_ARGUMENTS];
-  args[0].type = TYPE_OBJECT;
-  args[0].data.object = object;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS];
+  scDataTypeValue_t out;
+
+  in[0].type = TYPE_OBJECT;
+  in[0].data.object = object;
   if (object->class->destructor.data.ref)
-    SC_RunFunction( (scDataTypeFunction_t*)&object->class->destructor, args, NULL);
+    SC_RunFunction( (scDataTypeFunction_t*)&object->class->destructor, in, &out);
 }
 // Display data tree
 

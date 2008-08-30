@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
  * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
  * - module and require integration in scripting module engine
+ * - `equal' metamethods for all types
+ * - optimize (exemple: make lua <=> lua function call faster)
  */
 
 #include "sc_public.h"
@@ -145,6 +147,7 @@ void SC_Lua_Init( void )
   Com_Printf("Lua initializing... ");
   scDataTypeValue_t value;
   lua_State *L = lua_open();
+  scDataTypeHash_t **ud;
 
   // Lua standard lib
   luaopen_base(L);
@@ -161,7 +164,8 @@ void SC_Lua_Init( void )
 
   // root metatable
   lua_newtable(L);
-  lua_pushlightuserdata(L, value.data.namespace);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = value.data.namespace;
 
   // userdata metatable
   lua_newtable(L);
@@ -192,7 +196,7 @@ SC_Lua_Shutdown
 */
 void SC_Lua_Shutdown( void )
 {
-  Com_Printf("Lua shutting down... ");
+  Com_Printf("Lua shutting down...\n");
 
   if(g_luaState)
   {

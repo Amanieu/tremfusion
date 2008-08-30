@@ -105,7 +105,7 @@ static int next_method(lua_State *L)
     switch(type)
     {
       case TYPE_ARRAY:
-        array = lua_touserdata(L, -1);
+        array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
         if(lua_isnil(L, 2))
           keystate = 0;
@@ -136,7 +136,7 @@ static int next_method(lua_State *L)
       case TYPE_HASH:
       case TYPE_NAMESPACE:
         // get hash data
-        hash = lua_touserdata(L, -1);
+        hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
         if(lua_isnil(L, 2))
           key = SC_HashFirst(hash, &value);
@@ -197,7 +197,7 @@ static int ipairs_closure(lua_State *L)
   switch(type)
   {
     case TYPE_ARRAY:
-      array = lua_touserdata(L, -1);
+      array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
       if(keystate < array->buflen)
       {
@@ -226,7 +226,7 @@ static int ipairs_closure(lua_State *L)
     case TYPE_HASH:
     case TYPE_NAMESPACE:
       // get hash data
-      hash = lua_touserdata(L, -1);
+      hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
       // lookup in hashtable from current index to max hashtable size
       if(keystate < hash->buflen)
@@ -483,7 +483,7 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "getfenv", method_disabled);
   map_luamethod(L, "setfenv", method_disabled);
   map_luamethod(L, "gcinfo", method_disabled);
-  map_luamethod(L, "collectgarbage", method_disabled);
+  //map_luamethod(L, "collectgarbage", method_disabled);
   map_luamethod(L, "newproxy", method_disabled);
 
   luaL_register(L, "lua", lualib);

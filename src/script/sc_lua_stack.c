@@ -210,6 +210,8 @@ void SC_Lua_push_userdata(lua_State *L, void* userdata)
 
 void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
 {
+  scDataTypeString_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -243,7 +245,8 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, string);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = string;
 
   // userdata metatable
   lua_newtable(L);
@@ -258,6 +261,8 @@ void SC_Lua_push_string(lua_State *L, scDataTypeString_t *string)
 
 void SC_Lua_push_array( lua_State *L, scDataTypeArray_t *array )
 {
+  scDataTypeArray_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -281,7 +286,8 @@ void SC_Lua_push_array( lua_State *L, scDataTypeArray_t *array )
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, array);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = array;
 
   // userdata metatable
   lua_newtable(L);
@@ -296,6 +302,8 @@ void SC_Lua_push_array( lua_State *L, scDataTypeArray_t *array )
 
 void SC_Lua_push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
 {
+  scDataTypeHash_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -319,7 +327,8 @@ void SC_Lua_push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, hash);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = hash;
 
   // userdata metatable
   lua_newtable(L);
@@ -334,6 +343,8 @@ void SC_Lua_push_hash( lua_State *L, scDataTypeHash_t *hash, scDataType_t type )
 
 void SC_Lua_push_function( lua_State *L, scDataTypeFunction_t *function )
 {
+  scDataTypeFunction_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -359,7 +370,8 @@ void SC_Lua_push_function( lua_State *L, scDataTypeFunction_t *function )
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, function);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = function;
 
   // userdata metatable
   lua_newtable(L);
@@ -374,11 +386,13 @@ void SC_Lua_push_function( lua_State *L, scDataTypeFunction_t *function )
 
 void SC_Lua_push_class(lua_State *L, scClass_t *class)
 {
+  scClass_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
   // add a new reference for class
-  //SC_ClassGCInc(class);
+  SC_ClassGCInc(class);
 
   // metatable
   lua_newtable(L);
@@ -399,7 +413,8 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, class);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = class;
 
   // userdata metatable
   lua_newtable(L);
@@ -414,6 +429,8 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class)
 
 void SC_Lua_push_object(lua_State *L, scObject_t *object)
 {
+  scObject_t **ud;
+
   // maintable (empty, has only a metatable)
   lua_newtable(L);
 
@@ -435,7 +452,8 @@ void SC_Lua_push_object(lua_State *L, scObject_t *object)
   lua_setfield(L, -2, "_type");
 
   // push object
-  lua_pushlightuserdata(L, object);
+  ud = lua_newuserdata(L, sizeof(*ud));
+  *ud = object;
 
   // userdata metatable
   lua_newtable(L);
@@ -492,8 +510,6 @@ void SC_Lua_push_value( lua_State *L, scDataTypeValue_t *value )
       luaL_error(L, "internal error : attempt to push an unknow value (%d) in %s (%d)", value->type, __FILE__, __LINE__);
       break;
   }
-
-  SC_ValueGCInc(value);
 }
 
 scDataTypeString_t* SC_Lua_pop_lua_string(lua_State *L)
@@ -646,7 +662,26 @@ void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataT
         value->type = lua_tointeger(L, -1);
 
         lua_getfield(L, -2, "_ref");
-        value->data.any = lua_touserdata(L, -1);
+        switch(value->type)
+        {
+          case TYPE_BOOLEAN:
+          case TYPE_INTEGER:
+          case TYPE_FLOAT:
+          case TYPE_USERDATA:
+            value->data.any = lua_touserdata(L, -1);
+            break;
+          case TYPE_STRING:
+          case TYPE_FUNCTION:
+          case TYPE_ARRAY:
+          case TYPE_HASH:
+          case TYPE_NAMESPACE:
+          case TYPE_OBJECT:
+          case TYPE_CLASS:
+            value->data.any = *((void**)lua_touserdata(L, -1));
+            break;
+          default:
+            luaL_error(L, "internal error : attempt to pop value with invalid type (%d) in %s (%d)", value->type, __FILE__, __LINE__);
+        }
 
         lua_pop(L, 3);
       }
@@ -734,7 +769,7 @@ const char* SC_Lua_get_arg_string(lua_State *L, int index)
     }
 
     lua_getfield(L, -2, "_ref");
-    string = lua_touserdata(L, -1);
+    string = *((scDataTypeString_t**) lua_touserdata(L, -1));
     
     lua_pop(L, 3);
     return SC_StringToChar(string);

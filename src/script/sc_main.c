@@ -153,6 +153,9 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
       break;
 
     if(in[narg].type != func->argument[narg])
+      // TODO: some functions have hidden arguments (class, objects, etc...),
+      // so error message is wrong. Have to show real argument number
+      // (ex: game.Entity(lua.float(0)) )
       SC_EXEC_ERROR(va("error running function : argument %d not match (waiting for %s but having %s)", narg+1, SC_DataTypeToString(func->argument[narg]), SC_DataTypeToString(in[narg].type)));
 
     narg++;

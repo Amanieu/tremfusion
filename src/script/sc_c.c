@@ -59,11 +59,10 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   int nslen = strlen( namespace );
   int i, cnt;
   
-  class = BG_Alloc( sizeof(scClass_t) );
-  strcpy(class->name, def->name);
+  class = SC_ClassNew(def->name);
   strcpy(class->desc, def->desc);
 
-  class->constructor.gc.count = 0;
+  class->constructor.gc.count = 1;
   class->constructor.langage = LANGAGE_C;
   class->constructor.argument[0] = TYPE_CLASS;
   memcpy(class->constructor.argument+1, def->constructor_arguments, ( MAX_FUNCTION_ARGUMENTS ) * sizeof(scDataType_t));
@@ -71,7 +70,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   class->constructor.data.ref = def->constructor;
   class->constructor.closure = def->closure;
 
-  class->destructor.gc.count = 0;
+  class->destructor.gc.count = 1;
   class->destructor.langage = LANGAGE_C;
   class->destructor.argument[0] = TYPE_OBJECT;
   class->destructor.argument[1] = TYPE_UNDEF;
@@ -93,7 +92,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
 
     if(def->members[i].set)
     {
-      class->members[i].set.gc.count = 0;
+      class->members[i].set.gc.count = 1;
       class->members[i].set.langage = LANGAGE_C;
       class->members[i].set.data.ref = def->members[i].set;
       class->members[i].set.argument[0] = TYPE_OBJECT;
@@ -107,7 +106,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
 
     if(def->members[i].get)
     {
-      class->members[i].get.gc.count = 0;
+      class->members[i].get.gc.count = 1;
       class->members[i].get.langage = LANGAGE_C;
       class->members[i].get.data.ref = def->members[i].get;
       class->members[i].get.argument[0] = TYPE_OBJECT;
@@ -131,7 +130,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
     strcpy(class->methods[i].name, def->methods[i].name);
     strcpy(class->methods[i].desc, def->methods[i].desc);
 
-    class->methods[i].method.gc.count = 0;
+    class->methods[i].method.gc.count = 1;
     class->methods[i].method.langage = LANGAGE_C;
     class->methods[i].method.data.ref = def->methods[i].method;
     class->methods[i].method.argument[0] = TYPE_OBJECT;

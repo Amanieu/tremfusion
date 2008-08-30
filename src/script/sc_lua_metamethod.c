@@ -46,7 +46,7 @@ static const char *to_comparable_string(lua_State *L, int index)
       return NULL;
 
 	lua_getfield(L, -2, "_ref");
-    string = lua_touserdata(L, -1);
+    string = *((scDataTypeString_t**) lua_touserdata(L, -1));
     str = SC_StringToChar(string);
 
     lua_pop(L, 3);
@@ -146,10 +146,10 @@ int SC_Lua_call_metamethod( lua_State *L )
   lua_getfield(L, -2, "_ref");
 
   if(type == TYPE_FUNCTION)
-    function = lua_touserdata(L, -1);
+    function = *((scDataTypeFunction_t**) lua_touserdata(L, -1));
   else if(type == TYPE_CLASS)
   {
-    class = lua_touserdata(L, -1);
+    class = *((scClass_t**) lua_touserdata(L, -1));
     function = &class->constructor;
     in[0].type = TYPE_CLASS;
     in[0].data.class = class;
@@ -162,23 +162,30 @@ int SC_Lua_call_metamethod( lua_State *L )
   lua_pop(L, 3);
 
   top = lua_gettop(L);
-  any = 0;
+  if(function->argument[mod] == TYPE_ANY)
+    any = 1;
+  else
+    any = 0;
+
   for(i = 0; i < top-1; i++)
   {
     int index = i + mod;
-    if(function->argument[index] == TYPE_ANY)
-      any = 1;
-    if(any == 0 && function->argument[index] == TYPE_UNDEF)
+    if(any == 0)
     {
-      if(lua_getstack(L, 0, &ar))
+      if(function->argument[index] == TYPE_ANY)
+        any = 1;
+      else if(function->argument[index] == TYPE_UNDEF)
       {
-        lua_getinfo(L, "n", &ar);
-        luaL_error(L, LUA_QS " takes %d arguments (%d given)", ar.name, i, top-1);
+        if(lua_getstack(L, 0, &ar))
+        {
+          lua_getinfo(L, "n", &ar);
+          luaL_error(L, LUA_QS " takes %d arguments (%d given)", ar.name, i, top-1);
+        }
+        else
+          luaL_error(L, "function takes %d arguments (%d given)", i, top-1);
       }
-      else
-        luaL_error(L, "function takes %d arguments (%d given)", i, top-1);
     }
-    if(any)
+    if(any == 1)
       SC_Lua_get_value(L, i-top+1, &in[index], TYPE_ANY);
     else
       SC_Lua_get_value(L, i-top+1, &in[index], function->argument[index]);
@@ -186,7 +193,7 @@ int SC_Lua_call_metamethod( lua_State *L )
     SC_ValueGCInc(&in[index]);
   }
   
-  if(function->argument[i+mod] != TYPE_UNDEF)
+  if(any == 0 && function->argument[i+mod] != TYPE_UNDEF)
   {
     while(function->argument[i+mod] != TYPE_UNDEF && function->argument[i+mod] != TYPE_ANY)
       i++;
@@ -231,7 +238,7 @@ int SC_Lua_tostring_metamethod( lua_State *L )
   lua_getfield(L, -1, "_type");
   type = lua_tointeger(L, -1);
   lua_getfield(L, -2, "_ref");
-  ref = lua_touserdata(L, -1);
+  ref = *((void**) lua_touserdata(L, -1));
 
   lua_pushstring(L, va("%s: %p(C)",
       SC_DataTypeToString(type),
@@ -416,7 +423,7 @@ int SC_Lua_tostring_string_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  string = lua_touserdata(L, -1);
+  string = *((scDataTypeString_t**) lua_touserdata(L, -1));
 
   lua_pushstring(L, SC_StringToChar(string));
   return 1;
@@ -428,7 +435,7 @@ int SC_Lua_len_string_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  string = lua_touserdata(L, -1);
+  string = *((scDataTypeString_t**) lua_touserdata(L, -1));
 
   lua_pushinteger(L, string->length);
   return 1;
@@ -438,9 +445,7 @@ int SC_Lua_gc_string_metamethod(lua_State *L)
 {
   scDataTypeString_t *string;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  string = lua_touserdata(L, -1);
+   string = *((scDataTypeString_t**) lua_touserdata(L, -1));
   SC_StringGCDec(string);
 
   return 0;
@@ -460,7 +465,7 @@ int SC_Lua_index_array_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  array = lua_touserdata(L, -1);
+  array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
   nidx = SC_Lua_get_arg_integer(L, 2);
 
@@ -480,7 +485,7 @@ int SC_Lua_newindex_array_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  array = lua_touserdata(L, -1);
+  array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
   nidx = SC_Lua_get_arg_integer(L, 2);
   SC_ArraySet(array, nidx-1, &value);
@@ -494,7 +499,7 @@ int SC_Lua_len_array_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  array = lua_touserdata(L, -1);
+  array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
   lua_pushinteger(L, array->size);
   return 1;
@@ -504,9 +509,7 @@ int SC_Lua_gc_array_metamethod(lua_State *L)
 {
   scDataTypeArray_t *array;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  array = lua_touserdata(L, -1);
+  array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
   SC_ArrayGCDec(array);
 
   return 0;
@@ -524,7 +527,7 @@ int SC_Lua_len_hash_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  hash = lua_touserdata(L, -1);
+  hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
   lua_pushinteger(L, hash->size);
   return 1;
@@ -538,7 +541,7 @@ int SC_Lua_index_hash_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  hash = lua_touserdata(L, -1);
+  hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
   value.type = TYPE_HASH;
   value.data.hash = hash;
@@ -560,7 +563,7 @@ int SC_Lua_newindex_hash_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  hash = lua_touserdata(L, -1);
+  hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
   sidx = SC_Lua_get_arg_string(L, 2);
   SC_HashSet(hash, sidx, &value);
@@ -572,9 +575,7 @@ int SC_Lua_gc_hash_metamethod(lua_State *L)
 {
   scDataTypeHash_t *hash;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  hash = lua_touserdata(L, -1);
+  hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
   SC_HashGCDec(hash);
 
   return 0;
@@ -590,9 +591,7 @@ int SC_Lua_gc_function_metamethod(lua_State *L)
 {
   scDataTypeFunction_t *function;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  function = lua_touserdata(L, -1);
+  function = *((scDataTypeFunction_t**) lua_touserdata(L, -1));
   SC_FunctionGCDec(function);
 
   return 0;
@@ -608,9 +607,7 @@ int SC_Lua_gc_class_metamethod(lua_State *L)
 {
   scClass_t *class;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  class = lua_touserdata(L, -1);
+  class = *((scClass_t**) lua_touserdata(L, -1));
   //SC_ClassGCDec(class);
 
   return 0;
@@ -626,9 +623,7 @@ int SC_Lua_gc_object_metamethod(lua_State *L)
 {
   scObject_t *object;
 
-  lua_getmetatable(L, 1);
-  lua_getfield(L, -1, "_ref");
-  object = lua_touserdata(L, -1);
+  object = *((scObject_t**) lua_touserdata(L, -1));
   SC_ObjectGCDec(object);
 
   return 0;
@@ -646,7 +641,7 @@ int SC_Lua_object_index_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  object = lua_touserdata(L, -1);
+  object = *((scObject_t**) lua_touserdata(L, -1));
   name = luaL_checkstring(L, 2);
 
   method = SC_ClassGetMethod(object->class, name);
@@ -703,7 +698,7 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
-  object = lua_touserdata(L, -1);
+  object = *((scObject_t**) lua_touserdata(L, -1));
   lua_pop(L, 2);
 
   name = luaL_checkstring(L, 2);
