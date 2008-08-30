@@ -130,7 +130,7 @@ void SV_DemoWriteFrame(void)
 
 	// Write entities
 	MSG_WriteByte(&msg, demo_entityState);
-	for (i = 0; i < MAX_GENTITIES; i++)
+	for (i = 0; i < sv.num_entities; i++)
 	{
 		if (i >= sv_maxclients->integer && i < MAX_CLIENTS)
 			continue;
@@ -141,7 +141,7 @@ void SV_DemoWriteFrame(void)
 	}
 	MSG_WriteBits(&msg, ENTITYNUM_NONE, GENTITYNUM_BITS);
 	MSG_WriteByte(&msg, demo_entityShared);
-	for (i = 0; i < MAX_GENTITIES; i++)
+	for (i = 0; i < sv.num_entities; i++)
 	{
 		if (i >= sv_maxclients->integer && i < MAX_CLIENTS)
 			continue;
@@ -222,7 +222,7 @@ exit_loop:
 				return;
 			case demo_endFrame:
 				// Overwrite anything the game may have changed
-				for (i = 0; i < MAX_GENTITIES; i++)
+				for (i = 0; i < sv.num_entities; i++)
 				{
 					if (i >= sv_democlients->integer && i < MAX_CLIENTS)
 						continue;
@@ -284,6 +284,8 @@ exit_loop:
 						SV_UnlinkEntity(entity);
 
 					sv.demoEntities[num].r = entity->r;
+					if (num > sv.num_entities)
+						sv.num_entities = num;
 				}
 				break;
 			}
