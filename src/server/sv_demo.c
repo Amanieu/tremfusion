@@ -414,8 +414,8 @@ void SV_DemoStartPlayback(void)
 	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) ||
 	    !Cvar_VariableIntegerValue("sv_cheats") || r < sv.time)
 	{
-		// Change to the right map and start the demo
-		Cbuf_AddText(va("devmap %s\n%s\n", s, Cmd_Cmd()));
+		// Change to the right map and start the demo with a 20 second delay
+		Cbuf_AddText(va("devmap %s\ndelay 20000 %s\n", s, Cmd_Cmd()));
 		SV_DemoStopPlayback();
 		return;
 	}
