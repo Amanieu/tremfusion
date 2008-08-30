@@ -53,6 +53,7 @@ vmCvar_t  g_dedicated;
 vmCvar_t  g_speed;
 vmCvar_t  g_gravity;
 vmCvar_t  g_cheats;
+vmCvar_t  g_demoState;
 vmCvar_t  g_knockback;
 vmCvar_t  g_inactivity;
 vmCvar_t  g_debugMove;
@@ -133,6 +134,9 @@ static cvarTable_t   gameCvarTable[ ] =
 {
   // don't override the cheat state set by the system
   { &g_cheats, "sv_cheats", "", 0, 0, qfalse },
+
+  // demo state
+  { &g_demoState, "sv_demoState", "", 0, 0, qfalse },
 
   // noset vars
   { NULL, "gamename", GAME_VERSION , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
@@ -252,6 +256,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
 void G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
+void G_DemoSetClient( void );
+void G_DemoRemoveClient( void );
 
 void G_CountSpawns( void );
 void G_CalculateBuildPoints( void );
@@ -307,6 +313,18 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
 
     case GAME_CONSOLE_COMMAND:
       return ConsoleCommand( );
+
+    case GAME_DEMO_COMMAND:
+      switch ( arg0 )
+      {
+      case DC_CLIENT_SET:
+        G_DemoSetClient( );
+        break;
+      case DC_CLIENT_REMOVE:
+        G_DemoRemoveClient( );
+        break;
+      }
+      return 0;
   }
 
   return -1;
@@ -510,6 +528,8 @@ G_InitGame
 void G_InitGame( int levelTime, int randomSeed, int restart )
 {
   int i;
+  char buffer[ MAX_CVAR_VALUE_STRING ];
+  int a, b;
 
   srand( randomSeed );
 
@@ -526,7 +546,12 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   level.time = levelTime;
   level.startTime = levelTime;
   level.alienStage2Time = level.alienStage3Time =
-    level.humanStage2Time = level.humanStage3Time = level.startTime;
+  level.humanStage2Time = level.humanStage3Time = level.startTime;
+  trap_Cvar_VariableStringBuffer( "session", buffer, sizeof( buffer ) );
+  sscanf( buffer, "%i %i", &a, &b );
+  if ( a != trap_Cvar_VariableIntegerValue( "sv_maxclients" ) ||
+       b != trap_Cvar_VariableIntegerValue( "sv_democlients" ) )
+    level.newSession = qtrue;
 
   level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
 
@@ -1327,13 +1352,15 @@ void CalculateRanks( void )
   for( i = 0; i < level.maxclients; i++ )
   {
     P[ i ] = '-';
-    if ( level.clients[ i ].pers.connected != CON_DISCONNECTED )
+    if ( level.clients[ i ].pers.connected != CON_DISCONNECTED ||
+         level.clients[ i ].pers.demoClient )
     {
       level.sortedClients[ level.numConnectedClients ] = i;
       level.numConnectedClients++;
       P[ i ] = (char)'0' + level.clients[ i ].pers.teamSelection;
 
-      if( level.clients[ i ].pers.connected != CON_CONNECTED )
+      if( level.clients[ i ].pers.connected != CON_CONNECTED &&
+         !level.clients[ i ].pers.demoClient )
         continue;
 
       level.numVotingClients++;
@@ -1382,6 +1409,66 @@ void CalculateRanks( void )
   // if we are at the intermission, send the new info to everyone
   if( level.intermissiontime )
     SendScoreboardMessageToAllClients( );
+}
+
+/*
+============
+G_DemoCommand
+
+Store a demo command to a demo if we are recording
+============
+*/
+void G_DemoCommand( demoCommand_t cmd, const char *string )
+{
+  if( level.demoState == DS_RECORDING )
+    trap_DemoCommand( cmd, string );
+}
+
+/*
+============
+G_DemoSetClient
+
+Mark a client as a demo client and load info into it
+============
+*/
+void G_DemoSetClient( void )
+{
+  char buffer[ MAX_INFO_STRING ];
+  gclient_t *client;
+  char *s;
+
+  trap_Argv( 0, buffer, sizeof( buffer ) );
+  client = level.clients + atoi( buffer );
+  client->pers.demoClient = qtrue;
+
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  s = Info_ValueForKey( buffer, "name" );
+  if( *s )
+    Q_strncpyz( client->pers.netname, s, sizeof( client->pers.netname ) );
+  s = Info_ValueForKey( buffer, "ip" );
+  if( *s )
+    Q_strncpyz( client->pers.ip, s, sizeof( client->pers.ip ) );
+  s = Info_ValueForKey( buffer, "team" );
+  if( *s )
+    client->pers.teamSelection = atoi( s );
+  client->sess.spectatorState = SPECTATOR_NOT;
+}
+
+/*
+============
+G_DemoRemoveClient
+
+Unmark a client as a demo client
+============
+*/
+void G_DemoRemoveClient( void )
+{
+  char buffer[ 3 ];
+  gclient_t *client;
+
+  trap_Argv( 0, buffer, sizeof( buffer ) );
+  client = level.clients + atoi( buffer );
+  client->pers.demoClient = qfalse;
 }
 
 
@@ -1867,6 +1954,10 @@ can see the last frag.
 */
 void CheckExitRules( void )
 {
+  // don't exit in demos
+  if( level.demoState == DS_PLAYBACK )
+    return;
+
   // if at the intermission, wait for all non-bots to
   // signal ready, then go to next level
   if( level.intermissiontime )
@@ -2189,6 +2280,48 @@ void CheckCvars( void )
 }
 
 /*
+==================
+CheckDemo
+==================
+*/
+void CheckDemo( void )
+{
+  int i;
+
+  // Don't do anything if no change
+  if ( g_demoState.integer == level.demoState )
+    return;
+
+  // log all connected clients
+  if ( g_demoState.integer == DS_RECORDING )
+  {
+    char buffer[ MAX_INFO_STRING ] = "";
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
+      {
+        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
+        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
+        Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
+      }
+    }
+  }
+
+  // empty teams and display a message
+  else if ( g_demoState.integer == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( -1, "print \"A demo has been started on the server.\n\"" );
+    for ( i = 0; i < level.maxclients; i++ )
+    {
+      if ( level.clients[ i ].pers.teamSelection != TEAM_NONE )
+        G_ChangeTeam( g_entities + i, TEAM_NONE );
+    }
+  }
+  level.demoState = g_demoState.integer;
+}
+
+/*
 =============
 G_RunThink
 
@@ -2263,6 +2396,9 @@ void G_RunFrame( int levelTime )
 
   // get any cvar changes
   G_UpdateCvars( );
+
+  // check demo state
+  CheckDemo( );
 
   //
   // go through all allocated objects
