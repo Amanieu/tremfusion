@@ -939,6 +939,7 @@ void G_TeamVote( gentity_t *ent, qboolean voting );
 void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
+void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
 
 //

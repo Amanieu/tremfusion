@@ -1061,7 +1061,7 @@ void ClientUserinfoChanged( int clientNum )
         client->pers.nameChanges++;
         // log renames to demo
         Info_SetValueForKey( buf, "name", client->pers.netname );
-        trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
       }
     }
   }
@@ -1337,7 +1337,7 @@ void ClientBegin( int clientNum )
   Info_SetValueForKey( buffer, "name", client->pers.netname );
   Info_SetValueForKey( buffer, "ip", client->pers.ip );
   Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
-  trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
@@ -1718,7 +1718,7 @@ void ClientDisconnect( int clientNum )
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
 
-  trap_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
+  G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
 
   CalculateRanks( );
 }

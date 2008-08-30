@@ -171,7 +171,7 @@ void G_TeamCommand( team_t team, char *cmd )
     }
   }
 
-  trap_DemoCommand( DC_SERVER_COMMAND, cmd );
+  G_DemoCommand( DC_SERVER_COMMAND, cmd );
 }
 
 

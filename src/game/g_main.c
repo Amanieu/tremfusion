@@ -1413,6 +1413,19 @@ void CalculateRanks( void )
 
 /*
 ============
+G_DemoCommand
+
+Store a demo command to a demo if we are recording
+============
+*/
+void G_DemoCommand( demoCommand_t cmd, const char *string )
+{
+  if( level.demoState == DS_RECORDING )
+    trap_DemoCommand( cmd, string );
+}
+
+/*
+============
 G_DemoSetClient
 
 Mark a client as a demo client and load info into it
@@ -2266,7 +2279,12 @@ void CheckCvars( void )
   }
 }
 
-void G_CheckDemo( void )
+/*
+==================
+CheckDemo
+==================
+*/
+void CheckDemo( void )
 {
   int i;
 
@@ -2285,7 +2303,7 @@ void G_CheckDemo( void )
         Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
         Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
         Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
-        trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
       }
     }
   }
@@ -2380,7 +2398,7 @@ void G_RunFrame( int levelTime )
   G_UpdateCvars( );
 
   // check demo state
-  G_CheckDemo( );
+  CheckDemo( );
 
   //
   // go through all allocated objects

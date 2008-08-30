@@ -2747,7 +2747,7 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
           ( ent ) ? ent->client->pers.netname : "console" ) );
   // log renames to demo
   Info_SetValueForKey( buf, "name", newname );
-  trap_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(victim - g_entities), buf ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(victim - g_entities), buf ) );
   return qtrue;
 }
 
