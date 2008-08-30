@@ -624,7 +624,7 @@ void SV_Init (void) {
 	sv_timeout = Cvar_Get ("sv_timeout", "200", CVAR_TEMP );
 	sv_zombietime = Cvar_Get ("sv_zombietime", "2", CVAR_TEMP );
 
-	sv_allowDownload = Cvar_Get ("sv_allowDownload", "0", CVAR_SERVERINFO);
+	sv_allowDownload = Cvar_Get ("sv_allowDownload", "1", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_dlURL", "", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_wwwDownload", "1", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_wwwBaseURL", "", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
