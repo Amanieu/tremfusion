@@ -487,8 +487,27 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "getfenv", method_disabled);
   map_luamethod(L, "setfenv", method_disabled);
   map_luamethod(L, "gcinfo", method_disabled);
-  //map_luamethod(L, "collectgarbage", method_disabled);
+  map_luamethod(L, "collectgarbage", method_disabled);
   map_luamethod(L, "newproxy", method_disabled);
+
+  // disable functions because they don't work with current implementation
+  // (and for security reason)
+  map_luamethod(L, "load", method_disabled);
+  map_luamethod(L, "loadfile", method_disabled);
+  map_luamethod(L, "loadstring", method_disabled);
+  map_luamethod(L, "dofile", method_disabled);
+  map_luamethod(L, "assert", method_disabled);
+  map_luamethod(L, "error", method_disabled);
+  map_luamethod(L, "tonumber", method_disabled);
+  map_luamethod(L, "unpack", method_disabled);
+  map_luamethod(L, "select", method_disabled);
+  map_luamethod(L, "module", method_disabled);
+  map_luamethod(L, "require", method_disabled);
+
+
+  // disable coroutines (not tested, security issues...)
+  lua_pushnil(L);
+  lua_setglobal(L, "coroutine");
 
   luaL_register(L, "lua", lualib);
   lua_pop(L, 1);

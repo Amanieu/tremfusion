@@ -27,9 +27,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * TODO:
  * - metafloat hasn't same behaviour than lua numbers (ex: 12+lua.float(5.6))
  * - raise error if register a `inf' or `nan' number as integer
- * - WARNING: SECURITY ISSUE: Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
- * - WARNING: SECURITY ISSUE: `load'/`loadfile'/`loadstring' basic functions : what is it ?
- * - WARNING: SECURITY ISSUE: module and require integration in scripting module engine
+ * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
+ * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
+ * - module and require integration in scripting module engine
  * - optimize (exemple: make lua <=> lua function call faster)
  */
 
