@@ -1201,15 +1201,15 @@ void Key_WriteBindings( fileHandle_t f ) {
 	for (i=0 ; i<MAX_KEYS ; i++) {
 		if (keys[i].detailed) {
 			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
-				FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding);
+				FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
 			}
 			if ( keys[i].releaseBinding && keys[i].releaseBinding[0] ) {
-				FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), keys[i].releaseBinding);
+				FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].releaseBinding));
 			}
 		}
 		else {
 			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
-				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding);
+				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
 			}
 		}
 	}

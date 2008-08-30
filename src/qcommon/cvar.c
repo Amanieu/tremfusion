@@ -869,14 +869,14 @@ void Cvar_WriteVariables( fileHandle_t f, qboolean vmCvars ) {
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->latchedString);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->latchedString));
 			} else {
 				if( strlen( var->name ) + strlen( var->string ) + 10 > sizeof( buffer ) ) {
 					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->string);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->string));
 			}
 			FS_Write( buffer, strlen( buffer ), f );
 		}
