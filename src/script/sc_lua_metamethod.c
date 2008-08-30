@@ -256,11 +256,11 @@ int SC_Lua_eq_boolean_metamethod(lua_State *L)
 {
   int b1, b2;
 
-  if(SC_Lua_get_boolean(L, 1, &b1) != TYPE_BOOLEAN ||
-     !SC_Lua_get_boolean(L, 2, &b2) != TYPE_BOOLEAN)
-    lua_pushboolean(L, qfalse);
-  else
+  if(SC_Lua_get_boolean(L, 1, &b1) == TYPE_BOOLEAN &&
+     SC_Lua_get_boolean(L, 2, &b2) == TYPE_BOOLEAN)
     lua_pushboolean(L, b1 == b2);
+  else
+    lua_pushboolean(L, qfalse);
   return 1;
 }
 
@@ -396,13 +396,13 @@ int SC_Lua_eq_number_metamethod(lua_State *L)
   scDataType_t t;
 
   t = SC_Lua_get_number(L, 1, &n1);
-  if(t != TYPE_INTEGER)
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
   {
     lua_pushboolean(L, qfalse);
     return 1;
   }
   t = SC_Lua_get_number(L, 2, &n2);
-  if(t != TYPE_FLOAT)
+  if(t != TYPE_INTEGER && t != TYPE_FLOAT)
   {
     lua_pushboolean(L, qfalse);
     return 1;
@@ -585,12 +585,22 @@ int SC_Lua_newindex_array_metamethod(lua_State *L)
 int SC_Lua_len_array_metamethod(lua_State *L)
 {
   scDataTypeArray_t *array;
+  scDataTypeValue_t value;
+  int i;
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "_ref");
   array = *((scDataTypeArray_t**) lua_touserdata(L, -1));
 
-  lua_pushinteger(L, array->size);
+  // TODO: add a cache with len in a metafield, linked with index/newindex metamethods
+  for(i = 0; i < array->size; i++)
+  {
+    SC_ArrayGet(array, i, &value);
+    if(value.type == TYPE_UNDEF)
+      break;
+  }
+
+  lua_pushinteger(L, i);
   return 1;
 }
 
@@ -618,7 +628,8 @@ int SC_Lua_len_hash_metamethod(lua_State *L)
   lua_getfield(L, -1, "_ref");
   hash = *((scDataTypeHash_t**) lua_touserdata(L, -1));
 
-  lua_pushinteger(L, hash->size);
+  // FIXME: dirty hack, should be number of non-undefined value from table beginning
+  lua_pushinteger(L, 0);
   return 1;
 }
 

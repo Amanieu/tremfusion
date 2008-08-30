@@ -26,26 +26,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 /*
  * TODO:
  * - metafloat hasn't same behaviour than lua numbers (ex: 12+lua.float(5.6))
- * - Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
- * - `load'/`loadfile'/`loadstring' basic functions : what is it ?
- * - module and require integration in scripting module engine
+ * - raise error if register a `inf' or `nan' number as integer
+ * - WARNING: SECURITY ISSUE: Rewrite some basic lua functions : assert, error, dofile, tonumber, unpack, select
+ * - WARNING: SECURITY ISSUE: `load'/`loadfile'/`loadstring' basic functions : what is it ?
+ * - WARNING: SECURITY ISSUE: module and require integration in scripting module engine
  * - optimize (exemple: make lua <=> lua function call faster)
- * - registeration errors:
- *   => (12+lua.integer(5.6)) ? 18
- *   => lua.integer(3/2) ? 2
- *   => lua.integer(3/0)) ? 0
- *   => lua.integer(3%0)) ? 0
- *   => lua.integer(2.5*3) ? 8
- *   => (lua.integer(2.5)*3) ? 6
- *
- *   => true == lua.boolean(true) ? false
- *   => lua.boolean(true) == true ? false
- *   => lua.boolean(true) == lua.boolean(true) ? false
- *   => lua.boolean(false) == lua.boolean(false) ? false
- *   => lua.float(156) == lua.integer(156) ? false
- *
- *   => #{key1="coin", key2="meuh", key3="bouh"} ? 0
- *   => #lua.hash({key1="coin", key2="meuh", key3="bouh"}) ? 3
  */
 
 #include "sc_public.h"

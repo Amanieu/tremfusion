@@ -342,7 +342,7 @@ static int register_integer(lua_State *L)
 
   if(!SC_Lua_is_registered(L, 1, TYPE_INTEGER))
   {
-    integer = lua_tointeger(L, 1);
+    integer = (int)lua_tonumber(L, 1);
     SC_Lua_push_integer(L, integer);
   }
   return 1;

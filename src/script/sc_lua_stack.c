@@ -631,7 +631,7 @@ void SC_Lua_get_value(lua_State *L, int index, scDataTypeValue_t *value, scDataT
       if(type == TYPE_INTEGER)
       {
         value->type = TYPE_INTEGER;
-        value->data.integer = lua_tointeger(L, index);
+        value->data.integer = (int)lua_tonumber(L, index);
       }
       else
       {
@@ -810,7 +810,7 @@ scDataType_t SC_Lua_get_integer(lua_State *L, int index, int *integer)
 
   if(lua_isnumber(L, index))
   {
-    *integer = lua_tointeger(L, index);
+    *integer = (int)lua_tonumber(L, index);
     return TYPE_INTEGER;
   }
   else if(lua_istable(L, index) && lua_getmetatable(L, index))
