@@ -334,6 +334,7 @@ typedef struct
   char                ip[ 16 ];
   qboolean            muted;
   qboolean            denyBuild;
+  qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 } clientPersistant_t;
@@ -474,6 +475,14 @@ typedef struct damageRegion_s
   int       minAngle, maxAngle;
   qboolean  crouch;
 } damageRegion_t;
+
+// demo commands
+typedef enum
+{
+    DC_SERVER_COMMAND = -1,
+    DC_CLIENT_SET = 0,
+    DC_CLIENT_REMOVE
+} demoCommand_t;
 
 //status of the warning of certain events
 typedef enum
@@ -627,6 +636,8 @@ typedef struct
 
   char              emoticons[ MAX_EMOTICONS ][ MAX_EMOTICON_NAME_LEN ];
   int               emoticonCount;
+
+  demoState_t       demoState;
 } level_locals_t;
 
 #define CMD_CHEAT         0x01
@@ -928,6 +939,7 @@ void G_TeamVote( gentity_t *ent, qboolean voting );
 void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
+void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
 
 //
@@ -1201,3 +1213,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+void      trap_DemoCommand( demoCommand_t cmd, const char *string );
