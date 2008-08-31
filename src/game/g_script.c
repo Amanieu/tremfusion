@@ -197,10 +197,88 @@ static scConstant_t constants[] = {
   { "" }
 };
 
-void G_script_init( void )
+/*
+================
+G_InitScript
+
+Initialize scripting system and load libraries
+================
+*/
+
+static int autoload_dir(const char *dirname)
 {
+  int             numdirs;
+  char            dirlist[1024];
+  char            *dirptr;
+  char            filename[128];
+  char            *fnptr;
+  int             i, dirlen = 0, numFiles = 0;
+
+  strcpy(filename, dirname);
+  fnptr = filename + strlen(filename);
+
+  numdirs = trap_FS_GetFileList(dirname, "", dirlist, 1024);
+  dirptr = dirlist;
+  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
+  {
+    dirlen = strlen(dirptr);
+    strcpy(fnptr, dirptr);
+
+    // load the file
+    if (SC_RunScript(SC_LangageFromFilename(filename), filename) != -1 )
+      numFiles++;
+  }
+
+  numdirs = trap_FS_GetFileList(dirname, "/", dirlist, 1024);
+  dirptr = dirlist;
+  for(i = 0; i < numdirs; i++, dirptr += dirlen + 1)
+  {
+    // ignore hidden directories
+    if(dirptr[0] != '.')
+    {
+      strcpy(fnptr, va("%s/", dirptr));
+
+      // load recursively
+      numFiles += autoload_dir(filename);
+    }
+    dirlen = strlen(dirptr);
+  }
+
+  return numFiles;
+}
+
+void G_InitScript( void )
+{
+  char            buf[MAX_STRING_CHARS];
+  int             numFiles;
+
+  Com_Printf("------- Game Scripting System Initializing -------\n");
+  SC_Init();
+
   SC_AddLibrary( "game", game_lib );
   SC_AddClass( "game", &entity_def );
   SC_Constant_Add(constants);
+
+  SC_LoadLangages();
+
+  // Autoload directories
+  Com_Printf("load global scripts:\n");
+  numFiles = autoload_dir(GAME_SCRIPT_DIRECTORY "global/");
+  Com_Printf("%i global files parsed\n", numFiles);
+
+  Com_Printf("load map specific scripts:\n");
+  trap_Cvar_VariableStringBuffer("mapname", buf, sizeof(buf));
+  numFiles = autoload_dir(va(GAME_SCRIPT_DIRECTORY "map-%s/", buf));
+  Com_Printf("%i local files parsed\n", numFiles);
+
+  Com_Printf(va("load \"" GAME_SCRIPT_DIRECTORY "map-%s.cfg\"\n", buf));
+  trap_SendConsoleCommand(EXEC_APPEND,
+      va("exec \"" GAME_SCRIPT_DIRECTORY "map-%s.cfg\"\n", buf));
+
+  Com_Printf("load \"" GAME_SCRIPT_DIRECTORY "autoexec.cfg\"\n");
+  trap_SendConsoleCommand(EXEC_APPEND,
+      "exec \"" GAME_SCRIPT_DIRECTORY "autoexec.cfg\"\n");
+
+  Com_Printf("-----------------------------------\n");
 }
 

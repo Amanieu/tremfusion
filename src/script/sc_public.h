@@ -310,7 +310,6 @@ void SC_ValueDump(scDataTypeValue_t *value);
 
 void SC_Init( void );
 void SC_LoadLangages( void );
-void SC_AutoLoad( void );
 void SC_Shutdown( void );
 int  SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret);
 int SC_RunScript( scLangage_t langage, const char *filename );

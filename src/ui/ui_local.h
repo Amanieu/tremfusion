@@ -31,6 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../game/bg_public.h"
 #include "ui_shared.h"
 #include "ui_script.h"
+
+#define UI_SCRIPT_DIRECTORY "uiscript/"
+
 //
 // ui_main.c
 //

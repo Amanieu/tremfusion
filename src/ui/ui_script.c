@@ -52,7 +52,7 @@ void UI_ScriptInit( void )
   SC_Init();
   SC_UIModuleInit();
   SC_LoadLangages();
-  SC_AutoLoad();
+  //SC_AutoLoad();
 #ifndef Q3_VM
   trap_AddCommand( "script", UI_Script_f );
 #endif
@@ -98,7 +98,7 @@ void Script_ScRun( itemDef_t *item, char **args )
 
   if( String_Parse( args, &filename ) )
   {
-    SC_RunScript( SC_LangageFromFilename(va("scripts/ui/%s", filename) ), va("scripts/ui/%s", filename) );
+    SC_RunScript( SC_LangageFromFilename(filename), va(UI_SCRIPT_DIRECTORY "%s", filename) );
   }
 }
 /*  
@@ -110,7 +110,7 @@ static void UI_Script_f(void)
 {
   char filename[128];
   trap_Argv( 1, filename, 128 );
-  SC_RunScript( SC_LangageFromFilename(va("scripts/%s", filename) ), va("scripts/%s", filename) );
+  SC_RunScript( SC_LangageFromFilename(filename), va(UI_SCRIPT_DIRECTORY "%s", filename) );
 }
 
 void SC_UIMove( void )

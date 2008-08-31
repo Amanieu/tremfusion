@@ -930,12 +930,12 @@ void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
 int  G_TimeTilSuddenDeath( void );
-void G_InitScript( void );
 
 //
 // g_script.c
 //
-void G_script_init( void );
+#define GAME_SCRIPT_DIRECTORY "gscript/"
+void G_InitScript( void );
 
 //
 // g_client.c

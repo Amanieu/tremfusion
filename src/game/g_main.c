@@ -2462,21 +2462,3 @@ void G_RunFrame( int levelTime )
   level.frameMsec = trap_Milliseconds();
 }
 
-/*
-================
-G_InitScript
-
-Initialize scripting system and load libraries
-================
-*/
-//TODO!: Move to sc_game.c
-void G_InitScript( void )
-{
-  Com_Printf("------- Game Scripting System Initializing -------\n");
-  SC_Init();
-  G_script_init();
-  SC_LoadLangages();
-  SC_AutoLoad();
-  Com_Printf("-----------------------------------\n");
-}
-
