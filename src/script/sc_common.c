@@ -559,6 +559,7 @@ int SC_Module_Register(scObject_t *self, scObject_t *toregister)
   return 0;
 }
 
+// FIXME: unloading don't work fine, have to fix it
 int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
 {
   scDataTypeHash_t *hash;
@@ -623,9 +624,12 @@ int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
     for(i = 0; i < depend->size; i++)
     {
       int ret;
-      const char *name = SC_StringToChar(value.data.string);
+      const char *name;
 
       SC_ArrayGet(depend, i, &value);
+	  name = SC_StringToChar(value.data.string);
+	  if(value.type == TYPE_UNDEF)
+		  continue;
 
       SC_NamespaceGet(va("module.%s", name), &value2);
       if(value2.type != TYPE_UNDEF)
@@ -698,7 +702,7 @@ int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force)
   {
     SC_HashGet(hash, "loaded", &value);
     if(value.data.boolean == qfalse)
-      SC_EXEC_ERROR(va("can't unload module %s: not unloaded", name));
+      SC_EXEC_ERROR(va("can't unload module %s: not loaded", name));
   }
 
   SC_HashGet(hash, "registered", &value);

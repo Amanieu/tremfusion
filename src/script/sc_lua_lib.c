@@ -501,7 +501,7 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "tonumber", method_disabled);
   map_luamethod(L, "unpack", method_disabled);
   map_luamethod(L, "select", method_disabled);
-  map_luamethod(L, "module", method_disabled);
+  //map_luamethod(L, "module", method_disabled);
   map_luamethod(L, "require", method_disabled);
 
   // disable coroutines (not tested, security issues...)
