@@ -2822,7 +2822,7 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT | CVAR_VM_PROTECT );
 	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT | CVAR_VM_PROTECT );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", "tremfusion-base . @", CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {
