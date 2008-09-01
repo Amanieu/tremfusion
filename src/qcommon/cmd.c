@@ -1429,7 +1429,7 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function ) {
 Cmd_RemoveCommand
 ============
 */
-void	Cmd_RemoveCommand( const char *cmd_name ) {
+static void	Cmd_RemoveCommand2( const char *cmd_name, qboolean vmCmd ) {
 	cmd_function_t	*cmd, **back;
 
 	back = &cmd_functions;
@@ -1439,7 +1439,7 @@ void	Cmd_RemoveCommand( const char *cmd_name ) {
 			// command wasn't active
 			return;
 		}
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !strcmp( cmd_name, cmd->name ) && ( !vmCmd || !cmd->function ) ) {
 			*back = cmd->next;
 			if (cmd->name) {
 				Z_Free(cmd->name);
@@ -1449,6 +1449,12 @@ void	Cmd_RemoveCommand( const char *cmd_name ) {
 		}
 		back = &cmd->next;
 	}
+}
+void	Cmd_RemoveCommand( const char *cmd_name ) {
+	Cmd_RemoveCommand2( cmd_name, qfalse );
+}
+void	Cmd_RemoveVMCommand( const char *cmd_name ) {
+	Cmd_RemoveCommand2( cmd_name, qtrue );
 }
 
 

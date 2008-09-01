@@ -466,7 +466,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		CL_AddCgameCommand( VMA(1) );
 		return 0;
 	case CG_REMOVECOMMAND:
-		Cmd_RemoveCommand( VMA(1) );
+		Cmd_RemoveVMCommand( VMA(1) );
 		return 0;
 	case CG_SENDCLIENTCOMMAND:
 		CL_AddReliableCommand( VMA(1) );
