@@ -571,10 +571,10 @@ void Cvar_SetVM( const char *var_name, const char *value )
 	if( var && var->flags & CVAR_VMPROTECT )
 	{
 		if( value )
-			Com_Error( ERR_DROP, "VM tried to set protected var "
+			Com_Error( ERR_DROP, "Untrusted source tried to set protected cvar "
 				"\"%s\" to \"%s\"\n", var_name, value );
 		else
-			Com_Error( ERR_DROP, "VM tried to modify protected var "
+			Com_Error( ERR_DROP, "Untrusted source tried to modify protected cvar "
 				"\"%s\"\n", var_name );
 		return;
 	}
