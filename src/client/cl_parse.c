@@ -372,6 +372,7 @@ void CL_SystemInfoChanged( void ) {
 	char			key[BIG_INFO_KEY];
 	char			value[BIG_INFO_VALUE];
 	qboolean		gameSet;
+	qboolean		baseGameSet;
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
 	// NOTE TTimo:
@@ -388,7 +389,7 @@ void CL_SystemInfoChanged( void ) {
 #endif
 
 	if ( clc.demoplaying )
-		cl_connectedToCheatServer = 0;
+		cl_connectedToCheatServer = 1;
 	else {
 		s = Info_ValueForKey( systemInfo, "sv_cheats" );
 		cl_connectedToCheatServer = atoi( s );
@@ -428,6 +429,18 @@ void CL_SystemInfoChanged( void ) {
 				
 			gameSet = qtrue;
 		}
+		
+		// ehw!
+		if (!Q_stricmp(key, "fs_basegame"))
+		{
+			if(FS_CheckDirTraversal(value))
+			{
+				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_basegame value %s\n", value);
+				continue;
+			}
+				
+			baseGameSet = qtrue;
+		}
 
 		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
 			Cvar_Get(key, value, CVAR_SERVER_CREATED | CVAR_ROM);
@@ -447,9 +460,12 @@ void CL_SystemInfoChanged( void ) {
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
 		Cvar_Set( "fs_game", "" );
 	}
+	if ( !baseGameSet && *Cvar_VariableString("fs_basegame") ) {
+		Cvar_Set( "fs_basegame", "" );
+	}
 	if ( clc.demoplaying ) {
 		Cvar_Set( "sv_pure", "0" );
-		Cvar_Set( "sv_cheats", "0" );
+		Cvar_Set( "sv_cheats", "1" );
 	} else
 		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
 }
