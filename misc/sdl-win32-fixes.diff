@@ -171,7 +171,17 @@ Index: src/video/wincommon/SDL_sysmouse.c
 ===================================================================
 --- src/video/wincommon/SDL_sysmouse.c	(revision 4067)
 +++ src/video/wincommon/SDL_sysmouse.c	(working copy)
-@@ -208,15 +208,20 @@
+@@ -188,8 +188,7 @@
+ {
+ 	POINT mouse_pos;
+ 
+-	/* The fullscreen cursor must be done in software with DirectInput */
+-	if ( !this->screen || DDRAW_FULLSCREEN() ) {
++	if ( !this->screen ) {
+ 		return(0);
+ 	}
+ 
+@@ -208,15 +207,20 @@
  
  void WIN_WarpWMCursor(_THIS, Uint16 x, Uint16 y)
  {
@@ -195,7 +205,7 @@ Index: src/video/wincommon/SDL_sysmouse.c
  		pt.x = x;
  		pt.y = y;
  		ClientToScreen(SDL_Window, &pt);
-@@ -227,20 +232,15 @@
+@@ -227,20 +231,15 @@
  /* Update the current mouse state and position */
  void WIN_UpdateMouse(_THIS)
  {
@@ -251,7 +261,7 @@ Index: src/video/windib/SDL_dibevents.c
 +			SetCursorPos(center.x, center.y);
 +			posted = SDL_PrivateMouseMotion(0, 1, mouse.x, mouse.y);
 +		}
-+	} else {
++	} else if ( SDL_GetAppState() & SDL_APPMOUSEFOCUS ) {
 +		ScreenToClient(SDL_Window, &mouse);
 +#ifdef _WIN32_WCE
 +		if (SDL_VideoSurface)
@@ -264,19 +274,18 @@ Index: src/video/windib/SDL_dibevents.c
  void DIB_PumpEvents(_THIS)
  {
  	MSG msg;
-@@ -271,6 +301,11 @@
+@@ -271,6 +301,10 @@
  			DispatchMessage(&msg);
  		}
  	}
 +
-+	if ( SDL_GetAppState() & (SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS) ==
-+		(SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS) ) {
++	if ( SDL_GetAppState() & SDL_APPINPUTFOCUS ) {
 +		DIB_GenerateMouseMotionEvent( );
 +	}
  }
  
  static HKL hLayoutUS = NULL;
-@@ -494,7 +529,7 @@
+@@ -494,7 +528,7 @@
  		Uint16	wchars[2];
  
  		GetKeyboardState(keystate);
@@ -289,7 +298,7 @@ Index: src/video/windx5/SDL_dx5events.c
 ===================================================================
 --- src/video/windx5/SDL_dx5events.c	(revision 4067)
 +++ src/video/windx5/SDL_dx5events.c	(working copy)
-@@ -143,7 +143,12 @@
+@@ -143,9 +143,14 @@
  		(DISCL_FOREGROUND|DISCL_NONEXCLUSIVE),
  		(DISCL_FOREGROUND|DISCL_NONEXCLUSIVE), handle_keyboard },
  	{ "mouse",
@@ -301,8 +310,11 @@ Index: src/video/windx5/SDL_dx5events.c
 +		&c_dfDIMouse,
 +#endif
  		(DISCL_FOREGROUND|DISCL_NONEXCLUSIVE),
- 		(DISCL_FOREGROUND|DISCL_EXCLUSIVE), handle_mouse },
+-		(DISCL_FOREGROUND|DISCL_EXCLUSIVE), handle_mouse },
++		(DISCL_FOREGROUND|DISCL_NONEXCLUSIVE), handle_mouse },
  	{ NULL, NULL, NULL, 0, 0, NULL }
+ };
+ 	
 @@ -285,6 +290,76 @@
  		}
  	}
@@ -514,7 +526,19 @@ Index: src/video/windx5/SDL_dx5events.c
  	}
  }
  
-@@ -840,7 +912,7 @@
+@@ -516,10 +588,7 @@
+ 
+ 		/* The keyboard is handled via DirectInput */
+ 		case WM_SYSKEYUP:
+-		case WM_SYSKEYDOWN: {
+-			/* Pass syskey to DefWindwoProc (ALT-F4, etc.) */
+-		}
+-		break;
++		case WM_SYSKEYDOWN:
+ 		case WM_KEYUP:
+ 		case WM_KEYDOWN: {
+ 			/* Ignore windows keyboard messages */;
+@@ -840,7 +909,7 @@
  		keysym->unicode = vkey;
  #else
  		GetKeyboardState(keystate);
