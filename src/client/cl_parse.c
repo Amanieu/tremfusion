@@ -434,7 +434,7 @@ void CL_SystemInfoChanged( void ) {
 		else
 		{
 			// If this cvar may not be modified by a server discard the value.
-			if(!(cvar_flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED)))
+			if(!(cvar_flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED)) || (cvar_flags & CVAR_VM_PROTECT))
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", key, value);
 				continue;

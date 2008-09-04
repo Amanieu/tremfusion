@@ -1399,6 +1399,20 @@ void Cmd_TokenizeStringParseCvar( const char *text_in ) {
 
 /*
 ============
+Cmd_FindCommand
+============
+*/
+cmd_function_t *Cmd_FindCommand( const char *cmd_name )
+{
+	cmd_function_t *cmd;
+	for( cmd = cmd_functions; cmd; cmd = cmd->next )
+		if( !Q_stricmp( cmd_name, cmd->name ) )
+			return cmd;
+	return NULL;
+}
+
+/*
+============
 Cmd_AddCommand
 ============
 */
@@ -1406,14 +1420,12 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function ) {
 	cmd_function_t	*cmd;
 	
 	// fail if the command already exists
-	for ( cmd = cmd_functions ; cmd ; cmd=cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
-			// allow completion-only commands to be silently doubled
-			if ( function != NULL ) {
-				Com_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
-			}
-			return;
-		}
+	if( Cmd_FindCommand( cmd_name ) )
+	{
+		// allow completion-only commands to be silently doubled
+		if( function != NULL )
+			Com_Printf( "Cmd_AddCommand: %s already defined\n", cmd_name );
+		return;
 	}
 
 	// use a small malloc to avoid zone fragmentation
@@ -1429,7 +1441,7 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function ) {
 Cmd_RemoveCommand
 ============
 */
-static void	Cmd_RemoveCommand2( const char *cmd_name, qboolean vmCmd ) {
+void	Cmd_RemoveCommand( const char *cmd_name ) {
 	cmd_function_t	*cmd, **back;
 
 	back = &cmd_functions;
@@ -1439,7 +1451,7 @@ static void	Cmd_RemoveCommand2( const char *cmd_name, qboolean vmCmd ) {
 			// command wasn't active
 			return;
 		}
-		if ( !strcmp( cmd_name, cmd->name ) && ( !vmCmd || !cmd->function ) ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
 			*back = cmd->next;
 			if (cmd->name) {
 				Z_Free(cmd->name);
@@ -1450,13 +1462,29 @@ static void	Cmd_RemoveCommand2( const char *cmd_name, qboolean vmCmd ) {
 		back = &cmd->next;
 	}
 }
-void	Cmd_RemoveCommand( const char *cmd_name ) {
-	Cmd_RemoveCommand2( cmd_name, qfalse );
-}
-void	Cmd_RemoveVMCommand( const char *cmd_name ) {
-	Cmd_RemoveCommand2( cmd_name, qtrue );
-}
 
+/*
+============
+Cmd_RemoveCommandVM
+
+VMs may only remove completion-only commands
+============
+*/
+void Cmd_RemoveCommandVM( const char *cmd_name )
+{
+	cmd_function_t *cmd = Cmd_FindCommand( cmd_name );
+
+	if( !cmd )
+		return;
+	if( cmd->function )
+	{
+		Com_Error( ERR_DROP, "VM tried to remove system command "
+			"\"%s\"\n", cmd_name );
+		return;
+	}
+
+	Cmd_RemoveCommand( cmd_name );
+}
 
 /*
 ============

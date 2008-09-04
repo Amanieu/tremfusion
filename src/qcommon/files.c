@@ -2810,8 +2810,8 @@ static void FS_Startup( const char *gameName )
 	Com_Printf( "----- FS_Startup -----\n" );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
-	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT | CVAR_VM_PROTECT );
-	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT | CVAR_VM_PROTECT );
+	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_VMPROTECT );
+	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_VMPROTECT );
 	homePath = Sys_DefaultHomePath(&homePath2);
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
@@ -2819,8 +2819,8 @@ static void FS_Startup( const char *gameName )
 	if (!homePath2) {
 		homePath2 = "";
 	}
-	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT | CVAR_VM_PROTECT );
-	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT | CVAR_VM_PROTECT );
+	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_VMPROTECT );
+	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_VMPROTECT );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", "tremfusion-base . @", CVAR_ARCHIVE );
 
@@ -2831,7 +2831,7 @@ static void FS_Startup( const char *gameName )
 	// fs_homepath is somewhat particular to *nix systems, only add if relevant
 
 	#ifdef MACOS_X
-	fs_apppath = Cvar_Get ("fs_apppath", Sys_DefaultAppPath(), CVAR_INIT | CVAR_VM_PROTECT );
+	fs_apppath = Cvar_Get ("fs_apppath", Sys_DefaultAppPath(), CVAR_INIT|CVAR_VMPROTECT );
 	// Make MacOSX also include the base path included with the .app bundle
 	if (fs_apppath->string[0])
 		FS_AddGameDirectory(fs_apppath->string, gameName);

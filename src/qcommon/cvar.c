@@ -36,7 +36,7 @@ int			cvar_numIndexes;
 #define FILE_HASH_SIZE		256
 static	cvar_t*		hashTable[FILE_HASH_SIZE];
 
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm );
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force);
 
 /*
 ================
@@ -350,7 +350,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			cvar_modifiedFlags |= flags;
 		}
 
-		var->flags |= flags;
+		// if a var is not being created don't let it pretend to be
+		var->flags |= flags & ~CVAR_USER_CREATED;
 		// only allow one non-empty reset string without a warning
 		if ( !var->resetString[0] ) {
 			// we don't have a reset string yet
@@ -366,7 +367,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 			s = var->latchedString;
 			var->latchedString = NULL;	// otherwise cvar_set2 would free it
-			Cvar_Set2( var_name, s, qtrue, qfalse );
+			Cvar_Set2( var_name, s, qtrue );
 			Z_Free( s );
 		}
 
@@ -437,7 +438,7 @@ void Cvar_Print( cvar_t *v ) {
 Cvar_Set2
 ============
 */
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm ) {
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 	cvar_t	*var;
 
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -465,12 +466,6 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboo
 		} else {
 			return Cvar_Get (var_name, value, 0);
 		}
-	}
-
-	if (vm && (var->flags & CVAR_VM_PROTECT))
-	{
-		Com_Printf("QVM tried to modify protected %s cvar.\n", var_name );
-		return var;
 	}
 
 	if (!value ) {
@@ -561,7 +556,29 @@ Cvar_Set
 ============
 */
 void Cvar_Set( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qtrue, qfalse);
+	Cvar_Set2 (var_name, value, qtrue);
+}
+
+/*
+============
+Cvar_SetVM
+============
+*/
+void Cvar_SetVM( const char *var_name, const char *value )
+{
+	cvar_t *var = Cvar_FindVar( var_name );
+
+	if( var && var->flags & CVAR_VMPROTECT )
+	{
+		if( value )
+			Com_Error( ERR_DROP, "VM tried to set protected var "
+				"\"%s\" to \"%s\"\n", var_name, value );
+		else
+			Com_Error( ERR_DROP, "VM tried to modify protected var "
+				"\"%s\"\n", var_name );
+		return;
+	}
+	Cvar_Set( var_name, value );
 }
 
 /*
@@ -570,16 +587,7 @@ Cvar_SetLatched
 ============
 */
 void Cvar_SetLatched( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qfalse, qfalse);
-}
-
-/*
-============
-Cvar_SetVM
-============
-*/
-void Cvar_SetVM( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qtrue, qtrue);
+	Cvar_Set2 (var_name, value, qfalse);
 }
 
 /*
@@ -611,32 +619,15 @@ void Cvar_SetValueSafe( const char *var_name, float value) {
 	} else {
 		Com_sprintf (val, sizeof(val), "%f",value);
 	}
-	Cvar_Set2 (var_name, val, qfalse, qfalse);
+	Cvar_Set2 (var_name, val,qfalse);
 }
-
-/*
-============
-Cvar_SetValueVM
-============
-*/
-void Cvar_SetValueVM( const char *var_name, float value) {
-	char	val[32];
-
-	if ( value == (int)value ) {
-		Com_sprintf (val, sizeof(val), "%i",(int)value);
-	} else {
-		Com_sprintf (val, sizeof(val), "%f",value);
-	}
-	Cvar_SetVM (var_name, val);
-}
-
 /*
 ============
 Cvar_Reset
 ============
 */
 void Cvar_Reset( const char *var_name ) {
-	Cvar_Set2( var_name, NULL, qfalse, qfalse );
+	Cvar_Set2( var_name, NULL, qfalse );
 }
 
 /*
@@ -646,7 +637,7 @@ Cvar_ForceReset
 */
 void Cvar_ForceReset(const char *var_name)
 {
-	Cvar_Set2(var_name, NULL, qtrue, qfalse);
+	Cvar_Set2(var_name, NULL, qtrue);
 }
 
 /*
@@ -699,10 +690,25 @@ qboolean Cvar_Command( void ) {
 	}
 
 	// set the value if forcing isn't required
-	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse, qfalse);
+	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse);
 	return qtrue;
 }
 
+/*
+============
+Cvar_SetValueVM
+============
+*/
+void Cvar_SetValueVM( const char *var_name, float value )
+{
+	char val[32];
+
+	if( Q_isintegral( value ) )
+		Com_sprintf( val, sizeof(val), "%i", (int)value );
+	else
+		Com_sprintf( val, sizeof(val), "%f", value );
+	Cvar_SetVM( var_name, val );
+}
 
 /*
 ============
@@ -753,7 +759,7 @@ void Cvar_Toggle_f( void ) {
 	if(c == 2) {
 		Cvar_Set2(Cmd_Argv(1), va("%d", 
 			!Cvar_VariableValue(Cmd_Argv(1))), 
-			qfalse, qfalse);
+			qfalse);
 		return;
 	}
 
@@ -768,13 +774,13 @@ void Cvar_Toggle_f( void ) {
 	// behaviour is the same as no match (set to the first argument)
 	for(i = 2; i + 1 < c; i++) {
 		if(strcmp(curval, Cmd_Argv(i)) == 0) {
-			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse, qfalse);
+			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse);
 			return;
 		}
 	}
 
 	// fallback
-	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse);
+	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse);
 }
 
 /*
@@ -815,7 +821,7 @@ void Cvar_Set_f( void ) {
 		}
 		l += len;
 	}
-	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse, qfalse);
+	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
 	if( !v ) {
 		return;
 	}
