@@ -461,11 +461,11 @@ void Cmd_Math_f( void ) {
     op = Cmd_Argv( 2 );
     if ( !strcmp( op, "++" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) + 1 ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) + 1 ) );
     }
     else if ( !strcmp( op, "--" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) - 1 ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) - 1 ) );
     }
     else
     {
@@ -480,15 +480,15 @@ void Cmd_Math_f( void ) {
     v1 = Cmd_Argv( 3 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) + atoi( v1 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) + atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) - atoi( v1 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) - atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) * atoi( v1 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) * atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
@@ -497,7 +497,7 @@ void Cmd_Math_f( void ) {
       	Com_Printf ("Cannot divide by 0!\n");
       	return;
 	  }
-      Cvar_SetValueSafe( v, ( atoi( v ) / atoi( v1 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v ) / atoi( v1 ) ) );
     }
     else
     {
@@ -513,15 +513,15 @@ void Cmd_Math_f( void ) {
     v2 = Cmd_Argv( 5 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) + atoi( v2 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v1 ) + atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) - atoi( v2 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v1 ) - atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) * atoi( v2 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v1 ) * atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
@@ -530,7 +530,7 @@ void Cmd_Math_f( void ) {
       	Com_Printf ("Cannot divide by 0!\n");
       	return;
 	  }
-      Cvar_SetValueSafe( v, ( atoi( v1 ) / atoi( v2 ) ) );
+      Cvar_SetValueNoForce( v, ( atoi( v1 ) / atoi( v2 ) ) );
     }
     else
     {
@@ -1465,12 +1465,12 @@ void	Cmd_RemoveCommand( const char *cmd_name ) {
 
 /*
 ============
-Cmd_RemoveCommandVM
+Cmd_RemoveCommandSafe
 
-VMs may only remove completion-only commands
+Only remove commands with no associated function
 ============
 */
-void Cmd_RemoveCommandVM( const char *cmd_name )
+void Cmd_RemoveCommandSafe( const char *cmd_name )
 {
 	cmd_function_t *cmd = Cmd_FindCommand( cmd_name );
 

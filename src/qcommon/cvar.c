@@ -351,7 +351,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 		}
 
 		// if a var is not being created don't let it pretend to be
-		var->flags |= flags & ~CVAR_USER_CREATED;
+		var->flags |= flags & ~(CVAR_USER_CREATED|CVAR_SERVER_CREATED);
 		// only allow one non-empty reset string without a warning
 		if ( !var->resetString[0] ) {
 			// we don't have a reset string yet
@@ -561,14 +561,14 @@ void Cvar_Set( const char *var_name, const char *value) {
 
 /*
 ============
-Cvar_SetVM
+Cvar_SetSafe
 ============
 */
-void Cvar_SetVM( const char *var_name, const char *value )
+void Cvar_SetSafe( const char *var_name, const char *value )
 {
-	cvar_t *var = Cvar_FindVar( var_name );
+	int flags = Cvar_Flags( var_name );
 
-	if( var && var->flags & CVAR_VMPROTECT )
+	if( flags != CVAR_NONEXISTENT && flags & CVAR_PROTECTED )
 	{
 		if( value )
 			Com_Error( ERR_DROP, "Untrusted source tried to set protected cvar "
@@ -608,10 +608,10 @@ void Cvar_SetValue( const char *var_name, float value) {
 
 /*
 ============
-Cvar_SetValueSafe
+Cvar_SetValueNoForce
 ============
 */
-void Cvar_SetValueSafe( const char *var_name, float value) {
+void Cvar_SetValueNoForce( const char *var_name, float value) {
 	char	val[32];
 
 	if ( value == (int)value ) {
@@ -696,10 +696,10 @@ qboolean Cvar_Command( void ) {
 
 /*
 ============
-Cvar_SetValueVM
+Cvar_SetValueSafe
 ============
 */
-void Cvar_SetValueVM( const char *var_name, float value )
+void Cvar_SetValueSafe( const char *var_name, float value )
 {
 	char val[32];
 
@@ -707,7 +707,7 @@ void Cvar_SetValueVM( const char *var_name, float value )
 		Com_sprintf( val, sizeof(val), "%i", (int)value );
 	else
 		Com_sprintf( val, sizeof(val), "%f", value );
-	Cvar_SetVM( var_name, val );
+	Cvar_SetSafe( var_name, val );
 }
 
 /*
