@@ -304,7 +304,10 @@ void CG_InitConsoleCommands( void )
   trap_AddCommand( "kill" );
   trap_AddCommand( "messagemode" );
   trap_AddCommand( "messagemode2" );
+  trap_AddCommand( "messagemode3" );
+  trap_AddCommand( "messagemode4" );
   trap_AddCommand( "messagemode5" );
+  trap_AddCommand( "messagemode6" );
   trap_AddCommand( "prompt" );
   trap_AddCommand( "say" );
   trap_AddCommand( "say_team" );
