@@ -468,7 +468,7 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       node->hook = function;
     }
     else
-      node->type = SC_EVENT_NODE_TYPE_NODE;
+      node->type = SC_EVENT_NODE_TYPE_GROUP;
 
     if(strcmp(location, "inside") == 0)
       ret = SC_Event_AddNode(parent, parent->last, node, out);

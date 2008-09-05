@@ -415,7 +415,7 @@ typedef struct scEvent_s scEvent_t;
 typedef enum
 {
   SC_EVENT_NODE_TYPE_UNDEF=0,
-  SC_EVENT_NODE_TYPE_NODE,
+  SC_EVENT_NODE_TYPE_GROUP,
   SC_EVENT_NODE_TYPE_HOOK,
 } scEventNodeType_t;
 
@@ -461,7 +461,7 @@ scEventNode_t *SC_Event_NewNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
 void SC_Event_Dump(scEvent_t *event);
-int SC_Event_AddMainTags(scEvent_t *event, scDataTypeValue_t *out);
+int SC_Event_AddMainGroups(scEvent_t *event, scDataTypeValue_t *out);
 
 // sc_utils.c
 

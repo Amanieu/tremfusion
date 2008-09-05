@@ -170,11 +170,11 @@ static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int event_addmaintags(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_addmaingroups(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  if(SC_Event_AddMainTags(event, out) != 0)
+  if(SC_Event_AddMainGroups(event, out) != 0)
     return -1;
 
   out->type = TYPE_UNDEF;
@@ -188,9 +188,9 @@ static scLibObjectMember_t event_members[] = {
 };
 
 static scLibObjectMethod_t event_methods[] = {
-  { "addTag", "", event_add, { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_UNDEF },
-    TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_NODE },
-  { "addMainTags", "", event_addmaintags, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "addGroup", "", event_add, { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_UNDEF },
+    TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_GROUP },
+  { "addMainGroups", "", event_addmaingroups, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "addHook", "", event_add,
     { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
     TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_HOOK },
@@ -226,7 +226,7 @@ scEvent_t *SC_Event_New(void)
   event = BG_Alloc(sizeof(scEvent_t));
   event->skip = 0;
   event->root = SC_Event_NewNode("all");
-  event->root->type = SC_EVENT_NODE_TYPE_NODE;
+  event->root->type = SC_EVENT_NODE_TYPE_GROUP;
   event->root->parent = event->root;
   event->current_node = NULL;
 
@@ -258,7 +258,7 @@ int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *par
 
   data->current_node = node;
 
-  if(node->type == SC_EVENT_NODE_TYPE_NODE)
+  if(node->type == SC_EVENT_NODE_TYPE_GROUP)
   {
     for(i = node->first; i != NULL; i = i->next)
     {
@@ -297,38 +297,38 @@ int SC_Event_Call(scObject_t *event, scDataTypeHash_t *params, scDataTypeValue_t
   return 0;
 }
 
-int SC_Event_AddMainTags(scEvent_t *event, scDataTypeValue_t *out)
+int SC_Event_AddMainGroups(scEvent_t *event, scDataTypeValue_t *out)
 {
   scEventNode_t *node, *lnode;
 
   node = SC_Event_NewNode("check");
-  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
   node->parent = event->root;
   if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
     return -1;
   lnode = node;
 
   node = SC_Event_NewNode("system");
-  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
   node->parent = lnode;
   if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
     return -1;
 
   node = SC_Event_NewNode("game");
-  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
   node->parent = lnode;
   if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
     return -1;
 
   node = SC_Event_NewNode("action");
-  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
   node->parent = event->root;
   if(SC_Event_AddNode(node->parent, lnode, node, out) != 0)
     return -1;
   lnode = node;
 
   node = SC_Event_NewNode("init");
-  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
   node->parent = event->root;
   if(SC_Event_AddNode(node->parent, lnode->previous, node, out) != 0)
     return -1;
@@ -338,7 +338,15 @@ int SC_Event_AddMainTags(scEvent_t *event, scDataTypeValue_t *out)
 
 int SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new, scDataTypeValue_t *out)
 {
-  // TODO: make error if tag allready exist
+  scEventNode_t *node = parent->first;
+
+  // error if tag allready used
+  while(node)
+  {
+    if(strcmp(node->tag, new->tag) == 0)
+      SC_EXEC_ERROR(va("Can't add hook: %s tag allready exist", new->tag));
+    node = node->next;
+  }
  
   if(previous)
   {
@@ -421,7 +429,7 @@ scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
     idx = strchr(lidx, '.');
     if(idx)
       *idx = '\0';
-    if(node->type == SC_EVENT_NODE_TYPE_NODE)
+    if(node->type == SC_EVENT_NODE_TYPE_GROUP)
     {
       i = node->first;
       node = NULL;
@@ -499,7 +507,7 @@ static void dump_rec(scEventNode_t *node, char *name)
   len = strlen(n);
 
   Com_Printf("%s\n", n);
-  if(node->type == SC_EVENT_NODE_TYPE_NODE)
+  if(node->type == SC_EVENT_NODE_TYPE_GROUP)
   {
     tmpn = node->first;
     strcat(n, ".");
