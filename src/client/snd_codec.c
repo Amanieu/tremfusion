@@ -109,11 +109,6 @@ void S_CodecInit()
 #ifdef USE_CODEC_VORBIS
 	S_CodecRegister(&ogg_codec);
 #endif
-
-#ifdef USE_CODEC_MP3
-	S_CodecRegister(&mp3_codec);
-#endif
-
 }
 
 /*

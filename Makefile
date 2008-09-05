@@ -117,10 +117,6 @@ ifndef USE_CODEC_VORBIS
 USE_CODEC_VORBIS=0
 endif
 
-ifndef USE_CODEC_MP3
-USE_CODEC_MP3=0
-endif
-
 ifndef USE_MUMBLE
 USE_MUMBLE=1
 endif
@@ -277,10 +273,6 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
   endif
 
-  ifeq ($(USE_CODEC_MP3),1)
-    BASE_CFLAGS += -DUSE_CODEC_MP3
-  endif
-
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -334,10 +326,6 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
-  endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    CLIENT_LDFLAGS += -lmad
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -410,11 +398,6 @@ ifeq ($(PLATFORM),darwin)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    BASE_CFLAGS += -DUSE_CODEC_MP3
-    CLIENT_LDFLAGS += -lmad
-  endif
 
   BASE_CFLAGS += -D_THREAD_SAFE=1
 
@@ -484,10 +467,6 @@ ifeq ($(PLATFORM),mingw32)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
   endif
 
-  ifeq ($(USE_CODEC_MP3),1)
-    BASE_CFLAGS += -DUSE_CODEC_MP3
-  endif
-
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
@@ -518,10 +497,6 @@ ifeq ($(PLATFORM),mingw32)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
-  endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    CLIENT_LDFLAGS += -lmad
   endif
 
   ifeq ($(ARCH),x86)
@@ -572,10 +547,6 @@ ifeq ($(PLATFORM),freebsd)
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
   endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    BASE_CFLAGS += -DUSE_CODEC_MP3=1
-  endif
 
   ifeq ($(ARCH),axp)
     BASE_CFLAGS += -DNO_VM_COMPILED
@@ -616,10 +587,6 @@ ifeq ($(PLATFORM),freebsd)
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    CLIENT_LDFLAGS += -lmad
-  endif
 
 else # ifeq freebsd
 
@@ -645,10 +612,6 @@ ifeq ($(PLATFORM),openbsd)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
-  endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    BASE_CFLAGS += -DUSE_CODEC_MP3=1
   endif
 
   BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
@@ -679,10 +642,6 @@ ifeq ($(PLATFORM),openbsd)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
-  endif
-  
-  ifeq ($(USE_CODEC_MP3),1)
-    CLIENT_LDFLAGS += -lmad
   endif
 
 else # ifeq openbsd
@@ -1220,7 +1179,6 @@ Q3OBJ = \
   $(B)/client/snd_codec.o \
   $(B)/client/snd_codec_wav.o \
   $(B)/client/snd_codec_ogg.o \
-  $(B)/client/snd_codec_mp3.o \
   \
   $(B)/client/qal.o \
   $(B)/client/snd_openal.o \
