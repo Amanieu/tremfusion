@@ -572,6 +572,102 @@ static scLibObjectMethod_t window_methods[] = {
 };
 
 
+// itemDef_t class
+
+scClass_t *item_class;
+
+static int item_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: error management
+  scObject_t *self;
+  SC_Common_Constructor(in, out, closure);
+  self = out[0].data.object;
+  menuDef_t *menu;
+   
+  self->data.type = TYPE_USERDATA;
+  
+  menu =  &Menus[ in[1].data.integer ];
+  
+  if(in[1].type == TYPE_INTEGER)
+    menu = &Menus[ in[1].data.integer ];
+  else if (in[1].type == TYPE_FLOAT) // damm you lua!!
+    menu = &Menus[ atoi( va("%.0f",in[1].data.floating) ) ];
+  else
+    return 1;
+  
+  if(in[2].type == TYPE_INTEGER)
+    self->data.data.userdata = (void*)menu->items[ in[2].data.integer ];
+  else if (in[1].type == TYPE_FLOAT) // damm you lua!!
+    self->data.data.userdata = (void*)menu->items[ atoi( va("%.0f",in[2].data.floating) ) ];
+  else
+    return 1;
+  
+  return 0;
+}
+
+static int item_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 0;
+}
+
+typedef enum 
+{
+  ITEM_WINDOW,
+} item_closures;
+
+static int item_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  item_closures gettype = (int)closure;
+  itemDef_t *item;
+  
+  self = in[0].data.object;
+  item =  self->data.data.userdata;
+  switch (gettype)
+  {
+    case ITEM_WINDOW:
+      out[0].type = TYPE_OBJECT;
+      out[0].data.object = WindowObjFromWindowDef_t(&item->window);
+      break;
+    default:
+      out[0].type = TYPE_UNDEF;
+      return 1;
+  }
+  return 0;
+}
+
+static int item_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  return 1;
+}
+
+static int item_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *self;
+  itemDef_t *item;
+  
+  self = in[0].data.object;
+  item =  self->data.data.userdata;
+  
+  Item_UpdatePosition( item );
+  return 0;
+}
+
+static scLibObjectMember_t item_members[] = {
+  { "window", "", TYPE_OBJECT, item_set, item_get, (void*)ITEM_WINDOW },
+};
+
+static scField_t item_fields[] = {
+  { "name", "", TYPE_STRING, offsetof(itemDef_t, window.name) },
+  { "" },
+};
+
+static scLibObjectMethod_t item_methods[] = {
+  { "UpdatePosition", "", item_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "" },
+};
+
+
 static scObject_t *WindowObjFromWindowDef_t(windowDef_t *windowptr)
 {
   scObject_t *windowobj;
@@ -606,6 +702,16 @@ static scLibObjectDef_t menu_def = {
   NULL
 };
 
+static scLibObjectDef_t item_def = { 
+  "Item", "",
+  item_constructor, { TYPE_INTEGER, TYPE_INTEGER, TYPE_UNDEF },
+  item_destructor,
+  item_members, 
+  item_methods, 
+  item_fields,
+  NULL
+};
+
 static scLibObjectDef_t window_def = { 
   "Window", "",
   0, { TYPE_UNDEF },
@@ -632,6 +738,7 @@ static void SC_UIModuleInit( void )
   SC_AddLibrary( "ui", ui_lib );
   rect_class = SC_AddClass( "ui", &rect_def);
   menu_class = SC_AddClass( "ui", &menu_def);
+  item_class = SC_AddClass( "ui", &item_def);
   window_class = SC_AddClass( "ui", &window_def);
 }
 
