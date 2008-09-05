@@ -249,8 +249,7 @@ int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
   switch (ttype(t1)) {
     case LUA_TNIL:
-        lua_assert(ttype(t1) == ttype(t2));
-        return 1;
+        return ttype(t1) == ttype(t2);
     case LUA_TNUMBER:
         if(ttype(t2) == LUA_TUSERDATA || ttype(t2) == LUA_TTABLE)
         {

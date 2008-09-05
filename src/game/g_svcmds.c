@@ -406,7 +406,7 @@ qboolean  ConsoleCommand( void )
       else
         ret = SC_Module_Unload(value.data.object, &value2, 0);
 
-      if(ret == -1)
+      if(ret == -1 || ret == 0)
       {
         Com_Printf("Can't unload module `%s': %s\n", name, SC_StringToChar(value2.data.string));
         return qfalse;

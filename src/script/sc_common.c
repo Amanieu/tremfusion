@@ -407,7 +407,7 @@ scClass_t *module_class;
 
 static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
 {
-  int i;
+  int i, ret;
   scDataTypeValue_t value;
   scDataTypeArray_t *h;
   const char *name;
@@ -468,16 +468,19 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       node->hook = function;
     }
     else
-      node->type = SC_EVENT_NODE_TYPE_NODE;
+      node->type = SC_EVENT_NODE_TYPE_GROUP;
 
     if(strcmp(location, "inside") == 0)
-      SC_Event_AddNode(parent, parent->last, node);
+      ret = SC_Event_AddNode(parent, parent->last, node, out);
     else if(strcmp(location, "before") == 0)
-      SC_Event_AddNode(parent->parent, parent->previous, node);
+      ret = SC_Event_AddNode(parent->parent, parent->previous, node, out);
     else if(strcmp(location, "after") == 0)
-      SC_Event_AddNode(parent->parent, parent, node);
+      ret = SC_Event_AddNode(parent->parent, parent, node, out);
     else
       SC_EXEC_ERROR(va("invalid location in argument. Location should be `inside', `before' or `after', but having `%s'", location));
+
+    if(ret != 0)
+      return -1;
   }
 
   out->type = TYPE_UNDEF;
@@ -516,7 +519,8 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
     if(!node)
       SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
 
-    SC_Event_DeleteNode(node);
+    if(SC_Event_DeleteNode(node, out) != 0)
+      return -1;
   }
 
   return 0;
@@ -559,6 +563,7 @@ int SC_Module_Register(scObject_t *self, scObject_t *toregister)
   return 0;
 }
 
+// FIXME: unloading don't work fine, have to fix it
 int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
 {
   scDataTypeHash_t *hash;
@@ -623,9 +628,12 @@ int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
     for(i = 0; i < depend->size; i++)
     {
       int ret;
-      const char *name = SC_StringToChar(value.data.string);
+      const char *name;
 
       SC_ArrayGet(depend, i, &value);
+	  name = SC_StringToChar(value.data.string);
+	  if(value.type == TYPE_UNDEF)
+		  continue;
 
       SC_NamespaceGet(va("module.%s", name), &value2);
       if(value2.type != TYPE_UNDEF)
@@ -698,7 +706,7 @@ int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force)
   {
     SC_HashGet(hash, "loaded", &value);
     if(value.data.boolean == qfalse)
-      SC_EXEC_ERROR(va("can't unload module %s: not unloaded", name));
+      SC_EXEC_ERROR(va("can't unload module %s: not loaded", name));
   }
 
   SC_HashGet(hash, "registered", &value);

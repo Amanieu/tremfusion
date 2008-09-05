@@ -415,7 +415,7 @@ typedef struct scEvent_s scEvent_t;
 typedef enum
 {
   SC_EVENT_NODE_TYPE_UNDEF=0,
-  SC_EVENT_NODE_TYPE_NODE,
+  SC_EVENT_NODE_TYPE_GROUP,
   SC_EVENT_NODE_TYPE_HOOK,
 } scEventNodeType_t;
 
@@ -453,14 +453,15 @@ struct scHook_s
 extern scClass_t *event_class;
 
 scEvent_t *SC_Event_New(void);
-void SC_Event_Call(scObject_t *object, scDataTypeHash_t *params);
-void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new);
-void SC_Event_DeleteNode(scEventNode_t *node);
-void SC_Event_Skip(scEvent_t *event, const char *tag);
+int SC_Event_Call(scObject_t *event, scDataTypeHash_t *params, scDataTypeValue_t *out);
+int SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new, scDataTypeValue_t *out);
+int SC_Event_DeleteNode(scEventNode_t *node, scDataTypeValue_t *out);
+int SC_Event_Skip(scEvent_t *event, const char *tag, scDataTypeValue_t *out);
 scEventNode_t *SC_Event_NewNode(const char *tag);
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
 void SC_Event_Init(void);
 void SC_Event_Dump(scEvent_t *event);
+int SC_Event_AddMainGroups(scEvent_t *event, scDataTypeValue_t *out);
 
 // sc_utils.c
 

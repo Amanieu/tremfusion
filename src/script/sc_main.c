@@ -111,7 +111,7 @@ int SC_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *in, scD
 	  break;
   }
 
-  // On error, return now
+  // On error, return error
   if(ret != 0)
     return ret;
   
