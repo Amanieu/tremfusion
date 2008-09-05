@@ -407,7 +407,7 @@ scClass_t *module_class;
 
 static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
 {
-  int i;
+  int i, ret;
   scDataTypeValue_t value;
   scDataTypeArray_t *h;
   const char *name;
@@ -471,13 +471,16 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       node->type = SC_EVENT_NODE_TYPE_NODE;
 
     if(strcmp(location, "inside") == 0)
-      SC_Event_AddNode(parent, parent->last, node);
+      ret = SC_Event_AddNode(parent, parent->last, node, out);
     else if(strcmp(location, "before") == 0)
-      SC_Event_AddNode(parent->parent, parent->previous, node);
+      ret = SC_Event_AddNode(parent->parent, parent->previous, node, out);
     else if(strcmp(location, "after") == 0)
-      SC_Event_AddNode(parent->parent, parent, node);
+      ret = SC_Event_AddNode(parent->parent, parent, node, out);
     else
       SC_EXEC_ERROR(va("invalid location in argument. Location should be `inside', `before' or `after', but having `%s'", location));
+
+    if(ret != 0)
+      return -1;
   }
 
   out->type = TYPE_UNDEF;
@@ -516,7 +519,8 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
     if(!node)
       SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
 
-    SC_Event_DeleteNode(node);
+    if(SC_Event_DeleteNode(node, out) != 0)
+      return -1;
   }
 
   return 0;

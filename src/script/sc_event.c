@@ -71,7 +71,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
   const char *tag;
   const char *dest;
   int type = (int) closure;
-  int pos;
+  int pos, ret;
 
   event = in[0].data.object->data.data.userdata;
   tag = SC_StringToChar(in[1].data.string);
@@ -94,21 +94,26 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
   }
 
   parent = SC_Event_FindChild(event->root, dest);
+  if(!parent)
+	  SC_EXEC_ERROR(va("can't find hook: %s", dest));
 
   switch(pos)
   {
     case EVENT_INSIDE:
-      SC_Event_AddNode(parent, parent->last, node);
+      ret = SC_Event_AddNode(parent, parent->last, node, out);
       break;
     case EVENT_BEFORE:
-      SC_Event_AddNode(parent->parent, parent->previous, node);
+      ret = SC_Event_AddNode(parent->parent, parent->previous, node, out);
       break;
     case EVENT_AFTER:
-      SC_Event_AddNode(parent->parent, parent, node);
+      ret = SC_Event_AddNode(parent->parent, parent, node, out);
       break;
     default:
       SC_EXEC_ERROR(va("can't add hook: %d: unknow location", pos));
   }
+
+  if(ret != 0)
+    return ret;
 
   out->type = TYPE_UNDEF;
   return 0;
@@ -127,7 +132,8 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   if(!node)
     SC_EXEC_ERROR(va("Can't delete hook: Can't find hook %s", tag));
 
-  SC_Event_DeleteNode(node);
+  if(SC_Event_DeleteNode(node, out) != 0)
+    return -1;
 
   out->type = TYPE_UNDEF;
   return 0;
@@ -135,7 +141,8 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
 
 static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
 {
-  SC_Event_Call(in[0].data.object, in[1].data.hash);
+  if(SC_Event_Call(in[0].data.object, in[1].data.hash, out) != 0)
+    return -1;
 
   out[0].type = TYPE_UNDEF;
   return 0;
@@ -145,7 +152,9 @@ static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
 {
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  SC_Event_Skip(event, SC_StringToChar(in[1].data.string));
+  if(SC_Event_Skip(event, SC_StringToChar(in[1].data.string), out) != 0)
+    return -1;
+
   out[0].type = TYPE_UNDEF;
 
   return 0;
@@ -161,6 +170,17 @@ static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
+static int event_addmaintags(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scEvent_t *event = in[0].data.object->data.data.userdata;
+
+  if(SC_Event_AddMainTags(event, out) != 0)
+    return -1;
+
+  out->type = TYPE_UNDEF;
+  return 0;
+}
+
 static scLibObjectMember_t event_members[] = {
   { "before", "", TYPE_INTEGER, 0, event_get, (void*) EVENT_BEFORE },
   { "inside", "", TYPE_INTEGER, 0, event_get, (void*) EVENT_INSIDE },
@@ -170,6 +190,7 @@ static scLibObjectMember_t event_members[] = {
 static scLibObjectMethod_t event_methods[] = {
   { "addTag", "", event_add, { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_UNDEF },
     TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_NODE },
+  { "addMainTags", "", event_addmaintags, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
   { "addHook", "", event_add,
     { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
     TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_HOOK },
@@ -212,28 +233,27 @@ scEvent_t *SC_Event_New(void)
   return event;
 }
 
-void event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *params)
+int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *params, scDataTypeValue_t *out)
 {
   scEventNode_t *i;
-  scDataTypeValue_t args[3];
-  scDataTypeValue_t ret;
+  scDataTypeValue_t in[3];
   scEvent_t *data;
 
   data = event->data.data.userdata;
 
-  args[0].type = TYPE_OBJECT;
-  args[0].data.object = event;
-  args[1].type = TYPE_HASH;
-  args[1].data.hash = params;
-  args[2].type = TYPE_UNDEF;
+  in[0].type = TYPE_OBJECT;
+  in[0].data.object = event;
+  in[1].type = TYPE_HASH;
+  in[1].data.hash = params;
+  in[2].type = TYPE_UNDEF;
 
   if(node == NULL)
-    return;
+    return 0;
 
   if(node->skip)
   {
     node->skip = qfalse;
-    return;
+    return 0;
   }
 
   data->current_node = node;
@@ -242,7 +262,8 @@ void event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *pa
   {
     for(i = node->first; i != NULL; i = i->next)
     {
-      event_call_rec(event, i, params);
+      if(event_call_rec(event, i, params, out) != 0)
+        return -1;
 
       if(data->skip)
       {
@@ -257,19 +278,68 @@ void event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *pa
   }
   else
   {
-    SC_RunFunction(node->hook, args, &ret);
+    if(SC_RunFunction(node->hook, in, out) != 0)
+      SC_EXEC_ERROR(va("error running event function: %s", SC_StringToChar(out->data.string)));
   }
+
+  return 0;
 }
 
-void SC_Event_Call(scObject_t *event, scDataTypeHash_t *params)
+int SC_Event_Call(scObject_t *event, scDataTypeHash_t *params, scDataTypeValue_t *out)
 {
   scEvent_t *data = event->data.data.userdata;
-  event_call_rec(event, data->root, params);
+
+  if(event_call_rec(event, data->root, params, out) != 0)
+    return -1;
+
   data->current_node = NULL;
+
+  return 0;
 }
 
-void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new)
+int SC_Event_AddMainTags(scEvent_t *event, scDataTypeValue_t *out)
 {
+  scEventNode_t *node, *lnode;
+
+  node = SC_Event_NewNode("check");
+  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->parent = event->root;
+  if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
+    return -1;
+  lnode = node;
+
+  node = SC_Event_NewNode("system");
+  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->parent = lnode;
+  if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
+    return -1;
+
+  node = SC_Event_NewNode("game");
+  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->parent = lnode;
+  if(SC_Event_AddNode(node->parent, node->parent->last, node, out) != 0)
+    return -1;
+
+  node = SC_Event_NewNode("action");
+  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->parent = event->root;
+  if(SC_Event_AddNode(node->parent, lnode, node, out) != 0)
+    return -1;
+  lnode = node;
+
+  node = SC_Event_NewNode("init");
+  node->type = SC_EVENT_NODE_TYPE_NODE;
+  node->parent = event->root;
+  if(SC_Event_AddNode(node->parent, lnode->previous, node, out) != 0)
+    return -1;
+
+  return 0;
+}
+
+int SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new, scDataTypeValue_t *out)
+{
+  // TODO: make error if tag allready exist
+ 
   if(previous)
   {
     new->previous = previous;
@@ -288,14 +358,17 @@ void SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNod
     parent->last = new;
 
   new->parent = parent;
+
+  return 0;
 }
 
-void SC_Event_DeleteNode(scEventNode_t *node)
+int SC_Event_DeleteNode(scEventNode_t *node, scDataTypeValue_t *out)
 {
   scEventNode_t *parent = node->parent;
 
   while(node->first)
-    SC_Event_DeleteNode(node->first);
+    if(SC_Event_DeleteNode(node->first, out) != 0)
+      return -1;
 
   if(node->previous)
     node->previous->next = node->next;
@@ -308,6 +381,8 @@ void SC_Event_DeleteNode(scEventNode_t *node)
     parent->last = node->previous;
 
   BG_Free(node);
+
+  return 0;
 }
 
 scEventNode_t *SC_Event_NewNode(const char *tag)
@@ -322,56 +397,94 @@ scEventNode_t *SC_Event_NewNode(const char *tag)
 
 scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
 {
-  scEventNode_t *found;
   scEventNode_t *i;
+  char tmp[MAX_NAMESPACE_LENGTH];
+  char *idx, *lidx;
 
   if(node == NULL)
     return NULL;
 
-  if(strcmp(node->tag, tag) == 0)
-    return node;
-  else
+  Q_strncpyz(tmp, tag, sizeof(tmp));
+  lidx = tmp;
+
+  // Skip any 'all' tag founded
+  if(Q_strncmp(lidx, "all", 3) == 0)
   {
-    if(node->type == SC_EVENT_NODE_TYPE_NODE)
-    {
-      for(i = node->first; i != NULL; i = i->next)
-      {
-        found = SC_Event_FindChild(i, tag);
-        if(found)
-          return found;
-      }
-    }
+    idx = strchr(lidx, '.');
+    if(!idx)
+      return node;
+    lidx = idx + 1;
   }
 
-  return NULL;
+  while(lidx)
+  {
+    idx = strchr(lidx, '.');
+    if(idx)
+      *idx = '\0';
+    if(node->type == SC_EVENT_NODE_TYPE_NODE)
+    {
+      i = node->first;
+      node = NULL;
+      while(i != NULL)
+      {
+        if(strcmp(i->tag, lidx) == 0)
+        {
+          node = i;
+          break;
+        }
+        i = i->next;
+      }
+      if(!node)
+        return NULL;
+    }
+    else
+      return NULL;
+
+    if(idx)
+      lidx = idx +1;
+    else
+      lidx = NULL;
+  }
+  
+  return node;
 }
 
-void SC_Event_Skip(scEvent_t *event, const char *tag)
+int SC_Event_Skip(scEvent_t *event, const char *tag, scDataTypeValue_t *out)
 {
-  scEventNode_t *node;
+  scEventNode_t *node, *fnode;
 
-  node = event->current_node;
-  while(node != node->parent)
+  node = SC_Event_FindChild(event->root, tag);
+  if(!node)
+    SC_EXEC_ERROR(va("can't find hook: %s", tag));
+
+  node->skip = qtrue;
+
+  fnode = event->current_node;
+  while(fnode != fnode->parent)
   {
-    if(strcmp(node->tag, tag) == 0)
+    if(fnode == node)
     {
       event->skip = qtrue;
       break;
     }
 
-    node = node->parent;
+    fnode = fnode->parent;
   }
-  if(strcmp(node->tag, tag) == 0)
+  if(fnode == node)
     event->skip = qtrue;
 
-  node = SC_Event_FindChild(event->root, tag);
-  if(node)
-    node->skip = qtrue;
+  return 0;
 }
 
 void SC_Event_Init(void)
 {
+  scDataTypeValue_t value;
+
   event_class = SC_AddClass("script", &event_def);
+
+  value.type = TYPE_NAMESPACE;
+  value.data.namespace = SC_HashNew();
+  SC_NamespaceSet("event", &value);
 }
 
 static void dump_rec(scEventNode_t *node, char *name)
@@ -381,7 +494,6 @@ static void dump_rec(scEventNode_t *node, char *name)
   scEventNode_t *tmpn;
 
   strcpy(n, name);
-  strcat(n, ".");
   strcat(n, node->tag);
 
   len = strlen(n);
@@ -390,6 +502,7 @@ static void dump_rec(scEventNode_t *node, char *name)
   if(node->type == SC_EVENT_NODE_TYPE_NODE)
   {
     tmpn = node->first;
+    strcat(n, ".");
     while(tmpn)
     {
       dump_rec(tmpn, n);
