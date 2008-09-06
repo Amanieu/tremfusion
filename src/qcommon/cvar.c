@@ -36,7 +36,7 @@ int			cvar_numIndexes;
 #define FILE_HASH_SIZE		256
 static	cvar_t*		hashTable[FILE_HASH_SIZE];
 
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm );
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force);
 
 /*
 ================
@@ -350,7 +350,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			cvar_modifiedFlags |= flags;
 		}
 
-		var->flags |= flags;
+		// if a var is not being created don't let it pretend to be
+		var->flags |= flags & ~(CVAR_USER_CREATED|CVAR_SERVER_CREATED);
 		// only allow one non-empty reset string without a warning
 		if ( !var->resetString[0] ) {
 			// we don't have a reset string yet
@@ -366,7 +367,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 			s = var->latchedString;
 			var->latchedString = NULL;	// otherwise cvar_set2 would free it
-			Cvar_Set2( var_name, s, qtrue, qfalse );
+			Cvar_Set2( var_name, s, qtrue );
 			Z_Free( s );
 		}
 
@@ -437,7 +438,7 @@ void Cvar_Print( cvar_t *v ) {
 Cvar_Set2
 ============
 */
-cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboolean vm ) {
+cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 	cvar_t	*var;
 
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -465,12 +466,6 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force, qboo
 		} else {
 			return Cvar_Get (var_name, value, 0);
 		}
-	}
-
-	if (vm && (var->flags & CVAR_VM_PROTECT))
-	{
-		Com_Printf("QVM tried to modify protected %s cvar.\n", var_name );
-		return var;
 	}
 
 	if (!value ) {
@@ -561,7 +556,29 @@ Cvar_Set
 ============
 */
 void Cvar_Set( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qtrue, qfalse);
+	Cvar_Set2 (var_name, value, qtrue);
+}
+
+/*
+============
+Cvar_SetSafe
+============
+*/
+void Cvar_SetSafe( const char *var_name, const char *value )
+{
+	int flags = Cvar_Flags( var_name );
+
+	if( flags != CVAR_NONEXISTENT && flags & CVAR_PROTECTED )
+	{
+		if( value )
+			Com_Error( ERR_DROP, "Untrusted source tried to set protected cvar "
+				"\"%s\" to \"%s\"\n", var_name, value );
+		else
+			Com_Error( ERR_DROP, "Untrusted source tried to modify protected cvar "
+				"\"%s\"\n", var_name );
+		return;
+	}
+	Cvar_Set( var_name, value );
 }
 
 /*
@@ -570,16 +587,7 @@ Cvar_SetLatched
 ============
 */
 void Cvar_SetLatched( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qfalse, qfalse);
-}
-
-/*
-============
-Cvar_SetVM
-============
-*/
-void Cvar_SetVM( const char *var_name, const char *value) {
-	Cvar_Set2 (var_name, value, qtrue, qtrue);
+	Cvar_Set2 (var_name, value, qfalse);
 }
 
 /*
@@ -600,10 +608,10 @@ void Cvar_SetValue( const char *var_name, float value) {
 
 /*
 ============
-Cvar_SetValueSafe
+Cvar_SetValueNoForce
 ============
 */
-void Cvar_SetValueSafe( const char *var_name, float value) {
+void Cvar_SetValueNoForce( const char *var_name, float value) {
 	char	val[32];
 
 	if ( value == (int)value ) {
@@ -611,32 +619,15 @@ void Cvar_SetValueSafe( const char *var_name, float value) {
 	} else {
 		Com_sprintf (val, sizeof(val), "%f",value);
 	}
-	Cvar_Set2 (var_name, val, qfalse, qfalse);
+	Cvar_Set2 (var_name, val,qfalse);
 }
-
-/*
-============
-Cvar_SetValueVM
-============
-*/
-void Cvar_SetValueVM( const char *var_name, float value) {
-	char	val[32];
-
-	if ( value == (int)value ) {
-		Com_sprintf (val, sizeof(val), "%i",(int)value);
-	} else {
-		Com_sprintf (val, sizeof(val), "%f",value);
-	}
-	Cvar_SetVM (var_name, val);
-}
-
 /*
 ============
 Cvar_Reset
 ============
 */
 void Cvar_Reset( const char *var_name ) {
-	Cvar_Set2( var_name, NULL, qfalse, qfalse );
+	Cvar_Set2( var_name, NULL, qfalse );
 }
 
 /*
@@ -646,7 +637,7 @@ Cvar_ForceReset
 */
 void Cvar_ForceReset(const char *var_name)
 {
-	Cvar_Set2(var_name, NULL, qtrue, qfalse);
+	Cvar_Set2(var_name, NULL, qtrue);
 }
 
 /*
@@ -699,10 +690,25 @@ qboolean Cvar_Command( void ) {
 	}
 
 	// set the value if forcing isn't required
-	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse, qfalse);
+	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse);
 	return qtrue;
 }
 
+/*
+============
+Cvar_SetValueSafe
+============
+*/
+void Cvar_SetValueSafe( const char *var_name, float value )
+{
+	char val[32];
+
+	if( Q_isintegral( value ) )
+		Com_sprintf( val, sizeof(val), "%i", (int)value );
+	else
+		Com_sprintf( val, sizeof(val), "%f", value );
+	Cvar_SetSafe( var_name, val );
+}
 
 /*
 ============
@@ -737,61 +743,44 @@ void Cvar_Print_f(void)
 ============
 Cvar_Toggle_f
 
-Toggles a cvar for easy single key binding
+Toggles a cvar for easy single key binding, optionally through a list of
+given values
 ============
 */
 void Cvar_Toggle_f( void ) {
-	int		v;
+	int		i, c = Cmd_Argc();
+	char		*curval;
 
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf ("usage: toggle <variable>\n");
+	if(c < 2) {
+		Com_Printf("usage: toggle <variable> [value1, value2, ...]\n");
 		return;
 	}
 
-	v = Cvar_VariableValue( Cmd_Argv( 1 ) );
-	v = !v;
-
-	Cvar_Set2 (Cmd_Argv(1), va("%i", v), qfalse, qfalse);
-}
-
-/*
-============
-Cvar_ToggleList_f
-
-Toggles a cvar between a list of strings for easy single key binding
-============
-*/
-void Cvar_ToggleList_f( void ) {
-	int n;
-	char *strval;
-
-	if( Cmd_Argc() < 3 ) {
-		Com_Printf ("usage: togglelist <variable> <value1> <value2> ...\n");
+	if(c == 2) {
+		Cvar_Set2(Cmd_Argv(1), va("%d", 
+			!Cvar_VariableValue(Cmd_Argv(1))), 
+			qfalse);
 		return;
 	}
 
-	strval = Cvar_VariableString( Cmd_Argv(1) );
+	if(c == 3) {
+		Com_Printf("toggle: nothing to toggle to\n");
+		return;
+	}
 
-	n = 2;
-	for(;;) {
-		if( !strcmp( Cmd_Argv(n), strval ) ) {
-			// found it, set it to the next (or wrapped to the first) one in the list
-			if( ++n < Cmd_Argc() ) {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(n), qfalse, qfalse );
-			}
-			else {
-				Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
-			}
-			break;
-		}
+	curval = Cvar_VariableString(Cmd_Argv(1));
 
-		++n;
-		if( n >= Cmd_Argc() ) {
-			// not found, set it to the first one in the list
-			Cvar_Set2( Cmd_Argv(1), Cmd_Argv(2), qfalse, qfalse );
-			break;
+	// don't bother checking the last arg for a match since the desired
+	// behaviour is the same as no match (set to the first argument)
+	for(i = 2; i + 1 < c; i++) {
+		if(strcmp(curval, Cmd_Argv(i)) == 0) {
+			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse);
+			return;
 		}
 	}
+
+	// fallback
+	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse);
 }
 
 /*
@@ -832,7 +821,7 @@ void Cvar_Set_f( void ) {
 		}
 		l += len;
 	}
-	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse, qfalse);
+	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
 	if( !v ) {
 		return;
 	}
@@ -886,14 +875,14 @@ void Cvar_WriteVariables( fileHandle_t f, qboolean vmCvars ) {
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->latchedString);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->latchedString));
 			} else {
 				if( strlen( var->name ) + strlen( var->string ) + 10 > sizeof( buffer ) ) {
 					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->string);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->string));
 			}
 			FS_Write( buffer, strlen( buffer ), f );
 		}
@@ -1152,7 +1141,6 @@ void Cvar_Init (void) {
 
 	Cmd_AddCommand ("print", Cvar_Print_f);
 	Cmd_AddCommand ("toggle", Cvar_Toggle_f);
-	Cmd_AddCommand ("togglelist", Cvar_ToggleList_f);
 	Cmd_AddCommand ("set", Cvar_Set_f);
 	Cmd_AddCommand ("sets", Cvar_Set_f);
 	Cmd_AddCommand ("setu", Cvar_Set_f);

@@ -391,12 +391,12 @@ void Cmd_Give_f( gentity_t *ent )
         BG_Weapon( client->ps.weapon )->infiniteAmmo )
       return;
 
-    client->ps.ammo[0] = BG_Weapon( client->ps.weapon )->maxAmmo;
-    client->ps.ammo[1] = BG_Weapon( client->ps.weapon )->maxClips;
+    client->ps.ammo = BG_Weapon( client->ps.weapon )->maxAmmo;
+    client->ps.clips = BG_Weapon( client->ps.weapon )->maxClips;
 
     if( BG_Weapon( client->ps.weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, client->ps.stats ) )
-      client->ps.ammo[0] = (int)( (float)client->ps.ammo[0] * BATTPACK_MODIFIER );
+      client->ps.ammo = (int)( (float)client->ps.ammo * BATTPACK_MODIFIER );
   }
 }
 
@@ -579,6 +579,7 @@ G_ChangeTeam
 void G_ChangeTeam( gentity_t *ent, team_t newTeam )
 {
   team_t  oldTeam = ent->client->pers.teamSelection;
+  char    buf[ MAX_INFO_STRING ];
 
   if( oldTeam == newTeam )
     return;
@@ -588,17 +589,37 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
   G_LeaveTeam( ent );
   ent->client->pers.teamSelection = newTeam;
 
-  // under certain circumstances, clients can keep their kills and credits
-  // when switching teams
-//  if( !G_admin_permission( ent, ADMF_TEAMCHANGEFREE ) ||
-//      level.time - ent->client->pers.teamChangeTime < 60000 )
-    ent->client->ps.persistant[ PERS_CREDIT ] = 0;
 
   ent->client->pers.classSelection = PCL_NONE;
   ClientSpawn( ent, NULL, NULL, NULL );
   ent->client->pers.joinedATeam = qtrue;
   ent->client->pers.teamChangeTime = level.time;
+
+  if( oldTeam == TEAM_NONE )
+  {
+    // ps.persistant[] from a spectator cannot be trusted
+    ent->client->ps.persistant[ PERS_CREDIT ] = ent->client->pers.savedCredit;
+  }
+  // Convert between Alien and Human credits, specs use Alien credits
+  if( oldTeam == TEAM_HUMANS )
+    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
+                                      ALIEN_MAX_CREDITS / HUMAN_MAX_CREDITS + 0.5f );
+  if( newTeam == TEAM_HUMANS )
+    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
+                                      HUMAN_MAX_CREDITS / ALIEN_MAX_CREDITS + 0.5f );
+
+  if( newTeam == TEAM_NONE )
+  {
+    // save values before the client enters the spectator team and their
+    // ps.persistant[] values become trashed
+    ent->client->pers.savedCredit = ent->client->ps.persistant[ PERS_CREDIT ];
+  }
+    
   ClientUserinfoChanged( ent->client->ps.clientNum );
+
+  // log team changes to demo
+  Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
 }
 
 /*
@@ -635,6 +656,12 @@ void Cmd_Team_f( gentity_t *ent )
 
   if( !Q_stricmp( s, "spectate" ) )
     team = TEAM_NONE;
+  else if( level.demoState == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
+      "while a demo is being played\n\"" );
+    return;
+  }
   else if( !force && oldteam == TEAM_NONE && g_maxGameClients.integer &&
            level.numPlayingClients >= g_maxGameClients.integer )
   {
@@ -821,6 +848,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_GREEN;
+      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
       break;
 
     case SAY_TEAM:
@@ -832,6 +860,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
         Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ",
           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_CYAN;
+      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^5%s\"", name, chatText ) );
       break;
 
     case SAY_TELL:
@@ -2155,12 +2184,12 @@ void Cmd_Buy_f( gentity_t *ent )
 
     //add to inventory
     BG_AddWeaponToInventory( weapon, ent->client->ps.stats );
-    ent->client->ps.ammo[0] = BG_Weapon( weapon )->maxAmmo;
-    ent->client->ps.ammo[1] = BG_Weapon( weapon )->maxClips;
+    ent->client->ps.ammo = BG_Weapon( weapon )->maxAmmo;
+    ent->client->ps.clips = BG_Weapon( weapon )->maxClips;
 
     if( BG_Weapon( weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, ent->client->ps.stats ) )
-      ent->client->ps.ammo[0] *= BATTPACK_MODIFIER;
+      ent->client->ps.ammo *= BATTPACK_MODIFIER;
 
     G_ForceWeaponChange( ent, weapon );
 
@@ -2678,7 +2707,7 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       clientnum = level.maxclients - 1;
 
     // can't follow self
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( &g_entities[ clientnum ] == ent )
       continue;
 
     // avoid selecting existing follow target
@@ -2686,11 +2715,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
       continue; //effectively break;
 
     // can only follow connected clients
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
 
     // can't follow a spectator
-    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE )
+    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
     
     // if stickyspec is disabled, can't follow someone in queue either

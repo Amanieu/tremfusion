@@ -112,8 +112,7 @@ Restart the input subsystem
 */
 void Sys_In_Restart_f( void )
 {
-	IN_Shutdown();
-	IN_Init();
+	IN_Restart( );
 }
 
 /*
@@ -396,6 +395,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	char  fname[MAX_OSPATH];
 	char  *basepath;
 	char  *homepath;
+	char  *homepath2;
 	char  *pwdpath;
 	char  *gamedir;
 
@@ -407,12 +407,16 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	pwdpath = Sys_Cwd();
 	basepath = Cvar_VariableString( "fs_basepath" );
 	homepath = Cvar_VariableString( "fs_homepath" );
+	homepath2 = Cvar_VariableString( "fs_homepath2" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
 	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
 
 	if(!libHandle && homepath)
 		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
+
+	if(!libHandle && homepath)
+		libHandle = Sys_TryLibraryLoad(homepath2, gamedir, fname, fqpath);
 
 	if(!libHandle && basepath)
 		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
@@ -550,16 +554,6 @@ int main( int argc, char **argv )
 	NET_Init( );
 
 	CON_Init( );
-
-#ifndef _WIN32
-	// Windows doesn't have these signals
-	// see CON_CtrlHandler() in con_win32.c
-	signal( SIGHUP, Sys_SigHandler );
-	signal( SIGQUIT, Sys_SigHandler );
-	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGIOT, Sys_SigHandler );
-	signal( SIGBUS, Sys_SigHandler );
-#endif
 
 	signal( SIGILL, Sys_SigHandler );
 	signal( SIGFPE, Sys_SigHandler );

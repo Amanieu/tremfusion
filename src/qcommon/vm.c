@@ -40,6 +40,8 @@ and one exported function: Perform
 #include <windows.h>
 #else
 #include <sys/mman.h>
+#include <limits.h>
+#include <unistd.h>
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
 #endif
@@ -80,9 +82,9 @@ VM_Init
 ==============
 */
 void VM_Init( void ) {
-	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE | CVAR_VM_PROTECT );	// !@# SHIP WITH SET TO 2
-	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE | CVAR_VM_PROTECT );	// !@# SHIP WITH SET TO 0
-	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE | CVAR_VM_PROTECT );		// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 0
+	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
 
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
 	Cmd_AddCommand ("vminfo", VM_VmInfo_f );
@@ -463,7 +465,8 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		DWORD _unused = 0;
 		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
 #else
-		mprotect( vm->dataBase, 4096, PROT_NONE );
+		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
+			mprotect( vm->dataBase, 4096, PROT_NONE );
 #endif
 	}
 

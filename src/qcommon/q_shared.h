@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define PRODUCT_NAME            "tremfusion"
 
 #ifdef _MSC_VER
-# define PRODUCT_VERSION          "0.0.1b3"
+# define PRODUCT_VERSION          "0.0.2"
 #endif
 
 #define CLIENT_WINDOW_TITLE       "TremFusion " PRODUCT_VERSION
@@ -38,6 +38,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define Q3_VERSION                 PRODUCT_NAME " " PRODUCT_VERSION
 
 #define MAX_TEAMNAME 32
+
+#define GAMENAME BASEGAME
 
 #ifdef _MSC_VER
 
@@ -469,7 +471,7 @@ typedef struct {
 
 // Snaps the vector to the floor value always, ignoring any weirdness from
 // snapping negative versus positive numbers
-#define Floor(f) ( (f) >= 0.f ? (int)(f) : -(int)(-(f)) )
+#define Floor(fl) ( (fl) >= 0.f ? (int)(fl) : -(int)(-(fl)) )
 #define SnapVector(v) {(v)[0]=Floor((v)[0]);(v)[1]=Floor((v)[1]);(v)[2]=Floor((v)[2]);}
 
 // just in case you do't want to use the macros
@@ -662,6 +664,10 @@ vec_t DistanceBetweenLineSegments(
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 
+#ifdef _MSC_VER
+float rint( float v );
+#endif
+
 //=============================================
 
 float Com_Clamp( float min, float max, float value );
@@ -845,7 +851,7 @@ default values.
 
 #define CVAR_SERVER_CREATED	2048	// cvar was created by a server the client connected to.
 #define CVAR_VM_CREATED		4096	// cvar was created by a qvm
-#define CVAR_VM_PROTECT		8192	// cvar can't be modified by a qvm
+#define CVAR_PROTECTED		8192	// prevent modifying this var from VMs or the server
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
 // nothing outside the Cvar_*() functions should modify these fields!
@@ -1001,7 +1007,8 @@ typedef enum {
 //
 // per-level limits
 //
-#define	MAX_CLIENTS			64		// absolute limit
+#define CLIENTNUM_BITS		6
+#define	MAX_CLIENTS			(1<<CLIENTNUM_BITS)		// absolute limit
 #define MAX_LOCATIONS		64
 
 #define	GENTITYNUM_BITS		10		// don't need to send any more
@@ -1043,7 +1050,6 @@ typedef struct {
 #define	MAX_STATS				16
 #define	MAX_PERSISTANT			16
 #define	MAX_MISC    			16
-#define	MAX_WEAPONS				16		
 
 #define	MAX_PS_EVENTS			2
 
@@ -1115,7 +1121,10 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			misc[MAX_MISC];	// misc data
-	int			ammo[MAX_WEAPONS];
+	int			ammo;
+	int			clips;
+
+	int			ammo_extra[14]; // compatibility
 
 	int			generic1;
 	int			loopSound;

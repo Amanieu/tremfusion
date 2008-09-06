@@ -439,8 +439,8 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
   {
     clientNum = client->sess.spectatorClient;
     if( clientNum < 0 || clientNum > level.maxclients ||
-        !g_entities[ clientNum ].client ||
-        g_entities[ clientNum ].client->sess.spectatorState != SPECTATOR_NOT )
+        ( !g_entities[ clientNum ].client && !level.clients[ clientNum ].pers.demoClient ) ||
+        level.clients[ clientNum ].sess.spectatorState != SPECTATOR_NOT )
       following = qfalse;
   }
   
@@ -853,11 +853,11 @@ void ClientTimerActions( gentity_t *ent, int msec )
   // Regenerate Adv. Dragoon barbs
   if( client->ps.weapon == WP_ALEVEL3_UPG )
   {
-    if( client->ps.ammo[0] < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
+    if( client->ps.ammo < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
     {
       if( ent->timestamp + LEVEL3_BOUNCEBALL_REGEN < level.time )
       {
-        client->ps.ammo[0]++;
+        client->ps.ammo++;
         ent->timestamp = level.time;
       }
     }
@@ -1184,13 +1184,16 @@ void G_UnlaggedOff( void )
 ==============
 */
 
-void G_UnlaggedOn( vec3_t muzzle, float range )
+void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range )
 {
   int i = 0;
   gentity_t *ent;
   unlagged_t *calc;
-
+  
   if( !g_unlagged.integer )
+    return;
+
+  if( !attacker->client->useUnlagged )
     return;
 
   for( i = 0; i < level.maxclients; i++ )
@@ -1260,6 +1263,8 @@ static void G_UnlaggedDetectCollisions( gentity_t *ent )
 
   if( !g_unlagged.integer )
     return;
+  if( !ent->client->useUnlagged )
+    return;
 
   calc = &ent->client->unlaggedCalc;
 
@@ -1275,7 +1280,7 @@ static void G_UnlaggedDetectCollisions( gentity_t *ent )
   r2 = Distance( calc->origin, calc->maxs );
   range += ( r1 > r2 ) ? r1 : r2;
 
-  G_UnlaggedOn( ent->client->oldOrigin, range );
+  G_UnlaggedOn( ent, ent->client->oldOrigin, range );
 
   trap_Trace(&tr, ent->client->oldOrigin, ent->r.mins, ent->r.maxs,
     ent->client->ps.origin, ent->s.number,  MASK_PLAYERSOLID );
@@ -1825,7 +1830,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
     if( clientNum >= 0 )
     {
       cl = &level.clients[ clientNum ];
-      if( cl->pers.connected == CON_CONNECTED )
+      if( cl->pers.connected == CON_CONNECTED || cl->pers.demoClient )
       {
         flags = ( cl->ps.eFlags & ~( EF_VOTED | EF_TEAMVOTED ) ) |
                 ( ent->client->ps.eFlags & ( EF_VOTED | EF_TEAMVOTED ) );

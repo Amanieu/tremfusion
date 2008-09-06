@@ -276,7 +276,7 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 	xx = x;
 	re.SetColor( setColor );
 	while ( *s ) {
-		if ( !noColorEscape && Q_IsColorString( s ) ) {
+		if ( Q_IsColorString( s ) ) {
 			if ( !forceColor ) {
 				Com_Memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
 				color[3] = setColor[3];
@@ -391,8 +391,8 @@ void SCR_DrawVoipSender( void ) {
 	sprintf(string, "Client speaking: %s", Info_ValueForKey(cl.gameState.stringData +
 	        cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "n"));
 
-	// Display below the VoIP meter
-	SCR_DrawStringExt( 320 - strlen( string ) * 4, 30, 9, string, g_color_table[7], qfalse, qfalse );
+	// I hardcoded the display to be on the left side of the screen, and not to move
+	SCR_DrawStringExt( 6, 310, 12, string, g_color_table[7], qfalse, qfalse );
 }
 #endif
 
