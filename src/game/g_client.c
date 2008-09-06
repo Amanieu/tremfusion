@@ -1170,7 +1170,7 @@ void ClientUserinfoChanged( int clientNum )
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, userinfo );
 
-  /*G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );*/
+//  G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );
 }
 
 
@@ -1194,7 +1194,7 @@ to the server machine, but qfalse on map changes and tournement
 restarts.
 ============
 */
-char *ClientConnect( int clientNum, qboolean firstTime )
+char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot )
 {
   char      *value;
   gclient_t *client;
@@ -1250,6 +1250,14 @@ char *ClientConnect( int clientNum, qboolean firstTime )
     G_InitSessionData( client, userinfo );
 
   G_ReadSessionData( client );
+  
+  if( isBot ) {
+	ent->r.svFlags |= SVF_BOT;
+	ent->inuse = qtrue;
+	if( !G_BotConnect( clientNum, !firstTime ) ) {
+		return "BotConnectfailed";
+	}
+  }
 
   // get and distribute relevent paramters
   ClientUserinfoChanged( clientNum );
@@ -1324,6 +1332,69 @@ void ClientBegin( int clientNum )
   ClientSpawn( ent, NULL, NULL, NULL );
 
   trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE " entered the game\n\"", client->pers.netname ) );
+
+  // name can change between ClientConnect() and ClientBegin()
+  G_admin_namelog_update( client, qfalse );
+
+  // request the clients PTR code
+  trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
+
+  G_LogPrintf( "ClientBegin: %i\n", clientNum );
+
+  // log to demo
+  Info_SetValueForKey( buffer, "name", client->pers.netname );
+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
+
+  // count current clients and rank for scoreboard
+  CalculateRanks( );
+}
+
+/*
+===========
+ClientBegin
+
+called when a client has finished connecting, and is ready
+to be placed into the level.  This will happen every level load,
+and on transition between teams, but doesn't happen on respawns
+============
+*/
+void BotBegin( int clientNum )
+{
+  gentity_t *ent;
+  gclient_t *client;
+  int       flags;
+  char      buffer[ MAX_INFO_STRING ] = "";
+
+  ent = g_entities + clientNum;
+
+  client = level.clients + clientNum;
+
+  if( ent->r.linked )
+    trap_UnlinkEntity( ent );
+
+  G_InitGentity( ent );
+  ent->touch = 0;
+  ent->pain = 0;
+  ent->client = client;
+
+  client->pers.connected = CON_CONNECTED;
+  client->pers.enterTime = level.time;
+
+  // save eflags around this, because changing teams will
+  // cause this to happen with a valid entity, and we
+  // want to make sure the teleport bit is set right
+  // so the viewpoint doesn't interpolate through the
+  // world to the new position
+  flags = client->ps.eFlags;
+  memset( &client->ps, 0, sizeof( client->ps ) );
+  memset( &client->pmext, 0, sizeof( client->pmext ) );
+  client->ps.eFlags = flags;
+
+  // locate ent at a spawn point
+
+  ClientSpawn( ent, NULL, NULL, NULL );
 
   // name can change between ClientConnect() and ClientBegin()
   G_admin_namelog_update( client, qfalse );
@@ -1678,6 +1749,9 @@ void ClientDisconnect( int clientNum )
   gentity_t *tent;
   int       i;
 
+  // cleanup if we are kicking a bot that hasn't spawned yet
+  G_RemoveQueuedBotBegin( clientNum );
+  
   ent = g_entities + clientNum;
 
   if( !ent->client )
@@ -1721,4 +1795,8 @@ void ClientDisconnect( int clientNum )
   G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
 
   CalculateRanks( );
+  
+  if ( ent->r.svFlags & SVF_BOT ) {
+	BotAIShutdownClient( clientNum, qfalse );
+  }
 }

@@ -39,8 +39,10 @@ typedef struct
 gentity_t   g_entities[ MAX_GENTITIES ];
 gclient_t   g_clients[ MAX_CLIENTS ];
 
+vmCvar_t  g_fraglimit;
 vmCvar_t  g_timelimit;
 vmCvar_t  g_suddenDeathTime;
+vmCvar_t  g_capturelimit;
 vmCvar_t  g_friendlyFire;
 vmCvar_t  g_friendlyFireAliens;
 vmCvar_t  g_friendlyFireHumans;
@@ -55,6 +57,7 @@ vmCvar_t  g_gravity;
 vmCvar_t  g_cheats;
 vmCvar_t  g_demoState;
 vmCvar_t  g_knockback;
+vmCvar_t  g_quadfactor;
 vmCvar_t  g_inactivity;
 vmCvar_t  g_debugMove;
 vmCvar_t  g_debugDamage;
@@ -67,13 +70,19 @@ vmCvar_t  g_doWarmup;
 vmCvar_t  g_restarted;
 vmCvar_t  g_logFile;
 vmCvar_t  g_logFileSync;
+vmCvar_t  g_blood;
+vmCvar_t  g_podiumDist;
+vmCvar_t  g_podiumDrop;
 vmCvar_t  g_allowVote;
 vmCvar_t  g_voteLimit;
 vmCvar_t  g_teamAutoJoin;
 vmCvar_t  g_teamForceBalance;
+vmCvar_t  g_banIPs;
+vmCvar_t  g_filterBan;
 vmCvar_t  g_smoothClients;
 vmCvar_t  pmove_fixed;
 vmCvar_t  pmove_msec;
+vmCvar_t  g_rankings;
 vmCvar_t  g_listEntity;
 vmCvar_t  g_minCommandPeriod;
 vmCvar_t  g_minNameChangePeriod;
@@ -130,6 +139,16 @@ vmCvar_t  g_privateMessages;
 
 vmCvar_t  g_tag;
 
+//Start Champ bot cvars
+vmCvar_t  bot_developer;
+vmCvar_t  bot_challenge;
+vmCvar_t  bot_thinktime;
+vmCvar_t  bot_minaliens;
+vmCvar_t  bot_minhumans;
+vmCvar_t  bot_nochat;
+vmCvar_t  bot_fastchat;
+//End Champ bot cvars
+
 static cvarTable_t   gameCvarTable[ ] =
 {
   // don't override the cheat state set by the system
@@ -173,6 +192,9 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_password, "g_password", "", CVAR_USERINFO, 0, qfalse  },
 
+  { &g_banIPs, "g_banIPs", "", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_filterBan, "g_filterBan", "1", CVAR_ARCHIVE, 0, qfalse  },
+
   { &g_needpass, "g_needpass", "0", CVAR_SERVERINFO | CVAR_ROM, 0, qfalse },
 
   { &g_dedicated, "dedicated", "0", 0, 0, qfalse  },
@@ -180,12 +202,17 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_speed, "g_speed", "320", 0, 0, qtrue  },
   { &g_gravity, "g_gravity", "800", 0, 0, qtrue  },
   { &g_knockback, "g_knockback", "1000", 0, 0, qtrue  },
+  { &g_quadfactor, "g_quadfactor", "3", 0, 0, qtrue  },
   { &g_weaponRespawn, "g_weaponrespawn", "5", 0, 0, qtrue  },
   { &g_weaponTeamRespawn, "g_weaponTeamRespawn", "30", 0, 0, qtrue },
   { &g_inactivity, "g_inactivity", "0", 0, 0, qtrue },
   { &g_debugMove, "g_debugMove", "0", 0, 0, qfalse },
   { &g_debugDamage, "g_debugDamage", "0", 0, 0, qfalse },
   { &g_motd, "g_motd", "", 0, 0, qfalse },
+  { &g_blood, "com_blood", "1", 0, 0, qfalse },
+
+  { &g_podiumDist, "g_podiumDist", "80", 0, 0, qfalse },
+  { &g_podiumDrop, "g_podiumDrop", "70", 0, 0, qfalse },
 
   { &g_allowVote, "g_allowVote", "1", CVAR_ARCHIVE, 0, qfalse },
   { &g_voteLimit, "g_voteLimit", "5", CVAR_ARCHIVE, 0, qfalse },
@@ -246,7 +273,19 @@ static cvarTable_t   gameCvarTable[ ] =
 
   { &g_privateMessages, "g_privateMessages", "1", CVAR_ARCHIVE, 0, qfalse  },
 
-  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse }
+  { &g_tag, "g_tag", "main", CVAR_INIT, 0, qfalse },
+
+  //Start Champ bot cvars
+  { &bot_thinktime, "bot_thinktime", "100", CVAR_CHEAT, 0, qfalse  },
+  { &bot_minaliens, "bot_minaliens", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_minhumans, "bot_minhumans", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_developer, "bot_developer", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_challenge, "bot_challenge", "0", CVAR_SERVERINFO, 0, qfalse  },
+  { &bot_nochat,    "bot_nochat",    "0", CVAR_TEMP, 0, qfalse  },
+  { &bot_fastchat,  "bot_fastchat",  "0", CVAR_TEMP, 0, qfalse  },
+  //End Champ bot cvars
+  
+  { &g_rankings, "g_rankings", "0", 0, 0, qfalse}
 };
 
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );
@@ -285,7 +324,7 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
       return 0;
 
     case GAME_CLIENT_CONNECT:
-      return (intptr_t)ClientConnect( arg0, arg1 );
+      return (intptr_t)ClientConnect( arg0, arg1, arg2 );
 
     case GAME_CLIENT_THINK:
       ClientThink( arg0 );
@@ -313,6 +352,9 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
 
     case GAME_CONSOLE_COMMAND:
       return ConsoleCommand( );
+
+    case BOTAI_START_FRAME:
+	  return BotAIStartFrame( arg0 );
 
     case GAME_DEMO_COMMAND:
       switch ( arg0 )
@@ -651,6 +693,12 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   G_Printf( "-----------------------------------\n" );
 
+  if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+    G_InitBots( restart );
+    BotAISetup( restart );
+    BotAILoadMap( restart );
+  }
+
   G_RemapTeamShaders( );
 
   // so the server counts the spawns without a client attached
@@ -704,6 +752,10 @@ void G_ShutdownGame( int restart )
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
   trap_SetConfigstring( CS_WINNER, "" );
+  
+  if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
+    BotAIShutdown( restart );
+  }
 }
 
 
@@ -1340,6 +1392,7 @@ void CalculateRanks( void )
   int       i;
   char      P[ MAX_CLIENTS + 1 ] = {""};
   int       ff = 0;
+  int		numBots=0;
 
   level.numConnectedClients = 0;
   level.numPlayingClients = 0;
@@ -1367,7 +1420,8 @@ void CalculateRanks( void )
       if( level.clients[ i ].pers.teamSelection != TEAM_NONE )
       {
         level.numPlayingClients++;
-
+        if( g_entities[ i ].r.svFlags & SVF_BOT )
+            numBots++;
         if( level.clients[ i ].pers.teamSelection == TEAM_ALIENS )
         {
           level.numAlienClients++;
@@ -1385,6 +1439,7 @@ void CalculateRanks( void )
   }
   level.numNonSpectatorClients = level.numLiveAlienClients +
     level.numLiveHumanClients;
+  level.numVotingClients = level.numConnectedClients - numBots;	
   level.numteamVotingClients[ 0 ] = level.numHumanClients;
   level.numteamVotingClients[ 1 ] = level.numAlienClients;
   P[ i ] = '\0';
@@ -1602,7 +1657,7 @@ void BeginIntermission( void )
 
     MoveClientToIntermission( client );
   }
-
+  BotBeginIntermission();
   // send the current scoring to all clients
   SendScoreboardMessageToAllClients( );
 }
@@ -1870,7 +1925,10 @@ void CheckIntermissionExit( void )
 
     if( cl->ps.stats[ STAT_TEAM ] == TEAM_NONE )
       continue;
-
+    
+    if( g_entities[ cl->ps.clientNum ].r.svFlags & SVF_BOT )
+      continue;
+    
     if( cl->readyToExit )
     {
       ready++;

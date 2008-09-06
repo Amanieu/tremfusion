@@ -3017,6 +3017,49 @@ static qboolean CG_DrawQueue( void )
   return qtrue;
 }
 
+
+static void CG_DrawBotInfo( void ){
+	char  buffer[ MAX_STRING_CHARS ];
+	float w;
+	vec4_t      color = { 1, 1, 1, 1 };
+	float scale = 0.4f;
+	const char  *info;
+	char	key[MAX_INFO_KEY];
+	char	value[MAX_INFO_VALUE];
+    int y;
+	int clientnum;
+	
+
+	/*Com_sprintf( buffer, MAX_STRING_CHARS, "BotInfo Test.");
+	w = UI_Text_Width( buffer, scale, 0 );
+	CG_Text_Paint( 640 - w , 160, scale, color, buffer, 0, 0, ITEM_TEXTSTYLE_NORMAL );
+	*/
+	
+
+
+    // we dont spec? so give info for the crosshairplayer
+    //if(!cgs.clientinfo[ cg.snap->ps.clientNum ].botSkill){
+    //    clientnum = CG_CrosshairPlayer();
+    //}
+	//else	// info for the bot we spec
+		clientnum = cg.snap->ps.clientNum;
+
+    info = CG_ConfigString( CS_BOTINFOS + clientnum );
+
+	y = 160;
+	while(1){
+		Info_NextPair( &info, key, value);
+		if( !key[0] ) break;
+		if( !value[0] ) break;
+
+		Com_sprintf( buffer, MAX_STRING_CHARS, va("%s: %s", key, value) );
+		y += UI_Text_Height( buffer, scale, 0 ) + 5;
+		w = UI_Text_Width( buffer, scale, 0 );
+		UI_Text_Paint( 630 - w , y, scale, color, buffer, 0, 0, ITEM_TEXTSTYLE_NORMAL );
+	}
+	
+}
+
 //==================================================================================
 
 #define SPECTATOR_STRING "SPECTATOR"
@@ -3076,6 +3119,7 @@ static void CG_Draw2D( void )
   CG_DrawTeamVote( );
   CG_DrawFollow( );
   CG_DrawQueue( );
+  CG_DrawBotInfo( );
 
   // don't draw center string if scoreboard is up
   cg.scoreBoardShowing = CG_DrawScoreboard( );
