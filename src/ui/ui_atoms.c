@@ -319,6 +319,7 @@ qboolean UI_ConsoleCommand( int realTime )
     }
     trap_Argv( 1, uiInfo.chatPromptCallback, sizeof( uiInfo.chatPromptCallback ) );
     trap_Argv( 2, buffer, sizeof( buffer ) );
+    trap_Cvar_Set( "ui_sayBuffer", "" );
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qfalse;
     uiInfo.chatAdmins = qfalse;

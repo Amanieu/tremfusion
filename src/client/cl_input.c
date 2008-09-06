@@ -781,9 +781,30 @@ void CL_WritePacket( void ) {
 				clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = all;
 			} else if (Q_stricmp(target, "none") == 0) {
 				clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-			} else {
+			} else if (Q_stricmp(target, "team") == 0) {
+				char *t = Info_ValueForKey(cl.gameState.stringData +
+					cl.gameState.stringOffsets[CS_PLAYERS + clc.clientNum], "t");
+				int myteam = atoi(t);
 				clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+				for(i = 0; i < MAX_CLIENTS; i++)
+				{
+					t = Info_ValueForKey(cl.gameState.stringData +
+						cl.gameState.stringOffsets[ CS_PLAYERS + i ], "t");
+					if(!t[0])
+						continue;
+					if(myteam == atoi(t))
+					{
+						if(i < 31)
+							clc.voipTarget1 |= (1 << i);
+						else if(i < 62)
+							clc.voipTarget2 |= (1 << (i-31));
+						else if(i < 93)
+							clc.voipTarget3 |= (1 << (i-62));
+					}
+				}
+			} else {
 				const char *ptr = target;
+				clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
 				do {
 					if ((*ptr == ',') || (*ptr == '\0')) {
 						const int val = atoi(target);

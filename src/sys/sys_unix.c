@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
 
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -43,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(const char **path2)
 {
 	char *p;
 
@@ -68,6 +69,7 @@ char *Sys_DefaultHomePath(void)
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
 }
 
@@ -541,6 +543,18 @@ void Sys_ErrorDialog( const char *error )
 
 /*
 ==============
+Sys_GLimpInit
+
+Unix specific GL implementation initialisation
+==============
+*/
+void Sys_GLimpInit( void )
+{
+	// NOP
+}
+
+/*
+==============
 Sys_PlatformInit
 
 Unix specific initialisation
@@ -548,5 +562,9 @@ Unix specific initialisation
 */
 void Sys_PlatformInit( void )
 {
-	// NOP
+	signal( SIGHUP, Sys_SigHandler );
+	signal( SIGQUIT, Sys_SigHandler );
+	signal( SIGTRAP, Sys_SigHandler );
+	signal( SIGIOT, Sys_SigHandler );
+	signal( SIGBUS, Sys_SigHandler );
 }

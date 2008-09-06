@@ -133,7 +133,7 @@ CL_Netchan_TransmitNextFragment
 =================
 */
 void CL_Netchan_TransmitNextFragment( netchan_t *chan ) {
-	Netchan_TransmitNextFragment( chan );
+	Netchan_TransmitNextFragment( chan, 0 );
 }
 
 /*
@@ -145,7 +145,7 @@ void CL_Netchan_Transmit( netchan_t *chan, msg_t* msg ) {
 	MSG_WriteByte( msg, clc_EOF );
 
 	CL_Netchan_Encode( msg );
-	Netchan_Transmit( chan, msg->cursize, msg->data );
+	Netchan_Transmit( chan, msg->cursize, msg->data, 0 );
 }
 
 extern 	int oldsize;

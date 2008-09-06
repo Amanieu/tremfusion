@@ -173,7 +173,7 @@ GDIR=$(MOUNT_DIR)/game
 CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
-JPDIR=$(MOUNT_DIR)/jpeg-6
+JPDIR=$(MOUNT_DIR)/jpeg-6b
 PYTHONDIR=$(MOUNT_DIR)/python
 LUADIR=$(MOUNT_DIR)/lua
 SCRIPTDIR=$(MOUNT_DIR)/script
@@ -201,7 +201,7 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
 endif
 
 # version info
-VERSION_NUMBER=0.0.1b3
+VERSION_NUMBER=0.0.2
 
 ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .svn),.svn)
@@ -479,14 +479,10 @@ ifeq ($(PLATFORM),mingw32)
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON
 
-  # Require Windows XP or later
-  #
-  # IPv6 support requires a header wspiapi.h to work on earlier versions of
-  # windows. There is no MinGW equivalent of this header so we're forced to
-  # require XP. In theory this restriction can be removed if this header is
-  # obtained separately from the platform SDK. The MSVC build does not have
-  # this limitation.
-  BASE_CFLAGS += -DWINVER=0x501
+  # In the absence of wspiapi.h, require Windows XP or later
+  ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
+    BASE_CFLAGS += -DWINVER=0x501
+  endif
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
@@ -799,8 +795,6 @@ ifeq ($(PLATFORM),sunos)
   THREAD_LDFLAGS=-lpthread
   LDFLAGS=-lsocket -lnsl -ldl -lm
 
-  BOTCFLAGS=-O0
-
   CLIENT_LDFLAGS +=$(shell sdl-config --libs) -lGL
 
 else # ifeq sunos
@@ -907,11 +901,6 @@ endef
 define DO_SMP_CC
 $(echo_cmd) "SMP_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
-endef
-
-define DO_BOT_CC
-$(echo_cmd) "BOT_CC $<"
-$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(BOTCFLAGS) -DBOTLIB -o $@ -c $<
 endef
 
 ifeq ($(GENERATE_DEPENDENCIES),1)
@@ -1195,6 +1184,7 @@ Q3OBJ = \
   $(B)/client/cl_console.o \
   $(B)/client/cl_input.o \
   $(B)/client/cl_keys.o \
+  $(B)/client/cl_logs.o \
   $(B)/client/cl_main.o \
   $(B)/client/cl_net_chan.o \
   $(B)/client/cl_parse.o \
@@ -1238,6 +1228,7 @@ Q3OBJ = \
   \
   $(B)/client/sv_ccmds.o \
   $(B)/client/sv_client.o \
+  $(B)/client/sv_demo.o \
   $(B)/client/sv_game.o \
   $(B)/client/sv_init.o \
   $(B)/client/sv_main.o \
@@ -1260,18 +1251,17 @@ ifneq ($(USE_TTY_CLIENT),1)
 Q3OBJ += \
   $(B)/client/jcapimin.o \
   $(B)/client/jcapistd.o \
-  $(B)/client/jchuff.o   \
-  $(B)/client/jcinit.o \
   $(B)/client/jccoefct.o  \
   $(B)/client/jccolor.o \
-  $(B)/client/jfdctflt.o \
   $(B)/client/jcdctmgr.o \
-  $(B)/client/jcphuff.o \
+  $(B)/client/jchuff.o   \
+  $(B)/client/jcinit.o \
   $(B)/client/jcmainct.o \
   $(B)/client/jcmarker.o \
   $(B)/client/jcmaster.o \
   $(B)/client/jcomapi.o \
   $(B)/client/jcparam.o \
+  $(B)/client/jcphuff.o \
   $(B)/client/jcprepct.o \
   $(B)/client/jcsample.o \
   $(B)/client/jdapimin.o \
@@ -1289,6 +1279,7 @@ Q3OBJ += \
   $(B)/client/jdsample.o \
   $(B)/client/jdtrans.o \
   $(B)/client/jerror.o \
+  $(B)/client/jfdctflt.o \
   $(B)/client/jidctflt.o \
   $(B)/client/jmemmgr.o \
   $(B)/client/jmemnobs.o \
@@ -1452,6 +1443,7 @@ endif
 Q3DOBJ = \
   $(B)/ded/sv_client.o \
   $(B)/ded/sv_ccmds.o \
+  $(B)/ded/sv_demo.o \
   $(B)/ded/sv_game.o \
   $(B)/ded/sv_init.o \
   $(B)/ded/sv_main.o \
@@ -1792,9 +1784,6 @@ $(B)/client/%.o: $(SDIR)/%.c
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
 
-$(B)/client/%.o: $(BLIBDIR)/%.c
-	$(DO_BOT_CC)
-
 $(B)/client/%.o: $(JPDIR)/%.c
 	$(DO_CC)
 
@@ -1828,9 +1817,6 @@ $(B)/ded/%.o: $(SDIR)/%.c
 
 $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
-
-$(B)/ded/%.o: $(BLIBDIR)/%.c
-	$(DO_BOT_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.c
 	$(DO_DED_CC)

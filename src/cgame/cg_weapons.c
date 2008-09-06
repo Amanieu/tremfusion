@@ -757,6 +757,7 @@ void CG_InitWeapons( void )
     CG_RegisterWeapon( i );
 
   cgs.media.level2ZapTS = CG_RegisterTrailSystem( "models/weapons/lev2zap/lightning" );
+  cgs.media.massDriverTS = CG_RegisterTrailSystem( "models/weapons/mdriver/fireTS" );
 }
 
 
@@ -1356,7 +1357,7 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
     if( !BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) )
       continue;
 
-    if( !ps->ammo[0] && !ps->ammo[1] && !BG_Weapon( i )->infiniteAmmo )
+    if( !ps->ammo && !ps->clips && !BG_Weapon( i )->infiniteAmmo )
       colinfo[ numItems ] = 1;
     else
       colinfo[ numItems ] = 0;
@@ -1776,6 +1777,43 @@ void CG_MissileHitPlayer( weapon_t weaponNum, weaponMode_t weaponMode,
 
   if( weapon->wim[ weaponMode ].alwaysImpact )
     CG_MissileHitWall( weaponNum, weaponMode, 0, origin, dir, IMPACTSOUND_FLESH, charge );
+}
+
+/*
+==============
+CG_MassDriverFire
+
+Draws the mass driver trail
+==============
+*/
+
+#define MDRIVER_MUZZLE_OFFSET 48.f
+
+void CG_MassDriverFire( entityState_t *es )
+{
+  vec3_t front, frontToBack;
+  trailSystem_t *ts;
+  float length;
+
+  ts = CG_SpawnNewTrailSystem( cgs.media.massDriverTS );
+  if( !CG_IsTrailSystemValid( &ts ) )
+    return;
+
+  // trail front attaches to the player, needs to be pushed forward a bit
+  // so that it doesn't look like it shot out of the wrong location
+  VectorCopy( es->origin2, front );
+  VectorSubtract( es->pos.trBase, front, frontToBack );
+  length = VectorLength( frontToBack );
+  if( length - MDRIVER_MUZZLE_OFFSET < 0.f )
+    return;
+  VectorScale( frontToBack, 1 / length, frontToBack );
+  VectorMA( front, MDRIVER_MUZZLE_OFFSET, frontToBack, front );
+  CG_SetAttachmentPoint( &ts->frontAttachment, front );
+  CG_AttachToPoint( &ts->frontAttachment );
+
+  // trail back attaches to the impact point
+  CG_SetAttachmentPoint( &ts->backAttachment, es->pos.trBase );
+  CG_AttachToPoint( &ts->backAttachment );
 }
 
 

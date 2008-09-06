@@ -534,7 +534,7 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	//
 	// ignore any other non printable chars
 	//
-	if ( ch < 32 ) {
+	if ( ch < 32 && ch >= 0 ) {
 		return;
 	}
 
@@ -1139,14 +1139,16 @@ void Key_Bind_f (void)
 	}
 
 	keyName = Cmd_Argv(1);
-	if ( keyName[0]=='-' && keyName[1] ) {
-		mode = KEY_RELEASE;
-		detailed = qtrue;
-		keyName++;
-	} else if ( keyName[0]=='+' && keyName[1] ) {
-		mode = KEY_PUSH;
-		detailed = qtrue;
-		keyName++;
+	if ( keyName[0] && keyName[1] ) {
+		if ( keyName[0] == '-' && keyName[1] ) {
+			mode = KEY_RELEASE;
+			detailed = qtrue;
+			keyName++;
+		} else if ( keyName[0] == '+' && keyName[1] ) {
+			mode = KEY_PUSH;
+			detailed = qtrue;
+			keyName++;
+		}
 	}
 
 	b = Key_StringToKeynum (keyName);
@@ -1199,15 +1201,15 @@ void Key_WriteBindings( fileHandle_t f ) {
 	for (i=0 ; i<MAX_KEYS ; i++) {
 		if (keys[i].detailed) {
 			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
-				FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding);
+				FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
 			}
 			if ( keys[i].releaseBinding && keys[i].releaseBinding[0] ) {
-				FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), keys[i].releaseBinding);
+				FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].releaseBinding));
 			}
 		}
 		else {
 			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
-				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding);
+				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
 			}
 		}
 	}
@@ -1300,7 +1302,6 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 		{
 			if (keys[K_ALT].down)
 			{
-//				Key_ClearStates();  // Thilo: why should we clear the key states here?
 				Cvar_SetValue( "r_fullscreen",
 						!Cvar_VariableIntegerValue( "r_fullscreen" ) );
 				return;
@@ -1316,7 +1317,7 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 	}
 
 	// console key is hardcoded, so the user can never unbind it
-	if (key == '`' || key == '~' ||
+	if (key == K_CONSOLE ||
 		( key == K_ESCAPE && keys[K_SHIFT].down ) ) {
 		if (!down) {
 			return;
@@ -1471,11 +1472,6 @@ Normal keyboard characters, already shifted / capslocked / etc
 ===================
 */
 void CL_CharEvent( int key ) {
-	// the console key should never be used as a char
-	if ( key == '`' || key == '~' ) {
-		return;
-	}
-
 	// delete is not a printable character and is
 	// otherwise handled by Field_KeyDownEvent
 	if ( key == 127 ) {

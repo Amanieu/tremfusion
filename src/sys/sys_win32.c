@@ -39,13 +39,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
+static char homePath2[ MAX_OSPATH ] = { 0 };
 
 /*
 ================
 Sys_DefaultHomePath
 ================
 */
-char *Sys_DefaultHomePath( void )
+char *Sys_DefaultHomePath( const char **path2 )
 {
 	TCHAR szPath[MAX_PATH];
 	FARPROC qSHGetFolderPath;
@@ -76,7 +77,26 @@ char *Sys_DefaultHomePath( void )
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
+
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
+						NULL, 0, szPath ) ) )
+		{
+			Com_Printf("Unable to detect CSIDL_APPDATA\n");
+			FreeLibrary(shfolder);
+			return NULL;
+		}
+		Q_strncpyz( homePath2, szPath, sizeof( homePath ) );
+		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremulous" );
+		*path2 = homePath2;
 		FreeLibrary(shfolder);
+		if( !CreateDirectory( homePath2, NULL ) )
+		{
+			if( GetLastError() != ERROR_ALREADY_EXISTS )
+			{
+				Com_Printf("Unable to create directory \"%s\"\n", homePath2 );
+				*path2 = NULL;
+			}
+		}
 		if( !CreateDirectory( homePath, NULL ) )
 		{
 			if( GetLastError() != ERROR_ALREADY_EXISTS )
@@ -582,6 +602,40 @@ void Sys_ErrorDialog( const char *error )
 	}
 }
 
+#ifndef DEDICATED
+static qboolean SDL_VIDEODRIVER_externallySet = qfalse;
+#endif
+
+/*
+==============
+Sys_GLimpInit
+
+Windows specific GL implementation initialisation
+==============
+*/
+void Sys_GLimpInit( void )
+{
+#ifndef DEDICATED
+	if( !SDL_VIDEODRIVER_externallySet )
+	{
+		// It's a little bit weird having in_mouse control the
+		// video driver, but from ioq3's point of view they're
+		// virtually the same except for the mouse input anyway
+		if( Cvar_VariableIntegerValue( "in_mouse" ) == -1 )
+		{
+			// Use the windib SDL backend, which is closest to
+			// the behaviour of idq3 with in_mouse set to -1
+			_putenv( "SDL_VIDEODRIVER=windib" );
+		}
+		else
+		{
+			// Use the DirectX SDL backend
+			_putenv( "SDL_VIDEODRIVER=directx" );
+		}
+	}
+#endif
+}
+
 /*
 ==============
 Sys_PlatformInit
@@ -592,7 +646,15 @@ Windows specific initialisation
 void Sys_PlatformInit( void )
 {
 #ifndef DEDICATED
-	// Force the DirectX SDL backend to be used
-	_putenv( "SDL_VIDEODRIVER=directx" );
+	const char *SDL_VIDEODRIVER = getenv( "SDL_VIDEODRIVER" );
+
+	if( SDL_VIDEODRIVER )
+	{
+		Com_Printf( "SDL_VIDEODRIVER is externally set to \"%s\", "
+				"in_mouse -1 will have no effect\n", SDL_VIDEODRIVER );
+		SDL_VIDEODRIVER_externallySet = qtrue;
+	}
+	else
+		SDL_VIDEODRIVER_externallySet = qfalse;
 #endif
 }

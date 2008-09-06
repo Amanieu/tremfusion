@@ -26,7 +26,7 @@ BASE_OBJ="
 
 cd `dirname $0`
 if [ ! -f Makefile ]; then
-	echo "This script must be run from the Tremulous build directory"
+	echo "This script must be run from the Tremulous build directory";
 	exit 1
 fi
 
@@ -103,21 +103,6 @@ if [ -d /Developer/SDKs/MacOSX10.3.9.sdk ] && [ $TIGERHOST ]; then
 	PPC_SERVER_LDFLAGS=$PPC_CLIENT_LDFLAGS
 fi
 
-if [ -d /Developer/SDKs/MacOSX10.2.8.sdk ] && [ -x /usr/bin/gcc-3.3 ] && [ $TIGERHOST ]; then
-	PPC_CLIENT_SDK=/Developer/SDKs/MacOSX10.2.8.sdk
-	PPC_CLIENT_CC=gcc-3.3
-	PPC_CLIENT_CFLAGS="-arch ppc \
-		-nostdinc \
-		-F/Developer/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks \
-		-I/Developer/SDKs/MacOSX10.2.8.sdk/usr/include/gcc/darwin/3.3 \
-		-isystem /Developer/SDKs/MacOSX10.2.8.sdk/usr/include \
-		-DMAC_OS_X_VERSION_MIN_REQUIRED=1020"
-	PPC_CLIENT_LDFLAGS="-arch ppc \
-		-L/Developer/SDKs/MacOSX10.2.8.sdk/usr/lib/gcc/darwin/3.3 \
-		-F/Developer/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks \
-		-Wl,-syslibroot,/Developer/SDKs/MacOSX10.2.8.sdk,-m"
-fi
-
 if [ -z $PPC_CLIENT_SDK ] || [ -z $PPC_SERVER_SDK ] || [ -z $X86_SDK ]; then
 	echo "\
 ERROR: This script is for building a Universal Binary.  You cannot build
@@ -130,13 +115,12 @@ fi
 echo "Building PPC Dedicated Server against \"$PPC_SERVER_SDK\""
 echo "Building PPC Client against \"$PPC_CLIENT_SDK\""
 echo "Building X86 Client/Dedicated Server against \"$X86_SDK\""
-if [ "$PPC_CLIENT_SDK" != "/Developer/SDKs/MacOSX10.2.8.sdk" ] || \
-	[ "$PPC_SERVER_SDK" != "/Developer/SDKs/MacOSX10.3.9.sdk" ] || \
+if [ "$PPC_SERVER_SDK" != "/Developer/SDKs/MacOSX10.3.9.sdk" ] || \
 	[ "$X86_SDK" != "/Developer/SDKs/MacOSX10.4u.sdk" ]; then
 	echo "\
 WARNING: in order to build a binary with maximum compatibility you must
-         build on Mac OS X 10.4 using Xcode 2.3 or 2.5 and have the
-         MacOSX10.2.8, MacOSX10.3.9, and MacOSX10.4u SDKs installed
+         build on Mac OS X 10.4 using Xcode 2.3 or 2.5 
+         and have the  MacOSX10.3.9 and MacOSX10.4u SDKs installed
          from the Xcode install disk Packages folder."
 fi
 sleep 3

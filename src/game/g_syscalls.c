@@ -261,6 +261,12 @@ void trap_SendGameStat( const char *data )
   return;
 }
 
+void trap_DemoCommand( demoCommand_t cmd, const char *string )
+{
+  syscall( G_DEMO_COMMAND, cmd, string );
+  return;
+}
+
 int trap_Parse_AddGlobalDefine( char *define )
 {
   return syscall( G_PARSE_ADD_GLOBAL_DEFINE, define );

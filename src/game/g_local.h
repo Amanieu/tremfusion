@@ -208,6 +208,7 @@ struct gentity_s
   qboolean          spawned;            // whether or not this buildable has finished spawning
   int               shrunkTime;         // time when a barricade shrunk or zero
   int               buildTime;          // when this buildable was built
+  int               animTime;           // last animation change
   int               time1000;           // timer evaluated every second
   qboolean          deconstruct;        // deconstruct if no BP left
   int               deconstructTime;    // time at which structure marked
@@ -325,6 +326,9 @@ typedef struct
   int                 nameChangeTime;
   int                 nameChanges;
 
+  // used to save persistant[] values while in SPECTATOR_FOLLOW mode
+  int                 savedCredit;
+
   // votes
   qboolean            vote;
   qboolean            teamVote;
@@ -334,6 +338,7 @@ typedef struct
   char                ip[ 16 ];
   qboolean            muted;
   qboolean            denyBuild;
+  qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 } clientPersistant_t;
@@ -432,6 +437,7 @@ struct gclient_s
   unlagged_t          unlaggedBackup;
   unlagged_t          unlaggedCalc;
   int                 unlaggedTime;
+  qboolean            useUnlagged;  
  
   float               voiceEnthusiasm;
   char                lastVoiceCmd[ MAX_VOICE_CMD_LEN ];
@@ -473,6 +479,14 @@ typedef struct damageRegion_s
   int       minAngle, maxAngle;
   qboolean  crouch;
 } damageRegion_t;
+
+// demo commands
+typedef enum
+{
+    DC_SERVER_COMMAND = -1,
+    DC_CLIENT_SET = 0,
+    DC_CLIENT_REMOVE
+} demoCommand_t;
 
 //status of the warning of certain events
 typedef enum
@@ -626,6 +640,8 @@ typedef struct
 
   char              emoticons[ MAX_EMOTICONS ][ MAX_EMOTICON_NAME_LEN ];
   int               emoticonCount;
+
+  demoState_t       demoState;
 } level_locals_t;
 
 #define CMD_CHEAT         0x01
@@ -929,6 +945,7 @@ void G_TeamVote( gentity_t *ent, qboolean voting );
 void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
+void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
 
 //
@@ -952,7 +969,7 @@ void ClientCommand( int clientNum );
 void G_UnlaggedStore( void );
 void G_UnlaggedClear( gentity_t *ent );
 void G_UnlaggedCalc( int time, gentity_t *skipEnt );
-void G_UnlaggedOn( vec3_t muzzle, float range );
+void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range );
 void G_UnlaggedOff( void );
 void ClientThink( int clientNum );
 void ClientEndFrame( gentity_t *ent );
@@ -1225,4 +1242,7 @@ void trap_AddCommand( const char *cmd_name, void (*function) (void));
 void trap_RemoveCommand( const char *cmd_name);
 #endif
 
+void      trap_DemoCommand( demoCommand_t cmd, const char *string );
+
 #endif
+

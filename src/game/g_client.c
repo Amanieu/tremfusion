@@ -989,6 +989,7 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
+  char      buf[ MAX_INFO_STRING ];
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1058,6 +1059,9 @@ void ClientUserinfoChanged( int clientNum )
       {
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
+        // log renames to demo
+        Info_SetValueForKey( buf, "name", client->pers.netname );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
       }
     }
   }
@@ -1140,6 +1144,12 @@ void ClientUserinfoChanged( int clientNum )
     client->pers.teamInfo = qtrue;
   else
     client->pers.teamInfo = qfalse;
+  
+  s = Info_ValueForKey( userinfo, "cg_unlagged" );
+  if( !s[0] || atoi( s ) != 0 )
+    client->useUnlagged = qtrue;
+  else
+    client->useUnlagged = qfalse;
 
   // colors
   strcpy( c1, Info_ValueForKey( userinfo, "color1" ) );
@@ -1274,6 +1284,7 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+  char      buffer[ MAX_INFO_STRING ] = "";
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -1327,6 +1338,12 @@ void ClientBegin( int clientNum )
   trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
+
+  // log to demo
+  Info_SetValueForKey( buffer, "name", client->pers.netname );
+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );
@@ -1507,8 +1524,8 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   maxAmmo = BG_Weapon( weapon )->maxAmmo;
   maxClips = BG_Weapon( weapon )->maxClips;
   BG_AddWeaponToInventory( weapon, client->ps.stats );
-  client->ps.ammo[0] = maxAmmo;
-  client->ps.ammo[1] = maxClips;
+  client->ps.ammo = maxAmmo;
+  client->ps.clips = maxClips;
 
   client->ps.persistant[ PERS_NEWWEAPON ] = 0;
 
@@ -1710,6 +1727,8 @@ void ClientDisconnect( int clientNum )
       ent->client->ps.persistant[ PERS_SPECSTATE ] = SPECTATOR_NOT;
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
+
+  G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
 
   CalculateRanks( );
 

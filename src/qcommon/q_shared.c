@@ -998,7 +998,7 @@ char *Q_CleanStr( char *string ) {
 		if ( Q_IsColorString( s ) ) {
 			s++;
 		}		
-		else if ( c >= 0x20 && c <= 0x7E ) {
+		else if ( ( c >= 0x20 && c <= 0x7E ) || c == '\n' ) {
 			*d++ = c;
 		}
 		s++;
@@ -1054,11 +1054,11 @@ varargs versions of all text functions.
 */
 char	* QDECL va( char *format, ... ) {
 	va_list		argptr;
-	static char string[2][32000]; // in case va is called by nested functions
+	static char string[8][32000]; // in case va is called by nested functions
 	static int	index = 0;
 	char		*buf;
 
-	buf = string[index & 1];
+	buf = string[index & 7];
 	index++;
 
 	va_start (argptr, format);
@@ -1478,3 +1478,10 @@ char *Com_SkipTokens( char *s, int numTokens, char *sep )
 	else
 		return s;
 }
+
+#ifdef _MSC_VER
+float rint( float v ) {
+	if( v >= 0.5f ) return ceilf( v );
+	else return floorf( v );
+}
+#endif

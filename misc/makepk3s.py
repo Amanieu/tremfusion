@@ -18,9 +18,15 @@ parser.add_option("-b", "--debug",
 parser.add_option("--dir", "--directory",
                   dest="directory", default=".",
                   help="the directory to place the pk3's in")
+parser.add_option("-r", "--repository",
+                  dest="repository", default="..",
+                  help="path to the repository root folder")
 parser.add_option("-s", "--symlink",
                   dest="symlink_dir", default=None,
                   help="the directory to place symlinks to the pk3's in")
+parser.add_option("-g", "--game", 
+                  action="store_true", dest="inc_game_qvm", default=False,
+                  help="includes game.qvm in the tremfusion-game.pk3")
 
 (options, args) = parser.parse_args()
 scm_rev_num = int( commands.getoutput("hg identify -n | tr -d '+'") )
@@ -40,6 +46,12 @@ def add_dir_tree(globstring, pk3path):
       add_file(fspath,  join(pk3path, basename(fspath)) )
 
 dir_path = abspath( options.directory )
+
+if not exists( options.repository ):
+    parser.error("directory %s does not exist" % options.repository )
+    
+if not isdir( options.repository ):
+    parser.error("%s is not a directory" % options.repository )
 
 if not exists( dir_path ):
     parser.error("directory %s does not exist" % options.directory )
@@ -62,11 +74,11 @@ if options.makedata:
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
-    add_dir_tree("../fonts/*", "fonts/")
-    add_dir_tree("../gfx/*", "gfx/")
-    add_dir_tree("../models/*", "models/")
-    add_dir_tree("../sound/*", "sound/")
-    add_dir_tree("../ui/*", "ui/")
+    add_dir_tree(os.path.join(options.repository, "fonts/*"), "fonts/")
+    add_dir_tree(os.path.join(options.repository, "gfx/*"), "gfx/")
+    add_dir_tree(os.path.join(options.repository, "models/*"), "models/")
+    add_dir_tree(os.path.join(options.repository, "sound/*"), "sound/")
+    add_dir_tree(os.path.join(options.repository, "ui/*"), "ui/")
 
     pk3.close()
     if symlink_dir:
@@ -82,19 +94,20 @@ pk3filename = join ( dir_path, "tremfusion-game-r%04d.pk3" % scm_rev_num )
 print "Creating pk3 file at: %s" % pk3filename
 pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
-add_dir_tree("../armour/*", "armour/")
-add_dir_tree("../configs/*", "configs/")
-add_dir_tree("../scripts/*", "scripts/")
+add_dir_tree(os.path.join(options.repository, "armour/*"), "armour/")
+add_dir_tree(os.path.join(options.repository, "configs/*"), "configs/")
+add_dir_tree(os.path.join(options.repository, "scripts/*"), "scripts/")
 
 if options.usedebug:
-  qvmglobstring = "../build/debug-*/base/vm/*.qvm"
+  qvmglobstring = os.path.join(options.repository, "build/debug-*/base/vm/*.qvm")
 else:
-  qvmglobstring = "../build/release-*/base/vm/*.qvm"
+  qvmglobstring = os.path.join(options.repository, "build/release-*/base/vm/*.qvm")
 
 for fspath in glob.glob(qvmglobstring):
   if os.path.isdir(fspath): continue
   pk3path = "vm/" + os.path.basename(fspath)
-  if pk3path == "vm/game.qvm": # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
+  # Leave out game.qvm because its not needed by the clients and wouldn't work for a server without our tremded.
+  if not options.inc_game_qvm and pk3path == "vm/game.qvm":
     continue
   add_file(fspath, pk3path)
 

@@ -573,6 +573,8 @@ typedef struct
   int         painTime;
   int         painDirection;  // flip from 0 to 1
 
+  qboolean    squadMarked;    // player has been marked as a squadmember
+
   // machinegun spinning
   float       barrelAngle;
   int         barrelTime;
@@ -1283,6 +1285,7 @@ typedef struct
   qhandle_t   humanBleedPS;
 
   qhandle_t   teslaZapTS;
+  qhandle_t   massDriverTS;
 
   sfxHandle_t lCannonWarningSound;
   sfxHandle_t lCannonWarningSound2;
@@ -1294,6 +1297,9 @@ typedef struct
   qhandle_t   healthCross3X;
   qhandle_t   healthCrossMedkit;
   qhandle_t   healthCrossPoisoned;
+  
+  qhandle_t   squadMarkerH;
+  qhandle_t   squadMarkerV;
 } cgMedia_t;
 
 typedef struct
@@ -1514,6 +1520,7 @@ extern  vmCvar_t    cg_painBlendZoom;
 
 extern  vmCvar_t    cg_stickySpec;
 extern  vmCvar_t    cg_alwaysSprint;
+extern  vmCvar_t    cg_unlagged;
 
 extern  vmCvar_t    cg_debugVoices;
 
@@ -1599,6 +1606,7 @@ void        CG_DrawRect( float x, float y, float width, float height, float size
 void        CG_DrawSides(float x, float y, float w, float h, float size);
 void        CG_DrawTopBottom(float x, float y, float w, float h, float size);
 qboolean    CG_WorldToScreen( vec3_t point, float *x, float *y );
+qboolean    CG_WorldToScreenWrap( vec3_t point, float *x, float *y );
 char        *CG_KeyBinding( const char *bind );
 
 
@@ -1723,6 +1731,7 @@ void        CG_MissileHitWall( weapon_t weapon, weaponMode_t weaponMode, int cli
 void        CG_MissileHitPlayer( weapon_t weapon, weaponMode_t weaponMode, vec3_t origin, vec3_t dir, int entityNum, int charge );
 void        CG_Bullet( vec3_t origin, int sourceEntityNum, vec3_t normal, qboolean flesh, int fleshEntityNum );
 void        CG_ShotgunFire( entityState_t *es );
+void        CG_MassDriverFire( entityState_t *es );
 
 void        CG_AddViewWeapon (playerState_t *ps);
 void        CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent );

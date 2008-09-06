@@ -1962,7 +1962,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
 
     while( s && *s && count < len )
     {
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
 
       if( Q_IsColorString( s ) )
       {
@@ -2026,7 +2026,7 @@ float UI_Text_Height( const char *text, float scale, int limit )
       }
       else
       {
-        glyph = &font->glyphs[( int )*s];
+        glyph = &font->glyphs[( unsigned char )*s];
 
         if( max < glyph->height )
           max = glyph->height;
@@ -2120,7 +2120,7 @@ void UI_Text_Paint_Limit( float *maxX, float x, float y, float scale,
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[ ( int )*s ];
+      glyph = &font->glyphs[ ( unsigned char )*s ];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2217,7 +2217,7 @@ void UI_Text_Paint( float x, float y, float scale, vec4_t color, const char *tex
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2372,7 +2372,7 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
       len = limit;
 
     count = 0;
-    glyph2 = &font->glyphs[ ( int ) cursor];
+    glyph2 = &font->glyphs[ ( unsigned char ) cursor];
     width2 = glyph2->imageWidth * DC->aspectScale;
     height2 = glyph2->imageHeight;
     skip2 = glyph2->xSkip * DC->aspectScale;
@@ -2380,7 +2380,7 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
     while( s && *s && count < len )
     {
       float width, height, skip;
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -3647,7 +3647,7 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
-      else if( key < 32 || !item->cvar )
+      else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars
         releaseFocus = qfalse;
@@ -5285,6 +5285,7 @@ static bind_t g_bindings[] =
     { "messagemode5", -1,            -1, -1, -1 },
     { "messagemode6", -1,            -1, -1, -1 },
     { "prompt",       -1,            -1, -1, -1 },
+    { "squadmark",    'k',           -1, -1, -1 },
   };
 
 
