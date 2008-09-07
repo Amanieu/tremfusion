@@ -577,6 +577,23 @@ static scLibObjectDef_t cvarl_def = {
   NULL
 };
 
+static scConstant_t cvar_constants[] = {
+  { "CVAR_ARCHIVE", TYPE_INTEGER, (void*) CVAR_ARCHIVE },
+  { "CVAR_USERINFO", TYPE_INTEGER, (void*) CVAR_USERINFO },
+  { "CVAR_SERVERINFO", TYPE_INTEGER, (void*) CVAR_SERVERINFO },
+  { "CVAR_INIT", TYPE_INTEGER, (void*) CVAR_INIT },
+  { "CVAR_LATCH", TYPE_INTEGER, (void*) CVAR_LATCH },
+  { "CVAR_ROM", TYPE_INTEGER, (void*) CVAR_ROM },
+  { "CVAR_USER_CREATED", TYPE_INTEGER, (void*) CVAR_USER_CREATED },
+  { "CVAR_TEMP", TYPE_INTEGER, (void*) CVAR_TEMP },
+  { "CVAR_CHEAT", TYPE_INTEGER, (void*) CVAR_CHEAT },
+  { "CVAR_NORESTART", TYPE_INTEGER, (void*) CVAR_NORESTART },
+  { "CVAR_SERVER_CREATED", TYPE_INTEGER, (void*) CVAR_SERVER_CREATED },
+  { "CVAR_VM_CREATED", TYPE_INTEGER, (void*) CVAR_VM_CREATED },
+  { "CVAR_PROTECTED", TYPE_INTEGER, (void*) CVAR_PROTECTED },
+  { "CVAR_NONEXISTENT", TYPE_INTEGER, (void*) CVAR_NONEXISTENT },
+};
+
 /*
 ======================================================================
 
@@ -1142,6 +1159,7 @@ void SC_Common_Init( void )
 
   cvar_class = SC_AddClass("common", &cvar_def);
   cvarl_class = SC_AddClass("common", &cvarl_def);
+  SC_Constant_Add(cvar_constants);
 
   // set cvarl singleton to namespace root
   value.type = TYPE_OBJECT;
