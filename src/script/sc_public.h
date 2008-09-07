@@ -53,6 +53,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "structmember.h"
 #endif
 
+typedef struct scDataTypeValue_s scDataTypeValue_t;
+typedef struct scDataTypeArray_s scDataTypeArray_t;
+typedef struct scDataTypeHash_s scDataTypeHash_t;
+typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
+typedef struct scDataTypeFunction_s scDataTypeFunction_t;
+typedef struct scObject_s scObject_t;
+typedef struct scClass_s scClass_t;
+typedef scDataTypeHash_t scNamespace_t;
+
+typedef int (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
+
+
 #ifdef GAME
 #include "../game/g_local.h"
 #endif
@@ -105,17 +117,6 @@ typedef struct
   int     buflen;
   char    *data;
 } scDataTypeString_t;
-
-typedef struct scDataTypeValue_s scDataTypeValue_t;
-typedef struct scDataTypeArray_s scDataTypeArray_t;
-typedef struct scDataTypeHash_s scDataTypeHash_t;
-typedef struct scDataTypeHashEntry_s scDataTypeHashEntry_t;
-typedef struct scDataTypeFunction_s scDataTypeFunction_t;
-typedef struct scObject_s scObject_t;
-typedef struct scClass_s scClass_t;
-typedef scDataTypeHash_t scNamespace_t;
-
-typedef int (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
 
 #ifdef USE_LUA
 typedef unsigned int scLuaFunc_t;
@@ -377,6 +378,8 @@ typedef struct
   scField_t                 *fields;
   void                      *closure;
 } scLibObjectDef_t;
+
+#define FIELD_ADDRESS(STRUCT, X) ((size_t)&(((STRUCT *)0)->X))
 
 void SC_AddLibrary( const char *namespace, scLibFunction_t lib[] );
 

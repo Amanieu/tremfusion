@@ -431,6 +431,8 @@ static scObject_t* new_cvar(const char *name)
   // cvar size is struct size and name string size
   cvar = BG_Alloc(sizeof(struct cvarType_s) - sizeof(char) + len + 1);
   strcpy(&cvar->name, name);
+  memset(&cvar->cvar, 0x00, sizeof(cvar->cvar));
+  self->data.data.userdata = cvar;
 
   return self;
 }
