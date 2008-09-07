@@ -328,6 +328,7 @@ void SV_DemoStartRecord(void)
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	SV_DemoWriteFrame();
 	Com_Printf("Recording demo %s.\n", sv.demoName);
+	sv.demoState = DS_RECORDING;
 	Cvar_SetValue("sv_demoState", DS_RECORDING);
 }
 
@@ -430,6 +431,7 @@ void SV_DemoStartPlayback(void)
 		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
 	SV_DemoReadFrame();
 	Com_Printf("Playing demo %s.\n", sv.demoName);
+	sv.demoState = DS_PLAYBACK;
 	Cvar_SetValue("sv_demoState", DS_PLAYBACK);
 }
 
@@ -451,9 +453,12 @@ void SV_DemoStopPlayback(void)
 	sv.demoState = DS_NONE;
 	Cvar_SetValue("sv_demoState", DS_NONE);
 	Com_Printf("Stopped playing demo %s.\n", sv.demoName);
+
+	// demo hasn't actually started yet
+	if (sv.demoState != DS_PLAYBACK)
 #ifdef DEDICATED
-	Cbuf_AddText("map_restart 0\n");
+		Cbuf_AddText("map_restart 0\n");
 #else
-	Cbuf_AddText("killserver\n");
+		Cbuf_AddText("killserver\n");
 #endif
 }

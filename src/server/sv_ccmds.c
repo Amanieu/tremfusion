@@ -537,24 +537,7 @@ static void SV_Demo_Record_f( void ) {
 		Com_Printf("ERROR: Couldn't open %s for writing.\n", sv.demoName);
 		return;
 	}
-	sv.demoState = DS_RECORDING;
 	SV_DemoStartRecord();
-}
-
-
-/*
-=================
-SV_Demo_StopRecord_f
-=================
-*/
-static void SV_Demo_StopRecord_f( void ) {
-	if (sv.demoState != DS_RECORDING) {
-		Com_Printf("No demo is currently being recorded.\n");
-		return;
-	}
-
-	// Close the demo file
-	SV_DemoStopRecord();
 }
 
 
@@ -593,7 +576,6 @@ static void SV_Demo_Play_f( void ) {
 		Com_Printf("ERROR: Couldn't open %s for reading.\n", sv.demoName);
 		return;
 	}
-	sv.demoState = DS_PLAYBACK;
 	SV_DemoStartPlayback();
 }
 
@@ -604,13 +586,16 @@ SV_Demo_Stop_f
 =================
 */
 static void SV_Demo_Stop_f( void ) {
-	if (sv.demoState != DS_PLAYBACK) {
-		Com_Printf("No demo is currently being played.\n");
+	if (sv.demoState == DS_NONE) {
+		Com_Printf("No demo is currently being recorded or played.\n");
 		return;
 	}
 
 	// Close the demo file
-	SV_DemoStopPlayback();
+	if (sv.demoState == DS_PLAYBACK)
+		SV_DemoStopPlayback();
+	else
+		SV_DemoStopRecord();
 }
 
 //===========================================================
@@ -640,7 +625,6 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
 	Cmd_AddCommand ("redirectClient", SV_RedirectClient_f);
 	Cmd_AddCommand ("demo_record", SV_Demo_Record_f);
-	Cmd_AddCommand ("demo_stoprecord", SV_Demo_StopRecord_f);
 	Cmd_AddCommand ("demo_play", SV_Demo_Play_f);
 	Cmd_AddCommand ("demo_stop", SV_Demo_Stop_f);
 }
