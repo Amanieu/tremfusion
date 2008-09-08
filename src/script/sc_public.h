@@ -404,6 +404,7 @@ extern scClass_t *module_class;
 
 void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure);
 
+scObject_t *SC_Vec3FromNewVec3_t( float *vect );
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 vec3_t     *SC_Vec3FromScript(scObject_t *object);
 scObject_t *SC_Vec4FromVec4_t( float *vect );
