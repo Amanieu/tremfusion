@@ -2107,18 +2107,12 @@ CROSSHAIR
 */
 
 
-const vec4_t crosshairColours[] = {
-  { 1.0f, 0.0f, 0.0f, 0.35f }, // alien normal
-  { 0.5f, 0.0f, 0.0f, 0.35f }, // alien team
-  { 0.0f, 0.8f, 1.0f, 0.35f }, // human normal
-  { 0.0f, 0.4f, 0.5f, 0.35f } // human team
-};
 /*
 =================
 CG_DrawCrosshair
 =================
 */
-static void CG_DrawCrosshair( void )
+static void CG_DrawCrosshair( rectDef_t *rect, vec4_t color )
 {
   float         w, h;
   qhandle_t     hShader;
@@ -2147,20 +2141,25 @@ static void CG_DrawCrosshair( void )
 
   w = h = wi->crossHairSize * cg_crosshairSize.value;
   w *= cgDC.aspectScale;
-
+  
+  //FIXME: find a way to use rect from the hud instead of cg_crosshair[XY]
+  //the different sizes of the crosshairs make this a pain
   x = 320 + cg_crosshairX.integer - ( w / 2 );
   y = 240 + cg_crosshairY.integer - ( h / 2 );
 
   hShader = wi->crossHair;
+  
+  //aiming at a friendly player/buildable, dim the crosshair
+  if( cg.time == cg.crosshairClientTime || cg.crosshairBuildable >= 0 )
+  {
+    int i;
+    for( i = 0; i < 3; i++ )
+      color[i] *= .5f;
+  }
 
   if( hShader != 0 )
   {
-    int colour = 0;
-    if( cg.snap->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
-      colour += 2;
-    if( cg.time == cg.crosshairClientTime || cg.crosshairBuildable >= 0 )
-      colour += 1;
-    trap_R_SetColor( crosshairColours[ colour ] );
+    trap_R_SetColor( color );
     CG_DrawPic( x, y, w, h, hShader );
     trap_R_SetColor( NULL );
   }
@@ -2216,6 +2215,22 @@ static void CG_ScanForCrosshairEntity( void )
   cg.crosshairClientTime = cg.time;
 }
 
+
+/*
+=====================
+CG_DrawLocation
+=====================
+*/
+static void CG_DrawLocation( rectDef_t *rect, float scale, vec4_t color )
+{
+  const char    *location;
+  float         maxX;
+  maxX = rect->x + rect->w;
+  location = CG_ConfigString(CS_LOCATIONS + cgs.clientinfo[ cg.clientNum ].location);
+
+  UI_Text_Paint_Limit( &maxX, rect->x, rect->y, scale, color, location, 0, 0);
+  trap_R_SetColor( NULL );
+}
 
 /*
 =====================
@@ -2465,8 +2480,14 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
     case CG_SPECTATORS:
       CG_DrawTeamSpectators( &rect, scale, textvalign, color, shader );
       break;
+    case CG_PLAYER_LOCATION:
+      CG_DrawLocation( &rect, scale, color );
+      break;
     case CG_PLAYER_CROSSHAIRNAMES:
       CG_DrawCrosshairNames( &rect, scale, textStyle );
+      break;
+    case CG_PLAYER_CROSSHAIR:
+      CG_DrawCrosshair( &rect, color );
       break;
     case CG_STAGE_REPORT_TEXT:
       CG_DrawStageReport( &rect, text_x, text_y, color, scale, textalign, textvalign, textStyle );
@@ -3085,7 +3106,6 @@ static void CG_Draw2D( void )
     if( cg_drawStatus.integer )
       Menu_Paint( menu, qtrue );
 
-    CG_DrawCrosshair( );
   }
   else if( cg_drawStatus.integer )
     Menu_Paint( defaultMenu, qtrue );
