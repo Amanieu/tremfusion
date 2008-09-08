@@ -342,7 +342,7 @@ int SC_Lua_div_number_metamethod(lua_State *L)
     SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
 
   if(n2 == 0)
-    lua_pushnumber(L, INFINITY);
+    lua_pushnumber(L, 1.0/0.0);
   else
     lua_pushnumber(L, n1 / n2);
   return 1;
@@ -361,7 +361,7 @@ int SC_Lua_mod_number_metamethod(lua_State *L)
     SC_Lua_arg_error(L, 2, "number", lua_typename(L, SC_Lua_sctype2luatype(t)));
 
   if(n2 == 0)
-    lua_pushnumber(L, NAN);
+    lua_pushnumber(L, sqrt(-1.0));
   else
     lua_pushnumber(L, n1 - floor(n1/n2) * n2);
   return 1;

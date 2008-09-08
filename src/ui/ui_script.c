@@ -168,7 +168,7 @@ void SC_UIDraw( void )
 #define ADD_DRAW_FUNC_DESC "index = ui.AddDrawFunc(function) \n\n Adds function to an array of functions " \
                            "that will be called every UI_Refresh after the Menus have been drawn\n Returns index of function in " \
                            "array for ui.RemoveDrawFunc(index)"
-static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   SC_ArraySet( draw_func_array, current_draw_func_index, &in[0]);
   SC_ArraySet( draw_func_arg_array, current_draw_func_index, &in[1]);
@@ -178,7 +178,7 @@ static int add_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 #define REMOVE_DRAW_FUNC_DESC "ui.RemoveDrawFunc(index) \n\n Deletes the function that was added " \
                            "that will be called every UI_Refresh\n Returns: None"
-static int remove_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int remove_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   int func_index;
   func_index = in[0].data.integer;
@@ -191,7 +191,7 @@ static int remove_draw_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void
 #define ADD_MOVE_FUNC_DESC "index = ui.AddDrawFunc(function) \n\n Adds function to an array of functions " \
                            "that will be called every UI_Refresh before the Menus have been drawn\n Returns index of function in " \
                            "array for ui.RemoveMoveFunc(index)"
-static int add_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int add_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   SC_ArraySet( move_func_array, current_move_func_index, &in[0]);
   SC_ArraySet( move_func_arg_array, current_move_func_index, &in[1]);
@@ -201,7 +201,7 @@ static int add_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
 }
 #define REMOVE_MOVE_FUNC_DESC "ui.RemoveMoveFunc(index) \n\n Deletes the function that was added " \
                            "that will be called every UI_Refresh\n Returns: None"
-static int remove_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int remove_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   int func_index;
   func_index = in[0].data.integer;
@@ -211,7 +211,7 @@ static int remove_move_func( scDataTypeValue_t *in, scDataTypeValue_t *out, void
   return 0;
 }
 
-static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   float x, y, scale;
   vec4_t *colour;
@@ -226,7 +226,7 @@ static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   float x, y, w, h, size;
   vec4_t *colour;
@@ -265,7 +265,7 @@ typedef enum
   RECT_H,
 } sc_rect_closures;
 
-static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
   scObject_t *self;
@@ -286,7 +286,7 @@ static int rect_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int rect_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int rect_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
   scObject_t *self;
@@ -305,10 +305,10 @@ static int rect_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   return 0;
 }
 
-static int rect_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int rect_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
-  int settype = (int)closure;
+  int settype = closure.n;
   scObject_t *self;
   sc_rect_t *data;
   rectDef_t *rect;
@@ -338,10 +338,10 @@ static int rect_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int rect_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int rect_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
-  int gettype = (int)closure;
+  int gettype = closure.n;
   scObject_t *self;
   sc_rect_t *data;
   rectDef_t *rect;
@@ -374,7 +374,7 @@ static int rect_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   float x, y;
   scObject_t *self;
@@ -394,15 +394,15 @@ static int rect_containspoint(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
 }
 
 static scLibObjectMember_t rect_members[] = {
-    { "x", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_X },
-    { "y", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_Y },
-    { "w", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_W },
-    { "h", "", TYPE_FLOAT, rect_set, rect_get, (void*)RECT_H },
+    { "x", "", TYPE_FLOAT, rect_set, rect_get, { .n = RECT_X } },
+    { "y", "", TYPE_FLOAT, rect_set, rect_get, { .n = RECT_Y } },
+    { "w", "", TYPE_FLOAT, rect_set, rect_get, { .n = RECT_W } },
+    { "h", "", TYPE_FLOAT, rect_set, rect_get, { .n = RECT_H } },
     { "" },
 };
 
 static scLibObjectMethod_t rect_methods[] = {
-  { "ContainsPoint", "", rect_containspoint, {TYPE_FLOAT, TYPE_FLOAT, TYPE_UNDEF}, TYPE_BOOLEAN, NULL },
+  { "ContainsPoint", "", rect_containspoint, {TYPE_FLOAT, TYPE_FLOAT, TYPE_UNDEF}, TYPE_BOOLEAN, { .v = NULL } },
   { "" },
 };
 static scObject_t *RectObjFromRectDef_t(rectDef_t *rectptr)
@@ -417,7 +417,7 @@ static scObject_t *RectObjFromRectDef_t(rectDef_t *rectptr)
   data->rect       = rectptr;
   
   rectobj->data.type = TYPE_USERDATA;
-  rectobj->data.data.userdata = (void*)data;
+  rectobj->data.data.userdata = data;
   
   return rectobj;
 }
@@ -425,7 +425,7 @@ static scObject_t *RectObjFromRectDef_t(rectDef_t *rectptr)
 
 scClass_t *menu_class;
 
-static int menu_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
   scObject_t *self;
@@ -443,7 +443,7 @@ static int menu_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int menu_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 0;
 }
@@ -453,10 +453,10 @@ typedef enum
   MENU_WINDOW,
 } menu_closures;
 
-static int menu_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  menu_closures gettype = (int)closure;
+  menu_closures gettype = closure.n;
   menuDef_t *menu;
   
   self = in[0].data.object;
@@ -474,12 +474,12 @@ static int menu_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int menu_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 1;
 }
 
-static int menu_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   menuDef_t *menu;
@@ -491,7 +491,7 @@ static int menu_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, 
   return 0;
 }
 
-static int menu_close( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int menu_close( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   menuDef_t *menu;
@@ -504,7 +504,7 @@ static int menu_close( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 }
 
 static scLibObjectMember_t menu_members[] = {
-  { "window", "", TYPE_OBJECT, menu_set, menu_get, (void*)MENU_WINDOW },
+  { "window", "", TYPE_OBJECT, menu_set, menu_get, { .n = MENU_WINDOW } },
 };
 
 static scField_t menu_fields[] = {
@@ -513,8 +513,8 @@ static scField_t menu_fields[] = {
 };
 
 static scLibObjectMethod_t menu_methods[] = {
-  { "UpdatePosition", "", menu_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "Close", "", menu_close, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "UpdatePosition", "", menu_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "Close", "", menu_close, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" },
 };
 
@@ -522,7 +522,7 @@ static scLibObjectMethod_t menu_methods[] = {
 
 scClass_t *window_class;
 
-static int window_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int window_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 0;
 }
@@ -532,10 +532,10 @@ typedef enum
   WINDOW_RECT,
 } window_closures;
 
-static int window_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int window_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  window_closures gettype = (int)closure;
+  window_closures gettype = closure.n;
   windowDef_t *window;
   
   self = in[0].data.object;
@@ -553,13 +553,13 @@ static int window_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   return 0;
 }
 
-static int window_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int window_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 1;
 }
 
 static scLibObjectMember_t window_members[] = {
-  { "rect", "", TYPE_OBJECT, window_set, window_get, (void*)WINDOW_RECT },
+  { "rect", "", TYPE_OBJECT, window_set, window_get, { .n = WINDOW_RECT } },
 };
 
 static scField_t window_fields[] = {
@@ -576,7 +576,7 @@ static scLibObjectMethod_t window_methods[] = {
 
 scClass_t *item_class;
 
-static int item_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int item_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: error management
   scObject_t *self;
@@ -605,7 +605,7 @@ static int item_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int item_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int item_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 0;
 }
@@ -615,10 +615,10 @@ typedef enum
   ITEM_WINDOW,
 } item_closures;
 
-static int item_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int item_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  item_closures gettype = (int)closure;
+  item_closures gettype = closure.n;
   itemDef_t *item;
   
   self = in[0].data.object;
@@ -636,12 +636,12 @@ static int item_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int item_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int item_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   return 1;
 }
 
-static int item_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int item_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   itemDef_t *item;
@@ -654,7 +654,7 @@ static int item_updateposition ( scDataTypeValue_t *in, scDataTypeValue_t *out, 
 }
 
 static scLibObjectMember_t item_members[] = {
-  { "window", "", TYPE_OBJECT, item_set, item_get, (void*)ITEM_WINDOW },
+  { "window", "", TYPE_OBJECT, item_set, item_get, { .n = ITEM_WINDOW } },
 };
 
 static scField_t item_fields[] = {
@@ -663,7 +663,7 @@ static scField_t item_fields[] = {
 };
 
 static scLibObjectMethod_t item_methods[] = {
-  { "UpdatePosition", "", item_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "UpdatePosition", "", item_updateposition, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" },
 };
 
@@ -689,7 +689,7 @@ static scLibObjectDef_t rect_def = {
   rect_members, 
   rect_methods, 
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 static scLibObjectDef_t menu_def = { 
@@ -699,7 +699,7 @@ static scLibObjectDef_t menu_def = {
   menu_members, 
   menu_methods, 
   menu_fields,
-  NULL
+  { .v = NULL }
 };
 
 static scLibObjectDef_t item_def = { 
@@ -709,7 +709,7 @@ static scLibObjectDef_t item_def = {
   item_members, 
   item_methods, 
   item_fields,
-  NULL
+  { .v = NULL }
 };
 
 static scLibObjectDef_t window_def = { 
@@ -719,17 +719,17 @@ static scLibObjectDef_t window_def = {
   window_members, 
   window_methods, 
   window_fields,
-  NULL
+  { .v = NULL }
 };
 
 static scLibFunction_t ui_lib[] = {
-  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
-  { "RemoveDrawFunc", REMOVE_DRAW_FUNC_DESC, remove_draw_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "AddMoveFunc", ADD_MOVE_FUNC_DESC, add_move_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, NULL },
-  { "RemoveMoveFunc", REMOVE_MOVE_FUNC_DESC, remove_move_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, NULL },
+  { "AddDrawFunc", ADD_DRAW_FUNC_DESC, add_draw_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, { .v = NULL } },
+  { "RemoveDrawFunc", REMOVE_DRAW_FUNC_DESC, remove_draw_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "AddMoveFunc", ADD_MOVE_FUNC_DESC, add_move_func, { TYPE_FUNCTION, TYPE_ANY, TYPE_UNDEF }, TYPE_INTEGER, { .v = NULL } },
+  { "RemoveMoveFunc", REMOVE_MOVE_FUNC_DESC, remove_move_func, { TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "DrawText", "", draw_text, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_OBJECT, TYPE_STRING, TYPE_UNDEF }, TYPE_ANY, { .v = NULL } },
   { "DrawRect", "", draw_rect, { TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT, TYPE_FLOAT,
-                                TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, NULL },
+                                TYPE_FLOAT, TYPE_OBJECT, TYPE_UNDEF }, TYPE_ANY, { .v = NULL } },
   { "" }
 };
 

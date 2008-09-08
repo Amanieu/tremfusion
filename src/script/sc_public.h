@@ -62,8 +62,15 @@ typedef struct scObject_s scObject_t;
 typedef struct scClass_s scClass_t;
 typedef scDataTypeHash_t scNamespace_t;
 
-typedef int (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, void*);
+typedef union
+{
+  int          n;
+  void        *v;
+  size_t       s;
+  const char  *str;
+} scClosure_t;
 
+typedef int (*scCRef_t)(scDataTypeValue_t*, scDataTypeValue_t*, scClosure_t);
 
 #ifdef GAME
 #include "../game/g_local.h"
@@ -132,7 +139,7 @@ struct scDataTypeFunction_s
   scLangage_t           langage;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scDataType_t          return_type;
-  void*                 closure;
+  scClosure_t           closure;
   union
   {
     scCRef_t            ref;
@@ -175,7 +182,7 @@ typedef struct
   scDataType_t          type;
   scDataTypeMethod_t    set;
   scDataTypeMethod_t    get;
-  void                  *closure;
+  scClosure_t           closure;
 } scObjectMember_t;
 
 typedef struct
@@ -326,7 +333,7 @@ typedef struct
   scCRef_t              ref;
   scDataType_t          argument[MAX_FUNCTION_ARGUMENTS+1];
   scDataType_t          return_type;
-  void                  *closure;
+  scClosure_t           closure;
 } scLibFunction_t;
 
 typedef struct
@@ -343,7 +350,7 @@ typedef struct
   scCRef_t              ref;
   scDataType_t          argument[MAX_FUNCTION_ARGUMENTS+1];
   scDataType_t          return_type;
-  void                  *closure;
+  scClosure_t           closure;
 } scLibVariable_t;
 
 typedef struct
@@ -353,7 +360,7 @@ typedef struct
   scDataType_t          type;
   scCRef_t              set;
   scCRef_t              get;
-  void                  *closure;
+  scClosure_t           closure;
 } scLibObjectMember_t;
 
 typedef struct
@@ -363,7 +370,7 @@ typedef struct
   scCRef_t              method;
   scDataType_t          argument[ MAX_FUNCTION_ARGUMENTS + 1 ];
   scDataType_t          return_type;
-  void                  *closure;
+  scClosure_t           closure;
 } scLibObjectMethod_t;
 
 typedef struct
@@ -376,7 +383,7 @@ typedef struct
   scLibObjectMember_t       *members;
   scLibObjectMethod_t       *methods;
   scField_t                 *fields;
-  void                      *closure;
+  scClosure_t                closure;
 } scLibObjectDef_t;
 
 #define FIELD_ADDRESS(STRUCT, X) ((size_t)&(((STRUCT *)0)->X))
@@ -395,7 +402,7 @@ int SC_BuildValue(scDataTypeValue_t *val, const char *format, ...);
 extern scClass_t *vec3_class;
 extern scClass_t *module_class;
 
-void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);
+void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure);
 
 scObject_t *SC_Vec3FromVec3_t( float *vect );
 vec3_t     *SC_Vec3FromScript(scObject_t *object);
@@ -479,7 +486,12 @@ typedef struct
 {
   char            name[MAX_CONSTANT_LENGTH+1];
   scDataType_t    type; // can't be composite types like array or hash
-  void            *data;
+  union {
+    qboolean    b;
+    int         n;
+    void       *v;
+    const char *s;
+  } data;
 } scConstant_t;
 
 extern scConstant_t *sc_constants;

@@ -37,14 +37,14 @@ Global Functions
 ======================================================================
 */
 
-static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure )
+static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
   scDataTypeValue_t *args = in;
 
   while(args->type != TYPE_UNDEF)
   {
     if(in->type != TYPE_STRING)
-      SC_EXEC_ERROR(va("argument #%d need a string, but have a %s", args-in, SC_DataTypeToString(in->type)));
+      SC_EXEC_ERROR(va("argument #%ld need a string, but have a %s", args-in, SC_DataTypeToString(in->type)));
     Com_Printf(SC_StringToChar(in->data.string));
     in++;
   }
@@ -54,7 +54,7 @@ static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
 }
 
 static scLibFunction_t common_lib[] = {
-  { "Print", "", common_Print, { TYPE_ANY , TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "Print", "", common_Print, { TYPE_ANY , TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
@@ -82,7 +82,7 @@ typedef enum
   VEC3_Z,
 } vec3_closures;
 
-void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self = SC_ObjectNew(in[0].data.class);
 
@@ -90,10 +90,10 @@ void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   out->data.object = self;
 }
 
-static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  int settype = (int)closure;
+  int settype = closure.n;
   sc_vec3_t *data;
   vec_t *vec3;
   
@@ -121,10 +121,10 @@ static int vec3_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  int gettype = (int)closure;
+  int gettype = closure.n;
   sc_vec3_t *data;
   vec_t *vec3;
   
@@ -152,7 +152,7 @@ static int vec3_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   sc_vec3_t *data;
@@ -169,7 +169,7 @@ static int vec3_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   sc_vec3_t *data;
@@ -187,9 +187,9 @@ static int vec3_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 }
 
 static scLibObjectMember_t vec3_members[] = {
-    { "x", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_X },
-    { "y", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Y },
-    { "z", "", TYPE_FLOAT, vec3_set, vec3_get, (void*)VEC3_Z },
+    { "x", "", TYPE_FLOAT, vec3_set, vec3_get, { .n = VEC3_X } },
+    { "y", "", TYPE_FLOAT, vec3_set, vec3_get, { .n = VEC3_Y } },
+    { "z", "", TYPE_FLOAT, vec3_set, vec3_get, { .n = VEC3_Z } },
     { "" },
 };
 
@@ -204,7 +204,7 @@ static scLibObjectDef_t vec3_def = {
   vec3_members, 
   vec3_methods, 
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 vec3_t *SC_Vec3FromScript(scObject_t *object)
@@ -253,10 +253,10 @@ typedef enum
   VEC4_A,
 } vec4_closures;
 
-static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  int settype = (int)closure;
+  int settype = closure.n;
   sc_vec4_t *data;
   vec_t *vec4;
   
@@ -286,10 +286,10 @@ static int vec4_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
-  int gettype = (int)closure;
+  int gettype = closure.n;
   sc_vec3_t *data;
   vec_t *vec4;
   
@@ -320,7 +320,7 @@ static int vec4_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   sc_vec4_t *data;
@@ -338,7 +338,7 @@ static int vec4_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   sc_vec4_t *data;
@@ -356,10 +356,10 @@ static int vec4_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 }
 
 static scLibObjectMember_t vec4_members[] = {
-    { "r", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_R },
-    { "g", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_G },
-    { "b", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_B },
-    { "a", "", TYPE_FLOAT, vec4_set, vec4_get, (void*)VEC4_A },
+    { "r", "", TYPE_FLOAT, vec4_set, vec4_get, { .n = VEC4_R } },
+    { "g", "", TYPE_FLOAT, vec4_set, vec4_get, { .n = VEC4_G } },
+    { "b", "", TYPE_FLOAT, vec4_set, vec4_get, { .n = VEC4_B } },
+    { "a", "", TYPE_FLOAT, vec4_set, vec4_get, { .n = VEC4_A } },
     { "" },
 };
 
@@ -374,7 +374,7 @@ static scLibObjectDef_t vec4_def = {
   vec4_members, 
   vec4_methods, 
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 vec4_t *SC_Vec4FromScript(scObject_t *object)
@@ -445,13 +445,13 @@ static void update_cvar (struct cvarType_s *cvar)
   trap_Cvar_Update(&cvar->cvar);
 }
 
-static int cvar_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int cvar_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   int type;
   scObject_t *object = in[0].data.object;
   struct cvarType_s *cvar = object->data.data.userdata;
 
-  type = (int)closure;
+  type = closure.n;
   switch(type)
   {
     case CVAR_STRING:
@@ -474,7 +474,7 @@ static int cvar_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   int type;
   scObject_t *object = in[0].data.object;
@@ -483,7 +483,7 @@ static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   // update cvar, just be sure we have an up-to-date value
   update_cvar(cvar);
 
-  type = (int)closure;
+  type = closure.n;
   switch(type)
   {
     case CVAR_STRING:
@@ -509,7 +509,7 @@ static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int cvar_register ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int cvar_register ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *object = in[0].data.object;
   struct cvarType_s *cvar = object->data.data.userdata;
@@ -523,16 +523,16 @@ static int cvar_register ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 }
 
 static scLibObjectMember_t cvar_members[] = {
-  { "s", "", TYPE_STRING, cvar_set, cvar_get, (void*) CVAR_STRING },
-  { "n", "", TYPE_INTEGER, cvar_set, cvar_get, (void*) CVAR_INTEGER },
-  { "f", "", TYPE_FLOAT, cvar_set, cvar_get, (void*) CVAR_FLOAT },
+  { "s", "", TYPE_STRING, cvar_set, cvar_get, { .n = CVAR_STRING } },
+  { "n", "", TYPE_INTEGER, cvar_set, cvar_get, { .n = CVAR_INTEGER } },
+  { "f", "", TYPE_FLOAT, cvar_set, cvar_get, { .n = CVAR_FLOAT } },
   { "" }
 };
 
 static scLibObjectMethod_t cvar_methods[] = {
-  { "set", "", cvar_set, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, (void*) CVAR_STRING },
-  { "get", "", cvar_get, { TYPE_UNDEF }, TYPE_STRING, (void*) CVAR_STRING },
-  { "register", "", cvar_register, { TYPE_STRING, TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "set", "", cvar_set, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .n = CVAR_STRING } },
+  { "get", "", cvar_get, { TYPE_UNDEF }, TYPE_STRING, { .n = CVAR_STRING } },
+  { "register", "", cvar_register, { TYPE_STRING, TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
@@ -543,7 +543,7 @@ static scLibObjectDef_t cvar_def = {
   cvar_members,
   cvar_methods,
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 static scObject_t* new_cvarl( void )
@@ -556,7 +556,7 @@ static scObject_t* new_cvarl( void )
   return self;
 }
 
-static int cvarl_metaget ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int cvarl_metaget ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   // TODO: make cvar cache in list with a hashtable
 
@@ -568,7 +568,7 @@ static int cvarl_metaget ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *
 }
 
 static scLibObjectMember_t cvarl_members[] = {
-  { "_", "", TYPE_OBJECT, 0, cvarl_metaget, NULL },
+  { "_", "", TYPE_OBJECT, 0, cvarl_metaget, { .v = NULL } },
   { "" }
 };
 
@@ -579,24 +579,24 @@ static scLibObjectDef_t cvarl_def = {
   cvarl_members,
   NULL,
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 static scConstant_t cvar_constants[] = {
-  { "CVAR_ARCHIVE", TYPE_INTEGER, (void*) CVAR_ARCHIVE },
-  { "CVAR_USERINFO", TYPE_INTEGER, (void*) CVAR_USERINFO },
-  { "CVAR_SERVERINFO", TYPE_INTEGER, (void*) CVAR_SERVERINFO },
-  { "CVAR_INIT", TYPE_INTEGER, (void*) CVAR_INIT },
-  { "CVAR_LATCH", TYPE_INTEGER, (void*) CVAR_LATCH },
-  { "CVAR_ROM", TYPE_INTEGER, (void*) CVAR_ROM },
-  { "CVAR_USER_CREATED", TYPE_INTEGER, (void*) CVAR_USER_CREATED },
-  { "CVAR_TEMP", TYPE_INTEGER, (void*) CVAR_TEMP },
-  { "CVAR_CHEAT", TYPE_INTEGER, (void*) CVAR_CHEAT },
-  { "CVAR_NORESTART", TYPE_INTEGER, (void*) CVAR_NORESTART },
-  { "CVAR_SERVER_CREATED", TYPE_INTEGER, (void*) CVAR_SERVER_CREATED },
-  { "CVAR_VM_CREATED", TYPE_INTEGER, (void*) CVAR_VM_CREATED },
-  { "CVAR_PROTECTED", TYPE_INTEGER, (void*) CVAR_PROTECTED },
-  { "CVAR_NONEXISTENT", TYPE_INTEGER, (void*) CVAR_NONEXISTENT },
+  { "CVAR_ARCHIVE", TYPE_INTEGER, { .n =  CVAR_ARCHIVE } },
+  { "CVAR_USERINFO", TYPE_INTEGER, { .n =  CVAR_USERINFO } },
+  { "CVAR_SERVERINFO", TYPE_INTEGER, { .n =  CVAR_SERVERINFO } },
+  { "CVAR_INIT", TYPE_INTEGER, { .n =  CVAR_INIT } },
+  { "CVAR_LATCH", TYPE_INTEGER, { .n =  CVAR_LATCH } },
+  { "CVAR_ROM", TYPE_INTEGER, { .n =  CVAR_ROM } },
+  { "CVAR_USER_CREATED", TYPE_INTEGER, { .n =  CVAR_USER_CREATED } },
+  { "CVAR_TEMP", TYPE_INTEGER, { .n =  CVAR_TEMP } },
+  { "CVAR_CHEAT", TYPE_INTEGER, { .n =  CVAR_CHEAT } },
+  { "CVAR_NORESTART", TYPE_INTEGER, { .n =  CVAR_NORESTART } },
+  { "CVAR_SERVER_CREATED", TYPE_INTEGER, { .n =  CVAR_SERVER_CREATED } },
+  { "CVAR_VM_CREATED", TYPE_INTEGER, { .n =  CVAR_VM_CREATED } },
+  { "CVAR_PROTECTED", TYPE_INTEGER, { .n =  CVAR_PROTECTED } },
+  { "CVAR_NONEXISTENT", TYPE_INTEGER, { .n =  CVAR_NONEXISTENT } },
 };
 
 /*
@@ -977,7 +977,7 @@ typedef enum
   MODULE_LOADED
 } module_closures;
 
-static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self;
   scDataTypeHash_t *args, *hash;
@@ -1022,24 +1022,24 @@ static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   return 0;
 }
 
-static int null_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int null_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  SC_EXEC_ERROR(va("Can't access field `%s' to write: access denied", (char*) closure));
+  SC_EXEC_ERROR(va("Can't access field `%s' to write: access denied", closure.str));
 }
 
-static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
-  SC_HashSet(hash, (char*)closure, &in[1]);
+  SC_HashSet(hash, closure.str, &in[1]);
 
   out[0].type = TYPE_UNDEF;
 
   return 0;
 }
 
-static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scDataTypeHash_t *hash;
 
@@ -1051,31 +1051,31 @@ static int module_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   return 0;
 }
 
-static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
-  SC_HashGet(hash, (char*)closure, out);
+  SC_HashGet(hash, closure.str, out);
   if(out->type == TYPE_UNDEF)
-    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", (char*)closure));
+    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", closure.str));
 
   return 0;
 }
 
-static int module_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scDataTypeHash_t *hash;
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, SC_StringToChar(in[1].data.string), out);
   if(out->type == TYPE_UNDEF)
-    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", (char*)closure));
+    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", SC_StringToChar(in[1].data.string)));
 
   return 0;
 }
 
-static int module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   int ret = SC_Module_Load(in[0].data.object, out);
   if(ret == -1)
@@ -1087,7 +1087,7 @@ static int module_load(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   return 0;
 }
 
-static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   int ret = SC_Module_Register(in[0].data.object, in[1].data.object);
   if(ret == -1)
@@ -1098,9 +1098,9 @@ static int module_register(scDataTypeValue_t *in, scDataTypeValue_t *out, void *
   return 0;
 }
 
-static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int ret = SC_Module_Unload(in[0].data.object, out, (int)closure);
+  int ret = SC_Module_Unload(in[0].data.object, out, closure.n);
   if(ret == -1)
     return -1;
 
@@ -1110,7 +1110,7 @@ static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, void *cl
   return 0;
 }
 
-static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   SC_ValueDump(&in[0].data.object->data);
 
@@ -1120,26 +1120,26 @@ static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
 }
 
 static scLibObjectMember_t module_members[] = {
-  { "name", "", TYPE_STRING, null_set, module_get, (void*) "name" },
-  { "version", "", TYPE_STRING, null_set, module_get, (void*) "version" },
-  { "description", "", TYPE_STRING, null_set, module_get, (void*) "description" },
-  { "author", "", TYPE_STRING, null_set, module_get, (void*) "author" },
-  { "depend", "", TYPE_ARRAY, null_set, module_get, (void*) "depend" },
-  { "conflict", "", TYPE_ARRAY, null_set, module_get, (void*) "conflict" },
-  { "autoload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autoload" },
-  { "autounload", "", TYPE_FUNCTION, module_set, module_get, (void*) "autounload" },
-  { "autohooks", "", TYPE_ARRAY, module_set, module_get, (void*) "autohooks" },
-  { "loaded", "", TYPE_BOOLEAN, null_set, module_get, (void*) "loaded" },
-  { "_", "", TYPE_ANY, module_metaset, module_metaget, NULL },
+  { "name", "", TYPE_STRING, null_set, module_get, { .str =  "name" } },
+  { "version", "", TYPE_STRING, null_set, module_get, { .str =  "version" } },
+  { "description", "", TYPE_STRING, null_set, module_get, { .str =  "description" } },
+  { "author", "", TYPE_STRING, null_set, module_get, { .str =  "author" } },
+  { "depend", "", TYPE_ARRAY, null_set, module_get, { .str =  "depend" } },
+  { "conflict", "", TYPE_ARRAY, null_set, module_get, { .str =  "conflict" } },
+  { "autoload", "", TYPE_FUNCTION, module_set, module_get, { .str =  "autoload" } },
+  { "autounload", "", TYPE_FUNCTION, module_set, module_get, { .str =  "autounload" } },
+  { "autohooks", "", TYPE_ARRAY, module_set, module_get, { .str =  "autohooks" } },
+  { "loaded", "", TYPE_BOOLEAN, null_set, module_get, { .str =  "loaded" } },
+  { "_", "", TYPE_ANY, module_metaset, module_metaget, { .v = NULL } },
   { "" }
 };
 
 static scLibObjectMethod_t module_methods[] = {
-  { "load", "", module_load, { TYPE_UNDEF }, TYPE_BOOLEAN, NULL },
-  { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, (void*) 0 },
-  { "kill", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, (void*) 1 },
-  { "register", "", module_register, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "load", "", module_load, { TYPE_UNDEF }, TYPE_BOOLEAN, { .v = NULL } },
+  { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, { .n = 0 } },
+  { "kill", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, { .n = 1 } },
+  { "register", "", module_register, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
@@ -1150,7 +1150,7 @@ static scLibObjectDef_t module_def = {
   module_members,
   module_methods,
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 void SC_Common_Init( void )

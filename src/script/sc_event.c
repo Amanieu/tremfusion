@@ -42,14 +42,14 @@ typedef enum
   EVENT_AFTER,
 } loc_closure_t;
 
-static int event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   out[0].type = TYPE_INTEGER;
-  out[0].data.integer = (int) closure;
+  out[0].data.integer = closure.n;
   return 0;
 }
 
-static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event;
 
@@ -62,7 +62,7 @@ static int event_constructor( scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   return 0;
 }
 
-static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event;
   scEventNode_t *node;
@@ -70,7 +70,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
   scDataTypeFunction_t *function;
   const char *tag;
   const char *dest;
-  int type = (int) closure;
+  int type = closure.n;
   int pos, ret;
 
   event = in[0].data.object->data.data.userdata;
@@ -119,7 +119,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
   return 0;
 }
 
-static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event;
   const char *tag;
@@ -139,7 +139,7 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   return 0;
 }
 
-static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   if(SC_Event_Call(in[0].data.object, in[1].data.hash, out) != 0)
     return -1;
@@ -148,7 +148,7 @@ static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   return 0;
 }
 
-static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
@@ -160,7 +160,7 @@ static int event_skip(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
@@ -170,7 +170,7 @@ static int event_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int event_addmaingroups(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int event_addmaingroups(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scEvent_t *event = in[0].data.object->data.data.userdata;
 
@@ -182,22 +182,22 @@ static int event_addmaingroups(scDataTypeValue_t *in, scDataTypeValue_t *out, vo
 }
 
 static scLibObjectMember_t event_members[] = {
-  { "before", "", TYPE_INTEGER, 0, event_get, (void*) EVENT_BEFORE },
-  { "inside", "", TYPE_INTEGER, 0, event_get, (void*) EVENT_INSIDE },
-  { "after", "", TYPE_INTEGER, 0, event_get, (void*) EVENT_AFTER },
+  { "before", "", TYPE_INTEGER, 0, event_get, { .n = EVENT_BEFORE } },
+  { "inside", "", TYPE_INTEGER, 0, event_get, { .n = EVENT_INSIDE } },
+  { "after", "", TYPE_INTEGER, 0, event_get, { .n = EVENT_AFTER } },
 };
 
 static scLibObjectMethod_t event_methods[] = {
   { "addGroup", "", event_add, { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_UNDEF },
-    TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_GROUP },
-  { "addMainGroups", "", event_addmaingroups, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+    TYPE_UNDEF, { .n = SC_EVENT_NODE_TYPE_GROUP } },
+  { "addMainGroups", "", event_addmaingroups, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "addHook", "", event_add,
     { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
-    TYPE_UNDEF, (void*) SC_EVENT_NODE_TYPE_HOOK },
-  { "delete", "", event_delete, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "skip", "", event_skip, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, NULL },
-  { "dump", "", event_dump, { TYPE_UNDEF }, TYPE_UNDEF, NULL },
+    TYPE_UNDEF, { .n = SC_EVENT_NODE_TYPE_HOOK } },
+  { "delete", "", event_delete, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "skip", "", event_skip, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "dump", "", event_dump, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
@@ -208,7 +208,7 @@ static scLibObjectDef_t event_def = {
   event_members,
   event_methods,
   NULL,
-  NULL
+  { .v = NULL }
 };
 
 /*
@@ -412,7 +412,7 @@ scEventNode_t *SC_Event_NewCHook(const char *tag, scCRef_t cfunc)
   function->return_type = TYPE_UNDEF;
   function->langage = LANGAGE_C;
   function->data.ref = cfunc;
-  function->closure = NULL;
+  function->closure.v = NULL;
 
   return SC_Event_NewHook(tag, function);
 }

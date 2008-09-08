@@ -181,7 +181,7 @@ void SC_InitClass( scClass_t *class )
 #endif
 }
 
-static int script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, void *closure )
+static int script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret, scClosure_t closure )
 {
   SC_NamespaceSet( SC_StringToChar(args[0].data.string), &args[1] );
   ret->type = TYPE_UNDEF;
@@ -190,7 +190,7 @@ static int script_NamespaceAdd( scDataTypeValue_t *args, scDataTypeValue_t *ret,
 }
 
 static scLibFunction_t script_lib[] = {
-  { "NamespaceAdd", "", script_NamespaceAdd, { TYPE_STRING , TYPE_ANY, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "NamespaceAdd", "", script_NamespaceAdd, { TYPE_STRING , TYPE_ANY, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
 //  { "Command", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF },
   { "" }
 };

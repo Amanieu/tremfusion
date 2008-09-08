@@ -137,11 +137,11 @@ static void loadconstants(lua_State *L)
     switch(cst->type)
     {
       case TYPE_BOOLEAN:
-        lua_pushboolean(L, (int)cst->data);
+        lua_pushboolean(L, cst->data.b);
         lua_setglobal(L, cst->name);
         break;
       case TYPE_INTEGER:
-        lua_pushinteger(L, (int)cst->data);
+        lua_pushinteger(L, cst->data.n);
         lua_setglobal(L, cst->name);
         break;
       case TYPE_FLOAT:
@@ -150,11 +150,11 @@ static void loadconstants(lua_State *L)
         lua_setglobal(L, cst->name);
         break;
       case TYPE_STRING:
-        lua_pushstring(L, (char*)cst->data);
+        lua_pushstring(L, cst->data.s);
         lua_setglobal(L, cst->name);
         break;
       case TYPE_USERDATA:
-        lua_pushlightuserdata(L, cst->data);
+        lua_pushlightuserdata(L, cst->data.v);
         lua_setglobal(L, cst->name);
         break;
       default:

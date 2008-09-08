@@ -605,7 +605,7 @@ scDataTypeFunction_t* SC_Lua_get_lua_function(lua_State *L, int index)
   function->argument[0] = TYPE_ANY;
   function->argument[1] = TYPE_UNDEF;
   function->return_type = TYPE_ANY;
-  function->closure = NULL;
+  function->closure.v = NULL;
   fregister(L, function, index);
 
   return function;
