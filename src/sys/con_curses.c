@@ -20,9 +20,11 @@
  *
  */
 
-//#include "../qcommon/q_shared.h"
-//#include "../qcommon/qcommon.h"
-//#include "sys_local.h"
+#ifndef __STAND_ALONE__
+	#include "../qcommon/q_shared.h"
+	#include "../qcommon/qcommon.h"
+	#include "sys_local.h"
+#endif
 
 #include <curses.h>
 #include <fcntl.h>
