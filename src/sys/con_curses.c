@@ -20,9 +20,9 @@
  *
  */
 
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
-#include "sys_local.h"
+//#include "../qcommon/q_shared.h"
+//#include "../qcommon/qcommon.h"
+//#include "sys_local.h"
 
 #include <curses.h>
 #include <fcntl.h>
@@ -30,15 +30,23 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+#ifdef __STAND_ALONE__
+	#include <string.h>
+	#define Q_strncpyz strncpy
+	#define Q_strncmp strncmp
+#endif
+
 #define LOG_BUF_SIZE 2048
 
 static int con_state = 0; /* has CON_Init been run yet? */
 
 static char logbuf[LOG_BUF_SIZE][1024]; /* buffer that holds all of the log lines */
 static int logline = 0; /* current log buffer line */
+static int loglinepos = 0; /* current position in the buffer */
 
 static char *logwinbuf[LOG_BUF_SIZE]; /* buffer for the log window (points to the log buffer) */
 static int logwinline = 0; /* current log window line */
+static int logwinlinepos = 0; /* current position on the current line */
 
 static int reallogline = 0; /* count of total lines printed */
 
@@ -70,9 +78,14 @@ static _window win5;
 
 static char title[] = "[TremFusion Dedicated Server]"; /* console title */
 
-static char input_prompt[] = "console-> "; /* input prompt */
+static char input_prompt[] = "-> "; /* input prompt */
 static char input_buf[1024]; /* input buffer */
 static int input_buf_pos = 0; /* input buffer position */
+
+#ifdef __BUGGY_INPUT__
+/* static char input_winbuf[1024]; */ /* input window buffer */
+static int input_winbuf_pos = 0; /* input window buffer position */
+#endif
 
 /* -- prototypes -- */
 
@@ -264,11 +277,34 @@ static void LogPrint ( char *msg )
 	else
 	{
 		logwinbuf[logwinline] = msg;
-		mvwprintw(win4.win, logwinline, 0, "%s", logwinbuf[logwinline]);
+		/* mvwprintw(win4.win, logwinline, 0, "%s", logwinbuf[logwinline]); */
+
+		int msglen = strlen(msg);
+		int i;
+
+		for (i=0; i <= msglen; i++, logwinlinepos++)
+		{
+
+			if ( msg[i] == '\0' )
+			{
+				continue;
+			}
+			else if ( msg[i] == '\n' )
+			{
+				logwinline++;
+				/* FIXME: wtf, why is this wanting to be -2 to work!? */
+				logwinlinepos = -2;
+				continue;
+			}
+			else
+			{
+				mvwaddch(win4.win, logwinline, logwinlinepos, msg[i]);
+			}
+		}
 	}
 
 	WinRefresh(&win4);
-	logwinline++;
+	//logwinline++;
 }
 
 /* redraw the log window after a resize or some such event */
@@ -311,7 +347,7 @@ static void WinRefresh ( _window * win )
 
 /* -- tremulous functions -- */
 
-
+#if 0
 void CON_Print ( const char *msg )
 {
 	if ( con_state )
@@ -331,6 +367,55 @@ void CON_Print ( const char *msg )
 
 		logline++;
 		reallogline++;
+	}
+	else
+	{
+		char buf[1024];
+
+		snprintf(buf, sizeof(buf), "WARNING: CON_Print() called before CON_Init()\nCon_Print(\"%s\")\n", msg);
+		ErrPrint(buf);
+	}
+}
+#endif
+
+/* test code */
+void CON_Print ( const char *msg )
+{
+	if ( con_state )
+	{
+		if ( logline > LOG_BUF_SIZE )
+		{
+			logline = 0;
+			snprintf(logbuf[logline], 41, "NOTICE: log buffer filled, starting over");
+			LogPrint(logbuf[logline]);
+			logline++;
+                }
+
+		int msglen = strlen(msg);
+		int i;
+
+		for ( i = 0; i < msglen; i++, loglinepos++ )
+		{
+			if ( msg[i] == '\n' )
+			{
+				logbuf[logline][loglinepos] = msg[i];
+				logbuf[logline][(loglinepos + 1)] = '\0';
+
+				LogPrint(logbuf[logline]);
+				logline++;
+				reallogline++;
+				loglinepos = -1;
+
+				continue;
+			}
+
+			logbuf[logline][loglinepos] = msg[i];
+			logbuf[logline][(loglinepos + 1)] = '\0';
+		}
+
+		//LogPrint(logbuf[logline]);
+		//logline++;
+		//reallogline++;
 	}
 	else
 	{
@@ -402,7 +487,6 @@ char *CON_Input ( void )
 				int i;
 				static char text[1024];
 
-
 				Q_strncpyz(text, input_buf, sizeof(text));
 
 				for (i = input_buf_pos; i >= 0; i--)
@@ -416,7 +500,7 @@ char *CON_Input ( void )
 				input_buf_pos = 0;
 
 				/* i wont tell about this command if you wont >.>  */
-				if ( !Q_strncmp("clear", text, strlen(text)) )
+				if ( Q_strncmp("clear", text, strlen(text)) == 0 )
 				{
 					LogClear();
 					return(NULL);
@@ -436,10 +520,17 @@ char *CON_Input ( void )
 			if ( input_buf_pos > 0 )
 			{
 				input_buf[(input_buf_pos - 1)] = '\0';
+#ifdef __BUGGY_INPUT__
+				mvwdelch(win5.win, 0, (strlen(input_prompt) + (input_winbuf_pos - 1)));
+#else
 				mvwdelch(win5.win, 0, (strlen(input_prompt) + (input_buf_pos - 1)));
+#endif
 				WinRefresh(&win5);
 
 				input_buf_pos--;
+#ifdef __BUGGY_INPUT__
+				input_winbuf_pos--;
+#endif
 			}
 
 			return(NULL);
@@ -491,10 +582,31 @@ char *CON_Input ( void )
 			input_buf[input_buf_pos] = buf;
 			input_buf[(input_buf_pos + 1)] = '\0';
 
+#ifdef __BUGGY_INPUT__
+			if ( input_buf_pos >= (win5.cols - strlen(input_prompt)) )
+			{
+				int i;
+
+				for (i = input_winbuf_pos; i >= 0; i--)
+				{
+					mvwdelch(win5.win, 0, (strlen(input_prompt) + i));
+				}
+
+				input_winbuf_pos = 0;
+			}
+
+			mvwaddch(win5.win, 0, (strlen(input_prompt) + input_winbuf_pos), buf);
+			WinRefresh(&win5);
+
+			input_buf_pos++;
+			input_winbuf_pos++;
+#else
 			mvwaddch(win5.win, 0, (strlen(input_prompt) + input_buf_pos), buf);
 			WinRefresh(&win5);
 
 			input_buf_pos++;
+#endif
+
 		}
 
 		return(NULL);
