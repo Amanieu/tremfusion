@@ -256,6 +256,8 @@ struct gentity_s
   qboolean          ownerClear;                     // used for missle tracking
 
   qboolean          pointAgainstWorld;              // don't use the bbox for map collisions
+
+  scObject_t        *scriptingEntity;               // scripting object used to store entity
 };
 
 typedef enum
@@ -445,6 +447,7 @@ struct gclient_s
   int                 lcannonStartTime;
 
   int                 lastCrushTime;        // Tyrant crush
+  scObject_t          *scriptingClient;     // scripting object used to store client
 };
 
 
@@ -953,6 +956,11 @@ int  G_TimeTilSuddenDeath( void );
 //
 #define GAME_SCRIPT_DIRECTORY "gscript/"
 void G_InitScript( void );
+
+scObject_t *G_GetScriptingClient(gclient_t *client);
+gclient_t  *G_ClientFromScript(scObject_t *object);
+scObject_t *G_GetScriptingEntity(gentity_t *entity);
+gentity_t  *G_EntityFromScript(scObject_t *object);
 
 //
 // g_client.c

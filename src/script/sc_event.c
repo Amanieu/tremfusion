@@ -93,7 +93,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closur
     node->hook = function;
   }
 
-  parent = SC_Event_FindChild(event->root, dest);
+  parent = SC_Event_Find(event, dest);
   if(!parent)
 	  SC_EXEC_ERROR(va("can't find hook: %s", dest));
 
@@ -128,7 +128,7 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   event = in[0].data.object->data.data.userdata;
   tag = SC_StringToChar(in[1].data.string);
 
-  node = SC_Event_FindChild(event->root, tag);
+  node = SC_Event_Find(event, tag);
   if(!node)
     SC_EXEC_ERROR(va("Can't delete hook: Can't find hook %s", tag));
 
@@ -218,6 +218,15 @@ Global functions
 
 ======================================================================
 */
+
+scObject_t *SC_Event_NewObject(void)
+{
+  scObject_t *self = SC_ObjectNew(event_class);
+  self->data.type = TYPE_USERDATA;
+  self->data.data.userdata = SC_Event_New();
+
+  return self;
+}
 
 scEvent_t *SC_Event_New(void)
 {
@@ -393,6 +402,37 @@ int SC_Event_DeleteNode(scEventNode_t *node, scDataTypeValue_t *out)
   return 0;
 }
 
+scEventNode_t *SC_Event_NewCHook(const char *tag, scCRef_t cfunc)
+{
+  scDataTypeFunction_t *function = SC_FunctionNew();
+
+  function->argument[0] = TYPE_OBJECT;
+  function->argument[1] = TYPE_HASH;
+  function->argument[2] = TYPE_UNDEF;
+  function->return_type = TYPE_UNDEF;
+  function->langage = LANGAGE_C;
+  function->data.ref = cfunc;
+  function->closure = NULL;
+
+  return SC_Event_NewHook(tag, function);
+}
+
+scEventNode_t *SC_Event_NewHook(const char *tag, scDataTypeFunction_t *function)
+{
+  scEventNode_t *node = SC_Event_NewNode(tag);
+  node->type = SC_EVENT_NODE_TYPE_HOOK;
+  SC_FunctionGCInc(function);
+  node->hook = function;
+  return node;
+}
+
+scEventNode_t *SC_Event_NewGroup(const char *tag)
+{
+  scEventNode_t *node = SC_Event_NewNode(tag);
+  node->type = SC_EVENT_NODE_TYPE_GROUP;
+  return node;
+}
+
 scEventNode_t *SC_Event_NewNode(const char *tag)
 {
   scEventNode_t *node = BG_Alloc(sizeof(scEventNode_t));
@@ -403,14 +443,13 @@ scEventNode_t *SC_Event_NewNode(const char *tag)
   return node;
 }
 
-scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag)
+scEventNode_t *SC_Event_Find(scEvent_t *event, const char *tag)
 {
-  scEventNode_t *i;
+  scEventNode_t *node, *i;
   char tmp[MAX_NAMESPACE_LENGTH];
   char *idx, *lidx;
 
-  if(node == NULL)
-    return NULL;
+  node = event->root;
 
   Q_strncpyz(tmp, tag, sizeof(tmp));
   lidx = tmp;
@@ -461,7 +500,7 @@ int SC_Event_Skip(scEvent_t *event, const char *tag, scDataTypeValue_t *out)
 {
   scEventNode_t *node, *fnode;
 
-  node = SC_Event_FindChild(event->root, tag);
+  node = SC_Event_Find(event, tag);
   if(!node)
     SC_EXEC_ERROR(va("can't find hook: %s", tag));
 

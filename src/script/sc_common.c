@@ -207,6 +207,12 @@ static scLibObjectDef_t vec3_def = {
   NULL
 };
 
+vec3_t *SC_Vec3FromScript(scObject_t *object)
+{
+  sc_vec3_t *data = object->data.data.userdata;
+  return (vec3_t*) data->vect;
+}
+
 scObject_t *SC_Vec3FromVec3_t( float *vect )
 {
   scObject_t *instance;
@@ -371,6 +377,12 @@ static scLibObjectDef_t vec4_def = {
   NULL
 };
 
+vec4_t *SC_Vec4FromScript(scObject_t *object)
+{
+  sc_vec4_t *data = object->data.data.userdata;
+  return (vec4_t*) data->vect;
+}
+
 scObject_t *SC_Vec4FromVec4_t( float *vect )
 {
   scObject_t *instance;
@@ -386,14 +398,206 @@ scObject_t *SC_Vec4FromVec4_t( float *vect )
   return instance;
 }
 
-vec4_t *SC_Vec4t_from_Vec4( scObject_t *vectobject )
-{
-  sc_vec4_t *data;
-  
-  data = vectobject->data.data.userdata;
+/*
+======================================================================
 
-  return (vec4_t*)data->vect;
+Cvars
+
+======================================================================
+*/
+
+scClass_t *cvarl_class;
+scClass_t *cvar_class;
+
+enum
+{
+  CVAR_INTEGER,
+  CVAR_FLOAT,
+  CVAR_STRING
+} cvarType_e;
+
+struct cvarType_s
+{
+  vmCvar_t cvar;
+  char name; // To access to name string, use &cvarType_s.name
+};
+
+static scObject_t* new_cvar(const char *name)
+{
+  scObject_t *self;
+  struct cvarType_s *cvar;
+  int len = strlen(name);
+
+  self = SC_ObjectNew(cvar_class);
+
+  self->data.type = TYPE_USERDATA;
+  // cvar size is struct size and name string size
+  cvar = BG_Alloc(sizeof(struct cvarType_s) - sizeof(char) + len + 1);
+  strcpy(&cvar->name, name);
+  memset(&cvar->cvar, 0x00, sizeof(cvar->cvar));
+  self->data.data.userdata = cvar;
+
+  return self;
 }
+
+static void update_cvar (struct cvarType_s *cvar)
+{
+  trap_Cvar_Update(&cvar->cvar);
+}
+
+static int cvar_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  int type;
+  scObject_t *object = in[0].data.object;
+  struct cvarType_s *cvar = object->data.data.userdata;
+
+  type = (int)closure;
+  switch(type)
+  {
+    case CVAR_STRING:
+      trap_Cvar_Set(&cvar->name, SC_StringToChar(in[1].data.string));
+      break;
+
+    case CVAR_INTEGER:
+      trap_Cvar_Set(&cvar->name, va("%ld", in[1].data.integer));
+      break;
+
+    case CVAR_FLOAT:
+      trap_Cvar_Set(&cvar->name, va("%f", in[1].data.floating));
+      break;
+
+    default:
+      SC_EXEC_ERROR(va("Internal error: unknow case in `cvar_set' at %s (%d)", __FILE__, __LINE__));
+  }
+
+  out->type = TYPE_UNDEF;
+  return 0;
+}
+
+static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  int type;
+  scObject_t *object = in[0].data.object;
+  struct cvarType_s *cvar = object->data.data.userdata;
+
+  // update cvar, just be sure we have an up-to-date value
+  update_cvar(cvar);
+
+  type = (int)closure;
+  switch(type)
+  {
+    case CVAR_STRING:
+      out[0].type = TYPE_STRING;
+      out[0].data.string = SC_StringNewFromChar(cvar->cvar.string);
+      break;
+
+    case CVAR_INTEGER:
+      out[0].type = TYPE_INTEGER;
+      out[0].data.integer = cvar->cvar.integer;
+      break;
+
+    case CVAR_FLOAT:
+      out[0].type = TYPE_FLOAT;
+      out[0].data.floating = cvar->cvar.value;
+      break;
+
+    default:
+      SC_EXEC_ERROR(va("Internal error: unknow case in `cvar_get' at %s (%d)", __FILE__, __LINE__));
+  }
+
+  out[1].type = TYPE_UNDEF;
+  return 0;
+}
+
+static int cvar_register ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  scObject_t *object = in[0].data.object;
+  struct cvarType_s *cvar = object->data.data.userdata;
+  scDataTypeString_t *def = in[1].data.string;
+  int flags = in[2].data.integer;
+
+  trap_Cvar_Register(&cvar->cvar, &cvar->name, SC_StringToChar(def), flags);
+
+  out[1].type = TYPE_UNDEF;
+  return 0;
+}
+
+static scLibObjectMember_t cvar_members[] = {
+  { "s", "", TYPE_STRING, cvar_set, cvar_get, (void*) CVAR_STRING },
+  { "n", "", TYPE_INTEGER, cvar_set, cvar_get, (void*) CVAR_INTEGER },
+  { "f", "", TYPE_FLOAT, cvar_set, cvar_get, (void*) CVAR_FLOAT },
+  { "" }
+};
+
+static scLibObjectMethod_t cvar_methods[] = {
+  { "set", "", cvar_set, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, (void*) CVAR_STRING },
+  { "get", "", cvar_get, { TYPE_UNDEF }, TYPE_STRING, (void*) CVAR_STRING },
+  { "register", "", cvar_register, { TYPE_STRING, TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, NULL },
+  { "" }
+};
+
+static scLibObjectDef_t cvar_def = {
+  "Cvar", "",
+  0, { TYPE_UNDEF }, // no constructor, built with cvar list
+  0, // cvar should never be destroyed
+  cvar_members,
+  cvar_methods,
+  NULL,
+  NULL
+};
+
+static scObject_t* new_cvarl( void )
+{
+  scObject_t *self;
+
+  self = SC_ObjectNew(cvarl_class);
+  self->data.type = TYPE_UNDEF;
+
+  return self;
+}
+
+static int cvarl_metaget ( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+{
+  // TODO: make cvar cache in list with a hashtable
+
+  out[0].type = TYPE_OBJECT;
+  out[0].data.object = new_cvar(SC_StringToChar(in[1].data.string));
+  out[1].type = TYPE_UNDEF;
+
+  return 0;
+}
+
+static scLibObjectMember_t cvarl_members[] = {
+  { "_", "", TYPE_OBJECT, 0, cvarl_metaget, NULL },
+  { "" }
+};
+
+static scLibObjectDef_t cvarl_def = {
+  "CvarL", "",
+  0, { TYPE_UNDEF }, // no constructor, singleton built in root namespace
+  0, // cvar list should never be destroyed
+  cvarl_members,
+  NULL,
+  NULL,
+  NULL
+};
+
+static scConstant_t cvar_constants[] = {
+  { "CVAR_ARCHIVE", TYPE_INTEGER, (void*) CVAR_ARCHIVE },
+  { "CVAR_USERINFO", TYPE_INTEGER, (void*) CVAR_USERINFO },
+  { "CVAR_SERVERINFO", TYPE_INTEGER, (void*) CVAR_SERVERINFO },
+  { "CVAR_INIT", TYPE_INTEGER, (void*) CVAR_INIT },
+  { "CVAR_LATCH", TYPE_INTEGER, (void*) CVAR_LATCH },
+  { "CVAR_ROM", TYPE_INTEGER, (void*) CVAR_ROM },
+  { "CVAR_USER_CREATED", TYPE_INTEGER, (void*) CVAR_USER_CREATED },
+  { "CVAR_TEMP", TYPE_INTEGER, (void*) CVAR_TEMP },
+  { "CVAR_CHEAT", TYPE_INTEGER, (void*) CVAR_CHEAT },
+  { "CVAR_NORESTART", TYPE_INTEGER, (void*) CVAR_NORESTART },
+  { "CVAR_SERVER_CREATED", TYPE_INTEGER, (void*) CVAR_SERVER_CREATED },
+  { "CVAR_VM_CREATED", TYPE_INTEGER, (void*) CVAR_VM_CREATED },
+  { "CVAR_PROTECTED", TYPE_INTEGER, (void*) CVAR_PROTECTED },
+  { "CVAR_NONEXISTENT", TYPE_INTEGER, (void*) CVAR_NONEXISTENT },
+};
 
 /*
 ======================================================================
@@ -457,7 +661,7 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       function = value.data.function;
     }
 
-    parent = SC_Event_FindChild(event->root, tag);
+    parent = SC_Event_Find(event, tag);
     if(!parent)
       SC_EXEC_ERROR(va("can't load autohooks: unable to find hook by tag %s", tag));
 
@@ -515,7 +719,7 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     name = SC_StringToChar(value.data.string);
 
-    node = SC_Event_FindChild(event->root, name);
+    node = SC_Event_Find(event, name);
     if(!node)
       SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
 
@@ -951,9 +1155,20 @@ static scLibObjectDef_t module_def = {
 
 void SC_Common_Init( void )
 {
+  scDataTypeValue_t value;
+
   SC_AddLibrary( "common", common_lib );
   vec3_class = SC_AddClass( "common", &vec3_def);
   vec4_class = SC_AddClass( "common", &vec4_def);
   module_class = SC_AddClass("script", &module_def);
+
+  cvar_class = SC_AddClass("common", &cvar_def);
+  cvarl_class = SC_AddClass("common", &cvarl_def);
+  SC_Constant_Add(cvar_constants);
+
+  // set cvarl singleton to namespace root
+  value.type = TYPE_OBJECT;
+  value.data.object = new_cvarl();
+  SC_NamespaceSet("cvar", &value);
 }
 

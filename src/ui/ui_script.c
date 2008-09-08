@@ -219,7 +219,7 @@ static int draw_text( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   x      = in[0].data.floating;
   y      = in[1].data.floating;
   scale  = in[2].data.floating;
-  colour = SC_Vec4t_from_Vec4(in[3].data.object);
+  colour = SC_Vec4FromScript(in[3].data.object);
   text  = SC_StringToChar(in[4].data.string);
   UI_Text_Paint( x, y, scale, *colour, text, 0, 0, ITEM_TEXTSTYLE_NORMAL);
   out->type = TYPE_UNDEF;
@@ -235,7 +235,7 @@ static int draw_rect( scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   w      = in[2].data.floating;
   h      = in[3].data.floating;
   size   = in[4].data.floating;
-  colour = SC_Vec4t_from_Vec4(in[5].data.object);
+  colour = SC_Vec4FromScript(in[5].data.object);
   DC->drawRect(x, y, w, h, size, *colour);
   return 0;
 }
