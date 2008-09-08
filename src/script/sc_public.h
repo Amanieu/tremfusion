@@ -398,8 +398,9 @@ extern scClass_t *module_class;
 void SC_Common_Constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure);
 
 scObject_t *SC_Vec3FromVec3_t( float *vect );
+vec3_t     *SC_Vec3FromScript(scObject_t *object);
 scObject_t *SC_Vec4FromVec4_t( float *vect );
-vec4_t     *SC_Vec4t_from_Vec4( scObject_t *vectobject );
+vec4_t     *SC_Vec4FromScript(scObject_t *object);
 
 // modules
 int SC_Module_Init(scObject_t *self);
@@ -456,12 +457,16 @@ struct scHook_s
 extern scClass_t *event_class;
 
 scEvent_t *SC_Event_New(void);
+scObject_t *SC_Event_NewObject(void);
 int SC_Event_Call(scObject_t *event, scDataTypeHash_t *params, scDataTypeValue_t *out);
 int SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode_t *new, scDataTypeValue_t *out);
 int SC_Event_DeleteNode(scEventNode_t *node, scDataTypeValue_t *out);
 int SC_Event_Skip(scEvent_t *event, const char *tag, scDataTypeValue_t *out);
 scEventNode_t *SC_Event_NewNode(const char *tag);
-scEventNode_t *SC_Event_FindChild(scEventNode_t *node, const char *tag);
+scEventNode_t *SC_Event_NewCHook(const char *tag, scCRef_t function);
+scEventNode_t *SC_Event_NewHook(const char *tag, scDataTypeFunction_t *function);
+scEventNode_t *SC_Event_NewGroup(const char *tag);
+scEventNode_t *SC_Event_Find(scEvent_t *event, const char *tag);
 void SC_Event_Init(void);
 void SC_Event_Dump(scEvent_t *event);
 int SC_Event_AddMainGroups(scEvent_t *event, scDataTypeValue_t *out);

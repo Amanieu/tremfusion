@@ -207,6 +207,12 @@ static scLibObjectDef_t vec3_def = {
   NULL
 };
 
+vec3_t *SC_Vec3FromScript(scObject_t *object)
+{
+  sc_vec3_t *data = object->data.data.userdata;
+  return (vec3_t*) data->vect;
+}
+
 scObject_t *SC_Vec3FromVec3_t( float *vect )
 {
   scObject_t *instance;
@@ -371,6 +377,12 @@ static scLibObjectDef_t vec4_def = {
   NULL
 };
 
+vec4_t *SC_Vec4FromScript(scObject_t *object)
+{
+  sc_vec4_t *data = object->data.data.userdata;
+  return (vec4_t*) data->vect;
+}
+
 scObject_t *SC_Vec4FromVec4_t( float *vect )
 {
   scObject_t *instance;
@@ -384,15 +396,6 @@ scObject_t *SC_Vec4FromVec4_t( float *vect )
   instance->data.data.userdata = data;
 
   return instance;
-}
-
-vec4_t *SC_Vec4t_from_Vec4( scObject_t *vectobject )
-{
-  sc_vec4_t *data;
-  
-  data = vectobject->data.data.userdata;
-
-  return (vec4_t*)data->vect;
 }
 
 /*
@@ -658,7 +661,7 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       function = value.data.function;
     }
 
-    parent = SC_Event_FindChild(event->root, tag);
+    parent = SC_Event_Find(event, tag);
     if(!parent)
       SC_EXEC_ERROR(va("can't load autohooks: unable to find hook by tag %s", tag));
 
@@ -716,7 +719,7 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     name = SC_StringToChar(value.data.string);
 
-    node = SC_Event_FindChild(event->root, name);
+    node = SC_Event_Find(event, name);
     if(!node)
       SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
 
