@@ -44,7 +44,7 @@ static int common_Print( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
   while(args->type != TYPE_UNDEF)
   {
     if(in->type != TYPE_STRING)
-      SC_EXEC_ERROR(va("argument #%ld need a string, but have a %s", args-in, SC_DataTypeToString(in->type)));
+      SC_EXEC_ERROR(va("argument #%d need a string, but have a %s", args-in, SC_DataTypeToString(in->type)));
     Com_Printf(SC_StringToChar(in->data.string));
     in++;
   }
@@ -211,6 +211,22 @@ vec3_t *SC_Vec3FromScript(scObject_t *object)
 {
   sc_vec3_t *data = object->data.data.userdata;
   return (vec3_t*) data->vect;
+}
+
+scObject_t *SC_Vec3FromNewVec3_t( float *vect )
+{
+  scObject_t *instance;
+  sc_vec3_t *data;
+  instance = SC_ObjectNew(vec3_class);
+
+  instance->data.type = TYPE_USERDATA;
+  data = BG_Alloc(sizeof(sc_vec3_t));
+  data->sc_created = qtrue;
+  data->vect = BG_Alloc(sizeof(vec3_t));
+  memcpy(data->vect, vect, sizeof(vec3_t));
+  instance->data.data.userdata = data;
+
+  return instance;
 }
 
 scObject_t *SC_Vec3FromVec3_t( float *vect )

@@ -1430,11 +1430,14 @@ static int selectSpectatorSpawnPoint(scDataTypeValue_t *in, scDataTypeValue_t *o
     }
 
     value.type = TYPE_OBJECT;
-    value.data.object = G_GetScriptingEntity(spawn);
-    SC_HashSet(hash, "spawn", &value);
-    value.data.object = SC_Vec3FromVec3_t(origin);
+	if(spawn)
+	{
+		value.data.object = G_GetScriptingEntity(spawn);
+		SC_HashSet(hash, "spawn", &value);
+	}
+    value.data.object = SC_Vec3FromNewVec3_t(origin);
     SC_HashSet(hash, "origin", &value);
-    value.data.object = SC_Vec3FromVec3_t(angles);
+    value.data.object = SC_Vec3FromNewVec3_t(angles);
     SC_HashSet(hash, "angles", &value);
   }
 
@@ -1498,9 +1501,10 @@ static int buildableSpawnEffects(scDataTypeValue_t *in, scDataTypeValue_t *out, 
   SC_HashGet(hash, "spawn", &value);
   if(value.type != TYPE_UNDEF)
   {
+    spawn = G_EntityFromScript(value.data.object);
+
     SC_HashGet(hash, "buildableSpawnTime", &value);
 
-    spawn = G_EntityFromScript(value.data.object);
     if(spawn->s.eType == ET_BUILDABLE)
       G_SetBuildableAnim(spawn, BANIM_SPAWN1, qtrue);
 
@@ -1701,7 +1705,7 @@ static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_
   gclient_t        *client;
   int               index;
   gentity_t        *ent;
-  gentity_t        *spawn;
+  gentity_t        *spawn = NULL;
   scDataTypeHash_t *hash = in[1].data.hash;
   scDataTypeValue_t value;
   vec3_t           *origin, *angles;
@@ -1714,11 +1718,12 @@ static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_
   SC_HashGet(hash, "type", &value);
   type = SC_StringToChar(value.data.string);
   SC_HashGet(hash, "spawn", &value);
-  spawn = G_EntityFromScript(value.data.object);
+  if(value.type != TYPE_UNDEF)
+	  spawn = G_EntityFromScript(value.data.object);
   SC_HashGet(hash, "origin", &value);
-  origin = SC_Vec3FromScript(value.data.object->data.data.userdata);
+  origin = SC_Vec3FromScript(value.data.object);
   SC_HashGet(hash, "angles", &value);
-  angles = SC_Vec3FromScript(value.data.object->data.data.userdata);
+  angles = SC_Vec3FromScript(value.data.object);
 
   index = client->ps.clientNum;
   ent = g_entities + index;
@@ -1820,7 +1825,7 @@ static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
 {
   gclient_t         *client;
   gentity_t         *ent;
-  gentity_t         *spawn;
+  gentity_t         *spawn = NULL;
   scDataTypeHash_t  *hash = in[1].data.hash;
   scDataTypeValue_t  value;
   const char        *type;
@@ -1831,7 +1836,8 @@ static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
   SC_HashGet(hash, "type", &value);
   type = SC_StringToChar(value.data.string);
   SC_HashGet(hash, "spawn", &value);
-  spawn = G_EntityFromScript(value.data.object);
+  if(value.type != TYPE_UNDEF)
+	  spawn = G_EntityFromScript(value.data.object);
 
   ent = g_entities + client->ps.clientNum;
  
@@ -1972,6 +1978,9 @@ void G_InitEvent_PlayerSpawn(void)
 
   parent = node;
   SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("StopFollow", stopFollow), &out);
+
+  SC_Event_AddNode(parent, parent->last, 
       SC_Event_NewCHook("SetSpawnType", setSpawnType), &out);
 
   parent = SC_Event_Find(event, "init");
@@ -1986,9 +1995,6 @@ void G_InitEvent_PlayerSpawn(void)
   SC_Event_AddNode(action, action->last, node, &out);
 
   parent = node;
-  SC_Event_AddNode(parent, parent->last, 
-      SC_Event_NewCHook("StopFollow", stopFollow), &out);
-
   node = SC_Event_NewGroup("clear");
   SC_Event_AddNode(action, action->last, node, &out);
 
@@ -2077,11 +2083,11 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
     value.data.object = G_GetScriptingEntity(spawn);
     SC_HashSet(hash, "spawn", &value);
 
-    value.data.object = SC_Vec3FromVec3_t(origin);
+    value.data.object = SC_Vec3FromNewVec3_t(origin);
     SC_HashSet(hash, "origin", &value);
 
-    value.data.object = SC_Vec3FromVec3_t(angles);
-    SC_HashSet(hash, "origin", &value);
+    value.data.object = SC_Vec3FromNewVec3_t(angles);
+    SC_HashSet(hash, "angles", &value);
   }
 
   if(SC_Event_Call(event, hash, &out) != 0)
