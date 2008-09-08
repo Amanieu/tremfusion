@@ -1076,7 +1076,6 @@ void UI_Refresh( int realtime )
 {
   static int index;
   static int  previousTimes[UI_FPS_FRAMES];
-  uiClientState_t cstate;
 
   //if( !( trap_Key_GetCatcher() & KEYCATCH_UI ) ) {
   //  return;
@@ -1119,11 +1118,6 @@ void UI_Refresh( int realtime )
 
   // draw cursor
   UI_SetColor( NULL );
-
-  // don't draw the cursor if we are loading
-  trap_GetClientState( &cstate );
-  if( cstate.connState == CA_LOADING )
-    return;
 
   if( Menu_Count( ) > 0 && !trap_Cvar_VariableValue( "ui_hideCursor" ) )
   {
