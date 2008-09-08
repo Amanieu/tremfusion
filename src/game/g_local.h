@@ -912,6 +912,8 @@ void      ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t a
 void      player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod );
 qboolean  SpotWouldTelefrag( gentity_t *spot );
 
+void      G_InitEvent_PlayerSpawn(void);
+
 //
 // g_svcmds.c
 //
