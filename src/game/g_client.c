@@ -1361,7 +1361,7 @@ Initializes all non-persistant parts of playerState
 ============
 */
 
-static int setSpawnType(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int setSpawnType(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t *client;
   gentity_t *ent;
@@ -1397,7 +1397,7 @@ static int setSpawnType(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   return 0;
 }
 
-static int selectSpectatorSpawnPoint(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int selectSpectatorSpawnPoint(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1441,7 +1441,7 @@ static int selectSpectatorSpawnPoint(scDataTypeValue_t *in, scDataTypeValue_t *o
   return 0;
 }
 
-static int stopFollow(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int stopFollow(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1466,7 +1466,7 @@ static int stopFollow(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int setBuildableSpawnTime(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int setBuildableSpawnTime(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gentity_t *buildable;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1489,7 +1489,7 @@ static int setBuildableSpawnTime(scDataTypeValue_t *in, scDataTypeValue_t *out, 
   return 0;
 }
 
-static int buildableSpawnEffects(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int buildableSpawnEffects(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gentity_t *spawn;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1513,7 +1513,7 @@ static int buildableSpawnEffects(scDataTypeValue_t *in, scDataTypeValue_t *out, 
   return 0;
 }
 
-static int toggleTeleport(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int toggleTeleport(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1528,7 +1528,7 @@ static int toggleTeleport(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   return 0;
 }
 
-static int reset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int reset(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t          *client;
   scDataTypeHash_t   *hash = in[1].data.hash;
@@ -1639,7 +1639,7 @@ static int reset(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
   return 0;
 }
 
-static int giveEquipement(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int giveEquipement(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1667,7 +1667,7 @@ static int giveEquipement(scDataTypeValue_t *in, scDataTypeValue_t *out, void *c
   return 0;
 }
 
-static int gameplayParameters(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int gameplayParameters(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1696,7 +1696,7 @@ static int gameplayParameters(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   return 0;
 }
 
-static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   int               index;
@@ -1770,7 +1770,7 @@ static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   return 0;
 }
 
-static int scaleHealth(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int scaleHealth(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t         *client;
   gentity_t         *ent;
@@ -1796,7 +1796,7 @@ static int scaleHealth(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clos
   return 0;
 }
 
-static int clearCredits(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int clearCredits(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1816,7 +1816,7 @@ static int clearCredits(scDataTypeValue_t *in, scDataTypeValue_t *out, void *clo
   return 0;
 }
 
-static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t         *client;
   gentity_t         *ent;
@@ -1841,7 +1841,7 @@ static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int moveToIntermission(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int moveToIntermission(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1858,7 +1858,7 @@ static int moveToIntermission(scDataTypeValue_t *in, scDataTypeValue_t *out, voi
   return 0;
 }
 
-static int selectBestWeapon(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int selectBestWeapon(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1882,7 +1882,7 @@ static int selectBestWeapon(scDataTypeValue_t *in, scDataTypeValue_t *out, void 
   return 0;
 }
 
-static int runFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int runFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1919,13 +1919,13 @@ static int runFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure
   return 0;
 }
 
-static int updateRanks(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int updateRanks(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   CalculateRanks();
   return 0;
 }
 
-static int linkEntity(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int linkEntity(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
@@ -1943,7 +1943,7 @@ static int linkEntity(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closu
   return 0;
 }
 
-static int increaseSpawnCount(scDataTypeValue_t *in, scDataTypeValue_t *out, void *closure)
+static int increaseSpawnCount(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   gclient_t        *client;
   scDataTypeHash_t *hash = in[1].data.hash;
