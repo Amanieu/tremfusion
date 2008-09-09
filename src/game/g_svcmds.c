@@ -364,6 +364,7 @@ qboolean  ConsoleCommand( void )
   {
     char name[MAX_PATH_LENGTH+1];
     scDataTypeValue_t value, value2;
+	int ret;
 
     trap_Argv( 1, name, sizeof( name ) );
 
@@ -371,11 +372,19 @@ qboolean  ConsoleCommand( void )
 
     if(value.type == TYPE_OBJECT)
     {
-      if(SC_Module_Load(value.data.object, &value2) == -1)
+      ret = SC_Module_Load(value.data.object, &value2);
+      if(ret == -1)
       {
         Com_Printf("Can't load module `%s': %s\n", name, SC_StringToChar(value2.data.string));
         return qfalse;
       }
+      else if(ret == 0)
+      {
+        Com_Printf("Can't load module `%s': autoloader refuse to load\n", name);
+        return qfalse;
+      }
+      else
+        Com_Printf("`%s' loaded\n", name);
     }
     else
     {
@@ -406,11 +415,18 @@ qboolean  ConsoleCommand( void )
       else
         ret = SC_Module_Unload(value.data.object, &value2, 0);
 
-      if(ret == -1 || ret == 0)
+      if(ret == -1)
       {
         Com_Printf("Can't unload module `%s': %s\n", name, SC_StringToChar(value2.data.string));
         return qfalse;
       }
+      else if(ret == 0)
+      {
+        Com_Printf("Can't load module `%s': autounloader refuse to unload\n", name);
+        return qfalse;
+      }
+      else
+        Com_Printf("`%s' module unloaded\n", name);
     }
     else
     {

@@ -918,7 +918,7 @@ int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
     if(SC_RunFunction(autoload, fin, &fout) == -1)
       SC_EXEC_ERROR(SC_StringToChar(fout.data.string))
 
-    if(fout.data.boolean == qfalse)
+    if(fout.type == TYPE_BOOLEAN && fout.data.boolean == qfalse)
       return 0;
   }
 
@@ -994,7 +994,7 @@ int SC_Module_Unload(scObject_t *self, scDataTypeValue_t *out, int force)
     fin[0].data.object = self;
     fin[1].type = TYPE_UNDEF;
     SC_RunFunction(autounload, fin, &fout);
-    if(force == qfalse && fout.data.boolean == qfalse)
+    if(force == qfalse && fout.type == TYPE_BOOLEAN && fout.data.boolean == qfalse)
       return 0;
   }
 
@@ -1163,14 +1163,14 @@ static int module_unload(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
   return 0;
 }
 
-static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+/*static int module_dump(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   SC_ValueDump(&in[0].data.object->data);
 
   out[0].type = TYPE_UNDEF;
 
   return 0;
-}
+}*/
 
 static scLibObjectMember_t module_members[] = {
   { "name", "", TYPE_STRING, null_set, module_get, { .str =  "name" } },
@@ -1192,7 +1192,7 @@ static scLibObjectMethod_t module_methods[] = {
   { "unload", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, { .n = 0 } },
   { "kill", "", module_unload, { TYPE_UNDEF }, TYPE_BOOLEAN, { .n = 1 } },
   { "register", "", module_register, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
-  { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+//  { "dump", "", module_dump, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
