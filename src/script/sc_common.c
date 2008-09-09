@@ -201,9 +201,11 @@ static scLibObjectDef_t vec3_def = {
   "Vec3", "",
   vec3_constructor, { TYPE_UNDEF },
   vec3_destructor,
-  vec3_members, 
-  vec3_methods, 
-  NULL,
+  vec3_members,         // objectMembers
+  vec3_methods,	        // objectMethods
+  NULL,                 // objectFields
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -390,6 +392,8 @@ static scLibObjectDef_t vec4_def = {
   vec4_members, 
   vec4_methods, 
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -559,6 +563,8 @@ static scLibObjectDef_t cvar_def = {
   cvar_members,
   cvar_methods,
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -595,6 +601,8 @@ static scLibObjectDef_t cvarl_def = {
   cvarl_members,
   NULL,
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -1195,6 +1203,8 @@ static scLibObjectDef_t module_def = {
   module_members,
   module_methods,
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 

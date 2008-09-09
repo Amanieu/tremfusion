@@ -689,6 +689,8 @@ static scLibObjectDef_t rect_def = {
   rect_members, 
   rect_methods, 
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -699,6 +701,8 @@ static scLibObjectDef_t menu_def = {
   menu_members, 
   menu_methods, 
   menu_fields,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -709,6 +713,8 @@ static scLibObjectDef_t item_def = {
   item_members, 
   item_methods, 
   item_fields,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 
@@ -719,6 +725,8 @@ static scLibObjectDef_t window_def = {
   window_members, 
   window_methods, 
   window_fields,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 

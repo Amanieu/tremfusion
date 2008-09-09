@@ -207,12 +207,16 @@ struct scClass_s
   char                  desc[MAX_DESC_LENGTH+1];
   scDataTypeMethod_t    constructor;
   scDataTypeMethod_t    destructor;
-  scObjectMember_t      *members;
-  int                   memcount;
-  scObjectMethod_t      *methods;
-  int                   methcount;
-  scField_t             *fields;
-  int                   fieldcount;
+  scObjectMember_t      *objectMembers;
+  int                   objMemCount;
+  scObjectMethod_t      *objectMethods;
+  int                   objMethCount;
+  scObjectMember_t      *classMembers;
+  int                   clMemCount;
+  scObjectMethod_t		*classMethods;
+  int                   clMethCount;
+  scField_t             *objectFields;
+  int                   fieldCount;
 #ifdef USE_PYTHON
   PyObject              *python_type;
 #endif
@@ -380,9 +384,11 @@ typedef struct
   scCRef_t                  constructor;
   scDataType_t              constructor_arguments[MAX_FUNCTION_ARGUMENTS];
   scCRef_t                  destructor;
-  scLibObjectMember_t       *members;
-  scLibObjectMethod_t       *methods;
-  scField_t                 *fields;
+  scLibObjectMember_t       *objectMembers;
+  scLibObjectMethod_t       *objectMethods;
+  scField_t                 *objectFields;
+  scLibObjectMember_t       *classMembers;
+  scLibObjectMethod_t       *classMethods;
   scClosure_t                closure;
 } scLibObjectDef_t;
 

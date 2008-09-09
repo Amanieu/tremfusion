@@ -472,7 +472,9 @@ static scLibObjectDef_t entity_def = {
   entity_destructor,
   entity_members, 
   entity_methods, 
-  NULL,
+  NULL, // objectFields
+  NULL, // classMembers
+  NULL, // classMethods
   { .v = NULL }
 };
 
@@ -828,7 +830,9 @@ static scLibObjectDef_t client_def = {
   client_destructor,
   client_members, 
   client_methods, 
-  NULL,
+  NULL, // object fields
+  NULL, // class members
+  NULL, // class methods
   { .v = NULL }
 };
 

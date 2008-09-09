@@ -210,6 +210,8 @@ static scLibObjectDef_t event_def = {
   event_members,
   event_methods,
   NULL,
+  NULL,                 // classMembers
+  NULL,	                // classMethods
   { .v = NULL }
 };
 

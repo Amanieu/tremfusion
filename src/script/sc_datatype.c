@@ -833,7 +833,7 @@ static void classFree(scClass_t *class)
 
 scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 {
-  scObjectMethod_t *method = class->methods;
+  scObjectMethod_t *method = class->objectMethods;
   while(method->name[0] != '\0')
   {
     if(strcmp(method->name, name) == 0)
@@ -847,7 +847,7 @@ scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name)
 
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
 {
-  scObjectMember_t *member = class->members;
+  scObjectMember_t *member = class->objectMembers;
   scObjectMember_t *always = NULL;
   while(member->name[0] != '\0')
   {
@@ -865,7 +865,7 @@ scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name)
 
 scField_t *SC_ClassGetField(scClass_t *class, const char *name)
 {
-  scField_t *field = class->fields;
+  scField_t *field = class->objectFields;
   while(field->name[0] != '\0')
   {
     if(strcmp(field->name, name) == 0)

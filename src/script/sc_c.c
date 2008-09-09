@@ -79,82 +79,145 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
   class->destructor.closure = def->closure;
 
   cnt = 0;
-  if(def->members != NULL)
-    for(member = def->members; member->name[0] != '\0'; member++)
+  if(def->objectMembers != NULL)
+    for(member = def->objectMembers; member->name[0] != '\0'; member++)
       cnt++;
-  class->memcount = cnt;
-  class->members = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
+  class->objMemCount = cnt;
+  class->objectMembers = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
   {
-    strcpy(class->members[i].name, def->members[i].name);
-    strcpy(class->members[i].desc, def->members[i].desc);
-    class->members[i].type = def->members[i].type;
+    strcpy(class->objectMembers[i].name, def->objectMembers[i].name);
+    strcpy(class->objectMembers[i].desc, def->objectMembers[i].desc);
+    class->objectMembers[i].type = def->objectMembers[i].type;
 
-    if(def->members[i].set)
+    if(def->objectMembers[i].set)
     {
-      class->members[i].set.gc.count = 1;
-      class->members[i].set.langage = LANGAGE_C;
-      class->members[i].set.data.ref = def->members[i].set;
-      class->members[i].set.argument[0] = TYPE_OBJECT;
-      class->members[i].set.argument[1] = class->members[i].type;
-      class->members[i].set.argument[2] = TYPE_UNDEF;
-      class->members[i].set.return_type = TYPE_UNDEF;
-      class->members[i].set.closure = def->members[i].closure;
+      class->objectMembers[i].set.gc.count = 1;
+      class->objectMembers[i].set.langage = LANGAGE_C;
+      class->objectMembers[i].set.data.ref = def->objectMembers[i].set;
+      class->objectMembers[i].set.argument[0] = TYPE_OBJECT;
+      class->objectMembers[i].set.argument[1] = class->objectMembers[i].type;
+      class->objectMembers[i].set.argument[2] = TYPE_UNDEF;
+      class->objectMembers[i].set.return_type = TYPE_UNDEF;
+      class->objectMembers[i].set.closure = def->objectMembers[i].closure;
     }
     else
-      class->members[i].set.langage = LANGAGE_INVALID;
+      class->objectMembers[i].set.langage = LANGAGE_INVALID;
 
-    if(def->members[i].get)
+    if(def->objectMembers[i].get)
     {
-      class->members[i].get.gc.count = 1;
-      class->members[i].get.langage = LANGAGE_C;
-      class->members[i].get.data.ref = def->members[i].get;
-      class->members[i].get.argument[0] = TYPE_OBJECT;
-      class->members[i].get.argument[1] = TYPE_UNDEF;
-      class->members[i].get.return_type = class->members[i].type;
-      class->members[i].get.closure = def->members[i].closure;
+      class->objectMembers[i].get.gc.count = 1;
+      class->objectMembers[i].get.langage = LANGAGE_C;
+      class->objectMembers[i].get.data.ref = def->objectMembers[i].get;
+      class->objectMembers[i].get.argument[0] = TYPE_OBJECT;
+      class->objectMembers[i].get.argument[1] = TYPE_UNDEF;
+      class->objectMembers[i].get.return_type = class->objectMembers[i].type;
+      class->objectMembers[i].get.closure = def->objectMembers[i].closure;
     }
     else
-      class->members[i].get.langage = LANGAGE_INVALID;
+      class->objectMembers[i].get.langage = LANGAGE_INVALID;
   }
-  class->members[i].name[0] = '\0';
+  class->objectMembers[i].name[0] = '\0';
 
   cnt = 0;
-  if(def->methods != NULL)
-    for(method = def->methods; method->name[0] != '\0'; method++)
+  if(def->objectMethods != NULL)
+    for(method = def->objectMethods; method->name[0] != '\0'; method++)
       cnt++;
-  class->methcount = cnt;
-  class->methods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
+  class->objMethCount = cnt;
+  class->objectMethods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
   {
-    strcpy(class->methods[i].name, def->methods[i].name);
-    strcpy(class->methods[i].desc, def->methods[i].desc);
+    strcpy(class->objectMethods[i].name, def->objectMethods[i].name);
+    strcpy(class->objectMethods[i].desc, def->objectMethods[i].desc);
 
-    class->methods[i].method.gc.count = 1;
-    class->methods[i].method.langage = LANGAGE_C;
-    class->methods[i].method.data.ref = def->methods[i].method;
-    class->methods[i].method.argument[0] = TYPE_OBJECT;
-    memcpy( class->methods[i].method.argument+1, def->methods[i].argument,
+    class->objectMethods[i].method.gc.count = 1;
+    class->objectMethods[i].method.langage = LANGAGE_C;
+    class->objectMethods[i].method.data.ref = def->objectMethods[i].method;
+    class->objectMethods[i].method.argument[0] = TYPE_OBJECT;
+    memcpy( class->objectMethods[i].method.argument+1, def->objectMethods[i].argument,
             sizeof(scDataType_t) * MAX_FUNCTION_ARGUMENTS);
-    class->methods[i].method.return_type = def->methods[i].return_type;
-    class->methods[i].method.closure = def->methods[i].closure;
+    class->objectMethods[i].method.return_type = def->objectMethods[i].return_type;
+    class->objectMethods[i].method.closure = def->objectMethods[i].closure;
   }
-  class->methods[i].name[0] = '\0';
+  class->objectMethods[i].name[0] = '\0';
 
   cnt = 0;
-  if(def->fields != NULL)
-    for(field = def->fields; field->name[0] != '\0'; field++)
+  if(def->classMembers != NULL)
+    for(member = def->classMembers; member->name[0] != '\0'; member++)
       cnt++;
-  class->fieldcount = cnt;
-  class->fields = BG_Alloc(sizeof(scField_t) * (cnt+1));
+  class->clMemCount = cnt;
+  class->classMembers = BG_Alloc(sizeof(scObjectMember_t) * (cnt+1));
   for(i = 0; i < cnt; i++)
   {
-    strcpy(class->fields[i].name, def->fields[i].name);
-    strcpy(class->fields[i].desc, def->fields[i].desc);
-    class->fields[i].type = def->fields[i].type;
-    class->fields[i].ofs  = def->fields[i].ofs;
+    strcpy(class->classMembers[i].name, def->classMembers[i].name);
+    strcpy(class->classMembers[i].desc, def->classMembers[i].desc);
+    class->classMembers[i].type = def->classMembers[i].type;
+
+    if(def->classMembers[i].set)
+    {
+      class->classMembers[i].set.gc.count = 1;
+      class->classMembers[i].set.langage = LANGAGE_C;
+      class->classMembers[i].set.data.ref = def->classMembers[i].set;
+      class->classMembers[i].set.argument[0] = TYPE_OBJECT;
+      class->classMembers[i].set.argument[1] = class->classMembers[i].type;
+      class->classMembers[i].set.argument[2] = TYPE_UNDEF;
+      class->classMembers[i].set.return_type = TYPE_UNDEF;
+      class->classMembers[i].set.closure = def->classMembers[i].closure;
+    }
+    else
+      class->classMembers[i].set.langage = LANGAGE_INVALID;
+
+    if(def->classMembers[i].get)
+    {
+      class->classMembers[i].get.gc.count = 1;
+      class->classMembers[i].get.langage = LANGAGE_C;
+      class->classMembers[i].get.data.ref = def->classMembers[i].get;
+      class->classMembers[i].get.argument[0] = TYPE_OBJECT;
+      class->classMembers[i].get.argument[1] = TYPE_UNDEF;
+      class->classMembers[i].get.return_type = class->classMembers[i].type;
+      class->classMembers[i].get.closure = def->classMembers[i].closure;
+    }
+    else
+      class->classMembers[i].get.langage = LANGAGE_INVALID;
   }
-  class->fields[i].name[0] = '\0';
+  class->classMembers[i].name[0] = '\0';
+
+  cnt = 0;
+  if(def->classMethods != NULL)
+    for(method = def->classMethods; method->name[0] != '\0'; method++)
+      cnt++;
+  class->clMethCount = cnt;
+  class->classMethods = BG_Alloc(sizeof(scObjectMethod_t) * (cnt+1));
+  for(i = 0; i < cnt; i++)
+  {
+    strcpy(class->classMethods[i].name, def->classMethods[i].name);
+    strcpy(class->classMethods[i].desc, def->classMethods[i].desc);
+
+    class->classMethods[i].method.gc.count = 1;
+    class->classMethods[i].method.langage = LANGAGE_C;
+    class->classMethods[i].method.data.ref = def->classMethods[i].method;
+    class->classMethods[i].method.argument[0] = TYPE_OBJECT;
+    memcpy( class->classMethods[i].method.argument+1, def->classMethods[i].argument,
+            sizeof(scDataType_t) * MAX_FUNCTION_ARGUMENTS);
+    class->classMethods[i].method.return_type = def->classMethods[i].return_type;
+    class->classMethods[i].method.closure = def->classMethods[i].closure;
+  }
+  class->classMethods[i].name[0] = '\0';
+
+  cnt = 0;
+  if(def->objectFields != NULL)
+    for(field = def->objectFields; field->name[0] != '\0'; field++)
+      cnt++;
+  class->fieldCount = cnt;
+  class->objectFields = BG_Alloc(sizeof(scField_t) * (cnt+1));
+  for(i = 0; i < cnt; i++)
+  {
+    strcpy(class->objectFields[i].name, def->objectFields[i].name);
+    strcpy(class->objectFields[i].desc, def->objectFields[i].desc);
+    class->objectFields[i].type = def->objectFields[i].type;
+    class->objectFields[i].ofs  = def->objectFields[i].ofs;
+  }
+  class->objectFields[i].name[0] = '\0';
   
   var.type = TYPE_CLASS;
   var.data.class = class;
