@@ -1208,6 +1208,215 @@ static scLibObjectDef_t module_def = {
   { .v = NULL }
 };
 
+/*
+======================================================================
+
+Array
+
+======================================================================
+*/
+
+static int table_concat( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  scDataTypeArray_t *array = in[0].data.array;
+  const char *delim = NULL;
+  scDataTypeString_t *string = SC_StringNew();
+  scDataTypeValue_t value;
+  qboolean first;
+  int i,j;
+  int n;
+
+  if(in[1].type == TYPE_STRING)
+    delim = SC_StringToChar(in[1].data.string);
+
+  if(in[2].type == TYPE_INTEGER)
+    i = in[2].data.integer;
+  else
+    i = 0;
+
+  if(in[3].type == TYPE_INTEGER)
+    j = in[3].data.integer;
+  else
+    j = array->size;
+
+  first = qtrue;
+  for(n = i; n < j; n++)
+  {
+    if(!first && delim)
+    {
+      SC_Strcat(string, delim);
+      first = qfalse;
+    }
+
+    SC_ArrayGet(array, n, &value);
+    switch(value.type)
+    {
+      case TYPE_STRING:
+        SC_Strcat(string, SC_StringToChar(value.data.string));
+        break;
+
+      case TYPE_INTEGER:
+        SC_Strcat(string, va("%ld", value.data.integer));
+        break;
+
+      case TYPE_FLOAT:
+        SC_Strcat(string, va("%.14g", value.data.floating));
+        break;
+
+      case TYPE_UNDEF:
+        // Little hack to exit from for, because can't break loop
+        n = j;
+
+      default:
+        SC_EXEC_ERROR(va("Can't concat table: attempt a string or numerical value but having a %s", SC_DataTypeToString(value.type)));
+    }
+  }
+
+  out->data.string = string;
+  return 0;
+}
+
+static int table_insert( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  scDataTypeArray_t *array = in[0].data.array;
+  scDataTypeValue_t value;
+  int pos;
+  int i;
+
+  if(in[2].type == TYPE_INTEGER)
+    pos = in[2].data.integer;
+  else
+    pos = array->size;
+
+  for(i = array->size; i > pos; i--)
+  {
+    SC_ArrayGet(array, i-1, &value);
+    SC_ArraySet(array, i, &value);
+  }
+  SC_ArraySet(array, i, &in[1]);
+
+  return 0;
+}
+
+static int table_maxn( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  out->data.integer = in[0].data.array->size;
+  return 0;
+}
+
+static int table_remove( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  scDataTypeArray_t *array = in[0].data.array;
+  scDataTypeValue_t value;
+  int pos;
+  int i;
+
+  if(in[1].type == TYPE_INTEGER)
+    pos = in[1].data.integer;
+  else
+    pos = array->size - 1;
+
+  for(i = pos+1; i < array->size; i++)
+  {
+    SC_ArrayGet(array, i, &value);
+    SC_ArraySet(array, i-1, &value);
+  }
+  SC_ArrayDelete(array, i-1);
+
+  return 0;
+}
+
+static scDataTypeFunction_t *table_sort_func;
+
+static int table_sort_comparator(const void *va, const void *vb)
+{
+  scDataTypeValue_t *a = (scDataTypeValue_t*) va;
+  scDataTypeValue_t *b = (scDataTypeValue_t*) vb;
+  if(table_sort_func)
+  {
+    scDataTypeValue_t in[3];
+    scDataTypeValue_t out;
+
+    if(SC_RunFunction(table_sort_func, in, &out) != 0)
+    {
+      Com_Printf("table.sort: error with comparator function: %s", SC_StringToChar(out.data.string));
+      return 0;
+    }
+
+    return out.data.integer;
+  }
+  else if(a->type == TYPE_INTEGER)
+  {
+    if(b->type == TYPE_INTEGER)
+    {
+      if(a->data.integer < b->data.integer)
+        return -1;
+      else
+        return a->data.integer > b->data.integer;
+    }
+    else if(b->type == TYPE_FLOAT)
+    {
+      if(a->data.integer < b->data.floating)
+        return -1;
+      else
+        return a->data.integer > b->data.floating;
+    }
+  }
+  else if(a->type == TYPE_FLOAT)
+  {
+    if(b->type == TYPE_INTEGER)
+    {
+      if(a->data.floating < b->data.integer)
+        return -1;
+      else
+        return a->data.floating > b->data.integer;
+    }
+    else if(b->type == TYPE_FLOAT)
+    {
+      if(a->data.floating < b->data.floating)
+        return -1;
+      else
+        return a->data.floating > b->data.floating;
+    }
+  }
+  return 0;
+}
+
+static int table_sort( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  scDataTypeArray_t *array = in[0].data.array;
+  static qboolean used;
+
+  if(used)
+    SC_EXEC_ERROR("error: you can't use `table.sort' recursively");
+
+  if(in[1].type == TYPE_FUNCTION)
+  {
+    table_sort_func = in[1].data.function;
+    table_sort_func->argument[0] = TYPE_ANY;
+    table_sort_func->argument[1] = TYPE_ANY;
+    table_sort_func->argument[2] = TYPE_UNDEF;
+    table_sort_func->return_type = TYPE_INTEGER;
+  }
+  else
+    table_sort_func = NULL;
+
+  used = qtrue;
+  qsort(array->data, array->size, sizeof(*array->data), table_sort_comparator);
+  used = qfalse;
+
+  return 0;
+}
+
+static scLibFunction_t table_lib[] = {
+  { "concat", "", table_concat, { TYPE_ARRAY , TYPE_STRING, TYPE_INTEGER, TYPE_INTEGER, TYPE_UNDEF }, TYPE_STRING, { .v = NULL } },
+  { "insert", "", table_insert, { TYPE_ARRAY , TYPE_ANY, TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "maxn", "", table_maxn, { TYPE_ARRAY, TYPE_UNDEF }, TYPE_INTEGER, { .v = NULL } },
+  { "remove", "", table_remove, { TYPE_ARRAY, TYPE_INTEGER, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "sort", "", table_sort, { TYPE_ARRAY, TYPE_FUNCTION, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "" }
+};
+
 void SC_Common_Init( void )
 {
   scDataTypeValue_t value;
@@ -1225,5 +1434,7 @@ void SC_Common_Init( void )
   value.type = TYPE_OBJECT;
   value.data.object = new_cvarl();
   SC_NamespaceSet("cvar", &value);
+
+  SC_AddLibrary( "table", table_lib );
 }
 
