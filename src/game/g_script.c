@@ -83,6 +83,8 @@ enum ent_closures_e
   ENTITY_BUILDER,
   // Methods
   ENTITY_LINK,
+  // Class methods
+  ENTITY_FIND,
 };
 
 gentity_t *G_EntityFromScript(scObject_t *object)
@@ -307,7 +309,7 @@ static int entity_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
   return 0;
 }
 
-static int entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+static int entity_objectMethod(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *self = in[0].data.object;
   gentity_t *entity = G_EntityFromScript(self);
@@ -320,10 +322,53 @@ static int entity_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
       break;
 
     default:
-      SC_EXEC_ERROR(va("Internal error: unknow case in `entity_method', %s (%d)\n", __FILE__, __LINE__));
+      SC_EXEC_ERROR(va("Internal error: unknow case in `entity_objectMethod', %s (%d)\n", __FILE__, __LINE__));
   }
 
   out[0].type = TYPE_UNDEF;
+  return 0;
+}
+
+static int entity_classMethod(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scClass_t *class = in[0].data.class;
+  int type = closure.n;
+
+  switch(type)
+  {
+    case ENTITY_FIND:
+      {
+        scDataTypeArray_t *storeArray = SC_ArrayNew();
+        scObjectMember_t *member = SC_ClassGetMember(class, SC_StringToChar(in[1].data.string));
+        const char *pattern = SC_StringToChar(in[2].data.string);
+        gentity_t *entity;
+        scDataTypeValue_t value;
+        int n = 0;
+
+        if(member->type != TYPE_STRING)
+          SC_EXEC_ERROR(va("Internal error: search pattern attempt a string but have a %s", SC_DataTypeToString(member->type)));
+
+        for(entity = g_entities; entity < &g_entities[ level.num_entities ]; entity++)
+        {
+          if(strcmp((const char*)((void*)entity + member->closure.s), pattern) == 0)
+          {
+            value.type = TYPE_OBJECT;
+            value.data.object = G_GetScriptingEntity(entity);
+            SC_ArraySet(storeArray, n, &value);
+            n++;
+          }
+        }
+
+        out[0].type = TYPE_ARRAY;
+        out[0].data.array = storeArray;
+      }
+      break;
+
+
+    default:
+      SC_EXEC_ERROR(va("Internal error: unknow case in `entity_objectMethod', %s (%d)\n", __FILE__, __LINE__));
+  }
+
   return 0;
 }
 
@@ -461,8 +506,13 @@ static scLibObjectMember_t entity_members[] = {
   { "" },
 };
 
-static scLibObjectMethod_t entity_methods[] = {
-  { "link", "", entity_method, { TYPE_UNDEF }, TYPE_UNDEF, { .n = ENTITY_LINK } },
+static scLibObjectMethod_t entity_objectMethods[] = {
+  { "link", "", entity_objectMethod, { TYPE_UNDEF }, TYPE_UNDEF, { .n = ENTITY_LINK } },
+  { "" },
+};
+
+static scLibObjectMethod_t entity_classMethods[] = {
+  { "find", "", entity_classMethod, { TYPE_STRING, TYPE_STRING }, TYPE_ARRAY, { .n = ENTITY_FIND } },
   { "" },
 };
 
@@ -471,10 +521,10 @@ static scLibObjectDef_t entity_def = {
   0, { TYPE_UNDEF }, // an entity can't be made alone
   entity_destructor,
   entity_members, 
-  entity_methods, 
+  entity_objectMethods, 
   NULL, // objectFields
   NULL, // classMembers
-  NULL, // classMethods
+  entity_classMethods, // classMethods
   { .v = NULL }
 };
 
