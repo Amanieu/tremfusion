@@ -720,6 +720,98 @@ int SC_Lua_gc_class_metamethod(lua_State *L)
   return 0;
 }
 
+int SC_Lua_class_index_metamethod(lua_State *L)
+{
+  scClass_t *class;
+  scObjectMethod_t *method;
+  scObjectMember_t *member;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t out;
+  const char *name;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  class = *((scClass_t**) lua_touserdata(L, -1));
+  name = luaL_checkstring(L, 2);
+
+  method = SC_ClassGetClassMethod(class, name);
+  if(method)
+  {
+    SC_Lua_push_function(L, &method->method);
+    return 1;
+  }
+
+  member = SC_ClassGetClassMember(class, name);
+  if(member)
+  {
+    // Call 'get' method, push result
+    in[0].type = TYPE_CLASS;
+    in[0].data.class = class;
+	if(strcmp(member->name, "_") == 0)
+	{
+      in[1].type = TYPE_STRING;
+      in[1].data.string = SC_StringNewFromChar(name);
+      in[2].type = TYPE_UNDEF;
+    }
+    else
+      in[1].type = TYPE_UNDEF;
+
+    if(SC_RunFunction(&member->get, in, &out) != 0)
+      luaL_error(L, SC_StringToChar(out.data.string));
+
+    SC_Lua_push_value(L, &out);
+    return 1;
+  }
+
+  luaL_error(L, va("instance has no attribute `%s'", name));
+  return 0;
+}
+
+int SC_Lua_class_newindex_metamethod(lua_State *L)
+{
+  scClass_t *class;
+  scObjectMember_t *member;
+  scDataTypeValue_t in[MAX_FUNCTION_ARGUMENTS+1];
+  scDataTypeValue_t out;
+  const char *name;
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "_ref");
+  class = *((scClass_t**) lua_touserdata(L, -1));
+  lua_pop(L, 2);
+
+  name = luaL_checkstring(L, 2);
+
+  member = SC_ClassGetClassMember(class, name);
+  if(member)
+  {
+    in[0].type = TYPE_CLASS;
+    in[0].data.class = class;
+    // Call 'set' method with popped value
+    if(strcmp(member->name, "_") == 0)
+    {
+      in[1].type = TYPE_STRING;
+      in[1].data.string = SC_StringNewFromChar(name);
+
+      SC_Lua_pop_value(L, &in[2], member->set.argument[1]);
+      in[3].type = TYPE_UNDEF;
+    }
+    else
+    {
+      SC_Lua_pop_value(L, &in[1], member->set.argument[1]);
+      in[2].type = TYPE_UNDEF;
+    }
+
+    if(SC_RunFunction(&member->set, in, &out) != 0)
+      luaL_error(L, SC_StringToChar(out.data.string));
+
+    return 0;
+  }
+
+  luaL_error(L, va("instance has no attribute `%s'", name));
+  return 0;
+}
+
 /*
 ========================
 object metamethods

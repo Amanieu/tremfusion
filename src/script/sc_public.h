@@ -301,9 +301,11 @@ void SC_ObjectGCDec(scObject_t *object);
 void SC_ObjectDestroy( scObject_t *object );
 
 scClass_t *SC_ClassNew(const char *name);
-scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scObjectMember_t *SC_ClassGetMember(scClass_t *class, const char *name);
+scObjectMethod_t *SC_ClassGetMethod(scClass_t *class, const char *name);
 scField_t *SC_ClassGetField(scClass_t *class, const char *name);
+scObjectMember_t *SC_ClassGetClassMember(scClass_t *class, const char *name);
+scObjectMethod_t *SC_ClassGetClassMethod(scClass_t *class, const char *name);
 void SC_ClassGCInc(scClass_t *class);
 void SC_ClassGCDec(scClass_t *class);
 

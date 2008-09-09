@@ -147,6 +147,8 @@ int SC_Lua_gc_hash_metamethod(lua_State *L);
 int SC_Lua_gc_function_metamethod(lua_State *L);
 
 int SC_Lua_gc_class_metamethod(lua_State *L);
+int SC_Lua_class_index_metamethod(lua_State *L);
+int SC_Lua_class_newindex_metamethod(lua_State *L);
 
 int SC_Lua_gc_object_metamethod(lua_State *L);
 int SC_Lua_object_index_metamethod(lua_State *L);

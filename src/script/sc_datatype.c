@@ -877,6 +877,38 @@ scField_t *SC_ClassGetField(scClass_t *class, const char *name)
   return NULL;
 }
 
+scObjectMethod_t *SC_ClassGetClassMethod(scClass_t *class, const char *name)
+{
+  scObjectMethod_t *method = class->classMethods;
+  while(method->name[0] != '\0')
+  {
+    if(strcmp(method->name, name) == 0)
+      return method;
+
+    method++;
+  }
+
+  return NULL;
+}
+
+scObjectMember_t *SC_ClassGetClassMember(scClass_t *class, const char *name)
+{
+  scObjectMember_t *member = class->classMembers;
+  scObjectMember_t *always = NULL;
+  while(member->name[0] != '\0')
+  {
+    if(strcmp(member->name, name) == 0)
+      return member;
+
+	if(strcmp(member->name, "_") == 0)
+		always = member;
+
+    member++;
+  }
+
+  return always;
+}
+
 void SC_ClassGCInc(scClass_t *class)
 {
   class->gc.count++;

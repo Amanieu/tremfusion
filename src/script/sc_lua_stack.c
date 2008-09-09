@@ -400,9 +400,9 @@ void SC_Lua_push_class(lua_State *L, scClass_t *class)
   lua_setfield(L, -2, "__tostring");
   lua_pushcfunction(L, SC_Lua_call_metamethod);
   lua_setfield(L, -2, "__call");
-  lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
+  lua_pushcfunction(L, SC_Lua_class_index_metamethod);
   lua_setfield(L, -2, "__index");
-  lua_pushcfunction(L, SC_Lua_invalid_index_metamethod);
+  lua_pushcfunction(L, SC_Lua_class_newindex_metamethod);
   lua_setfield(L, -2, "__newindex");
   lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
   lua_setfield(L, -2, "__len");
@@ -445,6 +445,8 @@ void SC_Lua_push_object(lua_State *L, scObject_t *object)
   lua_setfield(L, -2, "__index");
   lua_pushcfunction(L, SC_Lua_object_newindex_metamethod);
   lua_setfield(L, -2, "__newindex");
+  lua_pushcfunction(L, SC_Lua_invalid_length_metamethod);
+  lua_setfield(L, -2, "__len");
   lua_pushstring(L, "cannot access protected metatable");
   lua_setfield(L, -2, "__metatable");
 
