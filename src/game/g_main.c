@@ -1023,6 +1023,7 @@ void G_SpawnClients( team_t team )
   vec3_t        spawn_origin, spawn_angles;
   spawnQueue_t  *sq = NULL;
   int           numSpawns = 0;
+  spectatorState_t oldstate;
 
   if( team == TEAM_ALIENS )
   {
@@ -1051,9 +1052,11 @@ void G_SpawnClients( team_t team )
 
       ent = &g_entities[ clientNum ];
 
+      oldstate = ent->client->sess.spectatorState;
       ent->client->sess.spectatorState = SPECTATOR_NOT;
       ClientUserinfoChanged( clientNum );
-      ClientSpawn( ent, spawn, spawn_origin, spawn_angles );
+      if(!ClientSpawn( ent, spawn, spawn_origin, spawn_angles ))
+        ent->client->sess.spectatorState = oldstate;
     }
   }
 }

@@ -141,10 +141,12 @@ static int event_delete(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure
 
 static int event_call( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  if(SC_Event_Call(in[0].data.object, in[1].data.hash, out) != 0)
+  int ret = SC_Event_Call(in[0].data.object, in[1].data.hash, out);
+  if(ret < 0)
     return -1;
 
-  out[0].type = TYPE_UNDEF;
+  out[0].type = TYPE_BOOLEAN;
+  out[0].data.boolean = ret;
   return 0;
 }
 
@@ -195,7 +197,7 @@ static scLibObjectMethod_t event_methods[] = {
     { TYPE_STRING, TYPE_INTEGER, TYPE_STRING, TYPE_FUNCTION, TYPE_UNDEF },
     TYPE_UNDEF, { .n = SC_EVENT_NODE_TYPE_HOOK } },
   { "delete", "", event_delete, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
-  { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "call", "", event_call, { TYPE_HASH, TYPE_UNDEF }, TYPE_BOOLEAN, { .v = NULL } },
   { "skip", "", event_skip, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "dump", "", event_dump, { TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
@@ -247,6 +249,8 @@ int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *par
   scEventNode_t *i;
   scDataTypeValue_t in[3];
   scEvent_t *data;
+  qboolean ret = qtrue;
+  int tret;
 
   data = event->data.data.userdata;
 
@@ -271,8 +275,11 @@ int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *par
   {
     for(i = node->first; i != NULL; i = i->next)
     {
-      if(event_call_rec(event, i, params, out) != 0)
+      tret = event_call_rec(event, i, params, out);
+      if(tret < 0)
         return -1;
+
+      ret &= tret;
 
       if(data->skip)
       {
@@ -289,21 +296,25 @@ int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *par
   {
     if(SC_RunFunction(node->hook, in, out) != 0)
       SC_EXEC_ERROR(va("error running event function: %s", SC_StringToChar(out->data.string)));
+    if(out[0].type == TYPE_BOOLEAN)
+      ret &= out[0].data.boolean;
   }
 
-  return 0;
+  return ret;
 }
 
 int SC_Event_Call(scObject_t *event, scDataTypeHash_t *params, scDataTypeValue_t *out)
 {
   scEvent_t *data = event->data.data.userdata;
+  int ret;
 
-  if(event_call_rec(event, data->root, params, out) != 0)
+  ret = event_call_rec(event, data->root, params, out);
+  if(ret < 0)
     return -1;
 
   data->current_node = NULL;
 
-  return 0;
+  return ret;
 }
 
 int SC_Event_AddMainGroups(scEvent_t *event, scDataTypeValue_t *out)

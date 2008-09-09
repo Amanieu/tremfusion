@@ -2063,12 +2063,13 @@ void G_InitEvent_PlayerSpawn(void)
   SC_Event_Dump(event);
 }
 
-void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles )
+int ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles )
 {
   scDataTypeHash_t    *hash = SC_HashNew();
   scObject_t          *event;
   scDataTypeValue_t   value;
   scDataTypeValue_t   out;
+  int				  ret;
 
   SC_NamespaceGet("event.player.Spawn", &value);
   event = value.data.object;
@@ -2090,8 +2091,11 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
     SC_HashSet(hash, "angles", &value);
   }
 
-  if(SC_Event_Call(event, hash, &out) != 0)
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
     G_Error(SC_StringToChar(out.data.string));
+
+  return ret;
 }
 
 
