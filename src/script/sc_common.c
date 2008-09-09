@@ -649,7 +649,10 @@ static int add_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
     SC_ArrayGet(h, 0, &value);
     if(value.type != TYPE_STRING)
       SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
-    SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
+    SC_NamespaceGet(va("event.%s", SC_StringToChar(value.data.string)), &value);
+	if(value.type == TYPE_UNDEF)
+      SC_EXEC_ERROR(va("Can't add autohooks: can't find event %s", SC_StringToChar(value.data.string)));
+
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
@@ -715,6 +718,10 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
   const char *name;
   scEvent_t *event;
   scEventNode_t *node;
+  char tag[MAX_TAG_SIZE];
+  char *idx;
+  const char *location;
+  const char *hookname;
 
   for(i = autohook->size - 1; i >= 0; i--)
   {
@@ -727,7 +734,11 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
     SC_ArrayGet(h, 0, &value);
     if(value.type != TYPE_STRING)
       SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
-    SC_NamespaceGet(SC_StringToChar(value.data.string), &value);
+    SC_NamespaceGet(va("event.%s", SC_StringToChar(value.data.string)), &value);
+    if(value.type == TYPE_UNDEF)
+      SC_EXEC_ERROR(va("Can't remove autohooks: can't find event %s", SC_StringToChar(value.data.string)));
+
+
     event = value.data.object->data.data.userdata;
 
     SC_ArrayGet(h, 1, &value);
@@ -735,9 +746,27 @@ static int remove_autohooks(scDataTypeArray_t *autohook, scDataTypeValue_t *out)
       SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
     name = SC_StringToChar(value.data.string);
 
-    node = SC_Event_Find(event, name);
+    SC_ArrayGet(h, 2, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
+    location = SC_StringToChar(value.data.string);
+
+    SC_ArrayGet(h, 3, &value);
+    if(value.type != TYPE_STRING)
+      SC_EXEC_ERROR(va("invalid format in argument. Attempt a string but having a %s", SC_DataTypeToString(value.type)));
+    Q_strncpyz(tag, SC_StringToChar(value.data.string), MAX_TAG_SIZE);
+
+    if(strcmp(location, "after") == 0 || strcmp(location, "before") == 0)
+    {
+      idx = Q_strrchr(tag, '.');
+      *idx = '\0';
+    }
+
+    hookname = va("%s.%s", tag, name);
+
+    node = SC_Event_Find(event, hookname);
     if(!node)
-      SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", name));
+      SC_EXEC_ERROR(va("can't delete hook: can't find %s tag", hookname));
 
     if(SC_Event_DeleteNode(node, out) != 0)
       return -1;

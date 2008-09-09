@@ -119,26 +119,26 @@ static int entity_field_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClo
 {
   scObject_t *object = in[0].data.object;
   size_t addr = closure.s;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   switch(in[1].type)
   {
     case TYPE_BOOLEAN:
-      *(qboolean*)(entity + addr) = in[1].data.boolean;
+      *(qboolean*)((void*)entity + addr) = in[1].data.boolean;
       break;
 
     case TYPE_INTEGER:
-      *(int*)(entity + addr) = in[1].data.integer;
+      *(int*)((void*)entity + addr) = in[1].data.integer;
       break;
 
     case TYPE_FLOAT:
-      *(float*)(entity + addr) = in[1].data.floating;
+      *(float*)((void*)entity + addr) = in[1].data.floating;
       break;
 
     case TYPE_STRING:
       // FIXME: /!\ Memory leak /!\ */
       SC_StringGCInc(in[1].data.string);
-      *(const char**)(entity + addr) = SC_StringToChar(in[1].data.string);
+      *(const char**)((void*)entity + addr) = SC_StringToChar(in[1].data.string);
       break;
 
     default:
@@ -153,28 +153,28 @@ static int entity_field_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClo
 {
   scObject_t *object = in[0].data.object;
   size_t addr = closure.s;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   switch(in[1].type)
   {
     case TYPE_BOOLEAN:
       out[0].type = TYPE_BOOLEAN;
-      out[0].data.boolean = *(qboolean*)(entity + addr);
+      out[0].data.boolean = *(qboolean*)((void*)entity + addr);
       break;
 
     case TYPE_INTEGER:
       out[0].type = TYPE_INTEGER;
-      out[0].data.integer = *(int*)(entity + addr);
+      out[0].data.integer = *(int*)((void*)entity + addr);
       break;
 
     case TYPE_FLOAT:
       out[0].type = TYPE_FLOAT;
-      out[0].data.floating = *(float*)(entity + addr);
+      out[0].data.floating = *(float*)((void*)entity + addr);
       break;
 
     case TYPE_STRING:
       out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(*(char**)(entity + addr));
+      out[0].data.string = SC_StringNewFromChar(*(char**)((void*)entity + addr));
       break;
 
     default:
@@ -189,9 +189,9 @@ static int entity_object_vec3_set(scDataTypeValue_t *in, scDataTypeValue_t *out,
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
-  memcpy(*(vec3_t**)(entity + addr), (vec3_t*) in[1].data.object->data.data.userdata, sizeof(vec3_t));
+  memcpy(*(vec3_t**)((void*)entity + addr), (vec3_t*) in[1].data.object->data.data.userdata, sizeof(vec3_t));
 
   out[0].type = TYPE_UNDEF;
   return 0;
@@ -201,10 +201,10 @@ static int entity_object_vec3_get(scDataTypeValue_t *in, scDataTypeValue_t *out,
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   out[0].type = TYPE_OBJECT;
-  out[0].data.object = SC_Vec3FromVec3_t(*(float**)(entity + addr));
+  out[0].data.object = SC_Vec3FromVec3_t(*(float**)((void*)entity + addr));
 
   out[1].type = TYPE_UNDEF;
   return 0;
@@ -214,9 +214,9 @@ static int entity_object_vec4_set(scDataTypeValue_t *in, scDataTypeValue_t *out,
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
-  memcpy(*(vec4_t**)(entity + addr), (vec4_t*) in[1].data.object->data.data.userdata, sizeof(vec4_t));
+  memcpy(*(vec4_t**)((void*)entity + addr), (vec4_t*) in[1].data.object->data.data.userdata, sizeof(vec4_t));
 
   out[0].type = TYPE_UNDEF;
   return 0;
@@ -226,10 +226,10 @@ static int entity_object_vec4_get(scDataTypeValue_t *in, scDataTypeValue_t *out,
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   out[0].type = TYPE_OBJECT;
-  out[0].data.object = SC_Vec4FromVec4_t(*(float**)(entity + addr));
+  out[0].data.object = SC_Vec4FromVec4_t(*(float**)((void*)entity + addr));
 
   out[1].type = TYPE_UNDEF;
   return 0;
@@ -239,9 +239,9 @@ static int entity_object_entity_set(scDataTypeValue_t *in, scDataTypeValue_t *ou
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
-  *(gentity_t**)(entity + addr) = (gentity_t*) G_EntityFromScript(in[1].data.object->data.data.userdata);
+  *(gentity_t**)((void*)entity + addr) = (gentity_t*) G_EntityFromScript(in[1].data.object->data.data.userdata);
 
   out[0].type = TYPE_UNDEF;
   return 0;
@@ -251,10 +251,10 @@ static int entity_object_entity_get(scDataTypeValue_t *in, scDataTypeValue_t *ou
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   out[0].type = TYPE_OBJECT;
-  out[0].data.object = G_GetScriptingEntity(*(gentity_t**)(entity + addr));
+  out[0].data.object = G_GetScriptingEntity(*(gentity_t**)((void*)entity + addr));
 
   out[1].type = TYPE_UNDEF;
   return 0;
@@ -264,9 +264,9 @@ static int entity_object_client_set(scDataTypeValue_t *in, scDataTypeValue_t *ou
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
-  *(gclient_t**)(entity + addr) = (gclient_t*) G_EntityFromScript(in[1].data.object);
+  *(gclient_t**)((void*)entity + addr) = (gclient_t*) G_EntityFromScript(in[1].data.object);
 
   out[0].type = TYPE_UNDEF;
   return 0;
@@ -276,10 +276,10 @@ static int entity_object_client_get(scDataTypeValue_t *in, scDataTypeValue_t *ou
 {
   scObject_t *object = in[0].data.object;
   int addr = closure.n;
-  gentity_t *entity = object->data.data.userdata;
+  gentity_t *entity = G_EntityFromScript(object);
 
   out[0].type = TYPE_OBJECT;
-  out[0].data.object = G_GetScriptingClient(*(gclient_t**)(entity + addr));
+  out[0].data.object = G_GetScriptingClient(*(gclient_t**)((void*)entity + addr));
 
   out[1].type = TYPE_UNDEF;
   return 0;
@@ -541,26 +541,26 @@ static int client_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
 {
   scObject_t *object = in[0].data.object;
   size_t addr = closure.s;
-  gclient_t *client = object->data.data.userdata;
+  gclient_t *client = G_ClientFromScript(object);
 
   switch(in[1].type)
   {
     case TYPE_BOOLEAN:
-      *(qboolean*)(client + addr) = in[1].data.boolean;
+      *(qboolean*)((void*)client + addr) = in[1].data.boolean;
       break;
 
     case TYPE_INTEGER:
-      *(int*)(client + addr) = in[1].data.integer;
+      *(int*)((void*)client + addr) = in[1].data.integer;
       break;
 
     case TYPE_FLOAT:
-      *(float*)(client + addr) = in[1].data.floating;
+      *(float*)((void*)client + addr) = in[1].data.floating;
       break;
 
     case TYPE_STRING:
       // FIXME: /!\ Memory leak /!\ */
       SC_StringGCInc(in[1].data.string);
-      *(const char**)(client + addr) = SC_StringToChar(in[1].data.string);
+      *(const char**)((void*)client + addr) = SC_StringToChar(in[1].data.string);
       break;
 
     default:
@@ -575,28 +575,28 @@ static int client_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
 {
   scObject_t *object = in[0].data.object;
   size_t addr = closure.s;
-  gclient_t *client = object->data.data.userdata;
+  gclient_t *client = G_ClientFromScript(object);
 
-  switch(in[1].type)
+  switch(out[0].type)
   {
     case TYPE_BOOLEAN:
       out[0].type = TYPE_BOOLEAN;
-      out[0].data.boolean = *(qboolean*)(client + addr);
+      out[0].data.boolean = *(qboolean*)((void*)client + addr);
       break;
 
     case TYPE_INTEGER:
       out[0].type = TYPE_INTEGER;
-      out[0].data.integer = *(int*)(client + addr);
+      out[0].data.integer = *(int*)((void*)client + addr);
       break;
 
     case TYPE_FLOAT:
       out[0].type = TYPE_FLOAT;
-      out[0].data.floating = *(float*)(client + addr);
+      out[0].data.floating = *(float*)((void*)client + addr);
       break;
 
     case TYPE_STRING:
       out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(*(char**)(client + addr));
+      out[0].data.string = SC_StringNewFromChar(*(char**)((void*)client + addr));
       break;
 
     default:
@@ -611,7 +611,7 @@ static int client_obj_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
 {
   scObject_t *object = in[0].data.object;
   int type = closure.n;
-  gclient_t *client = object->data.data.userdata;
+  gclient_t *client = G_ClientFromScript(object);
 
   switch(type)
   {
@@ -647,7 +647,7 @@ static int client_obj_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
 {
   scObject_t *object = in[0].data.object;
   int type = closure.n;
-  gclient_t *client = object->data.data.userdata;
+  gclient_t *client = G_ClientFromScript(object);
 
   switch(type)
   {
@@ -709,7 +709,7 @@ static int client_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
 static int client_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *object = in[0].data.object;
-  struct client_struct_s *cs = object->data.data.userdata;
+  gclient_t *client =  G_ClientFromScript(object);
   int type = closure.n;
 
   switch(type)
@@ -719,7 +719,7 @@ static int client_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
         gentity_t *ent, *spawn;
         vec3_t origin;
 
-        ent = g_entities + cs->client->ps.clientNum;
+        ent = g_entities + client->ps.clientNum;
 
         if(in[1].type == TYPE_UNDEF)
         {
@@ -728,7 +728,7 @@ static int client_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
         else
         {
           spawn = G_EntityFromScript(in[1].data.object);
-          G_CheckSpawnPoint(spawn->s.number, spawn->s.origin, spawn->s.origin2, cs->client->pers.teamSelection, origin);
+          G_CheckSpawnPoint(spawn->s.number, spawn->s.origin, spawn->s.origin2, client->pers.teamSelection, origin);
           ClientSpawn(ent, spawn, origin, spawn->s.angles);
         }
       }
@@ -753,7 +753,15 @@ static int client_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scCl
 }
 
 static scLibObjectMember_t client_members[] = {
-  // Vectors
+  // Session
+  { "spectatorTime", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorTime) } },
+  { "spectatorState", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorState) } },
+  { "spectatorClient", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorClient) } },
+  { "wins", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.wins) } },
+  { "losses", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.losses) } },
+  { "teamLeader", "", TYPE_BOOLEAN,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.teamLeader) } },
+  /*{ "ignoreList", "", TYPE_BOOLEAN,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.ignoreList) } },*/
+
   { "readyToExit", "", TYPE_BOOLEAN,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, readyToExit) } },
   { "noclip", "", TYPE_BOOLEAN,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, noclip) } },
   { "lastCmdTime", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, lastCmdTime) } },
@@ -847,6 +855,11 @@ static scConstant_t constants[] = {
   { "TEAM_NONE", TYPE_INTEGER, { .n = TEAM_NONE } },
   { "TEAM_ALIENS", TYPE_INTEGER, { .n = TEAM_ALIENS } },
   { "TEAM_HUMANS", TYPE_INTEGER, { .n = TEAM_HUMANS } },
+  { "SPECTATOR_NOT", TYPE_INTEGER, { .n = SPECTATOR_NOT } },
+  { "SPECTATOR_FREE", TYPE_INTEGER, { .n = SPECTATOR_FREE } },
+  { "SPECTATOR_LOCKED", TYPE_INTEGER, { .n = SPECTATOR_LOCKED } },
+  { "SPECTATOR_FOLLOW", TYPE_INTEGER, { .n = SPECTATOR_FOLLOW } },
+  { "SPECTATOR_SCOREBOARD", TYPE_INTEGER, { .n = SPECTATOR_SCOREBOARD } },
   { "" }
 };
 
@@ -909,8 +922,8 @@ void G_InitScript( void )
   SC_Init();
 
   SC_AddLibrary( "game", game_lib );
-  SC_AddClass( "game", &entity_def );
-  SC_AddClass( "game", &client_def );
+  entity_class = SC_AddClass( "game", &entity_def );
+  client_class = SC_AddClass( "game", &client_def );
   SC_Constant_Add(constants);
 
   SC_LoadLangages();
