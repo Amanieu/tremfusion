@@ -117,7 +117,9 @@ int SC_Lua_concat_metamethod(lua_State *L)
     lua_pushvalue(L, 2);
     lua_call(L, 1, 1);
     SC_Lua_pop_value(L, &value, TYPE_STRING);
+    SC_StringGCInc(value.data.string);
     lua_pushstring(L, SC_StringToChar(value.data.string));
+    SC_StringGCDec(value.data.string);
   }
   else
     lua_pushvalue(L, 2);
@@ -870,6 +872,7 @@ int SC_Lua_object_index_metamethod(lua_State *L)
 	{
       in[1].type = TYPE_STRING;
       in[1].data.string = SC_StringNewFromChar(name);
+      SC_StringGCInc(in[1].data.string);
       in[2].type = TYPE_UNDEF;
     }
     else
@@ -877,6 +880,9 @@ int SC_Lua_object_index_metamethod(lua_State *L)
 
     if(SC_RunFunction(&member->get, in, &out) != 0)
       luaL_error(L, SC_StringToChar(out.data.string));
+
+	if(strcmp(member->name, "_") == 0)
+      SC_StringGCDec(in[1].data.string);
 
     SC_Lua_push_value(L, &out);
     return 1;
@@ -923,6 +929,7 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
     {
       in[1].type = TYPE_STRING;
       in[1].data.string = SC_StringNewFromChar(name);
+	  SC_StringGCInc(in[1].data.string);
 
       SC_Lua_pop_value(L, &in[2], member->set.argument[1]);
       in[3].type = TYPE_UNDEF;
@@ -935,6 +942,11 @@ int SC_Lua_object_newindex_metamethod(lua_State *L)
 
     if(SC_RunFunction(&member->set, in, &out) != 0)
       luaL_error(L, SC_StringToChar(out.data.string));
+
+	if(strcmp(member->name, "_") == 0)
+	{
+		SC_StringGCDec(in[1].data.string);
+	}
 
     return 0;
   }

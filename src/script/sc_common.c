@@ -1337,6 +1337,10 @@ static int table_sort_comparator(const void *va, const void *vb)
     scDataTypeValue_t in[3];
     scDataTypeValue_t out;
 
+	memcpy(&in[0], a, sizeof(scDataTypeValue_t));
+	memcpy(&in[1], b, sizeof(scDataTypeValue_t));
+	in[2].type = TYPE_UNDEF;
+
     if(SC_RunFunction(table_sort_func, in, &out) != 0)
     {
       Com_Printf("table.sort: error with comparator function: %s", SC_StringToChar(out.data.string));
