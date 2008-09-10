@@ -338,24 +338,53 @@ static int register_boolean(lua_State *L)
 
 static int register_integer(lua_State *L)
 {
-  int integer;
+  union { int n; void* v; float f; } e;
+
 
   if(!SC_Lua_is_registered(L, 1, TYPE_INTEGER))
   {
-    integer = (int)lua_tonumber(L, 1);
-    SC_Lua_push_integer(L, integer);
+    e.n = (int)lua_tonumber(L, 1);
+    SC_Lua_push_integer(L, e.n);
+  }
+  else
+  {
+    lua_getmetatable(L, 1);
+    lua_getfield(L, -1, "_type");
+    if(lua_tointeger(L, -1) == TYPE_FLOAT)
+    {
+      lua_getfield(L, -2, "_ref");
+      e.v = lua_touserdata(L, -1);
+      lua_pop(L, 3);
+      SC_Lua_push_integer(L, e.f);
+    }
+    else
+      lua_pop(L, 2);
   }
   return 1;
 }
 
 static int register_float(lua_State *L)
 {
-  float floating;
+  union { float f; void* v; int n; } e;
 
   if(!SC_Lua_is_registered(L, 1, TYPE_FLOAT))
   {
-    floating = lua_tonumber(L, 1);
-    SC_Lua_push_float(L, floating);
+    e.f = lua_tonumber(L, 1);
+    SC_Lua_push_float(L, e.f);
+  }
+  else
+  {
+    lua_getmetatable(L, 1);
+    lua_getfield(L, -1, "_type");
+    if(lua_tointeger(L, -1) == TYPE_INTEGER)
+    {
+      lua_getfield(L, -2, "_ref");
+      e.v = lua_touserdata(L, -1);
+      lua_pop(L, 3);
+      SC_Lua_push_float(L, e.n);
+    }
+    else
+      lua_pop(L, 2);
   }
   return 1;
 }
@@ -487,7 +516,7 @@ void SC_Lua_loadlib(lua_State *L)
   map_luamethod(L, "getfenv", method_disabled);
   map_luamethod(L, "setfenv", method_disabled);
   map_luamethod(L, "gcinfo", method_disabled);
-  map_luamethod(L, "collectgarbage", method_disabled);
+  //map_luamethod(L, "collectgarbage", method_disabled);
   map_luamethod(L, "newproxy", method_disabled);
 
   // disable functions because they don't work with current implementation

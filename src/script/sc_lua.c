@@ -106,7 +106,9 @@ int SC_Lua_is_registered(lua_State *L, int index, scDataType_t type)
     if(lua_isnumber(L, -1))
     {
       stype = lua_tointeger(L, -1);
-      if(type != TYPE_ANY && stype != type)
+      if(type != TYPE_ANY && stype != type &&
+          ! ( ( type == TYPE_INTEGER && stype == TYPE_FLOAT ) ||
+            ( type == TYPE_FLOAT && stype == TYPE_INTEGER ) ) )
         luaL_argerror(L, index, va("%s expected, got %s", SC_DataTypeToString(type), SC_DataTypeToString(stype)));
 
       lua_pop(L, 2);
@@ -175,9 +177,7 @@ void SC_Lua_Init( void )
 
   // Lua standard lib
   luaopen_base(L);
-  luaopen_string(L);
-  luaopen_table(L);
-  lua_pop(L, 4);
+  lua_pop(L, 2);
 
   loadconstants(L);
 
@@ -301,7 +301,7 @@ int SC_Lua_RunFunction(const scDataTypeFunction_t *func, scDataTypeValue_t *in, 
 
   // do the call
   if(lua_pcall(L, narg, 1, 0) != 0)
-    SC_EXEC_ERROR(va("error running lua function : %s", lua_tostring(L, -1)));
+    SC_EXEC_ERROR(va("error running lua function :\n%s", lua_tostring(L, -1)));
 
   SC_Lua_pop_value(L, out, func->return_type);
 

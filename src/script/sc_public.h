@@ -39,7 +39,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 1 = Printouts of object creation and deletion
  * 2 = Printouts of actual reference increases and decreases
  */
-#define SC_GC_DEBUG 0
 
 #ifdef USE_LUA
 #include <lua.h>
