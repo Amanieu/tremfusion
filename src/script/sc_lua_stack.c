@@ -476,13 +476,13 @@ void SC_Lua_push_value( lua_State *L, scDataTypeValue_t *value )
       lua_pushnil(L);
       break;
     case TYPE_BOOLEAN:
-      SC_Lua_push_boolean(L, value->data.boolean);
+      lua_pushboolean(L, value->data.boolean);
       break;
     case TYPE_INTEGER:
-      SC_Lua_push_integer(L, value->data.integer);
+      lua_pushinteger(L, value->data.integer);
       break;
     case TYPE_FLOAT:
-      SC_Lua_push_float(L, value->data.floating);
+      lua_pushnumber(L, value->data.floating);
       break;
     case TYPE_USERDATA:
       SC_Lua_push_userdata(L, value->data.userdata);

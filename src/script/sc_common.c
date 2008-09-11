@@ -445,52 +445,45 @@ struct cvarType_s
 static scObject_t* new_cvar(const char *name)
 {
   scObject_t *self;
-  struct cvarType_s *cvar;
+  char *cvar;
   int len = strlen(name);
 
   self = SC_ObjectNew(cvar_class);
 
   self->data.type = TYPE_USERDATA;
   // cvar size is struct size and name string size
-  cvar = BG_Alloc(sizeof(struct cvarType_s) - sizeof(char) + len + 1);
-  strcpy(&cvar->name, name);
-  memset(&cvar->cvar, 0x00, sizeof(cvar->cvar));
+  cvar = BG_Alloc(len + 1);
+  strcpy(cvar, name);
   self->data.data.userdata = cvar;
 
   return self;
-}
-
-static void update_cvar (struct cvarType_s *cvar)
-{
-  trap_Cvar_Update(&cvar->cvar);
 }
 
 static int cvar_set ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   int type;
   scObject_t *object = in[0].data.object;
-  struct cvarType_s *cvar = object->data.data.userdata;
+  const char *cvar = object->data.data.userdata;
 
   type = closure.n;
   switch(type)
   {
     case CVAR_STRING:
-      trap_Cvar_Set(&cvar->name, SC_StringToChar(in[1].data.string));
+      trap_Cvar_Set(cvar, SC_StringToChar(in[1].data.string));
       break;
 
     case CVAR_INTEGER:
-      trap_Cvar_Set(&cvar->name, va("%ld", in[1].data.integer));
+      trap_Cvar_Set(cvar, va("%ld", in[1].data.integer));
       break;
 
     case CVAR_FLOAT:
-      trap_Cvar_Set(&cvar->name, va("%f", in[1].data.floating));
+      trap_Cvar_Set(cvar, va("%f", in[1].data.floating));
       break;
 
     default:
       SC_EXEC_ERROR(va("Internal error: unknow case in `cvar_set' at %s (%d)", __FILE__, __LINE__));
   }
 
-  out->type = TYPE_UNDEF;
   return 0;
 }
 
@@ -498,47 +491,53 @@ static int cvar_get ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
 {
   int type;
   scObject_t *object = in[0].data.object;
-  struct cvarType_s *cvar = object->data.data.userdata;
-
-  // update cvar, just be sure we have an up-to-date value
-  update_cvar(cvar);
+  const char *cvar = object->data.data.userdata;
 
   type = closure.n;
   switch(type)
   {
     case CVAR_STRING:
-      out[0].type = TYPE_STRING;
-      out[0].data.string = SC_StringNewFromChar(cvar->cvar.string);
+      {
+        char buffer[MAX_CVAR_VALUE_STRING];
+        trap_Cvar_VariableStringBuffer(cvar, buffer, sizeof(buffer));
+        out[0].type = TYPE_STRING;
+        out[0].data.string = SC_StringNewFromChar(buffer);
+      }
       break;
 
     case CVAR_INTEGER:
-      out[0].type = TYPE_INTEGER;
-      out[0].data.integer = cvar->cvar.integer;
+      {
+        out[0].type = TYPE_INTEGER;
+        out[0].data.integer = trap_Cvar_VariableIntegerValue(cvar);
+      }
       break;
 
     case CVAR_FLOAT:
-      out[0].type = TYPE_FLOAT;
-      out[0].data.floating = cvar->cvar.value;
+      {
+        char buffer[MAX_CVAR_VALUE_STRING];
+        trap_Cvar_VariableStringBuffer(cvar, buffer, sizeof(buffer));
+        out[0].type = TYPE_STRING;
+        out[0].data.floating = atof(cvar);
+      }
       break;
 
     default:
       SC_EXEC_ERROR(va("Internal error: unknow case in `cvar_get' at %s (%d)", __FILE__, __LINE__));
   }
 
-  out[1].type = TYPE_UNDEF;
   return 0;
 }
 
 static int cvar_register ( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *object = in[0].data.object;
-  struct cvarType_s *cvar = object->data.data.userdata;
+  const char *cvar = object->data.data.userdata;
+  vmCvar_t dcvar;
   scDataTypeString_t *def = in[1].data.string;
   int flags = in[2].data.integer;
 
-  trap_Cvar_Register(&cvar->cvar, &cvar->name, SC_StringToChar(def), flags);
+  trap_Cvar_Register(&dcvar, cvar, SC_StringToChar(def), flags);
 
-  out[1].type = TYPE_UNDEF;
   return 0;
 }
 
@@ -621,6 +620,7 @@ static scConstant_t cvar_constants[] = {
   { "CVAR_VM_CREATED", TYPE_INTEGER, { .n =  CVAR_VM_CREATED } },
   { "CVAR_PROTECTED", TYPE_INTEGER, { .n =  CVAR_PROTECTED } },
   { "CVAR_NONEXISTENT", TYPE_INTEGER, { .n =  CVAR_NONEXISTENT } },
+  { "" }
 };
 
 /*

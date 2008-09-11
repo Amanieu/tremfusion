@@ -22,16 +22,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-static int game_Command( scDataTypeValue_t *args, scDataTypeValue_t *ret, scClosure_t closure )
+static int game_command( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
 {
-  trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(args[0].data.string));
-  ret->type = TYPE_UNDEF;
+  trap_SendConsoleCommand(EXEC_APPEND, SC_StringToChar(in[0].data.string));
+  return 0;
+}
 
+static int game_cp( scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure )
+{
+  trap_SendServerCommand(-1, va("cp \"%s\"", SC_StringToChar(in[0].data.string)));
   return 0;
 }
 
 static scLibFunction_t game_lib[] = {
-  { "Command", "", game_Command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "command", "", game_command, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
+  { "cp", "", game_cp, { TYPE_STRING, TYPE_UNDEF }, TYPE_UNDEF, { .v = NULL } },
   { "" }
 };
 
