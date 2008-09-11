@@ -841,7 +841,7 @@ int SC_Module_Load(scObject_t *self, scDataTypeValue_t *out)
 
   SC_HashGet(hash, "loaded", &value);
   if(value.data.boolean)
-    SC_EXEC_ERROR(va("can't load module %s: allready loaded", name));
+    SC_EXEC_ERROR(va("can't load module %s: already loaded", name));
 
   SC_HashGet(hash, "conflict", &value);
   if(value.type == TYPE_ARRAY)
@@ -1066,7 +1066,7 @@ static int module_constructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scC
   name = va("module.%s", SC_StringToChar(value.data.string));
   SC_NamespaceGet(name, &value);
   if(value.type != TYPE_UNDEF)
-    SC_EXEC_ERROR(va("Can't create module %s: a module with this name allready exist", name));
+    SC_EXEC_ERROR(va("Can't create module %s: a module with this name already exist", name));
 
   value.type = TYPE_OBJECT;
   value.data.object = self;

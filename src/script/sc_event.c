@@ -362,11 +362,11 @@ int SC_Event_AddNode(scEventNode_t *parent, scEventNode_t *previous, scEventNode
 {
   scEventNode_t *node = parent->first;
 
-  // error if tag allready used
+  // error if tag already used
   while(node)
   {
     if(strcmp(node->tag, new->tag) == 0)
-      SC_EXEC_ERROR(va("Can't add hook: %s tag allready exist", new->tag));
+      SC_EXEC_ERROR(va("Can't add hook: %s tag already exist", new->tag));
     node = node->next;
   }
  
