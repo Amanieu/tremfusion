@@ -543,7 +543,9 @@ static void PM_CheckCharge( void )
   if( pm->ps->stats[ STAT_MISC ] > 0 )
     pm->ps->pm_flags |= PMF_CHARGE;
   else
+
     pm->ps->pm_flags &= ~PMF_CHARGE;
+
 }
 
 /*
@@ -621,6 +623,7 @@ static qboolean PM_CheckPounce( void )
   return qtrue;
 }
 
+
 /*
 =============
 PM_CheckWallJump
@@ -628,15 +631,50 @@ PM_CheckWallJump
 */
 static qboolean PM_CheckWallJump( void )
 {
-  vec3_t  dir, forward, right;
+  vec3_t  dir, forward, right, movedir, point;
   vec3_t  refNormal = { 0.0f, 0.0f, 1.0f };
   float   normalFraction = 1.5f;
   float   cmdFraction = 1.0f;
   float   upFraction = 1.5f;
+  trace_t trace;
 
+  if( !( BG_Class( pm->ps->stats[ STAT_CLASS ] )->abilities & SCA_WALLJUMPER ) )
+    return qfalse;
+
+  ProjectPointOnPlane( movedir, pml.forward, refNormal );
+  VectorNormalize( movedir );
+  
+  if( pm->cmd.forwardmove < 0 )
+    VectorNegate( movedir, movedir );
+  
+  //allow strafe transitions
+  if( pm->cmd.rightmove )
+  {
+    VectorCopy( pml.right, movedir );
+    
+    if( pm->cmd.rightmove < 0 )
+      VectorNegate( movedir, movedir );
+  }
+  
+  //trace into direction we are moving
+  VectorMA( pm->ps->origin, 0.25f, movedir, point );
+  pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask );
+  
+  if( trace.fraction < 1.0f &&
+      !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) &&
+      trace.plane.normal[ 2 ] < MIN_WALK_NORMAL )
+  {
+    if( !VectorCompare( trace.plane.normal, pm->ps->grapplePoint ) )
+    {
+      VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
+    }
+  }
+  else
+    return qfalse;
+  
   if( pm->ps->pm_flags & PMF_RESPAWNED )
     return qfalse;    // don't allow jump until all buttons are up
-
+  
   if( pm->cmd.upmove < 10 )
     // not holding jump
     return qfalse;
@@ -714,21 +752,24 @@ static qboolean PM_CheckWallJump( void )
   return qtrue;
 }
 
+
+
 static qboolean PM_CheckJump( void )
 {
   vec3_t normal;
 
-  if( BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude == 0.0f )
+  if( pm->ps->groundEntityNum == ENTITYNUM_NONE )
     return qfalse;
 
-  if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
-    return PM_CheckWallJump( );
+  if( BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude == 0.0f )
+    return qfalse;
 
   //can't jump and pounce at the same time
   if( ( pm->ps->weapon == WP_ALEVEL3 ||
         pm->ps->weapon == WP_ALEVEL3_UPG ) &&
       pm->ps->stats[ STAT_MISC ] > 0 )
     return qfalse;
+
 
   //can't jump and charge at the same time
   if( ( pm->ps->weapon == WP_ALEVEL4 ) &&
@@ -761,6 +802,12 @@ static qboolean PM_CheckJump( void )
     return qfalse;
   }
 
+  //don't allow walljump for a short while after jumping from the ground
+  if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
+  {
+    pm->ps->pm_flags |= PMF_TIME_WALLJUMP;
+    pm->ps->pm_time = 200;
+  }
   pml.groundPlane = qfalse;   // jumping away
   pml.walking = qfalse;
   pm->ps->pm_flags |= PMF_JUMP_HELD;
@@ -773,7 +820,9 @@ static qboolean PM_CheckJump( void )
 
   // jump away from wall
   BG_GetClientNormal( pm->ps, normal );
-
+  
+  if( pm->ps->velocity[ 2 ] < 0 )
+    pm->ps->velocity[ 2 ] = 0;
   VectorMA( pm->ps->velocity, BG_Class( pm->ps->stats[ STAT_CLASS ] )->jumpMagnitude,
             normal, pm->ps->velocity );
 
@@ -1157,6 +1206,7 @@ static void PM_AirMove( void )
   float     scale;
   usercmd_t cmd;
 
+  PM_CheckWallJump( );
   PM_Friction( );
 
   fmove = pm->cmd.forwardmove;
@@ -2139,7 +2189,6 @@ PM_GroundTrace
 static void PM_GroundTrace( void )
 {
   vec3_t      point;
-  vec3_t      movedir;
   vec3_t      refNormal = { 0.0f, 0.0f, 1.0f };
   trace_t     trace;
 
@@ -2240,41 +2289,6 @@ static void PM_GroundTrace( void )
       PM_GroundTraceMissed( );
       pml.groundPlane = qfalse;
       pml.walking = qfalse;
-
-      if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_WALLJUMPER ) )
-      {
-        ProjectPointOnPlane( movedir, pml.forward, refNormal );
-        VectorNormalize( movedir );
-
-        if( pm->cmd.forwardmove < 0 )
-          VectorNegate( movedir, movedir );
-
-        //allow strafe transitions
-        if( pm->cmd.rightmove )
-        {
-          VectorCopy( pml.right, movedir );
-
-          if( pm->cmd.rightmove < 0 )
-            VectorNegate( movedir, movedir );
-        }
-
-        //trace into direction we are moving
-        VectorMA( pm->ps->origin, 0.25f, movedir, point );
-        pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask );
-
-        //if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) &&
-        //    ( trace.entityNum == ENTITYNUM_WORLD ) )
-        if( trace.fraction < 1.0f &&
-                !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) )
-        {
-          if( !VectorCompare( trace.plane.normal, pm->ps->grapplePoint ) )
-          {
-            VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
-            PM_CheckWallJump( );
-          }
-        }
-      }
-
       return;
     }
   }
@@ -2864,7 +2878,20 @@ static void PM_Weapon( void )
       {
         pm->ps->stats[ STAT_STATE ] &= ~SS_CHARGING;
         if( pm->cmd.forwardmove > 0 )
-          pm->ps->stats[ STAT_MISC ] += pml.msec;
+        {
+          int charge = pml.msec;
+          vec3_t dir,vel;
+          AngleVectors(pm->ps->viewangles, dir, NULL, NULL);
+          VectorCopy(pm->ps->velocity,vel);
+          vel[2] = 0;
+          dir[2] = 0;
+          VectorNormalize(vel);
+          VectorNormalize(dir);
+
+          charge *= DotProduct(dir,vel);
+
+          pm->ps->stats[ STAT_MISC ] += charge;
+        }
         else
           pm->ps->stats[ STAT_MISC ] = 0;
       }
@@ -2890,8 +2917,11 @@ static void PM_Weapon( void )
     // Discharging
     else
     {
-      pm->ps->stats[ STAT_MISC ] -= pml.msec;
-      
+      if( pm->ps->stats[ STAT_MISC ] < LEVEL4_TRAMPLE_CHARGE_MIN )
+        pm->ps->stats[ STAT_MISC ] = 0;
+      else
+        pm->ps->stats[ STAT_MISC ] -= pml.msec;
+
       // If the charger has stopped moving take a chunk of charge away
       if( VectorLength( pm->ps->velocity ) < 64.0f || pm->cmd.rightmove )
         pm->ps->stats[ STAT_MISC ] -= LEVEL4_TRAMPLE_STOP_PENALTY * pml.msec;
@@ -2916,9 +2946,9 @@ static void PM_Weapon( void )
       pm->ps->stats[ STAT_MISC ] += pml.msec;
       if( pm->ps->stats[ STAT_MISC ] >= LCANNON_CHARGE_TIME_MAX )
         pm->ps->stats[ STAT_MISC ] = LCANNON_CHARGE_TIME_MAX;
-      if( pm->ps->stats[ STAT_MISC ] > pm->ps->ammo[0] * LCANNON_CHARGE_TIME_MAX /
+      if( pm->ps->stats[ STAT_MISC ] > pm->ps->ammo * LCANNON_CHARGE_TIME_MAX /
                                               LCANNON_CHARGE_AMMO )
-        pm->ps->stats[ STAT_MISC ] = pm->ps->ammo[0] * LCANNON_CHARGE_TIME_MAX /
+        pm->ps->stats[ STAT_MISC ] = pm->ps->ammo * LCANNON_CHARGE_TIME_MAX /
                                             LCANNON_CHARGE_AMMO;
     }
 
@@ -3017,7 +3047,7 @@ static void PM_Weapon( void )
   maxClips = BG_Weapon( pm->ps->weapon )->maxClips;
 
   // check for out of ammo
-  if( !pm->ps->ammo[0] && !pm->ps->ammo[1] && !BG_Weapon( pm->ps->weapon )->infiniteAmmo )
+  if( !pm->ps->ammo && !pm->ps->clips && !BG_Weapon( pm->ps->weapon )->infiniteAmmo )
   {
     if( ( pm->cmd.buttons & BUTTON_ATTACK ) ||
         ( BG_Weapon( pm->ps->weapon )->hasAltMode &&
@@ -3042,12 +3072,12 @@ static void PM_Weapon( void )
   //done reloading so give em some ammo
   if( pm->ps->weaponstate == WEAPON_RELOADING )
   {
-    pm->ps->ammo[1]--;
-    pm->ps->ammo[0] = BG_Weapon( pm->ps->weapon )->maxAmmo;
+    pm->ps->clips--;
+    pm->ps->ammo = BG_Weapon( pm->ps->weapon )->maxAmmo;
 
     if( BG_Weapon( pm->ps->weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, pm->ps->stats ) )
-      pm->ps->ammo[0] *= BATTPACK_MODIFIER;
+      pm->ps->ammo *= BATTPACK_MODIFIER;
 
     //allow some time for the weapon to be raised
     pm->ps->weaponstate = WEAPON_RAISING;
@@ -3057,7 +3087,7 @@ static void PM_Weapon( void )
   }
 
   // check for end of clip
-  if( ( !pm->ps->ammo[0] || ( pm->ps->pm_flags & PMF_WEAPON_RELOAD ) ) && pm->ps->ammo[1] )
+  if( ( !pm->ps->ammo || ( pm->ps->pm_flags & PMF_WEAPON_RELOAD ) ) && pm->ps->clips )
   {
     pm->ps->pm_flags &= ~PMF_WEAPON_RELOAD;
     pm->ps->weaponstate = WEAPON_RELOADING;
@@ -3175,7 +3205,7 @@ static void PM_Weapon( void )
     if( BG_Weapon( pm->ps->weapon )->hasThirdMode )
     {
       //hacky special case for slowblob
-      if( pm->ps->weapon == WP_ALEVEL3_UPG && !pm->ps->ammo[0] )
+      if( pm->ps->weapon == WP_ALEVEL3_UPG && !pm->ps->ammo )
       {
         pm->ps->weaponTime += 200;
         return;
@@ -3296,14 +3326,14 @@ static void PM_Weapon( void )
   {
     // Special case for lcannon
     if( pm->ps->weapon == WP_LUCIFER_CANNON && attack1 && !attack2 )
-      pm->ps->ammo[0] -= ( pm->ps->stats[ STAT_MISC ] * LCANNON_CHARGE_AMMO +
+      pm->ps->ammo -= ( pm->ps->stats[ STAT_MISC ] * LCANNON_CHARGE_AMMO +
                 LCANNON_CHARGE_TIME_MAX - 1 ) / LCANNON_CHARGE_TIME_MAX;
     else
-      pm->ps->ammo[0]--;
+      pm->ps->ammo--;
 
     // Stay on the safe side
-    if( pm->ps->ammo[0] < 0 )
-      pm->ps->ammo[0] = 0;
+    if( pm->ps->ammo < 0 )
+      pm->ps->ammo = 0;
 
   }
 
@@ -3534,7 +3564,7 @@ void PmoveSingle( pmove_t *pmove )
   // set the firing flag for continuous beam weapons
   if( !(pm->ps->pm_flags & PMF_RESPAWNED) && pm->ps->pm_type != PM_INTERMISSION &&
       ( pm->cmd.buttons & BUTTON_ATTACK ) &&
-      ( ( pm->ps->ammo[0] > 0 || pm->ps->ammo[1] > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
+      ( ( pm->ps->ammo > 0 || pm->ps->clips > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
     pm->ps->eFlags |= EF_FIRING;
   else
     pm->ps->eFlags &= ~EF_FIRING;
@@ -3542,7 +3572,7 @@ void PmoveSingle( pmove_t *pmove )
   // set the firing flag for continuous beam weapons
   if( !(pm->ps->pm_flags & PMF_RESPAWNED) && pm->ps->pm_type != PM_INTERMISSION &&
       ( pm->cmd.buttons & BUTTON_ATTACK2 ) &&
-      ( ( pm->ps->ammo[0] > 0 || pm->ps->ammo[1] > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
+      ( ( pm->ps->ammo > 0 || pm->ps->clips > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
     pm->ps->eFlags |= EF_FIRING2;
   else
     pm->ps->eFlags &= ~EF_FIRING2;
@@ -3550,7 +3580,7 @@ void PmoveSingle( pmove_t *pmove )
   // set the firing flag for continuous beam weapons
   if( !(pm->ps->pm_flags & PMF_RESPAWNED) && pm->ps->pm_type != PM_INTERMISSION &&
       ( pm->cmd.buttons & BUTTON_USE_HOLDABLE ) &&
-      ( ( pm->ps->ammo[0] > 0 || pm->ps->ammo[1] > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
+      ( ( pm->ps->ammo > 0 || pm->ps->clips > 0 ) || BG_Weapon( pm->ps->weapon )->infiniteAmmo ) )
     pm->ps->eFlags |= EF_FIRING3;
   else
     pm->ps->eFlags &= ~EF_FIRING3;

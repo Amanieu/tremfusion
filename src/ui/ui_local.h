@@ -30,6 +30,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/keycodes.h"
 #include "../game/bg_public.h"
 #include "ui_shared.h"
+#include "ui_script.h"
+
+#define UI_SCRIPT_DIRECTORY "uiscript/"
 
 //
 // ui_main.c
@@ -45,6 +48,13 @@ void UI_ServerInfo( void );
 void UI_RegisterCvars( void );
 void UI_UpdateCvars( void );
 void UI_DrawConnectScreen( qboolean overlay );
+
+//
+// ui_shared.c
+//
+void Menu_UpdatePosition( menuDef_t *menu );
+void Menus_Close( menuDef_t *menu );
+void Item_UpdatePosition( itemDef_t *item );
 
 // new ui stuff
 #define MAX_MAPS 128
@@ -277,11 +287,13 @@ typedef struct
 
   resolution_t  resolutions[ MAX_RESOLUTIONS ];
   int numResolutions;
+  qboolean oldResolutions;
 
   qboolean inGameLoad;
 
   qboolean  chatTeam;
   qboolean  chatAdmins;
+  qboolean  chatClan;
   qboolean  chatPrompt;
   char      chatPromptCallback[ MAX_STRING_CHARS ];
   int       chatTargetClientNum;
@@ -298,6 +310,14 @@ void      UI_AdjustFrom640( float *x, float *y, float *w, float *h );
 void      UI_Refresh( int time );
 void      UI_DrawHandlePic( float x, float y, float w, float h, qhandle_t hShader );
 void      UI_FillRect( float x, float y, float width, float height, const float *color );
+
+//
+// script cvars
+//
+extern  vmCvar_t  sc_python;
+extern  vmCvar_t  py_initialized;
+extern  vmCvar_t  sc_lua;
+extern  vmCvar_t  lua_initialized;
 
 //
 // ui_syscalls.c
@@ -382,5 +402,11 @@ int        trap_RealTime( qtime_t *qtime );
 void      trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset );
 
 void      trap_SetPbClStatus( int status );
+
+int        trap_CrosshairPlayer( void );
+int        trap_LastAttacker( void );
+
+void     trap_AddCommand( const char *cmd_name, void (*function) (void));
+void     trap_RemoveCommand( const char *cmd_name);
 
 #endif

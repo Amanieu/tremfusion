@@ -471,3 +471,25 @@ void trap_SetPbClStatus( int status )
 {
   syscall( UI_SET_PBCLSTATUS, status );
 }
+
+int trap_CrosshairPlayer( void )
+{
+  return syscall( UI_CROSSHAIR_PLAYER );
+}
+
+int trap_LastAttacker( void )
+{
+  return syscall( UI_LAST_ATTACKER );
+}
+
+void trap_AddCommand( const char *cmd_name, void (*function) (void))
+{
+  syscall( UI_ADD_COMMAND, cmd_name, function );
+  return;
+}
+
+void trap_RemoveCommand( const char *cmd_name)
+{
+  syscall( UI_REMOVE_COMMAND, cmd_name);
+  return;
+}

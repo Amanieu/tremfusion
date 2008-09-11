@@ -25,6 +25,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
+#ifdef USE_LUA
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#endif
+
 /*
 ===================
 Svcmd_EntityList_f
@@ -242,6 +248,18 @@ static void Svcmd_AdmitDefeat_f( void )
   } 
 }
 
+/*  
+=================
+Svcmd_Script_f
+=================
+*/  
+static void Svcmd_Script_f(void)
+{
+  char filename[128];
+  trap_Argv( 1, filename, 128 );
+  SC_RunScript( SC_LangageFromFilename(va("scripts/%s", filename) ), va("scripts/%s", filename) );
+}
+
 /*
 =================
 ConsoleCommand
@@ -336,12 +354,122 @@ qboolean  ConsoleCommand( void )
     level.lastWin = TEAM_NONE;
     trap_SetConfigstring( CS_WINNER, "Evacuation" );
     LogExit( "Evacuation." );
+    
+    // TODO: Call event here: game.on_exit
+
     return qtrue;
   }
-  
+
+  if( !Q_stricmp( cmd, "load" ) )
+  {
+    char name[MAX_PATH_LENGTH+1];
+    scDataTypeValue_t value, value2;
+	int ret;
+
+    trap_Argv( 1, name, sizeof( name ) );
+
+    SC_NamespaceGet(va("module.%s", name), &value);
+
+    if(value.type == TYPE_OBJECT)
+    {
+      ret = SC_Module_Load(value.data.object, &value2);
+      if(ret == -1)
+      {
+        Com_Printf("Can't load module `%s': %s\n", name, SC_StringToChar(value2.data.string));
+        return qfalse;
+      }
+      else if(ret == 0)
+      {
+        Com_Printf("Can't load module `%s': autoloader refuse to load\n", name);
+        return qfalse;
+      }
+      else
+        Com_Printf("`%s' loaded\n", name);
+    }
+    else
+    {
+      Com_Printf("Can't load module `%s': unknown module\n", name);
+      return qfalse;
+    }
+
+    return qtrue;
+  }
+
+  if( !Q_stricmp( cmd, "unload" ) )
+  {
+    char name[MAX_PATH_LENGTH+1];
+    char force[5+1];
+    scDataTypeValue_t value, value2;
+
+    trap_Argv( 1, name, sizeof( name ) );
+    trap_Argv( 2, force, sizeof( force ) );
+
+    SC_NamespaceGet(va("module.%s", name), &value);
+
+    if(value.type == TYPE_OBJECT)
+    {
+      int ret;
+
+      if(strcmp(force, "force") == 0)
+        ret = SC_Module_Unload(value.data.object, &value2, 1);
+      else
+        ret = SC_Module_Unload(value.data.object, &value2, 0);
+
+      if(ret == -1)
+      {
+        Com_Printf("Can't unload module `%s': %s\n", name, SC_StringToChar(value2.data.string));
+        return qfalse;
+      }
+      else if(ret == 0)
+      {
+        Com_Printf("Can't load module `%s': autounloader refuse to unload\n", name);
+        return qfalse;
+      }
+      else
+        Com_Printf("`%s' module unloaded\n", name);
+    }
+    else
+    {
+      Com_Printf("Can't load module `%s': unknown module\n", name);
+      return qfalse;
+    }
+
+    return qtrue;
+  }
+
+#ifdef USE_LUA
+  if( !Q_stricmp( cmd, "lua") )
+  {
+    char cmd[257];
+    lua_State *L = g_luaState;
+
+    trap_Argv(1, cmd, sizeof(cmd));
+
+    if(luaL_loadbuffer(L, cmd, strlen(cmd), "stdin"))
+    {
+      Com_Printf("error: %s\n", lua_tostring(L, -1));
+      return qfalse;
+    }
+
+    if(lua_pcall(L, 0, 0, 0))
+    {
+      Com_Printf("error %s\n", lua_tostring(L, -1));
+      return qfalse;
+    }
+
+    return qtrue;
+  }
+#endif
+
   // see if this is a a admin command
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;
+
+//  if( !Q_stricmp(cmd, "script") )
+//  {
+//    Svcmd_Script_f();
+//    return qtrue;
+//  }
 
   if( g_dedicated.integer )
   {
@@ -375,3 +503,16 @@ qboolean  ConsoleCommand( void )
   return qfalse;
 }
 
+void G_SVCommandsInit( void )
+{
+#ifndef Q3_VM
+  trap_AddCommand( "script", Svcmd_Script_f );
+#endif
+}
+
+void G_SVCommandsShutdown( void )
+{
+#ifndef Q3_VM
+  trap_RemoveCommand( "script");
+#endif
+}

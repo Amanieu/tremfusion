@@ -18,21 +18,22 @@ ifeq ($(COMPILE_PLATFORM),darwin)
 endif
 
 ifndef BUILD_CLIENT
-  BUILD_CLIENT     =
+  BUILD_CLIENT     = 1
 endif
 ifndef BUILD_CLIENT_SMP
-  BUILD_CLIENT_SMP =
+  BUILD_CLIENT_SMP = 1
 endif
 ifndef BUILD_SERVER
-  BUILD_SERVER     =
+  BUILD_SERVER     = 1
 endif
 ifndef BUILD_GAME_SO
-  BUILD_GAME_SO    =
+  BUILD_GAME_SO    = 1
 endif
 ifndef BUILD_GAME_QVM
-  BUILD_GAME_QVM   =
+  BUILD_GAME_QVM   = 1
 endif
 
+# SDL 1.2 is only thread-safe on Macs
 ifneq ($(PLATFORM),darwin)
   BUILD_CLIENT_SMP = 0
 endif
@@ -88,16 +89,16 @@ ifndef GENERATE_DEPENDENCIES
 GENERATE_DEPENDENCIES=1
 endif
 
-ifndef USE_EPOLL
-USE_EPOLL=1
-endif
-
 ifndef USE_OPENAL
 USE_OPENAL=1
 endif
 
 ifndef USE_OPENAL_DLOPEN
-USE_OPENAL_DLOPEN=0
+  ifeq ($(PLATFORM),mingw32)
+    USE_OPENAL_DLOPEN=1
+  else
+    USE_OPENAL_DLOPEN=0
+  endif
 endif
 
 ifndef USE_CURL
@@ -112,16 +113,32 @@ ifndef USE_CURL_DLOPEN
   endif
 endif
 
+ifndef USE_PYTHON
+  USE_PYTHON=0
+endif
+
+ifndef USE_LUA
+  USE_LUA=1
+endif
+
 ifndef USE_CODEC_VORBIS
 USE_CODEC_VORBIS=0
 endif
 
-ifndef USE_CURSES
-  ifeq ($(PLATFORM),linux)
-    USE_CURSES=1
-  else
-    USE_CURSES=0
-  endif
+ifndef USE_MUMBLE
+USE_MUMBLE=1
+endif
+
+ifndef USE_VOIP
+USE_VOIP=1
+endif
+
+ifndef USE_INTERNAL_SPEEX
+USE_INTERNAL_SPEEX=1
+endif
+
+ifndef USE_TTY_CLIENT
+USE_TTY_CLIENT=0
 endif
 
 ifndef USE_LOCAL_HEADERS
@@ -130,6 +147,15 @@ endif
 
 ifndef BUILD_MASTER_SERVER
 BUILD_MASTER_SERVER=0
+endif
+
+# Disable this on release builds
+ifndef USE_SCM_VERSION
+USE_SCM_VERSION=1
+endif
+
+ifndef ENABLE_SCRIPT_UI
+ENABLE_SCRIPT_UI=1
 endif
 
 #############################################################################
@@ -147,7 +173,11 @@ GDIR=$(MOUNT_DIR)/game
 CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
-JPDIR=$(MOUNT_DIR)/jpeg-6
+JPDIR=$(MOUNT_DIR)/jpeg-6b
+PYTHONDIR=$(MOUNT_DIR)/python
+LUADIR=$(MOUNT_DIR)/lua
+SCRIPTDIR=$(MOUNT_DIR)/script
+SPEEXDIR=$(MOUNT_DIR)/libspeex
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
 Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
@@ -158,32 +188,48 @@ LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
 
-# extract version info
-VERSION=$(shell grep "\#define *PRODUCT_VERSION" $(CMDIR)/q_shared.h | \
-  sed -e 's/[^"]*"\(.*\)"/\1/')
-
-USE_SVN=
-ifeq ($(wildcard .svn),.svn)
-  SVN_REV=$(shell LANG=C svnversion .)
-  ifneq ($(SVN_REV),)
-    SCM_VERSION=$(VERSION)_SVN$(SVN_REV)
-    USE_SVN=1
-  endif
+# set PKG_CONFIG_PATH to influence this, e.g.
+# PKG_CONFIG_PATH=/opt/cross/i386-mingw32msvc/lib/pkgconfig
+ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
+  CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
+  CURL_LIBS=$(shell pkg-config --libs libcurl)
+  OPENAL_CFLAGS=$(shell pkg-config --cflags openal)
+  OPENAL_LIBS=$(shell pkg-config --libs openal)
+  # FIXME: introduce CLIENT_CFLAGS
+  SDL_CFLAGS=$(shell pkg-config --cflags sdl|sed 's/-Dmain=SDL_main//')
+  SDL_LIBS=$(shell pkg-config --libs sdl)
 endif
 
-USE_HG=
-ifeq ($(wildcard .hg),.hg)
-  HG_REV=$(shell LANG=C hg id -n)
-  ifneq ($(HG_REV),)
-    SCM_VERSION=$(VERSION)_HG$(HG_REV)
-    USE_HG=1
-  endif
-endif
+# version info
+VERSION_NUMBER=0.0.2
 
-ifneq ($(USE_SVN),1)
-  ifneq ($(USE_HG),1)
-    SCM_VERSION=$(VERSION)
+ifeq ($(USE_SCM_VERSION),1)
+  ifeq ($(wildcard .svn),.svn)
+    SVN_REV=$(shell LANG=C svnversion .)
+    ifneq ($(SVN_REV),)
+      VERSION=$(VERSION_NUMBER)_R$(SVN_REV)
+      USE_SVN=1
+    endif
   endif
+
+  # For git-svn
+  ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
+    GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+    ifneq ($(GIT_REV),)
+      VERSION=$(VERSION_NUMBER)_R$(GIT_REV)
+      USE_GIT=1
+    endif
+  endif
+
+  ifeq ($(wildcard .hg),.hg)
+    HG_REV=$(shell LANG=C hg id -n)
+    ifneq ($(HG_REV),)
+      VERSION=$(VERSION_NUMBER)_R$(HG_REV)
+      USE_HG=1
+    endif
+  endif
+else
+  VERSION=$(VERSION_NUMBER)
 endif
 
 
@@ -216,10 +262,12 @@ ifeq ($(PLATFORM),linux)
   endif
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-    -pipe -DUSE_ICON $(shell sdl-config --cflags)
+    -pipe
 
-  ifeq ($(USE_EPOLL),1)
-    BASE_CFLAGS += -DUSE_EPOLL
+  ifneq ($(USE_TTY_CLIENT),1)
+    BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
+  else
+    BASE_CFLAGS += -DUSE_TTY_CLIENT
   endif
 
   ifeq ($(USE_OPENAL),1)
@@ -238,7 +286,15 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
+   endif
+   
+  ifeq ($(USE_PYTHON),1)
+    BASE_CFLAGS += -DUSE_PYTHON
   endif
+
+   ifeq ($(USE_LUA),1)
+     BASE_CFLAGS += -DUSE_LUA
+   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
@@ -273,7 +329,11 @@ ifeq ($(PLATFORM),linux)
   THREAD_LDFLAGS=-lpthread
   LDFLAGS=-ldl -lm
 
-  CLIENT_LDFLAGS=$(shell sdl-config --libs) -lGL
+  CLIENT_LDFLAGS=
+
+  ifneq ($(USE_TTY_CLIENT),1)
+    CLIENT_LDFLAGS += $(shell sdl-config --libs) -lGL
+  endif
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -287,12 +347,24 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
+  ifeq ($(USE_PYTHON),1)
+    PYTHONLDFLAGS = $(shell python -c "import distutils.sysconfig;print distutils.sysconfig.get_config_var('LINKFORSHARED')")
+    CFLAGS += -I/usr/include/python2.5
+    LDFLAGS += $(PYTHONLDFLAGS)
+    LDFLAGS += -lnsl  -lieee -lpthread -lutil -lpython2.5
+  endif
+  
+
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
 
-  ifeq ($(USE_CURSES),1)
-     NOTSHLIBLDFLAGS = -lcurses
+  ifeq ($(USE_MUMBLE),1)
+    CLIENT_LDFLAGS += -lrt
+  endif
+
+  ifeq ($(USE_LOCAL_HEADERS),1)
+    BASE_CFLAGS += -I$(SDLHDIR)/include
   endif
 
   ifeq ($(ARCH),x86)
@@ -320,13 +392,11 @@ ifeq ($(PLATFORM),darwin)
   CLIENT_LDFLAGS=
   OPTIMIZE=
   
-  # building the QVMs on MacOSX is broken, atm.
-  BUILD_GAME_QVM=0
-  
   BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
 
   ifeq ($(ARCH),ppc)
-    OPTIMIZE += -faltivec -O3
+    BASE_CFLAGS += -faltivec
+    OPTIMIZE += -O3
   endif
   ifeq ($(ARCH),x86)
     OPTIMIZE += -march=prescott -mfpmath=sse
@@ -400,27 +470,27 @@ else # ifeq darwin
 
 ifeq ($(PLATFORM),mingw32)
 
-ifndef WINDRES
-WINDRES=windres
-endif
+  ifndef WINDRES
+    WINDRES=windres
+  endif
 
   ARCH=x86
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(SDLHDIR)/include
+  # In the absence of wspiapi.h, require Windows XP or later
+  ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
+    BASE_CFLAGS += -DWINVER=0x501
   endif
 
   ifeq ($(USE_OPENAL),1)
-    BASE_CFLAGS += -DUSE_OPENAL=1 -DUSE_OPENAL_DLOPEN
-  endif
-
-  ifeq ($(USE_CURL),1)
-    BASE_CFLAGS += -DUSE_CURL
-    ifneq ($(USE_CURL_DLOPEN),1)
-      BASE_CFLAGS += -DCURL_STATICLIB
+    BASE_CFLAGS += -DUSE_OPENAL
+    BASE_CFLAGS += $(OPENAL_CFLAGS)
+    ifeq ($(USE_OPENAL_DLOPEN),1)
+      BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
+    else
+      CLIENT_LDFLAGS += $(OPENAL_LDFLAGS)
     endif
   endif
 
@@ -440,12 +510,19 @@ endif
 
   BINEXT=.exe
 
-  LDFLAGS= -lwsock32 -lwinmm
+  LDFLAGS= -lws2_32 -lwinmm
   CLIENT_LDFLAGS = -mwindows -lgdi32 -lole32 -lopengl32
 
   ifeq ($(USE_CURL),1)
+    BASE_CFLAGS += -DUSE_CURL
+    BASE_CFLAGS += $(CURL_CFLAGS)
     ifneq ($(USE_CURL_DLOPEN),1)
-      CLIENT_LDFLAGS += $(LIBSDIR)/win32/libcurl.a
+      ifeq ($(USE_LOCAL_HEADERS),1)
+        BASE_CFLAGS += -DCURL_STATICLIB
+        CLIENT_LDFLAGS += $(LIBSDIR)/win32/libcurl.a
+      else
+        CLIENT_LDFLAGS += $(CURL_LIBS)
+      endif
     endif
   endif
 
@@ -463,11 +540,15 @@ endif
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
   # libmingw32 must be linked before libSDLmain
-  CLIENT_LDFLAGS += -lmingw32 \
-                    $(LIBSDIR)/win32/libSDLmain.a \
-                    $(LIBSDIR)/win32/libSDL.dll.a
-
-  BUILD_CLIENT_SMP = 0
+  CLIENT_LDFLAGS += -lmingw32
+  ifeq ($(USE_LOCAL_HEADERS),1)
+    BASE_CFLAGS += -I$(SDLHDIR)/include
+    CLIENT_LDFLAGS += $(LIBSDIR)/win32/libSDLmain.a \
+                      $(LIBSDIR)/win32/libSDL.dll.a
+  else
+    BASE_CFLAGS += $(SDL_CFLAGS)
+    CLIENT_LDFLAGS += $(SDL_LIBS)
+  endif
 
 else # ifeq mingw32
 
@@ -538,7 +619,6 @@ ifeq ($(PLATFORM),freebsd)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
 
-
 else # ifeq freebsd
 
 #############################################################################
@@ -587,14 +667,13 @@ ifeq ($(PLATFORM),openbsd)
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
-      CLIENT_LDFLAGS += $(THREAD_LDFLAGS) -lopenal
+      CLIENT_LDFLAGS += $(THREAD_LDFLAGS) -lossaudio -lopenal
     endif
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
-
 
 else # ifeq openbsd
 
@@ -684,10 +763,10 @@ ifeq ($(PLATFORM),sunos)
   OPTIMIZE = -O3 -funroll-loops
 
   ifeq ($(ARCH),sparc)
-    OPTIMIZE = -O3 -falign-loops=2 \
-      -falign-jumps=2 -falign-functions=2 -fstrength-reduce \
-      -mtune=ultrasparc -mv8plus -mno-faster-structs \
-      -funroll-loops
+    OPTIMIZE = -O3 \
+      -fstrength-reduce -falign-functions=2 \
+      -mtune=ultrasparc3 -mv8plus -mno-faster-structs \
+      -funroll-loops #-mv8plus
   else
   ifeq ($(ARCH),x86)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
@@ -715,8 +794,6 @@ ifeq ($(PLATFORM),sunos)
 
   THREAD_LDFLAGS=-lpthread
   LDFLAGS=-lsocket -lnsl -ldl -lm
-
-  BOTCFLAGS=-O0
 
   CLIENT_LDFLAGS +=$(shell sdl-config --libs) -lGL
 
@@ -771,6 +848,19 @@ ifneq ($(BUILD_GAME_QVM),0)
   endif
 endif
 
+ifeq ($(USE_MUMBLE),1)
+  BASE_CFLAGS += -DUSE_MUMBLE
+endif
+
+ifeq ($(USE_VOIP),1)
+  BASE_CFLAGS += -DUSE_VOIP
+  ifeq ($(USE_INTERNAL_SPEEX),1)
+    BASE_CFLAGS += -DFLOATING_POINT -DUSE_ALLOCA -I$(SPEEXDIR)/include
+  else
+    CLIENT_LDFLAGS += -lspeex
+  endif
+endif
+
 ifdef DEFAULT_BASEDIR
   BASE_CFLAGS += -DDEFAULT_BASEDIR=\\\"$(DEFAULT_BASEDIR)\\\"
 endif
@@ -785,12 +875,14 @@ else
   DEPEND_CFLAGS =
 endif
 
-ifeq ($(USE_SVN),1)
-  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
+BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
+
+ifeq ($(USE_LUA),1)
+  SHLIBCFLAGS += -DUSE_LUA=1 -I$(LUADIR)
 endif
 
-ifeq ($(USE_HG),1)
-  BASE_CFLAGS += -DSCM_VERSION=\\\"$(SCM_VERSION)\\\"
+ifeq ($(ENABLE_SCRIPT_UI),1)
+  CFLAGS += -DENABLE_SCRIPT_UI
 endif
 
 ifeq ($(V),1)
@@ -809,11 +901,6 @@ endef
 define DO_SMP_CC
 $(echo_cmd) "SMP_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
-endef
-
-define DO_BOT_CC
-$(echo_cmd) "BOT_CC $<"
-$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(BOTCFLAGS) -DBOTLIB -o $@ -c $<
 endef
 
 ifeq ($(GENERATE_DEPENDENCIES),1)
@@ -871,14 +958,14 @@ debug:
 	@$(MAKE) targets B=$(BD) CFLAGS="$(CFLAGS) $(DEPEND_CFLAGS) \
 		$(DEBUG_CFLAGS)" V=$(V)
 ifeq ($(BUILD_MASTER_SERVER),1)
-	$(MAKE) -C $(MASTERDIR) debug
+	$(MAKE) -C $(MASTERDIR) debug VERSION=$(VERSION_NUMBER)
 endif
 
 release:
 	@$(MAKE) targets B=$(BR) CFLAGS="$(CFLAGS) $(DEPEND_CFLAGS) \
 		$(RELEASE_CFLAGS)" V=$(V)
 ifeq ($(BUILD_MASTER_SERVER),1)
-	$(MAKE) -C $(MASTERDIR) release
+	$(MAKE) -C $(MASTERDIR) release VERSION=$(VERSION_NUMBER)
 endif
 
 # Create the build directories, check libraries and print out
@@ -888,6 +975,7 @@ targets: makedirs
 	@echo "Building Tremulous in $(B):"
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  ARCH: $(ARCH)"
+	@echo "  VERSION: $(VERSION)"
 	@echo "  COMPILE_PLATFORM: $(COMPILE_PLATFORM)"
 	@echo "  COMPILE_ARCH: $(COMPILE_ARCH)"
 	@echo "  CC: $(CC)"
@@ -910,7 +998,9 @@ targets: makedirs
 		echo "    $$i"; \
 	done
 	@echo ""
+ifneq ($(TARGETS),)
 	@$(MAKE) $(TARGETS) V=$(V)
+endif
 
 makedirs:
 	@if [ ! -d $(BUILD_DIR) ];then $(MKDIR) $(BUILD_DIR);fi
@@ -923,6 +1013,8 @@ makedirs:
 	@if [ ! -d $(B)/base/game ];then $(MKDIR) $(B)/base/game;fi
 	@if [ ! -d $(B)/base/ui ];then $(MKDIR) $(B)/base/ui;fi
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
+	@if [ ! -d $(B)/base/python ];then $(MKDIR) $(B)/base/python;fi
+	@if [ ! -d $(B)/base/lua ];then $(MKDIR) $(B)/base/lua;fi
 	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
 	@if [ ! -d $(B)/tools ];then $(MKDIR) $(B)/tools;fi
 	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
@@ -1056,17 +1148,17 @@ endef
 
 define DO_CGAME_Q3LCC
 $(echo_cmd) "CGAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DCGAME -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
 endef
 
 define DO_GAME_Q3LCC
 $(echo_cmd) "GAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DGAME -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
 endef
 
 define DO_UI_Q3LCC
 $(echo_cmd) "UI_Q3LCC $<"
-$(Q)$(Q3LCC) -DUI -o $@ $<
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
 endef
 
 
@@ -1092,6 +1184,7 @@ Q3OBJ = \
   $(B)/client/cl_console.o \
   $(B)/client/cl_input.o \
   $(B)/client/cl_keys.o \
+  $(B)/client/cl_logs.o \
   $(B)/client/cl_main.o \
   $(B)/client/cl_net_chan.o \
   $(B)/client/cl_parse.o \
@@ -1135,6 +1228,7 @@ Q3OBJ = \
   \
   $(B)/client/sv_ccmds.o \
   $(B)/client/sv_client.o \
+  $(B)/client/sv_demo.o \
   $(B)/client/sv_game.o \
   $(B)/client/sv_init.o \
   $(B)/client/sv_main.o \
@@ -1150,20 +1244,24 @@ Q3OBJ = \
   $(B)/client/vm.o \
   $(B)/client/vm_interpreted.o \
   \
+  $(B)/client/con_log.o \
+  $(B)/client/sys_main.o
+
+ifneq ($(USE_TTY_CLIENT),1)
+Q3OBJ += \
   $(B)/client/jcapimin.o \
   $(B)/client/jcapistd.o \
-  $(B)/client/jchuff.o   \
-  $(B)/client/jcinit.o \
   $(B)/client/jccoefct.o  \
   $(B)/client/jccolor.o \
-  $(B)/client/jfdctflt.o \
   $(B)/client/jcdctmgr.o \
-  $(B)/client/jcphuff.o \
+  $(B)/client/jchuff.o   \
+  $(B)/client/jcinit.o \
   $(B)/client/jcmainct.o \
   $(B)/client/jcmarker.o \
   $(B)/client/jcmaster.o \
   $(B)/client/jcomapi.o \
   $(B)/client/jcparam.o \
+  $(B)/client/jcphuff.o \
   $(B)/client/jcprepct.o \
   $(B)/client/jcsample.o \
   $(B)/client/jdapimin.o \
@@ -1181,6 +1279,7 @@ Q3OBJ = \
   $(B)/client/jdsample.o \
   $(B)/client/jdtrans.o \
   $(B)/client/jerror.o \
+  $(B)/client/jfdctflt.o \
   $(B)/client/jidctflt.o \
   $(B)/client/jmemmgr.o \
   $(B)/client/jmemnobs.o \
@@ -1188,6 +1287,7 @@ Q3OBJ = \
   \
   $(B)/client/tr_animation.o \
   $(B)/client/tr_backend.o \
+  $(B)/client/tr_bloom.o \
   $(B)/client/tr_bsp.o \
   $(B)/client/tr_cmds.o \
   $(B)/client/tr_curve.o \
@@ -1217,11 +1317,13 @@ Q3OBJ = \
   \
   $(B)/client/sdl_gamma.o \
   $(B)/client/sdl_input.o \
-  $(B)/client/sdl_snd.o \
-  \
-  $(B)/client/con_passive.o \
-  $(B)/client/con_log.o \
-  $(B)/client/sys_main.o
+  $(B)/client/sdl_snd.o
+else
+Q3OBJ += \
+  $(B)/client/null_input.o \
+  $(B)/client/null_snddma.o \
+  $(B)/client/null_renderer.o  
+endif
 
 ifeq ($(ARCH),x86)
   Q3OBJ += \
@@ -1230,6 +1332,53 @@ ifeq ($(ARCH),x86)
     $(B)/client/ftola.o \
     $(B)/client/snapvectora.o
 endif
+
+ifeq ($(USE_VOIP),1)
+ifeq ($(USE_INTERNAL_SPEEX),1)
+Q3OBJ += \
+  $(B)/client/bits.o \
+  $(B)/client/buffer.o \
+  $(B)/client/cb_search.o \
+  $(B)/client/exc_10_16_table.o \
+  $(B)/client/exc_10_32_table.o \
+  $(B)/client/exc_20_32_table.o \
+  $(B)/client/exc_5_256_table.o \
+  $(B)/client/exc_5_64_table.o \
+  $(B)/client/exc_8_128_table.o \
+  $(B)/client/fftwrap.o \
+  $(B)/client/filterbank.o \
+  $(B)/client/filters.o \
+  $(B)/client/gain_table.o \
+  $(B)/client/gain_table_lbr.o \
+  $(B)/client/hexc_10_32_table.o \
+  $(B)/client/hexc_table.o \
+  $(B)/client/high_lsp_tables.o \
+  $(B)/client/jitter.o \
+  $(B)/client/kiss_fft.o \
+  $(B)/client/kiss_fftr.o \
+  $(B)/client/lpc.o \
+  $(B)/client/lsp.o \
+  $(B)/client/lsp_tables_nb.o \
+  $(B)/client/ltp.o \
+  $(B)/client/mdf.o \
+  $(B)/client/modes.o \
+  $(B)/client/modes_wb.o \
+  $(B)/client/nb_celp.o \
+  $(B)/client/preprocess.o \
+  $(B)/client/quant_lsp.o \
+  $(B)/client/resample.o \
+  $(B)/client/sb_celp.o \
+  $(B)/client/smallft.o \
+  $(B)/client/speex.o \
+  $(B)/client/speex_callbacks.o \
+  $(B)/client/speex_header.o \
+  $(B)/client/stereo.o \
+  $(B)/client/vbr.o \
+  $(B)/client/vq.o \
+  $(B)/client/window.o
+endif
+endif
+
 
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
@@ -1246,27 +1395,36 @@ endif
 ifeq ($(PLATFORM),mingw32)
   Q3OBJ += \
     $(B)/client/win_resource.o \
-    $(B)/client/sys_win32.o
+    $(B)/client/sys_win32.o \
+    $(B)/client/con_win32.o
 else
   Q3OBJ += \
-    $(B)/client/sys_unix.o
+    $(B)/client/sys_unix.o \
+    $(B)/client/con_tty.o
 endif
 
-Q3POBJ += \
-  $(B)/client/sdl_glimp.o
+ifeq ($(USE_MUMBLE),1)
+  Q3OBJ += \
+    $(B)/client/libmumblelink.o
+endif
 
-Q3POBJ_SMP += \
-  $(B)/clientsmp/sdl_glimp.o
+ifneq ($(USE_TTY_CLIENT),1)
+  Q3POBJ = \
+    $(B)/client/sdl_glimp.o
+
+  Q3POBJ_SMP = \
+    $(B)/clientsmp/sdl_glimp.o
+endif
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LDFLAGS) \
-		$(LDFLAGS) $(NOTSHLIBLDFLAGS) $(LIBSDLMAIN)
+		$(LDFLAGS) $(LIBSDLMAIN)
 
 $(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LDFLAGS) \
-		$(THREAD_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) $(LIBSDLMAIN)
+		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
@@ -1285,6 +1443,7 @@ endif
 Q3DOBJ = \
   $(B)/ded/sv_client.o \
   $(B)/ded/sv_ccmds.o \
+  $(B)/ded/sv_demo.o \
   $(B)/ded/sv_game.o \
   $(B)/ded/sv_init.o \
   $(B)/ded/sv_main.o \
@@ -1347,17 +1506,20 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/ded/sys_win32.o \
     $(B)/ded/con_win32.o
 else
-  Q3DOBJ += $(B)/ded/sys_unix.o
-  ifeq ($(USE_CURSES),1)
-    Q3DOBJ += $(B)/ded/con_curses.o
-  else
-    Q3DOBJ += $(B)/ded/con_tty.o
-  endif
+  Q3DOBJ += \
+    $(B)/ded/sys_unix.o \
+    $(B)/ded/con_tty.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+  Q3DOBJ += \
+  $(B)/ded/py_init.o \
+  $(B)/ded/py_main.o
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) -o $@ $(Q3DOBJ) $(LDFLAGS) $(NOTSHLIBLDFLAGS)
+	$(Q)$(CC) -o $@ $(Q3DOBJ) $(LDFLAGS)
 
 
 
@@ -1398,7 +1560,7 @@ CGOBJ_ = \
   $(B)/base/ui/ui_shared.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
 
 CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
 CGVMOBJ = $(CGOBJ_:%.o=%.asm)
@@ -1406,6 +1568,7 @@ CGVMOBJ = $(CGOBJ_:%.o=%.asm)
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(CGOBJ) $(GAME_LDFLAGS)
 
 $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1445,12 +1608,69 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
+  $(B)/base/game/g_script.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o
+  $(B)/base/qcommon/q_shared.o \
+  \
+  $(B)/base/game/sc_datatype.o \
+  $(B)/base/game/sc_main.o \
+  $(B)/base/game/sc_c.o \
+  $(B)/base/game/sc_common.o \
+  $(B)/base/game/sc_event.o \
+  $(B)/base/game/sc_utils.o
+  
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
+
+ifeq ($(USE_LUA),1)
+  GOBJ +=  \
+    $(B)/base/lua/lapi.o \
+    $(B)/base/lua/lauxlib.o \
+    $(B)/base/lua/lbaselib.o \
+    $(B)/base/lua/lcode.o \
+    $(B)/base/lua/ldblib.o \
+    $(B)/base/lua/ldebug.o \
+    $(B)/base/lua/ldo.o \
+    $(B)/base/lua/ldump.o \
+    $(B)/base/lua/lfunc.o \
+    $(B)/base/lua/lgc.o \
+    $(B)/base/lua/linit.o \
+    $(B)/base/lua/liolib.o \
+    $(B)/base/lua/llex.o \
+    $(B)/base/lua/lmathlib.o \
+    $(B)/base/lua/lmem.o \
+    $(B)/base/lua/loadlib.o \
+    $(B)/base/lua/lobject.o \
+    $(B)/base/lua/lopcodes.o \
+    $(B)/base/lua/loslib.o \
+    $(B)/base/lua/lparser.o \
+    $(B)/base/lua/lstate.o \
+    $(B)/base/lua/lstring.o \
+    $(B)/base/lua/lstrlib.o \
+    $(B)/base/lua/ltable.o \
+    $(B)/base/lua/ltablib.o \
+    $(B)/base/lua/ltm.o \
+    $(B)/base/lua/lua.o \
+    $(B)/base/lua/lundump.o \
+    $(B)/base/lua/lvm.o \
+    $(B)/base/lua/lzio.o \
+    $(B)/base/lua/print.o \
+    $(B)/base/game/sc_lua.o \
+    $(B)/base/game/sc_lua_stack.o \
+    $(B)/base/game/sc_lua_metamethod.o \
+    $(B)/base/game/sc_lua_lib.o
+endif
+
+ifeq ($(USE_PYTHON),1)
+  GOBJ += \
+    $(B)/base/game/sc_python_func.o \
+    $(B)/base/game/sc_python_object.o \
+    $(B)/base/game/sc_python_array.o \
+    $(B)/base/game/sc_python_hash.o \
+    $(B)/base/game/sc_python.o
+endif
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
@@ -1480,9 +1700,67 @@ UIOBJ_ = \
 UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
 UIVMOBJ = $(UIOBJ_:%.o=%.asm)
 
+ifeq ($(ENABLE_SCRIPT_UI),1)
+  UIOBJ +=  \
+    $(B)/base/ui/sc_datatype.o \
+    $(B)/base/ui/sc_main.o \
+    $(B)/base/ui/sc_c.o \
+    $(B)/base/ui/sc_common.o \
+    $(B)/base/ui/sc_event.o \
+    $(B)/base/ui/sc_utils.o \
+    $(B)/base/ui/ui_script.o \
+    $(B)/base/game/bg_alloc.o 
+  ifeq ($(USE_LUA),1)
+    UIOBJ +=  \
+      $(B)/base/lua/lapi.o \
+      $(B)/base/lua/lauxlib.o \
+      $(B)/base/lua/lbaselib.o \
+      $(B)/base/lua/lcode.o \
+      $(B)/base/lua/ldblib.o \
+      $(B)/base/lua/ldebug.o \
+      $(B)/base/lua/ldo.o \
+      $(B)/base/lua/ldump.o \
+      $(B)/base/lua/lfunc.o \
+      $(B)/base/lua/lgc.o \
+      $(B)/base/lua/linit.o \
+      $(B)/base/lua/liolib.o \
+      $(B)/base/lua/llex.o \
+      $(B)/base/lua/lmathlib.o \
+      $(B)/base/lua/lmem.o \
+      $(B)/base/lua/loadlib.o \
+      $(B)/base/lua/lobject.o \
+      $(B)/base/lua/lopcodes.o \
+      $(B)/base/lua/loslib.o \
+      $(B)/base/lua/lparser.o \
+      $(B)/base/lua/lstate.o \
+      $(B)/base/lua/lstring.o \
+      $(B)/base/lua/lstrlib.o \
+      $(B)/base/lua/ltable.o \
+      $(B)/base/lua/ltablib.o \
+      $(B)/base/lua/ltm.o \
+      $(B)/base/lua/lua.o \
+      $(B)/base/lua/lundump.o \
+      $(B)/base/lua/lvm.o \
+      $(B)/base/lua/lzio.o \
+      $(B)/base/lua/print.o \
+      $(B)/base/ui/sc_lua.o \
+      $(B)/base/ui/sc_lua_stack.o \
+      $(B)/base/ui/sc_lua_metamethod.o \
+      $(B)/base/ui/sc_lua_lib.o
+  endif
+  ifeq ($(USE_PYTHON),1)
+    UIOBJ += \
+      $(B)/base/ui/sc_python_func.o \
+      $(B)/base/ui/sc_python_object.o \
+      $(B)/base/ui/sc_python_array.o \
+      $(B)/base/ui/sc_python_hash.o \
+      $(B)/base/ui/sc_python.o
+  endif
+endif
+
 $(B)/base/ui$(ARCH).$(SHLIBEXT): $(UIOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
+	$(Q)$(CC) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
 
 $(B)/base/vm/ui.qvm: $(UIVMOBJ) $(UIDIR)/ui_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1506,10 +1784,10 @@ $(B)/client/%.o: $(SDIR)/%.c
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
 
-$(B)/client/%.o: $(BLIBDIR)/%.c
-	$(DO_BOT_CC)
-
 $(B)/client/%.o: $(JPDIR)/%.c
+	$(DO_CC)
+
+$(B)/client/%.o: $(SPEEXDIR)/%.c
 	$(DO_CC)
 
 $(B)/client/%.o: $(RDIR)/%.c
@@ -1527,6 +1805,9 @@ $(B)/client/%.o: $(SYSDIR)/%.c
 $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
+$(B)/client/%.o: $(NDIR)/%.c
+	$(DO_CC)
+
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1537,9 +1818,6 @@ $(B)/ded/%.o: $(SDIR)/%.c
 $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
 
-$(B)/ded/%.o: $(BLIBDIR)/%.c
-	$(DO_BOT_CC)
-
 $(B)/ded/%.o: $(SYSDIR)/%.c
 	$(DO_DED_CC)
 
@@ -1548,12 +1826,21 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 
 $(B)/ded/%.o: $(NDIR)/%.c
 	$(DO_DED_CC)
+	
+$(B)/ded/%.o: $(PYTHONDIR)/%.c
+	$(DO_DED_CC)
 
 # Extra dependencies to ensure the SVN version is incorporated
 ifeq ($(USE_SVN),1)
   $(B)/client/cl_console.o : .svn/entries
   $(B)/client/common.o : .svn/entries
   $(B)/ded/common.o : .svn/entries
+endif
+
+ifeq ($(USE_GIT),1)
+  $(B)/client/cl_console.o : .git/svn/.metadata
+  $(B)/client/common.o : .git/svn/.metadata
+  $(B)/ded/common.o : .git/svn/.metadata
 endif
 
 ifeq ($(USE_HG),1)
@@ -1572,17 +1859,29 @@ $(B)/base/cgame/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/cgame/%.o: $(CGDIR)/%.c
 	$(DO_CGAME_CC)
 
+$(B)/base/cgame/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_CGAME_CC)
+
 $(B)/base/cgame/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
 $(B)/base/cgame/%.asm: $(CGDIR)/%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
+$(B)/base/cgame/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
+	$(DO_CGAME_Q3LCC)
+
 
 $(B)/base/game/%.o: $(GDIR)/%.c
 	$(DO_GAME_CC)
 
+$(B)/base/game/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_GAME_CC)
+
 $(B)/base/game/%.asm: $(GDIR)/%.c $(Q3LCC)
+	$(DO_GAME_Q3LCC)
+
+$(B)/base/game/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
 	$(DO_GAME_Q3LCC)
 
 
@@ -1592,11 +1891,31 @@ $(B)/base/ui/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/ui/%.o: $(UIDIR)/%.c
 	$(DO_UI_CC)
 
+$(B)/base/ui/sc_%.o: $(SCRIPTDIR)/sc_%.c
+	$(DO_UI_CC)
+
 $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
 $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
+
+$(B)/base/ui/sc_%.asm: $(SCRIPTDIR)/sc_%.c $(Q3LCC)
+	$(DO_ui_Q3LCC)
+
+
+$(B)/base/python/%.o: $(PYTHONDIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/python/%.asm: $(PYTHONDIR)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
+
+
+$(B)/base/lua/%.o: $(LUADIR)/%.c
+	$(DO_SHLIB_CC)
+
+$(B)/base/lua/%.asm: $(LUADIC)/%.c $(Q3LCC)
+	$(DO_Q3LCC)
 
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c

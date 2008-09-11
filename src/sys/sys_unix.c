@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
 
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -43,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(const char **path2)
 {
 	char *p;
 
@@ -68,7 +69,35 @@ char *Sys_DefaultHomePath(void)
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
+}
+
+/*
+=================
+Sys_ResolveLink
+
+This resolves any symlinks to the binary. It's disabled for debug
+builds because there are situations where you are likely to want
+to symlink to binaries and /not/ have the links resolved.
+=================
+*/
+char *Sys_ResolveLink( char *arg0 )
+{
+#if NDEBUG && ( _BSD_SOURCE || _XOPEN_SOURCE >= 500 || _POSIX_C_SOURCE >= 200112L )
+	static char dst[ PATH_MAX ];
+	int n = readlink( arg0, dst, PATH_MAX - 1 );
+
+	if( n >= 0 && n < PATH_MAX )
+	{
+		dst[ n ] = '\0';
+		return dst;
+	}
+	else
+		return arg0;
+#else
+	return arg0;
+#endif
 }
 
 /*
@@ -463,6 +492,9 @@ void Sys_Sleep( int msec )
 {
 	fd_set fdset;
 
+	if( msec == 0 )
+		return;
+
 	FD_ZERO(&fdset);
 	FD_SET(fileno(stdin), &fdset);
 	if( msec < 0 )
@@ -507,4 +539,32 @@ void Sys_ErrorDialog( const char *error )
 		FS_Write( buffer, size, f );
 
 	FS_FCloseFile( f );
+}
+
+/*
+==============
+Sys_GLimpInit
+
+Unix specific GL implementation initialisation
+==============
+*/
+void Sys_GLimpInit( void )
+{
+	// NOP
+}
+
+/*
+==============
+Sys_PlatformInit
+
+Unix specific initialisation
+==============
+*/
+void Sys_PlatformInit( void )
+{
+	signal( SIGHUP, Sys_SigHandler );
+	signal( SIGQUIT, Sys_SigHandler );
+	signal( SIGTRAP, Sys_SigHandler );
+	signal( SIGIOT, Sys_SigHandler );
+	signal( SIGBUS, Sys_SigHandler );
 }

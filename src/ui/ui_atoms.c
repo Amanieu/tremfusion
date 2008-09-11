@@ -35,9 +35,9 @@ void QDECL Com_Error( int level, const char *error, ... )
   va_list    argptr;
   char    text[1024];
 
-  va_start ( argptr, error );
-  vsprintf ( text, error, argptr );
-  va_end ( argptr );
+  va_start( argptr, error );
+  Q_vsnprintf( text, sizeof( text ), error, argptr );
+  va_end( argptr );
 
   trap_Error( va( "%s", text ) );
 }
@@ -47,11 +47,13 @@ void QDECL Com_Printf( const char *msg, ... )
   va_list    argptr;
   char    text[1024];
 
-  va_start ( argptr, msg );
-  vsprintf ( text, msg, argptr );
-  va_end ( argptr );
+  va_start( argptr, msg );
+  Q_vsnprintf( text, sizeof( text ), msg, argptr );
+  va_end( argptr );
 
-  trap_Print( va( "%s", text ) );
+  //NOTE: Champion: this was trap_Print( va( "%s", text ));
+  // but that caused some weird things to happen
+  trap_Print(  text );
 }
 
 
@@ -170,12 +172,16 @@ qboolean UI_ConsoleCommand( int realTime )
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qfalse;
     uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qfalse;
     uiInfo.chatPrompt = qfalse;
     trap_Key_SetCatcher( KEYCATCH_UI );
     Menus_CloseByName( "say" );
     Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
     Menus_ActivateByName( "say" );
     return qtrue;
   }
@@ -190,13 +196,67 @@ qboolean UI_ConsoleCommand( int realTime )
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qtrue;
     uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qfalse;
     uiInfo.chatPrompt = qfalse;
     trap_Key_SetCatcher( KEYCATCH_UI );
     Menus_CloseByName( "say" );
     Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
     Menus_ActivateByName( "say_team" );
+    return qtrue;
+  }
+
+  if( Q_stricmp( cmd, "messagemode3" ) == 0 )
+  {
+    char buffer[ MAX_SAY_TEXT ] = "";
+    int i;
+    for ( i = 1; i < trap_Argc( ); i++ )
+        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
+    trap_Cvar_Set( "ui_sayBuffer", buffer );
+    uiInfo.chatTargetClientNum = trap_CrosshairPlayer();
+    uiInfo.chatTeam = qfalse;
+    uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qfalse;
+    uiInfo.chatPrompt = qfalse;
+    trap_Key_SetCatcher( KEYCATCH_UI );
+    Menus_CloseByName( "say" );
+    Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
+    Menus_CloseByName( "say_admins" );
+    Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
+    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
+      Menus_ActivateByName( "say_crosshair" );
+    return qtrue;
+  }
+
+  if( Q_stricmp( cmd, "messagemode4" ) == 0 )
+  {
+    char buffer[ MAX_SAY_TEXT ] = "";
+    int i;
+    for ( i = 1; i < trap_Argc( ); i++ )
+        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
+    trap_Cvar_Set( "ui_sayBuffer", buffer );
+    uiInfo.chatTargetClientNum = trap_LastAttacker();
+    uiInfo.chatTeam = qfalse;
+    uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qfalse;
+    uiInfo.chatPrompt = qfalse;
+    trap_Key_SetCatcher( KEYCATCH_UI );
+    Menus_CloseByName( "say" );
+    Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
+    Menus_CloseByName( "say_admins" );
+    Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
+    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
+      Menus_ActivateByName( "say_attacker" );
     return qtrue;
   }
 
@@ -210,36 +270,75 @@ qboolean UI_ConsoleCommand( int realTime )
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qfalse;
     uiInfo.chatAdmins = qtrue;
+    uiInfo.chatClan = qfalse;
     uiInfo.chatPrompt = qfalse;
     trap_Key_SetCatcher( KEYCATCH_UI );
     Menus_CloseByName( "say" );
     Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
     Menus_ActivateByName( "say_admins" );
+    return qtrue;
+  }
+
+  if( Q_stricmp( cmd, "messagemode6" ) == 0 )
+  {
+    char buffer[ MAX_SAY_TEXT ] = "";
+    int i;
+    for ( i = 1; i < trap_Argc( ); i++ )
+        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
+    trap_Cvar_Set( "ui_sayBuffer", buffer );
+    uiInfo.chatTargetClientNum = -1;
+    uiInfo.chatTeam = qfalse;
+    uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qtrue;
+    uiInfo.chatPrompt = qfalse;
+    trap_Key_SetCatcher( KEYCATCH_UI );
+    Menus_CloseByName( "say" );
+    Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
+    Menus_CloseByName( "say_admins" );
+    Menus_CloseByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
+    Menus_ActivateByName( "say_clan" );
     return qtrue;
   }
 
   if( Q_stricmp( cmd, "prompt" ) == 0 )
   {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    if ( trap_Argc( ) < 2 )
+    static char buffer[ MAX_SAY_TEXT ];
+    itemDef_t *item;
+    if ( trap_Argc( ) < 3 )
+    {
+      Com_Printf( "prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n" );
       return qfalse;
-    for ( i = 2; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
+    }
     trap_Argv( 1, uiInfo.chatPromptCallback, sizeof( uiInfo.chatPromptCallback ) );
+    trap_Argv( 2, buffer, sizeof( buffer ) );
+    trap_Cvar_Set( "ui_sayBuffer", "" );
     uiInfo.chatTargetClientNum = -1;
     uiInfo.chatTeam = qfalse;
     uiInfo.chatAdmins = qfalse;
+    uiInfo.chatClan = qfalse;
     uiInfo.chatPrompt = qtrue;
     trap_Key_SetCatcher( KEYCATCH_UI );
     Menus_CloseByName( "say" );
     Menus_CloseByName( "say_team" );
+    Menus_CloseByName( "say_crosshair" );
+    Menus_CloseByName( "say_attacker" );
     Menus_CloseByName( "say_admins" );
     Menus_CloseByName( "say_prompt" );
-    Menus_ActivateByName( "say_prompt" );
+    Menus_CloseByName( "say_clan" );
+    item = Menu_FindItemByName( Menus_ActivateByName( "say_prompt" ), "say_field" );
+    if ( item )
+    {
+      trap_Argv( 2, buffer, sizeof( buffer ) );
+      item->text = buffer;
+    }
     return qtrue;
   }
 
@@ -269,6 +368,8 @@ qboolean UI_ConsoleCommand( int realTime )
     }
     return qtrue;    
   }
+  
+  
 
   return qfalse;
 }

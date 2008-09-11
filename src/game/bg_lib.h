@@ -76,6 +76,16 @@ typedef int cmp_t( const void *, const void * );
 void        qsort( void *a, size_t n, size_t es, cmp_t *cmp );
 void        srand( unsigned seed );
 int         rand( void );
+// FIXME: NDEBUG isn't defined for compiling the QVMs
+#ifndef NDEBUG
+// these two are so that __LINE__ is expanded and *then* strung
+#define str2(x) #x
+#define str(x) str2(x)
+#define assert( x ) if( !( x ) ) Com_Error( ERR_DROP, \
+    __FILE__ ":" str(__LINE__) ": Assertion `" #x "' failed" );
+#else
+#define assert( x ) // nothing
+#endif
 
 // String functions
 size_t  strlen( const char *string );
@@ -94,8 +104,6 @@ double  _atof( const char **stringPtr );
 int     atoi( const char *string );
 int     _atoi( const char **stringPtr );
 
-
-int     vsprintf( char *buffer, const char *fmt, va_list argptr );
 int     sscanf( const char *buffer, const char *fmt, ... );
 
 // Memory functions

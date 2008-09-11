@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // bg_public.h -- definitions shared by both the server game and client game modules
 
+#ifndef _GAME_BG_PUBLIC_H_
+#define _GAME_BG_PUBLIC_H_
+
 //tremulous balance header
 #include "tremulous.h"
 
@@ -268,7 +271,6 @@ typedef enum
 
   PERS_STATE,
   PERS_CREDIT,    // human credit
-  PERS_BANK,      // human credit in the bank
   PERS_QUEUEPOS,  // position in the spawn queue
   PERS_NEWWEAPON  // weapon to switch to
 } persEnum_t;
@@ -301,16 +303,6 @@ typedef enum
 #define EF_TEAMVOTED        0x00010000    // already cast a vote
 #define EF_BLOBLOCKED       0x00020000    // caught by a trapper
 #define EF_WARN_CHARGE      0x00040000    // Lucifer Cannon is about to overcharge
-
-typedef enum
-{
-  HI_NONE,
-
-  HI_TELEPORTER,
-  HI_MEDKIT,
-
-  HI_NUM_HOLDABLE
-} holdable_t;
 
 typedef enum
 {
@@ -421,11 +413,6 @@ typedef enum
 
 
 #define B_HEALTH_MASK 255
-
-// reward sounds (stored in ps->persistant[PERS_PLAYEREVENTS])
-#define PLAYEREVENT_DENIEDREWARD      0x0001
-#define PLAYEREVENT_GAUNTLETREWARD    0x0002
-#define PLAYEREVENT_HOLYSHIT          0x0004
 
 // entityState_t->event values
 // entity events are for effects that take place reletive
@@ -1186,9 +1173,20 @@ typedef enum
               // this avoids having to set eFlags and eventNum
 } entityType_t;
 
-void  *BG_Alloc( int size );
+#if BG_MEMORY_DEBUG
+#define BG_Alloc(x) _BG_Alloc(x, __FILE__, __LINE__)
+void  *_BG_Alloc( int size, char *file, int line );
+#define BG_Free(x) _BG_Free(x, __FILE__, __LINE__)
+void  _BG_Free( void *ptr, char *file, int line );
+#else
+#define BG_Alloc(x) _BG_Alloc(x)
+void  *_BG_Alloc( int size);
+#define BG_Free(x) _BG_Free(x)
+void  _BG_Free( void *ptr);
+void BG_MemoryDebugDump( void );
+#endif
+
 void  BG_InitMemory( void );
-void  BG_Free( void *ptr );
 void  BG_DefragmentMemory( void );
 
 void  BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result );
@@ -1295,3 +1293,6 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
                                  int enthusiasm, int *trackNum );
 
 int BG_LoadEmoticons( char names[ ][ MAX_EMOTICON_NAME_LEN ], int widths[ ] );
+
+#endif 
+

@@ -391,12 +391,12 @@ void Cmd_Give_f( gentity_t *ent )
         BG_Weapon( client->ps.weapon )->infiniteAmmo )
       return;
 
-    client->ps.ammo[0] = BG_Weapon( client->ps.weapon )->maxAmmo;
-    client->ps.ammo[1] = BG_Weapon( client->ps.weapon )->maxClips;
+    client->ps.ammo = BG_Weapon( client->ps.weapon )->maxAmmo;
+    client->ps.clips = BG_Weapon( client->ps.weapon )->maxClips;
 
     if( BG_Weapon( client->ps.weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, client->ps.stats ) )
-      client->ps.ammo[0] = (int)( (float)client->ps.ammo[0] * BATTPACK_MODIFIER );
+      client->ps.ammo = (int)( (float)client->ps.ammo * BATTPACK_MODIFIER );
   }
 }
 
@@ -551,6 +551,7 @@ void G_LeaveTeam( gentity_t *self )
   G_StopFromFollowing( self );
 
   G_TeamVote( self, qfalse );
+  self->suicideTime = 0;
 
   for( i = 0; i < level.num_entities; i++ )
   {
@@ -578,24 +579,47 @@ G_ChangeTeam
 void G_ChangeTeam( gentity_t *ent, team_t newTeam )
 {
   team_t  oldTeam = ent->client->pers.teamSelection;
+  char    buf[ MAX_INFO_STRING ];
 
   if( oldTeam == newTeam )
     return;
 
+  // TODO: Call event here: player.on_change_team
+
   G_LeaveTeam( ent );
   ent->client->pers.teamSelection = newTeam;
 
-  // under certain circumstances, clients can keep their kills and credits
-  // when switching teams
-//  if( !G_admin_permission( ent, ADMF_TEAMCHANGEFREE ) ||
-//      level.time - ent->client->pers.teamChangeTime < 60000 )
-    ent->client->ps.persistant[ PERS_CREDIT ] = 0;
 
   ent->client->pers.classSelection = PCL_NONE;
   ClientSpawn( ent, NULL, NULL, NULL );
   ent->client->pers.joinedATeam = qtrue;
   ent->client->pers.teamChangeTime = level.time;
+
+  if( oldTeam == TEAM_NONE )
+  {
+    // ps.persistant[] from a spectator cannot be trusted
+    ent->client->ps.persistant[ PERS_CREDIT ] = ent->client->pers.savedCredit;
+  }
+  // Convert between Alien and Human credits, specs use Alien credits
+  if( oldTeam == TEAM_HUMANS )
+    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
+                                      ALIEN_MAX_CREDITS / HUMAN_MAX_CREDITS + 0.5f );
+  if( newTeam == TEAM_HUMANS )
+    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
+                                      HUMAN_MAX_CREDITS / ALIEN_MAX_CREDITS + 0.5f );
+
+  if( newTeam == TEAM_NONE )
+  {
+    // save values before the client enters the spectator team and their
+    // ps.persistant[] values become trashed
+    ent->client->pers.savedCredit = ent->client->ps.persistant[ PERS_CREDIT ];
+  }
+    
   ClientUserinfoChanged( ent->client->ps.clientNum );
+
+  // log team changes to demo
+  Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
 }
 
 /*
@@ -632,6 +656,12 @@ void Cmd_Team_f( gentity_t *ent )
 
   if( !Q_stricmp( s, "spectate" ) )
     team = TEAM_NONE;
+  else if( level.demoState == DS_PLAYBACK )
+  {
+    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
+      "while a demo is being played\n\"" );
+    return;
+  }
   else if( !force && oldteam == TEAM_NONE && g_maxGameClients.integer &&
            level.numPlayingClients >= g_maxGameClients.integer )
   {
@@ -818,6 +848,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_GREEN;
+      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
       break;
 
     case SAY_TEAM:
@@ -829,6 +860,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
         Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ",
           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
       color = COLOR_CYAN;
+      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^5%s\"", name, chatText ) );
       break;
 
     case SAY_TELL:
@@ -1042,12 +1074,12 @@ void Cmd_VSay_f( gentity_t *ent )
     case VOICE_CHAN_LOCAL:
       trap_SendServerCommand( -1, va(
         "voice %d %d %d %d \"%s\"\n",
-        ent-g_entities, vchan, cmdNum, trackNum, arg ) );
+        (int)(ent-g_entities), vchan, cmdNum, trackNum, arg ) );
       break;
     case VOICE_CHAN_TEAM:
       G_TeamCommand( ent->client->pers.teamSelection, va(
         "voice %d %d %d %d \"%s\"\n",
-        ent-g_entities, vchan, cmdNum, trackNum, arg ) );
+        (int)(ent-g_entities), vchan, cmdNum, trackNum, arg ) );
       break;
     default:
       break;
@@ -1786,6 +1818,9 @@ void Cmd_Class_f( gentity_t *ent )
         if( cost >= 0 )
         {
           int oldBoostTime = -1;
+
+          // TODO: Call event here: game.on_evolve
+
           ent->client->pers.evolveHealthFraction = (float)ent->client->ps.stats[ STAT_HEALTH ] /
             (float)BG_Class( currentClass )->health;
 
@@ -1923,6 +1958,9 @@ void Cmd_Destroy_f( gentity_t *ent )
         G_AddEvent( ent, EV_BUILD_DELAY, ent->client->ps.clientNum );
         return;
       }
+
+      // Call scripts hooks
+      // TODO: Call event here: buildable.on_decon
 
       if( g_markDeconstruct.integer )
       {
@@ -2103,20 +2141,6 @@ void Cmd_Buy_f( gentity_t *ent )
       return;
     }
 
-    //can afford this?
-    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
-      return;
-    }
-
-    //have space to carry this?
-    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
-    {
-      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
-      return;
-    }
-
     if( BG_Weapon( weapon )->team != TEAM_HUMANS )
     {
       //shouldn't need a fancy dialog
@@ -2138,18 +2162,34 @@ void Cmd_Buy_f( gentity_t *ent )
       return;
     }
 
+    //can afford this?
+    if( BG_Weapon( weapon )->price > (short)ent->client->ps.persistant[ PERS_CREDIT ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOFUNDS );
+      return;
+    }
+
+    //have space to carry this?
+    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
+    {
+      G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
+      return;
+    }
+
     // In some instances, weapons can't be changed
     if( !BG_PlayerCanChangeWeapon( &ent->client->ps ) )
       return;
 
+    // TODO: Call event here: player.on_inventory_changed
+
     //add to inventory
     BG_AddWeaponToInventory( weapon, ent->client->ps.stats );
-    ent->client->ps.ammo[0] = BG_Weapon( weapon )->maxAmmo;
-    ent->client->ps.ammo[1] = BG_Weapon( weapon )->maxClips;
+    ent->client->ps.ammo = BG_Weapon( weapon )->maxAmmo;
+    ent->client->ps.clips = BG_Weapon( weapon )->maxClips;
 
     if( BG_Weapon( weapon )->usesEnergy &&
         BG_InventoryContainsUpgrade( UP_BATTPACK, ent->client->ps.stats ) )
-      ent->client->ps.ammo[0] *= BATTPACK_MODIFIER;
+      ent->client->ps.ammo *= BATTPACK_MODIFIER;
 
     G_ForceWeaponChange( ent, weapon );
 
@@ -2223,6 +2263,7 @@ void Cmd_Buy_f( gentity_t *ent )
       }
 
       //add to inventory
+      // TODO: Call event here: player.on_inventory_changed
       BG_AddUpgradeToInventory( upgrade, ent->client->ps.stats );
     }
 
@@ -2287,6 +2328,7 @@ void Cmd_Sell_f( gentity_t *ent )
         return;
       }
 
+      // TODO: Call event here: player.on_inventory_changed
       BG_RemoveWeaponFromInventory( weapon, ent->client->ps.stats );
 
       //add to funds
@@ -2325,6 +2367,7 @@ void Cmd_Sell_f( gentity_t *ent )
       }
 
       //add to inventory
+      // TODO: Call event here: player.on_inventory_changed
       BG_RemoveUpgradeFromInventory( upgrade, ent->client->ps.stats );
 
       if( upgrade == UP_BATTPACK )
@@ -2353,6 +2396,7 @@ void Cmd_Sell_f( gentity_t *ent )
       if( BG_InventoryContainsWeapon( i, ent->client->ps.stats ) &&
           BG_Weapon( i )->purchasable )
       {
+        // TODO: Call event here: player.on_inventory_changed
         BG_RemoveWeaponFromInventory( i, ent->client->ps.stats );
 
         //add to funds
@@ -2389,6 +2433,7 @@ void Cmd_Sell_f( gentity_t *ent )
           ent->client->ps.eFlags ^= EF_TELEPORT_BIT;
         }
 
+        // TODO: Call event here: player.on_inventory_changed
         BG_RemoveUpgradeFromInventory( i, ent->client->ps.stats );
 
         if( i == UP_BATTPACK )
@@ -2661,20 +2706,22 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
     if( clientnum < 0 )
       clientnum = level.maxclients - 1;
 
+    // can't follow self
+    if( &g_entities[ clientnum ] == ent )
+      continue;
+
     // avoid selecting existing follow target
     if( clientnum == original && !selectAny )
       continue; //effectively break;
 
-    // can't follow self
-    if( &level.clients[ clientnum ] == ent->client )
-      continue;
-
     // can only follow connected clients
-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
 
     // can't follow a spectator
-    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE )
+    if( level.clients[ clientnum ].pers.teamSelection == TEAM_NONE &&
+        !level.clients[ clientnum ].pers.demoClient )
       continue;
     
     // if stickyspec is disabled, can't follow someone in queue either
@@ -2787,8 +2834,6 @@ void Cmd_FollowCycle_f( gentity_t *ent )
   // won't work unless spectating
   if( ent->client->sess.spectatorState == SPECTATOR_NOT )
     return;
-  if( ent->client->sess.spectatorState == SPECTATOR_NOT )
-    return;
 
   G_FollowNewClient( ent, dir );
 }
@@ -2806,6 +2851,9 @@ void Cmd_PTRCVerify_f( gentity_t *ent )
   char                s[ MAX_TOKEN_CHARS ] = { 0 };
   int                 code;
 
+  if( ent->client->pers.connection )
+    return;
+
   trap_Argv( 1, s, sizeof( s ) );
 
   if( !s[ 0 ] )
@@ -2813,16 +2861,16 @@ void Cmd_PTRCVerify_f( gentity_t *ent )
 
   code = atoi( s );
 
-  if( G_VerifyPTRC( code ) )
+  connection = G_FindConnectionForCode( code );
+  if( connection )
   {
-    connection = G_FindConnectionForCode( code );
-
     // valid code
     if( connection->clientTeam != TEAM_NONE )
       trap_SendServerCommand( ent->client->ps.clientNum, "ptrcconfirm" );
 
     // restore mapping
     ent->client->pers.connection = connection;
+    connection->clientNum = ent->client->ps.clientNum;
   }
   else
   {
@@ -2850,6 +2898,13 @@ void Cmd_PTRCRestore_f( gentity_t *ent )
   int                 code;
   connectionRecord_t  *connection;
 
+  if( ent->client->pers.joinedATeam )
+  {
+    trap_SendServerCommand( ent - g_entities,
+      "print \"You cannot use a PTR code after joining a team\n\"" );
+    return;
+  }
+
   trap_Argv( 1, s, sizeof( s ) );
 
   if( !s[ 0 ] )
@@ -2857,28 +2912,18 @@ void Cmd_PTRCRestore_f( gentity_t *ent )
 
   code = atoi( s );
 
-  if( G_VerifyPTRC( code ) )
+  connection = ent->client->pers.connection;
+  if( connection && connection->ptrCode == code )
   {
-    if( ent->client->pers.joinedATeam )
-    {
-      trap_SendServerCommand( ent - g_entities,
-        "print \"You cannot use a PTR code after joining a team\n\"" );
-    }
-    else
-    {
-      // valid code
-      connection = G_FindConnectionForCode( code );
+    // set the correct team
+    G_ChangeTeam( ent, connection->clientTeam );
 
-      if( connection )
-      {
-        // set the correct team
-        G_ChangeTeam( ent, connection->clientTeam );
-
-        // set the correct credit
-        ent->client->ps.persistant[ PERS_CREDIT ] = 0;
-        G_AddCreditToClient( ent->client, connection->clientCredit, qtrue );
-      }
-    }
+    // set the correct credit
+    ent->client->ps.persistant[ PERS_CREDIT ] = 0;
+    G_AddCreditToClient( ent->client, connection->clientCredit, qtrue );
+    if ( connection->oldClient != ent - g_entities )
+        G_AddCreditToClient( &level.clients[ connection->oldClient ], -connection->clientCredit, qtrue );
+    connection->oldClient = ent - g_entities;
   }
   else
   {
@@ -2966,7 +3011,7 @@ static void Cmd_Test_f( gentity_t *ent )
 {
   trap_SendServerCommand( ent - g_entities, va(
     "  r.contents = %d\n  targeted = %d\n", 
-    ent->r.contents, ( ent->targeted ) ? ent->targeted - g_entities : 0 ) );
+    ent->r.contents, ( ent->targeted ) ? (int)(ent->targeted - g_entities) : 0 ) );
 }
 
 /*
@@ -3330,12 +3375,12 @@ void G_PrivateMessage( gentity_t *ent )
       ( matches == 1 ) ? "" : "s",
       color,
       msg,
-      ent ? ent-g_entities : -1 ) );
+      ent ? (int)(ent-g_entities) : -1 ) );
     if( ent )
     {
       trap_SendServerCommand( pids[ i ], va(
         "print \">> to reply, say: /m %d [your message] <<\n\"",
-        ( ent - g_entities ) ) );
+        (int)( ent - g_entities ) ) );
     }
     trap_SendServerCommand( pids[ i ], va(
       "cp \"^%cprivate message from ^7%s^7\"", color,

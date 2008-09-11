@@ -125,6 +125,8 @@ typedef enum
   // 1.32
   UI_FS_SEEK,
   UI_SET_PBCLSTATUS,
+  UI_CROSSHAIR_PLAYER,
+  UI_LAST_ATTACKER,
 
   UI_MEMSET = 100,
   UI_MEMCPY,
@@ -134,7 +136,10 @@ typedef enum
   UI_ATAN2,
   UI_SQRT,
   UI_FLOOR,
-  UI_CEIL
+  UI_CEIL,
+  
+  UI_ADD_COMMAND,
+  UI_REMOVE_COMMAND,
 }
 uiImport_t;
 

@@ -23,10 +23,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "keycodes.h"
 
 typedef struct {
-	qboolean	down;
-	int			repeats;		// if > 1, it is autorepeating
-	char		*pushBinding;
-	char		*releaseBinding;
+	qboolean down;
+	int      repeats; // if > 1, it is autorepeating
+	qboolean detailed;
+	char     *pushBinding;
+	char     *releaseBinding;
 } qkey_t;
 
 #define KEY_PUSH qtrue
@@ -49,13 +50,13 @@ extern	field_t	chatField;
 extern	int				anykeydown;
 extern	qboolean	chat_team;
 extern	qboolean	chat_admins;
+extern	qboolean	chat_clans;
 extern	int			chat_playerNum;
 
 typedef struct {
 	qboolean	active;
 	char		question[1024];
 	char		callback[1024];
-	char		store[1024];
 } cmdPrompt_t;
 
 extern	cmdPrompt_t	prompt;

@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // this file is only included when building a dll
 // g_syscalls.asm is included instead when building a qvm
 
+#ifdef syscall
+#undef syscall
+#endif /*syscall*/
+
 static intptr_t (QDECL *syscall)( intptr_t arg, ... ) = (intptr_t (QDECL *)( intptr_t, ...))-1;
 
 
@@ -257,6 +261,12 @@ void trap_SendGameStat( const char *data )
   return;
 }
 
+void trap_DemoCommand( demoCommand_t cmd, const char *string )
+{
+  syscall( G_DEMO_COMMAND, cmd, string );
+  return;
+}
+
 int trap_Parse_AddGlobalDefine( char *define )
 {
   return syscall( G_PARSE_ADD_GLOBAL_DEFINE, define );
@@ -282,3 +292,14 @@ int trap_Parse_SourceFileAndLine( int handle, char *filename, int *line )
   return syscall( G_PARSE_SOURCE_FILE_AND_LINE, handle, filename, line );
 }
 
+void trap_AddCommand( const char *cmd_name, void (*function) (void))
+{
+  syscall( G_ADD_COMMAND, cmd_name, function );
+  return;
+}
+
+void trap_RemoveCommand( const char *cmd_name)
+{
+  syscall( G_REMOVE_COMMAND, cmd_name);
+  return;
+}

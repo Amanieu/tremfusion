@@ -989,6 +989,7 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
+  char      buf[ MAX_INFO_STRING ];
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1058,6 +1059,9 @@ void ClientUserinfoChanged( int clientNum )
       {
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
+        // log renames to demo
+        Info_SetValueForKey( buf, "name", client->pers.netname );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
       }
     }
   }
@@ -1140,6 +1144,12 @@ void ClientUserinfoChanged( int clientNum )
     client->pers.teamInfo = qtrue;
   else
     client->pers.teamInfo = qfalse;
+  
+  s = Info_ValueForKey( userinfo, "cg_unlagged" );
+  if( !s[0] || atoi( s ) != 0 )
+    client->useUnlagged = qtrue;
+  else
+    client->useUnlagged = qfalse;
 
   // colors
   strcpy( c1, Info_ValueForKey( userinfo, "color1" ) );
@@ -1193,7 +1203,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   char      guid[ 33 ];
   char      ip[ 16 ] = {""};
   char      reason[ MAX_STRING_CHARS ] = {""};
-  int       i;
 
   ent = &g_entities[ clientNum ];
 
@@ -1254,6 +1263,9 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   // count current clients and rank for scoreboard
   CalculateRanks( );
   G_admin_namelog_update( client, qfalse );
+
+  // TODO: Call event here: game.on_player_connect
+
   return NULL;
 }
 
@@ -1272,13 +1284,14 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+  char      buffer[ MAX_INFO_STRING ] = "";
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
   if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
     trap_SendServerCommand( clientNum, "disconnect \"Your client is missing files.\n\n"
       "To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
-      "For a client with fast http-download visit themerge.tremforges.net\n\n"
+      "For a client with fast http-download visit tremfusion.tremforges.net\n\n"
       "Open your console and enter: /cl_allowDownload 1\n\"" );
     return;
   }
@@ -1291,12 +1304,16 @@ void ClientBegin( int clientNum )
     trap_UnlinkEntity( ent );
 
   G_InitGentity( ent );
+
+  // TODO: Call event here: player.on_init
+
   ent->touch = 0;
   ent->pain = 0;
   ent->client = client;
 
   client->pers.connected = CON_CONNECTED;
   client->pers.enterTime = level.time;
+  client->pers.classSelection = PCL_NONE;
 
   // save eflags around this, because changing teams will
   // cause this to happen with a valid entity, and we
@@ -1322,8 +1339,16 @@ void ClientBegin( int clientNum )
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 
+  // log to demo
+  Info_SetValueForKey( buffer, "name", client->pers.netname );
+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
+
   // count current clients and rank for scoreboard
   CalculateRanks( );
+
+  // TODO: Call event here: game.on_player_begin
 }
 
 /*
@@ -1335,31 +1360,99 @@ after the first ClientBegin, and after each respawn
 Initializes all non-persistant parts of playerState
 ============
 */
-void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles )
+
+static int setSpawnType(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int                 index;
-  vec3_t              spawn_origin, spawn_angles;
-  gclient_t           *client;
-  int                 i;
-  clientPersistant_t  saved;
-  clientSession_t     savedSess;
-  int                 persistant[ MAX_PERSISTANT ];
-  gentity_t           *spawnPoint = NULL;
-  int                 flags;
-  int                 savedPing;
-  int                 teamLocal;
-  int                 eventSequence;
-  char                userinfo[ MAX_INFO_STRING ];
-  vec3_t              up = { 0.0f, 0.0f, 1.0f };
-  int                 maxAmmo, maxClips;
-  weapon_t            weapon;
+  gclient_t *client;
+  gentity_t *ent;
+  gentity_t *spawn = NULL;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
 
+  // Get parameters
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  SC_HashGet(hash, "spawn", &value);
+  if(value.type == TYPE_OBJECT)
+    spawn = G_EntityFromScript(value.data.object);
 
-  index = ent - g_entities;
-  client = ent->client;
+  ent = g_entities + client->ps.clientNum;
+
+  value.type = TYPE_STRING;
+  if( client->sess.spectatorState == SPECTATOR_NOT )
+  {
+    if(spawn == NULL)
+      G_Error("ClientSpawn: spawn is NULL\n");
+
+    if(ent == spawn)
+      value.data.string = SC_StringNewFromChar("evolve");
+    else
+      value.data.string = SC_StringNewFromChar("spawn");
+  }
+  else
+    value.data.string = SC_StringNewFromChar("spectate");
+
+  SC_HashSet(hash, "type", &value);
+
+  return 0;
+}
+
+static int selectSpectatorSpawnPoint(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  gentity_t *spawn;
+  int teamLocal;
+  const char *type;
+  vec3_t origin, angles;
+
+  // Get parameters
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  SC_HashGet(hash, "type", &value);
+  type = SC_StringToChar(value.data.string);
 
   teamLocal = client->pers.teamSelection;
 
+  if(strcmp(type, "spectate") == 0)
+  {
+    if( teamLocal == TEAM_NONE )
+      spawn = G_SelectSpectatorSpawnPoint( origin, angles );
+    else if( teamLocal == TEAM_ALIENS )
+      spawn = G_SelectAlienLockSpawnPoint( origin, angles );
+    else if( teamLocal == TEAM_HUMANS )
+      spawn = G_SelectHumanLockSpawnPoint( origin, angles );
+    else
+    {
+      G_Error("No spawn found\n");
+      return -1;
+    }
+
+    value.type = TYPE_OBJECT;
+	if(spawn)
+	{
+		value.data.object = G_GetScriptingEntity(spawn);
+		SC_HashSet(hash, "spawn", &value);
+	}
+    value.data.object = SC_Vec3FromNewVec3_t(origin);
+    SC_HashSet(hash, "origin", &value);
+    value.data.object = SC_Vec3FromNewVec3_t(angles);
+    SC_HashSet(hash, "angles", &value);
+  }
+
+  return 0;
+}
+
+static int stopFollow(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  
   //if client is dead and following teammate, stop following before spawning
   if( client->sess.spectatorClient != -1 )
   {
@@ -1368,88 +1461,135 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   }
 
   // only start client if chosen a class and joined a team
-  if( client->pers.classSelection == PCL_NONE && teamLocal == TEAM_NONE )
+  if( client->pers.classSelection == PCL_NONE && client->pers.teamSelection == TEAM_NONE )
     client->sess.spectatorState = SPECTATOR_FREE;
   else if( client->pers.classSelection == PCL_NONE )
     client->sess.spectatorState = SPECTATOR_LOCKED;
 
-  if( origin != NULL )
-    VectorCopy( origin, spawn_origin );
+  return 0;
+}
 
-  if( angles != NULL )
-    VectorCopy( angles, spawn_angles );
+static int setBuildableSpawnTime(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gentity_t *buildable;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
 
-  // find a spawn point
-  // do it before setting health back up, so farthest
-  // ranging doesn't count this client
-  if( client->sess.spectatorState != SPECTATOR_NOT )
+  SC_HashGet(hash, "spawn", &value);
+  if(value.type != TYPE_UNDEF)
   {
-    if( teamLocal == TEAM_NONE )
-      spawnPoint = G_SelectSpectatorSpawnPoint( spawn_origin, spawn_angles );
-    else if( teamLocal == TEAM_ALIENS )
-      spawnPoint = G_SelectAlienLockSpawnPoint( spawn_origin, spawn_angles );
-    else if( teamLocal == TEAM_HUMANS )
-      spawnPoint = G_SelectHumanLockSpawnPoint( spawn_origin, spawn_angles );
+    value.type = TYPE_INTEGER;
+    buildable = G_EntityFromScript(value.data.object);
+
+    if( buildable->buildableTeam == TEAM_ALIENS )
+      value.data.integer = ALIEN_SPAWN_REPEAT_TIME;
+    else if( buildable->buildableTeam == TEAM_HUMANS )
+      value.data.integer = HUMAN_SPAWN_REPEAT_TIME;
+
+    SC_HashSet(hash, "buildableSpawnTime", &value);
   }
-  else
+  
+  return 0;
+}
+
+static int buildableSpawnEffects(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gentity_t *spawn;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+
+  SC_HashGet(hash, "spawn", &value);
+  if(value.type != TYPE_UNDEF)
   {
-    if( spawn == NULL )
-    {
-      G_Error( "ClientSpawn: spawn is NULL\n" );
-      return;
-    }
+    spawn = G_EntityFromScript(value.data.object);
 
-    spawnPoint = spawn;
+    SC_HashGet(hash, "buildableSpawnTime", &value);
 
-    if( ent != spawn )
-    {
-      //start spawn animation on spawnPoint
-      G_SetBuildableAnim( spawnPoint, BANIM_SPAWN1, qtrue );
+    if(spawn->s.eType == ET_BUILDABLE)
+      G_SetBuildableAnim(spawn, BANIM_SPAWN1, qtrue);
 
-      if( spawnPoint->buildableTeam == TEAM_ALIENS )
-        spawnPoint->clientSpawnTime = ALIEN_SPAWN_REPEAT_TIME;
-      else if( spawnPoint->buildableTeam == TEAM_HUMANS )
-        spawnPoint->clientSpawnTime = HUMAN_SPAWN_REPEAT_TIME;
-    }
+    if( spawn->buildableTeam == TEAM_ALIENS )
+      spawn->clientSpawnTime = value.data.integer;
+    else if( spawn->buildableTeam == TEAM_HUMANS )
+      spawn->clientSpawnTime = value.data.integer;
   }
+  
+  return 0;
+}
 
-  // toggle the teleport bit so the client knows to not lerp
-  flags = ent->client->ps.eFlags & ( EF_TELEPORT_BIT | EF_VOTED | EF_TEAMVOTED );
-  flags ^= EF_TELEPORT_BIT;
-  G_UnlaggedClear( ent );
+static int toggleTeleport(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
 
-  // clear everything but the persistant data
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  
+  client->ps.eFlags &= ( EF_TELEPORT_BIT | EF_VOTED | EF_TEAMVOTED );
+  client->ps.eFlags ^= EF_TELEPORT_BIT;
+  
+  return 0;
+}
 
+static int reset(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t          *client;
+  scDataTypeHash_t   *hash = in[1].data.hash;
+  scDataTypeValue_t   value;
+  int                 index;
+  gentity_t          *ent;
+  int                 flags;
+  clientPersistant_t  saved;
+  clientSession_t     savedSess;
+  int                 savedPing;
+  scObject_t         *savedScript;
+  int                 persistant[ MAX_PERSISTANT ];
+  int                 eventSequence;
+  int                 i;
+  char                userinfo[ MAX_INFO_STRING ];
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+
+  index = client->ps.clientNum;
+  ent = g_entities + index;
+  
+  // save persistant data
+  flags = client->ps.eFlags;
   saved = client->pers;
   savedSess = client->sess;
   savedPing = client->ps.ping;
+  savedScript = client->scriptingClient;
 
   for( i = 0; i < MAX_PERSISTANT; i++ )
     persistant[ i ] = client->ps.persistant[ i ];
 
   eventSequence = client->ps.eventSequence;
+
+  // clear everything
+  G_UnlaggedClear( ent );
   memset( client, 0, sizeof( *client ) );
 
+  // reset persistant data
   client->pers = saved;
   client->sess = savedSess;
   client->ps.ping = savedPing;
-  client->lastkilled_client = -1;
+  client->scriptingClient = savedScript;
+  client->ps.eFlags = flags;
 
   for( i = 0; i < MAX_PERSISTANT; i++ )
     client->ps.persistant[ i ] = persistant[ i ];
 
   client->ps.eventSequence = eventSequence;
 
-  // increment the spawncount so the client will detect the respawn
-  client->ps.persistant[ PERS_SPAWN_COUNT ]++;
-  client->ps.persistant[ PERS_SPECSTATE ] = client->sess.spectatorState;
-
-  client->airOutTime = level.time + 12000;
-
+  // userinfo never used, useless ?
   trap_GetUserinfo( index, userinfo, sizeof( userinfo ) );
-  client->ps.eFlags = flags;
 
-  //Com_Printf( "ent->client->pers->pclass = %i\n", ent->client->pers.classSelection );
+  // initialize new data
+  client->lastkilled_client = -1;
+  client->ps.persistant[ PERS_SPECSTATE ] = client->sess.spectatorState;
+  client->airOutTime = level.time + 12000;
 
   ent->s.groundEntityNum = ENTITYNUM_NONE;
   ent->client = &level.clients[ index ];
@@ -1470,35 +1610,9 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   client->ps.stats[ STAT_WEAPONS2 ] = 0;
   client->ps.stats[ STAT_SLOTS ] = 0;
   client->ps.stats[ STAT_MISC ] = 0;
-
-  client->ps.eFlags = flags;
   client->ps.clientNum = index;
 
   BG_ClassBoundingBox( ent->client->pers.classSelection, ent->r.mins, ent->r.maxs, NULL, NULL, NULL );
-
-  if( client->sess.spectatorState == SPECTATOR_NOT )
-    client->pers.maxHealth = client->ps.stats[ STAT_MAX_HEALTH ] =
-      BG_Class( ent->client->pers.classSelection )->health;
-  else
-    client->pers.maxHealth = client->ps.stats[ STAT_MAX_HEALTH ] = 100;
-
-  // clear entity values
-  if( ent->client->pers.classSelection == PCL_HUMAN )
-  {
-    BG_AddWeaponToInventory( WP_BLASTER, client->ps.stats );
-    BG_AddUpgradeToInventory( UP_MEDKIT, client->ps.stats );
-    weapon = client->pers.humanItemSelection;
-  }
-  else if( client->sess.spectatorState == SPECTATOR_NOT )
-    weapon = BG_Class( ent->client->pers.classSelection )->startWeapon;
-  else
-    weapon = WP_NONE;
-
-  maxAmmo = BG_Weapon( weapon )->maxAmmo;
-  maxClips = BG_Weapon( weapon )->maxClips;
-  BG_AddWeaponToInventory( weapon, client->ps.stats );
-  client->ps.ammo[0] = maxAmmo;
-  client->ps.ammo[1] = maxClips;
 
   client->ps.persistant[ PERS_NEWWEAPON ] = 0;
 
@@ -1507,80 +1621,8 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
 
   ent->client->ps.stats[ STAT_BUILDABLE ] = BA_NONE;
   ent->client->ps.stats[ STAT_STATE ] = 0;
+
   VectorSet( ent->client->ps.grapplePoint, 0.0f, 0.0f, 1.0f );
-
-  // health will count down towards max_health
-  ent->health = client->ps.stats[ STAT_HEALTH ] = client->ps.stats[ STAT_MAX_HEALTH ]; //* 1.25;
-
-  //if evolving scale health
-  if( ent == spawn )
-  {
-    ent->health *= ent->client->pers.evolveHealthFraction;
-    client->ps.stats[ STAT_HEALTH ] *= ent->client->pers.evolveHealthFraction;
-  }
-
-  //clear the credits array
-  for( i = 0; i < MAX_CLIENTS; i++ )
-    ent->credits[ i ] = 0;
-
-  client->ps.stats[ STAT_STAMINA ] = MAX_STAMINA;
-
-  G_SetOrigin( ent, spawn_origin );
-  VectorCopy( spawn_origin, client->ps.origin );
-
-#define UP_VEL  150.0f
-#define F_VEL   50.0f
-
-  //give aliens some spawn velocity
-  if( client->sess.spectatorState == SPECTATOR_NOT &&
-      client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
-  {
-    if( ent == spawn )
-    {
-      //evolution particle system
-      G_AddPredictableEvent( ent, EV_ALIEN_EVOLVE, DirToByte( up ) );
-    }
-    else
-    {
-      spawn_angles[ YAW ] += 180.0f;
-      AngleNormalize360( spawn_angles[ YAW ] );
-
-      if( spawnPoint->s.origin2[ 2 ] > 0.0f )
-      {
-        vec3_t  forward, dir;
-
-        AngleVectors( spawn_angles, forward, NULL, NULL );
-        VectorScale( forward, F_VEL, forward );
-        VectorAdd( spawnPoint->s.origin2, forward, dir );
-        VectorNormalize( dir );
-
-        VectorScale( dir, UP_VEL, client->ps.velocity );
-      }
-
-      G_AddPredictableEvent( ent, EV_PLAYER_RESPAWN, 0 );
-    }
-  }
-  else if( client->sess.spectatorState == SPECTATOR_NOT &&
-           client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
-  {
-    spawn_angles[ YAW ] += 180.0f;
-    AngleNormalize360( spawn_angles[ YAW ] );
-  }
-
-  // the respawned flag will be cleared after the attack and jump keys come up
-  client->ps.pm_flags |= PMF_RESPAWNED;
-
-  trap_GetUsercmd( client - level.clients, &ent->client->pers.cmd );
-  G_SetClientViewAngle( ent, spawn_angles );
-
-  if( client->sess.spectatorState == SPECTATOR_NOT )
-  {
-    trap_LinkEntity( ent );
-
-    // force the base weapon up
-    client->ps.weapon = WP_NONE;
-    client->ps.weaponstate = WEAPON_READY;
-  }
 
   // don't allow full run speed for a bit
   client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
@@ -1596,33 +1638,275 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   client->ps.torsoAnim = TORSO_STAND;
   client->ps.legsAnim = LEGS_IDLE;
 
-  if( level.intermissiontime )
-    MoveClientToIntermission( ent );
-  else
+  trap_GetUsercmd( client - level.clients, &ent->client->pers.cmd );
+
+  return 0;
+}
+
+static int giveEquipement(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  weapon_t          weapon;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  
+  if( client->pers.classSelection == PCL_HUMAN )
   {
-    // fire the targets of the spawn point
-    if( !spawn )
-      G_UseTargets( spawnPoint, ent );
+    BG_AddWeaponToInventory( WP_BLASTER, client->ps.stats );
+    BG_AddUpgradeToInventory( UP_MEDKIT, client->ps.stats );
+    weapon = client->pers.humanItemSelection;
+  }
+  else if( client->sess.spectatorState == SPECTATOR_NOT )
+    weapon = BG_Class( client->pers.classSelection )->startWeapon;
+  else
+    weapon = WP_NONE;
 
-    // select the highest weapon number available, after any
-    // spawn given items have fired
-    client->ps.weapon = 1;
+  BG_AddWeaponToInventory( weapon, client->ps.stats );
+  client->ps.ammo = BG_Weapon( weapon )->maxAmmo;
+  client->ps.clips = BG_Weapon( weapon )->maxClips;
 
-    for( i = WP_NUM_WEAPONS - 1; i > 0 ; i-- )
+  return 0;
+}
+
+static int gameplayParameters(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  int               index;
+  gentity_t        *ent;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+
+  index = client->ps.clientNum;
+  ent = g_entities + index;
+
+  // give health
+  if( client->sess.spectatorState == SPECTATOR_NOT )
+    client->pers.maxHealth = client->ps.stats[ STAT_MAX_HEALTH ] =
+      BG_Class( ent->client->pers.classSelection )->health;
+  else
+    client->pers.maxHealth = client->ps.stats[ STAT_MAX_HEALTH ] = 100;
+
+  // health will count down towards max_health
+  ent->health = client->ps.stats[ STAT_HEALTH ] = client->ps.stats[ STAT_MAX_HEALTH ]; //* 1.25;
+
+  client->ps.stats[ STAT_STAMINA ] = MAX_STAMINA;
+
+  return 0;
+}
+
+static int setPosition(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  int               index;
+  gentity_t        *ent;
+  gentity_t        *spawn = NULL;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  vec3_t           *origin, *angles;
+  const char       *type;
+  vec3_t            up = { 0.0f, 0.0f, 1.0f };
+
+  // Get parameters
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  SC_HashGet(hash, "type", &value);
+  type = SC_StringToChar(value.data.string);
+  SC_HashGet(hash, "spawn", &value);
+  if(value.type != TYPE_UNDEF)
+	  spawn = G_EntityFromScript(value.data.object);
+  SC_HashGet(hash, "origin", &value);
+  origin = SC_Vec3FromScript(value.data.object);
+  SC_HashGet(hash, "angles", &value);
+  angles = SC_Vec3FromScript(value.data.object);
+
+  index = client->ps.clientNum;
+  ent = g_entities + index;
+
+  G_SetOrigin( ent, *origin );
+  VectorCopy( *origin, client->ps.origin );
+
+#define UP_VEL  150.0f
+#define F_VEL   50.0f
+
+  //give aliens some spawn velocity
+  if( client->sess.spectatorState == SPECTATOR_NOT &&
+      client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
+  {
+    if(strcmp(type, "evolve") == 0)
     {
-      if( BG_InventoryContainsWeapon( i, client->ps.stats ) )
+      //evolution particle system
+      G_AddPredictableEvent( ent, EV_ALIEN_EVOLVE, DirToByte( up ) );
+    }
+    else
+    {
+      (*angles)[ YAW ] += 180.0f;
+      AngleNormalize360( (*angles)[ YAW ] );
+
+      if( spawn->s.origin2[ 2 ] > 0.0f )
       {
-        client->ps.weapon = i;
-        break;
+        vec3_t  forward, dir;
+
+        AngleVectors( *angles, forward, NULL, NULL );
+        VectorScale( forward, F_VEL, forward );
+        VectorAdd( spawn->s.origin2, forward, dir );
+        VectorNormalize( dir );
+
+        VectorScale( dir, UP_VEL, client->ps.velocity );
       }
+
+      G_AddPredictableEvent( ent, EV_PLAYER_RESPAWN, 0 );
     }
   }
+  else if( client->sess.spectatorState == SPECTATOR_NOT &&
+           client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+  {
+    (*angles)[ YAW ] += 180.0f;
+    AngleNormalize360( (*angles)[ YAW ] );
+  }
+
+  G_SetClientViewAngle( ent, *angles );
+
+  return 0;
+}
+
+static int scaleHealth(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t         *client;
+  gentity_t         *ent;
+  scDataTypeHash_t  *hash = in[1].data.hash;
+  scDataTypeValue_t  value;
+  const char        *type;
+ 
+  // Get parameters
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  SC_HashGet(hash, "type", &value);
+  type = SC_StringToChar(value.data.string);
+
+  ent = g_entities + client->ps.clientNum;
+ 
+  //if evolving scale health
+  if(strcmp(type, "evolve") == 0)
+  {
+    ent->health *= ent->client->pers.evolveHealthFraction;
+    client->ps.stats[ STAT_HEALTH ] *= ent->client->pers.evolveHealthFraction;
+  }
+
+  return 0;
+}
+
+static int clearCredits(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  gentity_t        *ent;
+  int               i;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+
+  ent = g_entities + client->ps.clientNum;
+  
+  //clear the credits array
+  for( i = 0; i < MAX_CLIENTS; i++ )
+    ent->credits[ i ] = 0;
+
+  return 0;
+}
+
+static int fireTarget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t         *client;
+  gentity_t         *ent;
+  gentity_t         *spawn = NULL;
+  scDataTypeHash_t  *hash = in[1].data.hash;
+  scDataTypeValue_t  value;
+  const char        *type;
+ 
+  // Get parameters
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  SC_HashGet(hash, "type", &value);
+  type = SC_StringToChar(value.data.string);
+  SC_HashGet(hash, "spawn", &value);
+  if(value.type != TYPE_UNDEF)
+	  spawn = G_EntityFromScript(value.data.object);
+
+  ent = g_entities + client->ps.clientNum;
+ 
+  if(strcmp(type, "spectate") != 0)
+    G_UseTargets(spawn, ent);
+
+  return 0;
+}
+
+static int moveToIntermission(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  gentity_t        *ent;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  ent = g_entities + client->ps.clientNum;
+
+  if( level.intermissiontime )
+    MoveClientToIntermission( ent );
+
+  return 0;
+}
+
+static int selectBestWeapon(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  int               i;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  
+  client->ps.weaponstate = WEAPON_READY;
+  client->ps.weapon = 1;
+  for( i = WP_NUM_WEAPONS - 1; i > 0 ; i-- )
+  {
+    if( BG_InventoryContainsWeapon( i, client->ps.stats ) )
+    {
+      client->ps.weapon = i;
+      break;
+    }
+  }
+
+  return 0;
+}
+
+static int runFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  int               index;
+  gentity_t        *ent;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+
+  index = client->ps.clientNum;
+  ent = g_entities + index;
 
   // run a client frame to drop exactly to the floor,
   // initialize animations and other things
   client->ps.commandTime = level.time - 100;
   ent->client->pers.cmd.serverTime = level.time;
-  ClientThink( ent-g_entities );
+  ClientThink(index);
 
   // positively link the client, even if the command times are weird
   if( client->sess.spectatorState == SPECTATOR_NOT )
@@ -1632,14 +1916,188 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
     trap_LinkEntity( ent );
   }
 
-  // must do this here so the number of active clients is calculated
-  CalculateRanks( );
 
   // run the presend to set anything else
   ClientEndFrame( ent );
 
-  // clear entity state values
   BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
+
+  return 0;
+}
+
+static int updateRanks(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  CalculateRanks();
+  return 0;
+}
+
+static int linkEntity(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+  gentity_t        *ent;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+
+  ent = g_entities + client->ps.clientNum;
+
+  if( client->sess.spectatorState == SPECTATOR_NOT )
+    trap_LinkEntity( ent );
+
+  return 0;
+}
+
+static int increaseSpawnCount(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  gclient_t        *client;
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
+
+  SC_HashGet(hash, "client", &value);
+  client = G_ClientFromScript(value.data.object);
+  
+  client->ps.persistant[ PERS_SPAWN_COUNT ]++;
+  client->ps.pm_flags |= PMF_RESPAWNED;
+  return 0;
+}
+
+void G_InitEvent_PlayerSpawn(void)
+{
+  scObject_t *self = SC_Event_NewObject();
+  scEvent_t *event = self->data.data.userdata;
+  scDataTypeValue_t value, out;
+  scEventNode_t *node, *parent, *action;
+
+  SC_Event_AddMainGroups(event, &out);
+
+  parent = SC_Event_Find(event, "check");
+  node = SC_Event_NewGroup("init");
+  SC_Event_AddNode(parent, NULL, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("StopFollow", stopFollow), &out);
+
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SetSpawnType", setSpawnType), &out);
+
+  parent = SC_Event_Find(event, "init");
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("SpectatorSpawnPoint", selectSpectatorSpawnPoint), &out);
+
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("BuildableSpawnTime", setBuildableSpawnTime), &out);
+
+  action = SC_Event_Find(event, "action");
+  node = SC_Event_NewGroup("init");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  node = SC_Event_NewGroup("clear");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("Reset", reset), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("ClearCredits", clearCredits), &out);
+
+  node = SC_Event_NewGroup("reinit");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("GameplayParameters", gameplayParameters), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("GiveEquipement", giveEquipement), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("ScaleHealth", scaleHealth), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("SelectBestWeapon", selectBestWeapon), &out);
+
+  node = SC_Event_NewGroup("spawn");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("ToggleTeleport", toggleTeleport), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("SetPosition", setPosition), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("BuildableSpawnEffects", buildableSpawnEffects), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("FireTarget", fireTarget), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("SpawnCount", increaseSpawnCount), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("LinkEntity", linkEntity), &out);
+
+  node = SC_Event_NewGroup("finish");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("MoveToIntermission", moveToIntermission), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("UpdateRanks", updateRanks), &out);
+
+  SC_Event_AddNode(parent, parent->last,
+      SC_Event_NewCHook("RunFrame", runFrame), &out);
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet("event.player.Spawn", &value);
+}
+
+int ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles )
+{
+  scDataTypeHash_t    *hash = SC_HashNew();
+  scObject_t          *event;
+  scDataTypeValue_t   value;
+  scDataTypeValue_t   out;
+  int				  ret;
+
+  SC_HashGCInc(hash);
+
+  SC_NamespaceGet("event.player.Spawn", &value);
+  event = value.data.object;
+
+  value.type = TYPE_OBJECT;
+  value.data.object = G_GetScriptingClient(ent->client);
+  SC_HashSet(hash, "client", &value);
+
+  if(spawn)
+  {
+    value.type = TYPE_OBJECT;
+    value.data.object = G_GetScriptingEntity(spawn);
+    SC_HashSet(hash, "spawn", &value);
+
+    value.data.object = SC_Vec3FromNewVec3_t(origin);
+    SC_HashSet(hash, "origin", &value);
+
+    value.data.object = SC_Vec3FromNewVec3_t(angles);
+    SC_HashSet(hash, "angles", &value);
+  }
+
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
+    G_Error(SC_StringToChar(out.data.string));
+
+  SC_HashGCDec(hash);
+
+  return ret;
 }
 
 
@@ -1701,5 +2159,9 @@ void ClientDisconnect( int clientNum )
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
 
+  G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
+
   CalculateRanks( );
+
+  // TODO: Call event here: game.on_player_disconnect
 }

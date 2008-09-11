@@ -100,6 +100,11 @@ vmCvar_t  ui_winner;
 
 vmCvar_t  ui_emoticons;
 
+vmCvar_t  sc_python;
+vmCvar_t  py_initialized;
+vmCvar_t  sc_lua;
+vmCvar_t  lua_initialized;
+
 static cvarTable_t    cvarTable[ ] =
 {
   { &ui_browserShowFull, "ui_browserShowFull", "1", CVAR_ARCHIVE },
@@ -123,6 +128,11 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_textWrapCache, "ui_textWrapCache", "1", CVAR_ARCHIVE },
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
   { &ui_emoticons, "ui_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
+  
+  { &sc_python,       "sc_python",       "1", CVAR_LATCH },
+  { &py_initialized,  "py_initialized",  "0", CVAR_ROM },
+  { &sc_lua,          "sc_lua",          "1", CVAR_LATCH },
+  { &lua_initialized, "lua_initialized", "0", CVAR_ROM },
 };
 
 static int    cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -1105,6 +1115,10 @@ void UI_Refresh( int realtime )
 
   UI_UpdateCvars();
 
+#ifdef ENABLE_SCRIPT_UI
+  SC_UIMove();
+#endif
+  
   if( Menu_Count() > 0 )
   {
     // paint all the menus
@@ -1130,6 +1144,9 @@ void UI_Refresh( int realtime )
     UI_DrawHandlePic( uiInfo.uiDC.cursorx - ( 16.0f * uiInfo.uiDC.aspectScale ), uiInfo.uiDC.cursory - 16.0f,
                       32.0f * uiInfo.uiDC.aspectScale, 32.0f, uiInfo.uiDC.Assets.cursor );
   }
+#ifdef ENABLE_SCRIPT_UI
+  SC_UIDraw();
+#endif
 }
 
 /*
@@ -1139,6 +1156,9 @@ UI_Shutdown
 */
 void UI_Shutdown( void )
 {
+#ifdef ENABLE_SCRIPT_UI
+  UI_ScriptShutdown();
+#endif
   trap_LAN_SaveCachedServers();
 }
 
@@ -2989,6 +3009,16 @@ static void UI_RunMenuScript( char **args )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_team \"%s\"\n", buffer ) );
       else if( uiInfo.chatAdmins )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_admins \"%s\"\n", buffer ) );
+      else if( uiInfo.chatClan )
+      {
+        char clantagDecolored[ 32 ];
+        trap_Cvar_VariableStringBuffer( "cl_clantag", clantagDecolored, sizeof( clantagDecolored ) );
+        Q_CleanStr( clantagDecolored );
+        if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 )
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
+        else
+          Com_Printf( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
+      }
       else if( uiInfo.chatPrompt )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
       else
@@ -3610,21 +3640,41 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+      int mode = trap_Cvar_VariableValue( "r_mode" );
+      if ( mode < 0 || mode >= uiInfo.numResolutions )
       {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
-        return resolution;
+        Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)",
+                     (int)trap_Cvar_VariableValue( "r_customWidth" ),
+                     (int)trap_Cvar_VariableValue( "r_customHeight" ) );
       }
+      else
+      {
+        Com_sprintf( resolution, sizeof( resolution ), "%dx%d",
+                     uiInfo.resolutions[ mode ].w,
+                     uiInfo.resolutions[ mode ].h );
+      }
+      return resolution;
     }
+    else
+    {
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
 
-    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
-    return resolution;
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+        {
+          Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+          return resolution;
+        }
+      }
+
+      Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+      return resolution;
+    }
   }
 
   return "";
@@ -3754,8 +3804,13 @@ static void UI_FeederSelection( float feederID, int index )
     uiInfo.humanBuildIndex = index;
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
-    trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    if ( uiInfo.oldResolutions )
+      trap_Cvar_Set( "r_mode", va( "%d", index ) );
+    else
+    {
+      trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
+      trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    }
   }
 }
 
@@ -3763,14 +3818,19 @@ static int UI_FeederInitialise( float feederID )
 {
   if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
+      return trap_Cvar_VariableValue( "r_mode" );
+    else
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-        return i;
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
+
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+          return i;
+      }
     }
   }
 
@@ -3848,7 +3908,16 @@ void UI_ParseResolutions( void )
   char        *s = NULL;
 
   trap_Cvar_VariableStringBuffer( "r_availableModes", buf, sizeof( buf ) );
-  p = buf;
+  if ( buf[0] )
+  {
+    p = buf;
+    uiInfo.oldResolutions = qfalse;
+  }
+  else
+  {
+    p = "320x240 400x300 512x384 640x480 800x600 960x720 1024x768 1152x864 1280x1024 1600x1200 2048x1536 856x480";
+    uiInfo.oldResolutions = qtrue;
+  }
   uiInfo.numResolutions = 0;
 
   while( String_Parse( &p, &out ) )
@@ -3883,6 +3952,9 @@ void UI_Init( qboolean inGameLoad )
 
   UI_RegisterCvars();
   UI_InitMemory();
+#ifdef ENABLE_SCRIPT_UI
+  UI_ScriptInit();
+#endif
 
   // cache redundant calulations
   trap_GetGlconfig( &uiInfo.uiDC.glconfig );

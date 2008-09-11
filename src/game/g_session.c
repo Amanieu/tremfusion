@@ -53,7 +53,7 @@ void G_WriteClientSessionData( gclient_t *client )
     BG_ClientListString( &client->sess.ignoreList )
     );
 
-  var = va( "session%i", client - level.clients );
+  var = va( "session%i", (int)(client - level.clients) );
 
   trap_Cvar_Set( var, s );
 }
@@ -71,7 +71,7 @@ void G_ReadSessionData( gclient_t *client )
   const char  *var;
   int spectatorState;
 
-  var = va( "session%i", client - level.clients );
+  var = va( "session%i", (int)(client - level.clients) );
   trap_Cvar_VariableStringBuffer( var, s, sizeof(s) );
 
   // FIXME: should be using BG_ClientListParse() for ignoreList, but
@@ -121,4 +121,9 @@ void G_WriteSessionData( void )
     if( level.clients[ i ].pers.connected == CON_CONNECTED )
       G_WriteClientSessionData( &level.clients[ i ] );
   }
+
+  // write values for sv_maxclients and sv_democlients because they invalidate session data
+  trap_Cvar_Set( "session", va( "%i %i", 
+                 trap_Cvar_VariableIntegerValue( "sv_maxclients" ),
+                 trap_Cvar_VariableIntegerValue( "sv_democlients" ) ) );
 }

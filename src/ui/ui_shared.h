@@ -423,6 +423,7 @@ typedef struct
   qhandle_t cursor;
   float FPS;
 
+  qboolean  hudloading;
 }
 displayContextDef_t;
 
@@ -434,6 +435,7 @@ void Display_ExpandMacros( char * buff );
 void Menu_Init( menuDef_t *menu );
 void Item_Init( itemDef_t *item );
 void Menu_PostParse( menuDef_t *menu );
+qboolean Rect_ContainsPoint( rectDef_t *rect, float x, float y );
 menuDef_t *Menu_GetFocused( void );
 void Menu_HandleKey( menuDef_t *menu, int key, qboolean down );
 void Menu_HandleMouseMove( menuDef_t *menu, float x, float y );
@@ -464,6 +466,7 @@ qboolean Display_MouseMove( void *p, float x, float y );
 int Display_CursorType( int x, int y );
 qboolean Display_KeyBindPending( void );
 menuDef_t *Menus_FindByName( const char *p );
+itemDef_t *Menu_FindItemByName( menuDef_t *menu, const char *p );
 void Menus_CloseByName( const char *p );
 void Display_HandleKey( int key, qboolean down, int x, int y );
 void LerpColor( vec4_t a, vec4_t b, vec4_t c, float t );

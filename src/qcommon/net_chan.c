@@ -187,7 +187,7 @@ Netchan_TransmitNextFragment
 Send one fragment of the current message
 =================
 */
-void Netchan_TransmitNextFragment( netchan_t *chan ) {
+void Netchan_TransmitNextFragment( netchan_t *chan, int delay ) {
 	msg_t		send;
 	byte		send_buf[MAX_PACKETLEN];
 	int			fragmentLength;
@@ -213,7 +213,7 @@ void Netchan_TransmitNextFragment( netchan_t *chan ) {
 	MSG_WriteData( &send, chan->unsentBuffer + chan->unsentFragmentStart, fragmentLength );
 
 	// send the datagram
-	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress );
+	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress, delay );
 
 	if ( showpackets->integer ) {
 		Com_Printf ("%s send %4i : s=%i fragment=%i,%i\n"
@@ -244,7 +244,7 @@ Sends a message to a connection, fragmenting if necessary
 A 0 length will still generate a packet.
 ================
 */
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data ) {
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data, int delay ) {
 	msg_t		send;
 	byte		send_buf[MAX_PACKETLEN];
 
@@ -260,7 +260,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data ) {
 		Com_Memcpy( chan->unsentBuffer, data, length );
 
 		// only send the first fragment now
-		Netchan_TransmitNextFragment( chan );
+		Netchan_TransmitNextFragment( chan, delay );
 
 		return;
 	}
@@ -279,7 +279,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data ) {
 	MSG_WriteData( &send, data, length );
 
 	// send the datagram
-	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress );
+	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress, delay );
 
 	if ( showpackets->integer ) {
 		Com_Printf( "%s send %4i : s=%i ack=%i\n"
@@ -461,71 +461,6 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 
 //==============================================================================
 
-/*
-===================
-NET_CompareBaseAdr
-
-Compares without the port
-===================
-*/
-qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
-{
-	if (a.type != b.type)
-		return qfalse;
-
-	if (a.type == NA_LOOPBACK)
-		return qtrue;
-
-	if (a.type == NA_IP)
-	{
-		if (a.ip[0] == b.ip[0] && a.ip[1] == b.ip[1] && a.ip[2] == b.ip[2] && a.ip[3] == b.ip[3])
-			return qtrue;
-		return qfalse;
-	}
-
-	Com_Printf ("NET_CompareBaseAdr: bad address type\n");
-	return qfalse;
-}
-
-const char	*NET_AdrToString (netadr_t a)
-{
-	static	char	s[64];
-
-	if (a.type == NA_LOOPBACK) {
-		Com_sprintf (s, sizeof(s), "loopback");
-	} else if (a.type == NA_IP) {
-		Com_sprintf (s, sizeof(s), "%i.%i.%i.%i:%hu",
-			a.ip[0], a.ip[1], a.ip[2], a.ip[3], BigShort(a.port));
-	}
-
-	return s;
-}
-
-
-qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
-{
-	if (a.type != b.type)
-		return qfalse;
-
-	if (a.type == NA_LOOPBACK)
-		return qtrue;
-
-	if (a.type == NA_IP)
-	{
-		if (a.ip[0] == b.ip[0] && a.ip[1] == b.ip[1] && a.ip[2] == b.ip[2] && a.ip[3] == b.ip[3] && a.port == b.port)
-			return qtrue;
-		return qfalse;
-	}
-
-	Com_Printf ("NET_CompareAdr: bad address type\n");
-	return qfalse;
-}
-
-
-qboolean	NET_IsLocalAddress( netadr_t adr ) {
-	return adr.type == NA_LOOPBACK;
-}
-
 
 
 /*
@@ -651,7 +586,7 @@ void NET_FlushPacketQueue(void)
 	}
 }
 
-void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to ) {
+void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to, int delay ) {
 
 	// sequenced packets are shown in netchan, so just show oob
 	if ( showpackets->integer && *(int *)data == -1 )	{
@@ -671,6 +606,9 @@ void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to ) 
 	}
 	else if ( sock == NS_SERVER && sv_packetdelay->integer > 0 ) {
 		NET_QueuePacket( length, data, to, sv_packetdelay->integer );
+	}
+	else if ( sock == NS_SERVER && delay > 0 ) {
+		NET_QueuePacket( length, data, to, delay );
 	}
 	else {
 		Sys_SendPacket( length, data, to );
@@ -700,7 +638,7 @@ void QDECL NET_OutOfBandPrint( netsrc_t sock, netadr_t adr, const char *format, 
 	va_end( argptr );
 
 	// send the datagram
-	NET_SendPacket( sock, strlen( string ), string, adr );
+	NET_SendPacket( sock, strlen( string ), string, adr, 0 );
 }
 
 /*
@@ -729,7 +667,7 @@ void QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len
 	mbuf.cursize = len+4;
 	Huff_Compress( &mbuf, 12);
 	// send the datagram
-	NET_SendPacket( sock, mbuf.cursize, mbuf.data, adr );
+	NET_SendPacket( sock, mbuf.cursize, mbuf.data, adr, 0 );
 }
 
 /*
@@ -737,46 +675,68 @@ void QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len
 NET_StringToAdr
 
 Traps "localhost" for loopback, passes everything else to system
+return 0 on address not found, 1 on address found with port, 2 on address found without port.
 =============
 */
-qboolean	NET_StringToAdr( const char *s, netadr_t *a ) {
-	qboolean	r;
-	char	base[MAX_STRING_CHARS];
-	char	*port;
+int NET_StringToAdr( const char *s, netadr_t *a, netadrtype_t family )
+{
+	char	base[MAX_STRING_CHARS], *search;
+	char	*port = NULL;
 
 	if (!strcmp (s, "localhost")) {
 		Com_Memset (a, 0, sizeof(*a));
 		a->type = NA_LOOPBACK;
-		return qtrue;
+// as NA_LOOPBACK doesn't require ports report port was given.
+		return 1;
 	}
 
-	// look for a port number
 	Q_strncpyz( base, s, sizeof( base ) );
-	port = strstr( base, ":" );
-	if ( port ) {
-		*port = 0;
-		port++;
+	
+	if(*base == '[' || Q_CountChar(base, ':') > 1)
+	{
+		// This is an ipv6 address, handle it specially.
+		search = strchr(base, ']');
+		if(search)
+		{
+			*search = '\0';
+			search++;
+
+			if(*search == ':')
+				port = search + 1;
+		}
+		
+		if(*base == '[')
+			search = base + 1;
+		else
+			search = base;
+	}
+	else
+	{
+		// look for a port number
+		port = strchr( base, ':' );
+		
+		if ( port ) {
+			*port = '\0';
+			port++;
+		}
+		
+		search = base;
 	}
 
-	r = Sys_StringToAdr( base, a );
-
-	if ( !r ) {
+	if(!Sys_StringToAdr(search, a, family))
+	{
 		a->type = NA_BAD;
-		return qfalse;
+		return 0;
 	}
 
-	// inet_addr returns this if out of range
-	if ( a->ip[0] == 255 && a->ip[1] == 255 && a->ip[2] == 255 && a->ip[3] == 255 ) {
-		a->type = NA_BAD;
-		return qfalse;
+	if(port)
+	{
+		a->port = BigShort((short) atoi(port));
+		return 1;
 	}
-
-	if ( port ) {
-		a->port = BigShort( (short)atoi( port ) );
-	} else {
-		a->port = BigShort( PORT_SERVER );
+	else
+	{
+		a->port = BigShort(PORT_SERVER);
+		return 2;
 	}
-
-	return qtrue;
 }
-

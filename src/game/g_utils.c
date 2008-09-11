@@ -162,10 +162,16 @@ void G_TeamCommand( team_t team, char *cmd )
     {
       if( level.clients[ i ].pers.teamSelection == team ||
         ( level.clients[ i ].pers.teamSelection == TEAM_NONE &&
-          G_admin_permission( &g_entities[ i ], ADMF_SPEC_ALLCHAT ) ) )
+          G_admin_permission( &g_entities[ i ], ADMF_SPEC_ALLCHAT ) ) ||
+        ( level.clients[ i ].pers.teamSelection == TEAM_NONE &&
+          level.clients[ i ].sess.spectatorState == SPECTATOR_FOLLOW &&
+          level.clients[ i ].sess.spectatorClient >= 0 &&
+          level.clients[ level.clients[ i ].sess.spectatorClient ].pers.teamSelection == team ) )
         trap_SendServerCommand( i, cmd );
     }
   }
+
+  G_DemoCommand( DC_SERVER_COMMAND, cmd );
 }
 
 
@@ -409,6 +415,8 @@ void G_InitGentity( gentity_t *e )
   e->classname = "noclass";
   e->s.number = e - g_entities;
   e->r.ownerNum = ENTITYNUM_NONE;
+
+  // TODO: Call event here: entity.on_init
 }
 
 /*

@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // g_local.h -- local definitions for game module
 
+#ifndef _GAME_G_LOCAL_H_
+#define _GAME_G_LOCAL_H_
+
 #include "../qcommon/q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
@@ -30,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
+#include "../script/sc_public.h"
 #include "g_admin.h"
 
 //==================================================================
@@ -204,6 +208,7 @@ struct gentity_s
   qboolean          spawned;            // whether or not this buildable has finished spawning
   int               shrunkTime;         // time when a barricade shrunk or zero
   int               buildTime;          // when this buildable was built
+  int               animTime;           // last animation change
   int               time1000;           // timer evaluated every second
   qboolean          deconstruct;        // deconstruct if no BP left
   int               deconstructTime;    // time at which structure marked
@@ -249,6 +254,10 @@ struct gentity_s
   float             zapDmg;                         // keep track of damage
 
   qboolean          ownerClear;                     // used for missle tracking
+
+  qboolean          pointAgainstWorld;              // don't use the bbox for map collisions
+
+  scObject_t        *scriptingEntity;               // scripting object used to store entity
 };
 
 typedef enum
@@ -283,6 +292,7 @@ typedef struct
 typedef struct connectionRecord_s
 {
   int       clientNum;
+  int       oldClient;
   team_t    clientTeam;
   int       clientCredit;
 
@@ -318,6 +328,9 @@ typedef struct
   int                 nameChangeTime;
   int                 nameChanges;
 
+  // used to save persistant[] values while in SPECTATOR_FOLLOW mode
+  int                 savedCredit;
+
   // votes
   qboolean            vote;
   qboolean            teamVote;
@@ -327,6 +340,7 @@ typedef struct
   char                ip[ 16 ];
   qboolean            muted;
   qboolean            denyBuild;
+  qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 } clientPersistant_t;
@@ -425,6 +439,7 @@ struct gclient_s
   unlagged_t          unlaggedBackup;
   unlagged_t          unlaggedCalc;
   int                 unlaggedTime;
+  qboolean            useUnlagged;  
  
   float               voiceEnthusiasm;
   char                lastVoiceCmd[ MAX_VOICE_CMD_LEN ];
@@ -432,6 +447,7 @@ struct gclient_s
   int                 lcannonStartTime;
 
   int                 lastCrushTime;        // Tyrant crush
+  scObject_t          *scriptingClient;     // scripting object used to store client
 };
 
 
@@ -466,6 +482,14 @@ typedef struct damageRegion_s
   int       minAngle, maxAngle;
   qboolean  crouch;
 } damageRegion_t;
+
+// demo commands
+typedef enum
+{
+    DC_SERVER_COMMAND = -1,
+    DC_CLIENT_SET = 0,
+    DC_CLIENT_REMOVE
+} demoCommand_t;
 
 //status of the warning of certain events
 typedef enum
@@ -619,6 +643,8 @@ typedef struct
 
   char              emoticons[ MAX_EMOTICONS ][ MAX_EMOTICON_NAME_LEN ];
   int               emoticonCount;
+
+  demoState_t       demoState;
 } level_locals_t;
 
 #define CMD_CHEAT         0x01
@@ -882,14 +908,18 @@ gentity_t *G_SelectHumanLockSpawnPoint( vec3_t origin, vec3_t angles );
 void      SpawnCorpse( gentity_t *ent );
 void      respawn( gentity_t *ent );
 void      BeginIntermission( void );
-void      ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles );
+int       ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles );
 void      player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod );
 qboolean  SpotWouldTelefrag( gentity_t *spot );
+
+void      G_InitEvent_PlayerSpawn(void);
 
 //
 // g_svcmds.c
 //
 qboolean  ConsoleCommand( void );
+void G_SVCommandsInit( void );
+void G_SVCommandsShutdown( void );
 
 //
 // g_weapon.c
@@ -920,7 +950,21 @@ void G_TeamVote( gentity_t *ent, qboolean voting );
 void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
+void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
+
+void G_InitEvent_GameFrame(void);
+
+//
+// g_script.c
+//
+#define GAME_SCRIPT_DIRECTORY "gscript/"
+void G_InitScript( void );
+
+scObject_t *G_GetScriptingClient(gclient_t *client);
+gclient_t  *G_ClientFromScript(scObject_t *object);
+scObject_t *G_GetScriptingEntity(gentity_t *entity);
+gentity_t  *G_EntityFromScript(scObject_t *object);
 
 //
 // g_client.c
@@ -937,7 +981,7 @@ void ClientCommand( int clientNum );
 void G_UnlaggedStore( void );
 void G_UnlaggedClear( gentity_t *ent );
 void G_UnlaggedCalc( int time, gentity_t *skipEnt );
-void G_UnlaggedOn( vec3_t muzzle, float range );
+void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range );
 void G_UnlaggedOff( void );
 void ClientThink( int clientNum );
 void ClientEndFrame( gentity_t *ent );
@@ -1043,10 +1087,14 @@ void      G_InitMapRotations( void );
 //
 void                G_UpdatePTRConnection( gclient_t *client );
 connectionRecord_t  *G_GenerateNewConnection( gclient_t *client );
-qboolean            G_VerifyPTRC( int code );
 void                G_ResetPTRConnections( void );
 connectionRecord_t  *G_FindConnectionForCode( int code );
-void                G_DeletePTRConnection( connectionRecord_t *connection );
+
+//
+// py_game.c
+//
+void G_InitPython( void );
+void G_ShutdownPython( void );
 
 
 //some maxs
@@ -1055,7 +1103,7 @@ void                G_DeletePTRConnection( connectionRecord_t *connection );
 extern  level_locals_t  level;
 extern  gentity_t       g_entities[ MAX_GENTITIES ];
 
-#define FOFS(x) ((int)&(((gentity_t *)0)->x))
+#define FOFS(x) ((size_t)&(((gentity_t *)0)->x))
 
 extern  vmCvar_t  g_dedicated;
 extern  vmCvar_t  g_cheats;
@@ -1147,6 +1195,11 @@ extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
 
+extern  vmCvar_t  sc_python;
+extern  vmCvar_t  py_initialized;
+extern  vmCvar_t  sc_lua;
+extern  vmCvar_t  lua_initialized;
+
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );
 int       trap_Milliseconds( void );
@@ -1195,3 +1248,13 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+
+#ifndef Q3_VM
+void trap_AddCommand( const char *cmd_name, void (*function) (void));
+void trap_RemoveCommand( const char *cmd_name);
+#endif
+
+void      trap_DemoCommand( demoCommand_t cmd, const char *string );
+
+#endif
+

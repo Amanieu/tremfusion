@@ -25,6 +25,32 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 ===============
+G_Use
+
+Called to make object use another object
+===============
+*/
+void G_Use( gentity_t *ent, gentity_t *other, gentity_t *activator )
+{
+  if( ! ent->use )
+    return;
+
+  // TODO: Call event here: entity.on_use
+
+  if( ent->s.eType == ET_BUILDABLE )
+  {
+    // TODO: Call event here: buildable.on_use
+  }
+  else if( ent->s.eType == ET_PLAYER )
+  {
+    // TODO: Call event here: player.on_use
+  }
+    
+  ent->use( ent, other, activator ); //other and activator are the same in this context
+}
+
+/*
+===============
 G_DamageFeedback
 
 Called just before a snapshot is sent to the given player.
@@ -413,8 +439,8 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
   {
     clientNum = client->sess.spectatorClient;
     if( clientNum < 0 || clientNum > level.maxclients ||
-        !g_entities[ clientNum ].client ||
-        g_entities[ clientNum ].client->sess.spectatorState != SPECTATOR_NOT )
+        ( !g_entities[ clientNum ].client && !level.clients[ clientNum ].pers.demoClient ) ||
+        level.clients[ clientNum ].sess.spectatorState != SPECTATOR_NOT )
       following = qfalse;
   }
   
@@ -793,8 +819,14 @@ void ClientTimerActions( gentity_t *ent, int msec )
         }
       }
 
-      if( ent->health > client->ps.stats[ STAT_MAX_HEALTH ] )
+      if( ent->health >= client->ps.stats[ STAT_MAX_HEALTH ] )
+      {
+        int i;
         ent->health = client->ps.stats[ STAT_MAX_HEALTH ];
+        for( i = 0; i < MAX_CLIENTS; i++ )
+          ent->credits[ i ] = 0;
+      }
+      
     }
 
     // turn off life support when a team admits defeat
@@ -821,11 +853,11 @@ void ClientTimerActions( gentity_t *ent, int msec )
   // Regenerate Adv. Dragoon barbs
   if( client->ps.weapon == WP_ALEVEL3_UPG )
   {
-    if( client->ps.ammo[0] < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
+    if( client->ps.ammo < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
     {
       if( ent->timestamp + LEVEL3_BOUNCEBALL_REGEN < level.time )
       {
-        client->ps.ammo[0]++;
+        client->ps.ammo++;
         ent->timestamp = level.time;
       }
     }
@@ -1152,13 +1184,16 @@ void G_UnlaggedOff( void )
 ==============
 */
 
-void G_UnlaggedOn( vec3_t muzzle, float range )
+void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range )
 {
   int i = 0;
   gentity_t *ent;
   unlagged_t *calc;
-
+  
   if( !g_unlagged.integer )
+    return;
+
+  if( !attacker->client->useUnlagged )
     return;
 
   for( i = 0; i < level.maxclients; i++ )
@@ -1228,6 +1263,8 @@ static void G_UnlaggedDetectCollisions( gentity_t *ent )
 
   if( !g_unlagged.integer )
     return;
+  if( !ent->client->useUnlagged )
+    return;
 
   calc = &ent->client->unlaggedCalc;
 
@@ -1243,7 +1280,7 @@ static void G_UnlaggedDetectCollisions( gentity_t *ent )
   r2 = Distance( calc->origin, calc->maxs );
   range += ( r1 > r2 ) ? r1 : r2;
 
-  G_UnlaggedOn( ent->client->oldOrigin, range );
+  G_UnlaggedOn( ent, ent->client->oldOrigin, range );
 
   trap_Trace(&tr, ent->client->oldOrigin, ent->r.mins, ent->r.maxs,
     ent->client->ps.origin, ent->s.number,  MASK_PLAYERSOLID );
@@ -1434,6 +1471,8 @@ void ClientThink_real( gentity_t *ent )
     {
       //remove anti toxin
       BG_DeactivateUpgrade( UP_MEDKIT, client->ps.stats );
+
+      // TODO: Call event here: game.on_inventory_changed
       BG_RemoveUpgradeFromInventory( UP_MEDKIT, client->ps.stats );
 
       client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
@@ -1457,6 +1496,8 @@ void ClientThink_real( gentity_t *ent )
 
     //remove grenade
     BG_DeactivateUpgrade( UP_GRENADE, client->ps.stats );
+
+    // TODO: Call event here: player.on_inventory_changed
     BG_RemoveUpgradeFromInventory( UP_GRENADE, client->ps.stats );
 
     //M-M-M-M-MONSTER HACK
@@ -1780,7 +1821,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
 {
   gclient_t *cl;
   int       clientNum, flags;
-  int       score, ping, credit;
+  int       score, ping;
 
   // if we are doing a chase cam or a remote view, grab the latest info
   if( ent->client->sess.spectatorState == SPECTATOR_FOLLOW )
@@ -1789,17 +1830,13 @@ void SpectatorClientEndFrame( gentity_t *ent )
     if( clientNum >= 0 )
     {
       cl = &level.clients[ clientNum ];
-      if( cl->pers.connected == CON_CONNECTED )
+      if( cl->pers.connected == CON_CONNECTED || cl->pers.demoClient )
       {
         flags = ( cl->ps.eFlags & ~( EF_VOTED | EF_TEAMVOTED ) ) |
                 ( ent->client->ps.eFlags & ( EF_VOTED | EF_TEAMVOTED ) );
-        // although it's not really necessary to keep credits continuously in sync,
-        // it makes a fair few things simpler and reduces the chance of bugs arising
-        credit = ent->client->ps.persistant[ PERS_CREDIT ];
         score = ent->client->ps.persistant[ PERS_SCORE ];
         ping = ent->client->ps.ping;
         ent->client->ps = cl->ps;
-        ent->client->ps.persistant[ PERS_CREDIT ] = credit;
         ent->client->ps.persistant[ PERS_SCORE ] = score;
         ent->client->ps.ping = ping;
         ent->client->ps.pm_flags |= PMF_FOLLOW;

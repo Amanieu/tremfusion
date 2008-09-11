@@ -40,7 +40,14 @@ void G_SetBuildableAnim( gentity_t *ent, buildableAnimNumber_t anim, qboolean fo
   if( force )
     localAnim |= ANIM_FORCEBIT;
 
-  localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+  // don't toggle the togglebit more than once per frame
+  if( ent->animTime != level.time )
+  {
+    localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+    ent->animTime = level.time;
+  }
+  else
+    localAnim |= ent->s.legsAnim & ANIM_TOGGLEBIT;
 
   ent->s.legsAnim = localAnim;
 }
@@ -1899,7 +1906,10 @@ void HMedistat_Think( gentity_t *self )
             }
           }
           else if( !BG_InventoryContainsUpgrade( UP_MEDKIT, player->client->ps.stats ) )
+          {
+            // TODO: Call event here: player.on_inventory_changed
             BG_AddUpgradeToInventory( UP_MEDKIT, player->client->ps.stats );
+          }
         }
       }
     }
@@ -2459,8 +2469,14 @@ void G_BuildableThink( gentity_t *ent, int msec )
       }
     }
 
-    if( ent->health > bHealth )
+    if( ent->health >= bHealth )
+    {
+      int i;
       ent->health = bHealth;
+      for( i = 0; i < MAX_CLIENTS; i++ )
+        ent->credits[ i ] = 0;
+    }
+    
   }
 
   if( ent->lev1Grabbed && ent->lev1GrabTime + LEVEL1_GRAB_TIME < level.time )
@@ -3098,6 +3114,11 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
   gentity_t *built;
   vec3_t    normal;
 
+  if( builder )
+  {
+    // TODO: Call event here: player.on_build
+  }
+
   // Free existing buildables
   G_FreeMarkedBuildables( builder );
 
@@ -3306,6 +3327,8 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
 
   trap_LinkEntity( built );
 
+  // TODO: Call event here: buildable.on_init
+
   return built;
 }
 
@@ -3391,7 +3414,10 @@ qboolean G_BuildIfValid( gentity_t *ent, buildable_t buildable )
       break;
   }
 
-  return qfalse;
+  // TODO: Call event here: buildable.on_build
+  G_Build( ent, buildable, origin, ent->s.apos.trBase );
+
+  return qtrue;
 }
 
 /*
@@ -3666,6 +3692,9 @@ static void G_LayoutBuildItem( buildable_t buildable, vec3_t origin,
   VectorCopy( angles, builder->s.angles );
   VectorCopy( origin2, builder->s.origin2 );
   VectorCopy( angles2, builder->s.angles2 );
+
+  // TODO: Call event here: buildable.on_init
+
   G_SpawnBuildable( builder, buildable );
 }
 

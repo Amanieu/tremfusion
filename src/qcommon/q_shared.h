@@ -27,19 +27,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME            "themerge"
-#define PRODUCT_VERSION         "0.0.0"
+#define PRODUCT_NAME            "tremfusion"
 
-#ifdef SCM_VERSION
-# define Q3_VERSION PRODUCT_NAME " " SCM_VERSION
-#else
-# define Q3_VERSION PRODUCT_NAME " " PRODUCT_VERSION
+#ifdef _MSC_VER
+# define PRODUCT_VERSION          "0.0.2"
 #endif
 
-#define CLIENT_WINDOW_TITLE       "TheMerge " PRODUCT_VERSION
-#define CLIENT_WINDOW_MIN_TITLE   "TheMerge"
+#define CLIENT_WINDOW_TITLE       "TremFusion " PRODUCT_VERSION
+#define CLIENT_WINDOW_MIN_TITLE   "TremFusion"
+#define Q3_VERSION                 PRODUCT_NAME " " PRODUCT_VERSION
 
 #define MAX_TEAMNAME 32
+
+#define GAMENAME BASEGAME
 
 #ifdef _MSC_VER
 
@@ -90,9 +90,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
  **********************************************************************/
 
+#ifdef Q3_VM
+
 #include "../game/bg_lib.h"
 
-#ifndef Q3_VM
+typedef int intptr_t;
+
+#else
 
 #include <assert.h>
 #include <math.h>
@@ -104,29 +108,37 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <limits.h>
 
+// vsnprintf is ISO/IEC 9899:1999
+// abstracting this to make it portable
+#ifdef _WIN32
+  #define Q_vsnprintf _vsnprintf
+  #define Q_snprintf _snprintf
+#else
+  #define Q_vsnprintf vsnprintf
+  #define Q_snprintf snprintf
 #endif
+
+#ifdef _MSC_VER
+  #include <io.h>
+
+  typedef __int64 int64_t;
+  typedef __int32 int32_t;
+  typedef __int16 int16_t;
+  typedef __int8 int8_t;
+  typedef unsigned __int64 uint64_t;
+  typedef unsigned __int32 uint32_t;
+  typedef unsigned __int16 uint16_t;
+  typedef unsigned __int8 uint8_t;
+#else
+  #include <stdint.h>
+#endif
+
+#endif
+
 
 #include "q_platform.h"
 
 //=============================================================
-
-#ifdef Q3_VM
-   typedef int intptr_t;
-#else
-  #ifndef _MSC_VER
-    #include <stdint.h>
-  #else
-    #include <io.h>
-    typedef __int64 int64_t;
-    typedef __int32 int32_t;
-    typedef __int16 int16_t;
-    typedef __int8 int8_t;
-    typedef unsigned __int64 uint64_t;
-    typedef unsigned __int32 uint32_t;
-    typedef unsigned __int16 uint16_t;
-    typedef unsigned __int8 uint8_t;
-  #endif
-#endif
 
 typedef unsigned char 		byte;
 
@@ -219,7 +231,6 @@ typedef enum {
 	ERR_DROP,					// print to console and disconnect from game
 	ERR_SERVERDISCONNECT,		// don't kill server
 	ERR_DISCONNECT,				// client disconnected from the server
-	ERR_NEED_CD					// pop up the need-cd dialog
 } errorParm_t;
 
 
@@ -335,7 +346,9 @@ extern	vec4_t		colorMdGrey;
 extern	vec4_t		colorDkGrey;
 
 #define Q_COLOR_ESCAPE	'^'
-#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1)) ) // ^[0-9a-zA-Z]
+#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && isprint(*((p)+1)) && \
+                              *((p)+1) != Q_COLOR_ESCAPE && *((p)+1) != '.' && \
+                              *((p)+1) != '_' && !isspace(*((p)+1)) )
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -458,7 +471,7 @@ typedef struct {
 
 // Snaps the vector to the floor value always, ignoring any weirdness from
 // snapping negative versus positive numbers
-#define Floor(f) ( (f) >= 0.f ? (int)(f) : -(int)(-(f)) )
+#define Floor(fl) ( (fl) >= 0.f ? (int)(fl) : -(int)(-(fl)) )
 #define SnapVector(v) {(v)[0]=Floor((v)[0]);(v)[1]=Floor((v)[1]);(v)[2]=Floor((v)[2]);}
 
 // just in case you do't want to use the macros
@@ -651,6 +664,10 @@ vec_t DistanceBetweenLineSegments(
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 
+#ifdef _MSC_VER
+float rint( float v );
+#endif
+
 //=============================================
 
 float Com_Clamp( float min, float max, float value );
@@ -727,6 +744,8 @@ int Q_isprint( int c );
 int Q_islower( int c );
 int Q_isupper( int c );
 int Q_isalpha( int c );
+qboolean Q_isanumber( const char *s );
+qboolean Q_isintegral( float f );
 
 // portable case insensitive compare
 int		Q_stricmp (const char *s1, const char *s2);
@@ -745,6 +764,8 @@ void	Q_strcat( char *dest, int size, const char *src );
 int Q_PrintStrlen( const char *string );
 // removes color sequences from string
 char *Q_CleanStr( char *string );
+// Count the number of char tocount encountered in string
+int Q_CountChar(const char *string, char tocount);
 
 //=============================================
 
@@ -829,19 +850,25 @@ default values.
 #define CVAR_NORESTART		1024	// do not clear when a cvar_restart is issued
 
 #define CVAR_SERVER_CREATED	2048	// cvar was created by a server the client connected to.
+#define CVAR_VM_CREATED		4096	// cvar was created by a qvm
+#define CVAR_PROTECTED		8192	// prevent modifying this var from VMs or the server
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
 // nothing outside the Cvar_*() functions should modify these fields!
 typedef struct cvar_s {
-	char		*name;
-	char		*string;
-	char		*resetString;		// cvar_restart will reset to this value
-	char		*latchedString;		// for CVAR_LATCH vars
-	int			flags;
+	char			*name;
+	char			*string;
+	char			*resetString;		// cvar_restart will reset to this value
+	char			*latchedString;		// for CVAR_LATCH vars
+	int				flags;
 	qboolean	modified;			// set each time the cvar is changed
-	int			modificationCount;	// incremented each time the cvar is changed
-	float		value;				// atof( string )
-	int			integer;			// atoi( string )
+	int				modificationCount;	// incremented each time the cvar is changed
+	float			value;				// atof( string )
+	int				integer;			// atoi( string )
+	qboolean	validate;
+	qboolean	integral;
+	float			min;
+	float			max;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;
@@ -980,7 +1007,8 @@ typedef enum {
 //
 // per-level limits
 //
-#define	MAX_CLIENTS			64		// absolute limit
+#define CLIENTNUM_BITS		6
+#define	MAX_CLIENTS			(1<<CLIENTNUM_BITS)		// absolute limit
 #define MAX_LOCATIONS		64
 
 #define	GENTITYNUM_BITS		10		// don't need to send any more
@@ -1022,7 +1050,6 @@ typedef struct {
 #define	MAX_STATS				16
 #define	MAX_PERSISTANT			16
 #define	MAX_MISC    			16
-#define	MAX_WEAPONS				16		
 
 #define	MAX_PS_EVENTS			2
 
@@ -1094,7 +1121,10 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			misc[MAX_MISC];	// misc data
-	int			ammo[MAX_WEAPONS];
+	int			ammo;
+	int			clips;
+
+	int			ammo_extra[14]; // compatibility
 
 	int			generic1;
 	int			loopSound;

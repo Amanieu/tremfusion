@@ -29,7 +29,7 @@ cvar_t		*cvar_vars;
 cvar_t		*cvar_cheats;
 int			cvar_modifiedFlags;
 
-#define	MAX_CVARS	1024
+#define	MAX_CVARS	4096
 cvar_t		cvar_indexes[MAX_CVARS];
 int			cvar_numIndexes;
 
@@ -190,6 +190,109 @@ void	Cvar_CommandCompletion( void(*callback)(const char *s) ) {
 	}
 }
 
+/*
+============
+Cvar_Validate
+============
+*/
+static const char *Cvar_Validate( cvar_t *var,
+    const char *value, qboolean warn )
+{
+	static char s[ MAX_CVAR_VALUE_STRING ];
+	float valuef;
+	qboolean changed = qfalse;
+
+	if( !var->validate )
+		return value;
+
+	if( !value )
+		return value;
+
+	if( Q_isanumber( value ) )
+	{
+		valuef = atof( value );
+
+		if( var->integral )
+		{
+			if( !Q_isintegral( valuef ) )
+			{
+				if( warn )
+					Com_Printf( "WARNING: cvar '%s' must be integral", var->name );
+
+				valuef = (int)valuef;
+				changed = qtrue;
+			}
+		}
+	}
+	else
+	{
+		if( warn )
+			Com_Printf( "WARNING: cvar '%s' must be numeric", var->name );
+
+		valuef = atof( var->resetString );
+		changed = qtrue;
+	}
+
+	if( valuef < var->min )
+	{
+		if( warn )
+		{
+			if( changed )
+				Com_Printf( " and is" );
+			else
+				Com_Printf( "WARNING: cvar '%s'", var->name );
+
+			if( Q_isintegral( var->min ) )
+				Com_Printf( " out of range (min %d)", (int)var->min );
+			else
+				Com_Printf( " out of range (min %f)", var->min );
+		}
+
+		valuef = var->min;
+		changed = qtrue;
+	}
+	else if( valuef > var->max )
+	{
+		if( warn )
+		{
+			if( changed )
+				Com_Printf( " and is" );
+			else
+				Com_Printf( "WARNING: cvar '%s'", var->name );
+
+			if( Q_isintegral( var->max ) )
+				Com_Printf( " out of range (max %d)", (int)var->max );
+			else
+				Com_Printf( " out of range (max %f)", var->max );
+		}
+
+		valuef = var->max;
+		changed = qtrue;
+	}
+
+	if( changed )
+	{
+		if( Q_isintegral( valuef ) )
+		{
+			Com_sprintf( s, sizeof( s ), "%d", (int)valuef );
+
+			if( warn )
+				Com_Printf( ", setting to %d\n", (int)valuef );
+		}
+		else
+		{
+			Com_sprintf( s, sizeof( s ), "%f", valuef );
+
+			if( warn )
+				Com_Printf( ", setting to %f\n", valuef );
+		}
+
+		return s;
+	}
+	else
+		return value;
+}
+
 
 /*
 ============
@@ -221,6 +324,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 	var = Cvar_FindVar (var_name);
 	if ( var ) {
+		var_value = Cvar_Validate( var, var_value, qfalse );
+
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
 		if ( ( var->flags & CVAR_USER_CREATED ) && !( flags & CVAR_USER_CREATED )
@@ -229,12 +334,24 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			Z_Free( var->resetString );
 			var->resetString = CopyString( var_value );
 
+			if(flags & CVAR_ROM)
+			{
+				// this variable was set by the user,
+				// so force it to value given by the engine.
+
+				if(var->latchedString)
+					Z_Free(var->latchedString);
+				
+				var->latchedString = CopyString(var_value);
+			}
+
 			// ZOID--needs to be set so that cvars the game sets as 
 			// SERVERINFO get sent to clients
 			cvar_modifiedFlags |= flags;
 		}
 
-		var->flags |= flags;
+		// if a var is not being created don't let it pretend to be
+		var->flags |= flags & ~(CVAR_USER_CREATED|CVAR_SERVER_CREATED);
 		// only allow one non-empty reset string without a warning
 		if ( !var->resetString[0] ) {
 			// we don't have a reset string yet
@@ -254,13 +371,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			Z_Free( s );
 		}
 
-// use a CVAR_SET for rom sets, get won't override
-#if 0
-		// CVAR_ROM always overrides
-		if ( flags & CVAR_ROM ) {
-			Cvar_Set2( var_name, var_value, qtrue );
-		}
-#endif
 		return var;
 	}
 
@@ -279,6 +389,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var->value = atof (var->string);
 	var->integer = atoi(var->string);
 	var->resetString = CopyString( var_value );
+	var->validate = qfalse;
 
 	// link the variable in
 	var->next = cvar_vars;
@@ -293,6 +404,33 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	hashTable[hash] = var;
 
 	return var;
+}
+
+/*
+============
+Cvar_Print
+
+Prints the value, default, and latched string of the given variable
+============
+*/
+void Cvar_Print( cvar_t *v ) {
+	Com_Printf ("\"%s\" is:\"%s" S_COLOR_WHITE "\"",
+			v->name, v->string );
+
+	if ( !( v->flags & CVAR_ROM ) ) {
+		if ( !Q_stricmp( v->string, v->resetString ) ) {
+			Com_Printf (", the default" );
+		} else {
+			Com_Printf (" default:\"%s" S_COLOR_WHITE "\"",
+					v->resetString );
+		}
+	}
+
+	Com_Printf ("\n");
+
+	if ( v->latchedString ) {
+		Com_Printf( "latched: \"%s\"\n", v->latchedString );
+	}
 }
 
 /*
@@ -333,6 +471,8 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 	if (!value ) {
 		value = var->resetString;
 	}
+
+	value = Cvar_Validate( var, value, qtrue );
 
 	if((var->flags & CVAR_LATCH) && var->latchedString) {
 		if(!strcmp(value,var->latchedString))
@@ -421,6 +561,28 @@ void Cvar_Set( const char *var_name, const char *value) {
 
 /*
 ============
+Cvar_SetSafe
+============
+*/
+void Cvar_SetSafe( const char *var_name, const char *value )
+{
+	int flags = Cvar_Flags( var_name );
+
+	if( flags != CVAR_NONEXISTENT && flags & CVAR_PROTECTED )
+	{
+		if( value )
+			Com_Error( ERR_DROP, "Untrusted source tried to set protected cvar "
+				"\"%s\" to \"%s\"\n", var_name, value );
+		else
+			Com_Error( ERR_DROP, "Untrusted source tried to modify protected cvar "
+				"\"%s\"\n", var_name );
+		return;
+	}
+	Cvar_Set( var_name, value );
+}
+
+/*
+============
 Cvar_SetLatched
 ============
 */
@@ -446,10 +608,10 @@ void Cvar_SetValue( const char *var_name, float value) {
 
 /*
 ============
-Cvar_SetValueSafe
+Cvar_SetValueNoForce
 ============
 */
-void Cvar_SetValueSafe( const char *var_name, float value) {
+void Cvar_SetValueNoForce( const char *var_name, float value) {
 	char	val[32];
 
 	if ( value == (int)value ) {
@@ -523,23 +685,7 @@ qboolean Cvar_Command( void ) {
 
 	// perform a variable print or set
 	if ( Cmd_Argc() == 1 ) {
-		Com_Printf ("\"%s\" is:\"%s" S_COLOR_WHITE "\"",
-				v->name, v->string );
-
-		if ( !( v->flags & CVAR_ROM ) ) {
-			if ( !Q_stricmp( v->string, v->resetString ) ) {
-				Com_Printf (", the default" );
-			} else {
-				Com_Printf (" default:\"%s" S_COLOR_WHITE "\"",
-						v->resetString );
-			}
-		}
-
-		Com_Printf ("\n");
-
-		if ( v->latchedString ) {
-			Com_Printf( "latched: \"%s\"\n", v->latchedString );
-		}
+		Cvar_Print( v );
 		return qtrue;
 	}
 
@@ -548,26 +694,93 @@ qboolean Cvar_Command( void ) {
 	return qtrue;
 }
 
+/*
+============
+Cvar_SetValueSafe
+============
+*/
+void Cvar_SetValueSafe( const char *var_name, float value )
+{
+	char val[32];
+
+	if( Q_isintegral( value ) )
+		Com_sprintf( val, sizeof(val), "%i", (int)value );
+	else
+		Com_sprintf( val, sizeof(val), "%f", value );
+	Cvar_SetSafe( var_name, val );
+}
+
+/*
+============
+Cvar_Print_f
+
+Prints the contents of a cvar 
+(preferred over Cvar_Command where cvar names and commands conflict)
+============
+*/
+void Cvar_Print_f(void)
+{
+	char *name;
+	cvar_t *cv;
+	
+	if(Cmd_Argc() != 2)
+	{
+		Com_Printf ("usage: print <variable>\n");
+		return;
+	}
+
+	name = Cmd_Argv(1);
+
+	cv = Cvar_FindVar(name);
+	
+	if(cv)
+		Cvar_Print(cv);
+	else
+		Com_Printf ("Cvar %s does not exist.\n", name);
+}
 
 /*
 ============
 Cvar_Toggle_f
 
-Toggles a cvar for easy single key binding
+Toggles a cvar for easy single key binding, optionally through a list of
+given values
 ============
 */
 void Cvar_Toggle_f( void ) {
-	int		v;
+	int		i, c = Cmd_Argc();
+	char		*curval;
 
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf ("usage: toggle <variable>\n");
+	if(c < 2) {
+		Com_Printf("usage: toggle <variable> [value1, value2, ...]\n");
 		return;
 	}
 
-	v = Cvar_VariableValue( Cmd_Argv( 1 ) );
-	v = !v;
+	if(c == 2) {
+		Cvar_Set2(Cmd_Argv(1), va("%d", 
+			!Cvar_VariableValue(Cmd_Argv(1))), 
+			qfalse);
+		return;
+	}
 
-	Cvar_Set2 (Cmd_Argv(1), va("%i", v), qfalse);
+	if(c == 3) {
+		Com_Printf("toggle: nothing to toggle to\n");
+		return;
+	}
+
+	curval = Cvar_VariableString(Cmd_Argv(1));
+
+	// don't bother checking the last arg for a match since the desired
+	// behaviour is the same as no match (set to the first argument)
+	for(i = 2; i + 1 < c; i++) {
+		if(strcmp(curval, Cmd_Argv(i)) == 0) {
+			Cvar_Set2(Cmd_Argv(1), Cmd_Argv(i + 1), qfalse);
+			return;
+		}
+	}
+
+	// fallback
+	Cvar_Set2(Cmd_Argv(1), Cmd_Argv(2), qfalse);
 }
 
 /*
@@ -580,11 +793,18 @@ weren't declared in C code.
 */
 void Cvar_Set_f( void ) {
 	int		i, c, l, len;
-	char	combined[MAX_STRING_TOKENS];
+	char	cmd[5], combined[MAX_STRING_TOKENS];
+	cvar_t *v;
 
 	c = Cmd_Argc();
-	if ( c < 3 ) {
-		Com_Printf ("usage: set <variable> <value>\n");
+	Q_strncpyz( cmd, Cmd_Argv(0), sizeof( cmd ) );
+
+	if ( c < 2 ) {
+		Com_Printf ("usage: %s <variable> <value>\n", cmd);
+		return;
+	}
+	if ( c == 2 ) {
+		Cvar_Print_f();
 		return;
 	}
 
@@ -601,73 +821,24 @@ void Cvar_Set_f( void ) {
 		}
 		l += len;
 	}
-	Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
-}
-
-/*
-============
-Cvar_SetU_f
-
-As Cvar_Set, but also flags it as userinfo
-============
-*/
-void Cvar_SetU_f( void ) {
-	cvar_t	*v;
-
-	if ( Cmd_Argc() != 3 ) {
-		Com_Printf ("usage: setu <variable> <value>\n");
+	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
+	if( !v ) {
 		return;
 	}
-	Cvar_Set_f();
-	v = Cvar_FindVar( Cmd_Argv( 1 ) );
-	if ( !v ) {
-		return;
+	switch( cmd[3] ) {
+		default:
+		case '\0':
+			break;
+		case 'u':
+			v->flags |= CVAR_USERINFO;
+			break;
+		case 's':
+			v->flags |= CVAR_SERVERINFO;
+			break;
+		case 'a':
+			v->flags |= CVAR_ARCHIVE;
+			break;
 	}
-	v->flags |= CVAR_USERINFO;
-}
-
-/*
-============
-Cvar_SetS_f
-
-As Cvar_Set, but also flags it as userinfo
-============
-*/
-void Cvar_SetS_f( void ) {
-	cvar_t	*v;
-
-	if ( Cmd_Argc() != 3 ) {
-		Com_Printf ("usage: sets <variable> <value>\n");
-		return;
-	}
-	Cvar_Set_f();
-	v = Cvar_FindVar( Cmd_Argv( 1 ) );
-	if ( !v ) {
-		return;
-	}
-	v->flags |= CVAR_SERVERINFO;
-}
-
-/*
-============
-Cvar_SetA_f
-
-As Cvar_Set, but also flags it as archived
-============
-*/
-void Cvar_SetA_f( void ) {
-	cvar_t	*v;
-
-	if ( Cmd_Argc() != 3 ) {
-		Com_Printf ("usage: seta <variable> <value>\n");
-		return;
-	}
-	Cvar_Set_f();
-	v = Cvar_FindVar( Cmd_Argv( 1 ) );
-	if ( !v ) {
-		return;
-	}
-	v->flags |= CVAR_ARCHIVE;
 }
 
 /*
@@ -691,12 +862,12 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to qtrue.
 ============
 */
-void Cvar_WriteVariables( fileHandle_t f ) {
+void Cvar_WriteVariables( fileHandle_t f, qboolean vmCvars ) {
 	cvar_t	*var;
 	char	buffer[1024];
 
 	for (var = cvar_vars ; var ; var = var->next) {
-		if( var->flags & CVAR_ARCHIVE ) {
+		if( ( var->flags & CVAR_ARCHIVE ) && ( ( var->flags & (CVAR_VM_CREATED|CVAR_USER_CREATED) ) != 0 ) == vmCvars ) {
 			// write the latched value, even if it hasn't taken effect yet
 			if ( var->latchedString ) {
 				if( strlen( var->name ) + strlen( var->latchedString ) + 10 > sizeof( buffer ) ) {
@@ -704,14 +875,14 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->latchedString);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->latchedString));
 			} else {
 				if( strlen( var->name ) + strlen( var->string ) + 10 > sizeof( buffer ) ) {
 					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->string);
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, Cmd_EscapeString(var->string));
 			}
 			FS_Write( buffer, strlen( buffer ), f );
 		}
@@ -889,6 +1060,22 @@ void Cvar_InfoStringBuffer( int bit, char* buff, int buffsize ) {
 
 /*
 =====================
+Cvar_CheckRange
+=====================
+*/
+void Cvar_CheckRange( cvar_t *var, float min, float max, qboolean integral )
+{
+	var->validate = qtrue;
+	var->min = min;
+	var->max = max;
+	var->integral = integral;
+
+	// Force an initial range check
+	Cvar_Set( var->name, var->string );
+}
+
+/*
+=====================
 Cvar_Register
 
 basically a slightly modified Cvar_Get for the interpreted modules
@@ -897,7 +1084,7 @@ basically a slightly modified Cvar_Get for the interpreted modules
 void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags ) {
 	cvar_t	*cv;
 
-	cv = Cvar_Get( varName, defaultValue, flags );
+	cv = Cvar_Get( varName, defaultValue, flags | CVAR_VM_CREATED );
 	if ( !vmCvar ) {
 		return;
 	}
@@ -909,7 +1096,7 @@ void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultVa
 
 /*
 =====================
-Cvar_Register
+Cvar_Update
 
 updates an interpreted modules' version of a cvar
 =====================
@@ -952,12 +1139,16 @@ Reads in all archived cvars
 void Cvar_Init (void) {
 	cvar_cheats = Cvar_Get("sv_cheats", "1", CVAR_ROM | CVAR_SYSTEMINFO );
 
+	Cmd_AddCommand ("print", Cvar_Print_f);
 	Cmd_AddCommand ("toggle", Cvar_Toggle_f);
 	Cmd_AddCommand ("set", Cvar_Set_f);
-	Cmd_AddCommand ("sets", Cvar_SetS_f);
-	Cmd_AddCommand ("setu", Cvar_SetU_f);
-	Cmd_AddCommand ("seta", Cvar_SetA_f);
+	Cmd_AddCommand ("sets", Cvar_Set_f);
+	Cmd_AddCommand ("setu", Cvar_Set_f);
+	Cmd_AddCommand ("seta", Cvar_Set_f);
 	Cmd_AddCommand ("reset", Cvar_Reset_f);
 	Cmd_AddCommand ("cvarlist", Cvar_List_f);
 	Cmd_AddCommand ("cvar_restart", Cvar_Restart_f);
+#if defined USE_PYTHON && defined DEDICATED
+	PY_CvarInit();
+#endif /*defined USE_PYTHON && defined DEDICATED*/
 }

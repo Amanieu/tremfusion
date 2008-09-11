@@ -1,0 +1,6 @@
+
+env = Environment(CPPPATH='/usr/include/python2.5', CFLAGS="-DUSE_PYTHON=1 -DUNITTEST=1 -g -O0")
+
+env.Program(["sc_python_datatype_test.c", "symbols.c",
+         "../../game/bg_alloc.c", "../../qcommon/q_shared.c", 
+         "../../script/sc_datatype.c", "../../script/sc_python.c", "../../script/sc_c.c"], LIBS='python2.5')

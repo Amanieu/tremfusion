@@ -48,7 +48,7 @@
   {
     name "joinserver"
     visible MENU_FALSE
-    fullscreen MENU_TRUE
+    fullscreen MENU_FALSE
     rect 0 0 W H
     focusColor 1 .75 0 1
     outOfBoundsClick
@@ -56,6 +56,7 @@
     aspectBias ASPECT_NONE
     onOpen
     {
+      sc_run "joinserver.py"
       uiScript InitServerList 3;
       hide accept_alt;
       show accept;

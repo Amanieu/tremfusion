@@ -138,7 +138,7 @@ Returns the total damage dealt.
 float G_RewardAttackers( gentity_t *self )
 {
   float value, totalDamage = 0;
-  int team, i;
+  int team, i, maxHealth = 0;
 
   // Total up all the damage done by every client
   for( i = 0; i < MAX_CLIENTS; i++ )
@@ -151,16 +151,17 @@ float G_RewardAttackers( gentity_t *self )
   {
     value = BG_GetValueOfPlayer( &self->client->ps );
     team = self->client->pers.teamSelection;
+    maxHealth = self->client->ps.stats[ STAT_MAX_HEALTH ];
   }
   else if( self->s.eType == ET_BUILDABLE )
   {
     value = BG_Buildable( self->s.modelindex )->value;
-
     // only give partial credits for a buildable not yet completed
     if( !self->spawned )
       value *= (float)( level.time - self->buildTime ) /
           BG_Buildable( self->s.modelindex )->buildTime;
     team = self->buildableTeam;
+    maxHealth = BG_Buildable( self->s.modelindex )->health;
   }
   else
     return totalDamage;
@@ -170,6 +171,9 @@ float G_RewardAttackers( gentity_t *self )
   {
     gentity_t *player = g_entities + i;
     short num = value * self->credits[ i ] / totalDamage;
+    int stageValue = num;
+    if( totalDamage < maxHealth )
+      stageValue *= totalDamage / maxHealth;
 
     if( !player->client || !self->credits[ i ] ||
         player->client->ps.stats[ STAT_TEAM ] == team )
@@ -178,9 +182,9 @@ float G_RewardAttackers( gentity_t *self )
 
     // add to stage counters
     if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
-      trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + num ) );
+      trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + stageValue ) );
     else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
-      trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + num ) );
+      trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + stageValue ) );
 
     self->credits[ i ] = 0;
   }
@@ -305,7 +309,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
       ScoreboardMessage( g_entities + i );
   }
 
-  self->client->pers.classSelection = PCL_NONE; // reset the classtype
   VectorCopy( self->s.origin, self->client->pers.lastDeathLocation );
 
   self->takedamage = qfalse; // can still be gibbed
@@ -1097,11 +1100,34 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         targ->health = -999;
 
       targ->enemy = attacker;
+      // TODO: Call event here: entity.on_die
+
+      if( targ->s.eType == ET_BUILDABLE )
+      {
+        // TODO: Call event here: buildable.on_die
+      }
+      else if( targ->s.eType == ET_PLAYER )
+      {
+        // TODO: Call event here: player.on_die
+      }
       targ->die( targ, inflictor, attacker, take, mod );
       return;
     }
     else if( targ->pain )
+	{
+      // TODO: Call event here: entity.on_pain
+
+      if( targ->s.eType == ET_BUILDABLE )
+      {
+        // TODO: Call event here: buildable.on_pain
+      }
+      else if( targ->s.eType == ET_PLAYER )
+      {
+        // TODO: Call event here: player.on_pain
+      }
+
       targ->pain( targ, attacker, take );
+    }
   }
 }
 

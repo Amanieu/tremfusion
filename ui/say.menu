@@ -87,6 +87,84 @@
     }
   }
 
+  // Say to Player in Crosshair
+  menuDef
+  {
+    name say_crosshair
+    fullScreen MENU_FALSE
+    visible MENU_FALSE
+    dontCloseAll MENU_TRUE
+    rect X Y W H
+    aspectBias ALIGN_LEFT
+    focusColor 1 1 1 1
+    style WINDOW_STYLE_EMPTY
+    onOpen
+    {
+      setfocus say_field;
+    }
+
+    itemDef
+    {
+      name say_field
+      type ITEM_TYPE_EDITFIELD
+      style WINDOW_STYLE_EMPTY
+      text "Say to aimed player:"
+      cvar "ui_sayBuffer"
+      maxchars 128
+      rect 0 0 W H
+      textalign ALIGN_LEFT
+      textvalign VALIGN_CENTER
+      textstyle ITEM_TEXTSTYLE_SHADOWED
+      textscale .4
+      forecolor 0.93 0.93 0.92 1
+      visible MENU_TRUE
+      onTextEntry
+      {
+        uiScript Say;
+        close say_crosshair;
+      }
+    }
+  }
+
+  // Say to Last Attacker
+  menuDef
+  {
+    name say_attacker
+    fullScreen MENU_FALSE
+    visible MENU_FALSE
+    dontCloseAll MENU_TRUE
+    rect X Y W H
+    aspectBias ALIGN_LEFT
+    focusColor 1 1 1 1
+    style WINDOW_STYLE_EMPTY
+    onOpen
+    {
+      setfocus say_field;
+    }
+
+    itemDef
+    {
+      name say_field
+      type ITEM_TYPE_EDITFIELD
+      style WINDOW_STYLE_EMPTY
+      text "Say to last attacker:"
+      cvar "ui_sayBuffer"
+      maxchars 128
+      rect 0 0 W H
+      textalign ALIGN_LEFT
+      textvalign VALIGN_CENTER
+      textstyle ITEM_TEXTSTYLE_SHADOWED
+      textscale .4
+      forecolor 0.93 0.93 0.92 1
+      visible MENU_TRUE
+      onTextEntry
+      {
+        uiScript Say;
+        close say_attacker;
+      }
+    }
+  }
+
   // Say to Admins
   menuDef
   {
@@ -126,6 +204,45 @@
     }
   }
 
+  // Say to Clan
+  menuDef
+  {
+    name say_clan
+    fullScreen MENU_FALSE
+    visible MENU_FALSE
+    dontCloseAll MENU_TRUE
+    rect X Y W H
+    aspectBias ALIGN_LEFT
+    focusColor 1 1 1 1
+    style WINDOW_STYLE_EMPTY
+    onOpen
+    {
+      setfocus say_field;
+    }
+
+    itemDef
+    {
+      name say_field
+      type ITEM_TYPE_EDITFIELD
+      style WINDOW_STYLE_EMPTY
+      text "Say to clan:"
+      cvar "ui_sayBuffer"
+      maxchars 128
+      rect 0 0 W H
+      textalign ALIGN_LEFT
+      textvalign VALIGN_CENTER
+      textstyle ITEM_TEXTSTYLE_SHADOWED
+      textscale .4
+      forecolor 0.93 0.93 0.92 1
+      visible MENU_TRUE
+      onTextEntry
+      {
+        uiScript Say;
+        close say_clan;
+      }
+    }
+  }
+
   // Custom prompt
   menuDef
   {
@@ -147,7 +264,7 @@
       name say_field
       type ITEM_TYPE_EDITFIELD
       style WINDOW_STYLE_EMPTY
-      text "Say:"
+      text "" // Automatically filled in by the code
       cvar "ui_sayBuffer"
       maxchars 128
       rect 0 0 W H

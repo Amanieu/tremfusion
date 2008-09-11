@@ -110,6 +110,12 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace )
   qboolean    returnAfterDamage = qfalse;
   vec3_t      dir;
 
+  if( trace->surfaceFlags & SURF_NOIMPACT )
+  {
+    G_FreeEntity( ent );
+    return;
+  }
+
   other = &g_entities[ trace->entityNum ];
   attacker = &g_entities[ ent->r.ownerNum ];
 
@@ -254,39 +260,61 @@ void G_RunMissile( gentity_t *ent )
   // ignore interactions with the missile owner
   passent = ent->r.ownerNum;
 
-  // trace a line from the previous position to the current position
+  // general trace to see if we hit anything at all
   trap_Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, origin, passent, ent->clipmask );
 
   if( tr.startsolid || tr.allsolid )
   {
-    // make sure the tr.entityNum is set to the entity we're stuck in
-    trap_Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, ent->r.currentOrigin, passent, ent->clipmask );
     tr.fraction = 0;
+    VectorCopy( ent->r.currentOrigin, tr.endpos );
   }
-  else
+
+  // this is a bit nasty
+  // keep in mind that some of the later else ifs change the contents of tr
+  if( tr.fraction == 1.0f )
+  {
     VectorCopy( tr.endpos, ent->r.currentOrigin );
+  }
+  // we hit something, then - check if it was an entity (or if we don't care)
+  else if( !ent->pointAgainstWorld || tr.contents & CONTENTS_BODY || 
+      ( tr.entityNum >= 0 && tr.entityNum != ENTITYNUM_WORLD ) )
+  {
+    VectorCopy( tr.endpos, ent->r.currentOrigin );
+
+    G_MissileImpact( ent, &tr );
+
+    if( ent->s.eType != ET_MISSILE )
+      return;   // exploded
+  }
+  // only hit the world with zero width
+  else if( trap_Trace( &tr, ent->r.currentOrigin, NULL, NULL, origin, 
+                       passent, ent->clipmask ), tr.fraction < 1.0f )
+  {
+    VectorCopy( tr.endpos, ent->r.currentOrigin );
+
+    G_MissileImpact( ent, &tr );
+
+    if( ent->s.eType != ET_MISSILE )
+      return;   // exploded
+  }
+  // one last check to see if we can hit an entity near solid stuff
+  // use conditional shortcutting and comma operators to only trace if necessary
+  else if( tr.contents & CONTENTS_BODY ||
+      ( tr.entityNum >= 0 && tr.entityNum != ENTITYNUM_WORLD ) ||
+      ( trap_Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, 
+                    origin, passent, CONTENTS_BODY ), tr.fraction ) < 1.0f )
+  {
+    VectorCopy( tr.endpos, ent->r.currentOrigin );
+
+    G_MissileImpact( ent, &tr );
+
+    if( ent->s.eType != ET_MISSILE )
+      return;   // exploded
+  }
 
   ent->r.contents = CONTENTS_SOLID; //trick trap_LinkEntity into...
   trap_LinkEntity( ent );
   ent->r.contents = 0; //...encoding bbox information
-
-  if( tr.fraction != 1 )
-  {
-    // never explode or bounce on sky
-    if( tr.surfaceFlags & SURF_NOIMPACT )
-    {
-      // If grapple, reset owner
-      if( ent->parent && ent->parent->client && ent->parent->client->hook == ent )
-        ent->parent->client->hook = NULL;
-
-      G_FreeEntity( ent );
-      return;
-    }
-
-    G_MissileImpact( ent, &tr );
-    if( ent->s.eType != ET_MISSILE )
-      return;   // exploded
-  }
 
   // check think function after bouncing
   G_RunThink( ent );
@@ -310,6 +338,7 @@ gentity_t *fire_flamer( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn();
   bolt->classname = "flame";
+  bolt->pointAgainstWorld = qfalse;
   bolt->nextthink = level.time + FLAMER_LIFETIME;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -356,6 +385,7 @@ gentity_t *fire_blaster( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn();
   bolt->classname = "blaster";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 10000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -401,6 +431,7 @@ gentity_t *fire_pulseRifle( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn();
   bolt->classname = "pulse";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 10000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -448,6 +479,7 @@ gentity_t *fire_luciferCannon( gentity_t *self, vec3_t start, vec3_t dir,
 
   bolt = G_Spawn( );
   bolt->classname = "lcannon";
+  bolt->pointAgainstWorld = qtrue;
 
   if( damage == LCANNON_DAMAGE )
     bolt->nextthink = level.time;
@@ -506,6 +538,7 @@ gentity_t *launch_grenade( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "grenade";
+  bolt->pointAgainstWorld = qfalse;
   bolt->nextthink = level.time + 5000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -641,6 +674,7 @@ gentity_t *fire_hive( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "hive";
+  bolt->pointAgainstWorld = qfalse;
   bolt->nextthink = level.time + HIVE_DIR_CHANGE_PERIOD;
   bolt->think = AHive_SearchAndDestroy;
   bolt->s.eType = ET_MISSILE;
@@ -682,6 +716,7 @@ gentity_t *fire_lockblob( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "lockblob";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 15000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -720,6 +755,7 @@ gentity_t *fire_slowBlob( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "slowblob";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 15000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -759,6 +795,7 @@ gentity_t *fire_paraLockBlob( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "lockblob";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 15000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;
@@ -796,6 +833,7 @@ gentity_t *fire_bounceBall( gentity_t *self, vec3_t start, vec3_t dir )
 
   bolt = G_Spawn( );
   bolt->classname = "bounceball";
+  bolt->pointAgainstWorld = qtrue;
   bolt->nextthink = level.time + 3000;
   bolt->think = G_ExplodeMissile;
   bolt->s.eType = ET_MISSILE;

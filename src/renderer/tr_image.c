@@ -110,7 +110,21 @@ void GL_TextureMode( const char *string ) {
 
 	gl_filter_min = modes[i].minimize;
 	gl_filter_max = modes[i].maximize;
-
+    
+    // bound texture anisotropy
+    
+    if(glConfig.textureFilterAnisotropic)
+    {
+        if(r_ext_texture_filter_anisotropic->value > glConfig.maxAnisotropy)
+        {
+            ri.Cvar_Set("r_ext_texture_filter_anisotropic", va("%d", glConfig.maxAnisotropy));
+        }
+        else if(r_ext_texture_filter_anisotropic->value < 1.0)
+        {
+             ri.Cvar_Set("r_ext_texture_filter_anisotropic", "1.0");
+        }
+    }
+    
 	// change all the existing mipmap texture objects
 	for ( i = 0 ; i < tr.numImages ; i++ ) {
 		glt = tr.images[ i ];
@@ -118,6 +132,10 @@ void GL_TextureMode( const char *string ) {
 			GL_Bind (glt);
 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+            
+            // set texture anisotropy
+            if(glConfig.textureFilterAnisotropic)
+                qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value);
 		}
 	}
 }
@@ -183,6 +201,7 @@ void R_ImageList_f( void ) {
 			ri.Printf( PRINT_ALL, "RGB8" );
 			break;
 		case GL_RGB4_S3TC:
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
 			ri.Printf( PRINT_ALL, "S3TC " );
 			break;
 		case GL_RGBA4:
@@ -199,7 +218,7 @@ void R_ImageList_f( void ) {
 		case GL_REPEAT:
 			ri.Printf( PRINT_ALL, "rept " );
 			break;
-		case GL_CLAMP:
+		case GL_CLAMP_TO_EDGE:
 			ri.Printf( PRINT_ALL, "clmp " );
 			break;
 		default:
@@ -559,7 +578,16 @@ static void Upload32( unsigned *data,
 	c = width*height;
 	scan = ((byte *)data);
 	samples = 3;
-	if (!lightMap) {
+
+	if(lightMap)
+	{
+		if(r_greyscale->integer)
+			internalFormat = GL_LUMINANCE;
+		else
+			internalFormat = GL_RGB;
+	}
+	else
+	{
 		for ( i = 0; i < c; i++ )
 		{
 			if ( scan[i*4+0] > rMax )
@@ -583,41 +611,68 @@ static void Upload32( unsigned *data,
 		// select proper internal format
 		if ( samples == 3 )
 		{
-			if ( glConfig.textureCompression == TC_S3TC )
+			if(r_greyscale->integer)
 			{
-				internalFormat = GL_RGB4_S3TC;
-			}
-			else if ( r_texturebits->integer == 16 )
-			{
-				internalFormat = GL_RGB5;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				internalFormat = GL_RGB8;
+				if(r_texturebits->integer == 16)
+					internalFormat = GL_LUMINANCE8;
+				else if(r_texturebits->integer == 32)
+					internalFormat = GL_LUMINANCE16;
+				else
+					internalFormat = GL_LUMINANCE;
 			}
 			else
 			{
-				internalFormat = 3;
+				if ( glConfig.textureCompression == TC_S3TC_ARB )
+				{
+					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+				}
+				else if ( glConfig.textureCompression == TC_S3TC )
+				{
+					internalFormat = GL_RGB4_S3TC;
+				}
+				else if ( r_texturebits->integer == 16 )
+				{
+					internalFormat = GL_RGB5;
+				}
+				else if ( r_texturebits->integer == 32 )
+				{
+					internalFormat = GL_RGB8;
+				}
+				else
+				{
+					internalFormat = GL_RGB;
+				}
 			}
 		}
 		else if ( samples == 4 )
 		{
-			if ( r_texturebits->integer == 16 )
+			if(r_greyscale->integer)
 			{
-				internalFormat = GL_RGBA4;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				internalFormat = GL_RGBA8;
+				if(r_texturebits->integer == 16)
+					internalFormat = GL_LUMINANCE8_ALPHA8;
+				else if(r_texturebits->integer == 32)
+					internalFormat = GL_LUMINANCE16_ALPHA16;
+				else
+					internalFormat = GL_LUMINANCE_ALPHA;
 			}
 			else
 			{
-				internalFormat = 4;
+				if ( r_texturebits->integer == 16 )
+				{
+					internalFormat = GL_RGBA4;
+				}
+				else if ( r_texturebits->integer == 32 )
+				{
+					internalFormat = GL_RGBA8;
+				}
+				else
+				{
+					internalFormat = GL_RGBA;
+				}
 			}
 		}
-	} else {
-		internalFormat = 3;
 	}
+
 	// copy or resample data as appropriate for first MIP level
 	if ( ( scaled_width == width ) && 
 		( scaled_height == height ) ) {
@@ -783,6 +838,390 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	return image;
 }
 
+/****************************
+RGB GET/SET
+****************************/
+ 
+//RED
+static byte getImageR(byte *targa_rgba, int x, int y, int columns, int rows)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+  if(rows<=y)
+		y=y%rows;
+  if(columns<=x)
+		x=x%columns;
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+  
+	
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	
+	return *pixbuf;
+}
+
+static void setImageR(byte *targa_rgba, int x, int y, int columns, int rows, byte value)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	
+	*pixbuf=value;
+}
+//GREEN
+static byte getImageG(byte *targa_rgba, int x, int y, int columns, int rows)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+  if(rows<=y)
+		y=y%rows;
+  if(columns<=x)
+		x=x%columns;
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	
+	pixbuf++;
+	return *pixbuf;
+}
+
+static void setImageG(byte *targa_rgba, int x, int y, int columns, int rows, byte value)
+{
+	byte	*pixbuf;
+
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	pixbuf++;
+	*pixbuf=value;
+}
+//BLUE
+static byte getImageB(byte *targa_rgba, int x, int y, int columns, int rows)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+  if(rows<=y)
+		y=y%rows;
+  if(columns<=x)
+		x=x%columns;
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	pixbuf+=2;
+	return *pixbuf;
+}
+
+static void setImageB(byte *targa_rgba, int x, int y, int columns, int rows, byte value)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4;
+	
+	pixbuf+=(x*4);
+	pixbuf+=2;
+	*pixbuf=value;
+}
+
+//RGB
+static void getImageRGB(byte *targa_rgba, int x, int y, int columns, int rows, vec3_t rgb)
+{
+	byte	*pixbuf;
+	
+	x*=((x<0)?-1:1);
+	y*=((y<0)?-1:1);
+  //if(rows<=y)
+	y=y%rows;
+  //if(columns<=x)
+	x=x%columns;
+	//x*=((x<0)?-1:1);
+	//y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4 + x*4;
+	
+	rgb[0]=*pixbuf;
+	rgb[1]=*(pixbuf+1);
+	rgb[2]=*(pixbuf+2);
+}
+
+static void setImageRGB(byte *targa_rgba, int x, int y, int columns, int rows, vec3_t rgb)
+{
+	byte	*pixbuf;
+	
+	//x*=((x<0)?-1:1);
+	//y*=((y<0)?-1:1);
+	
+	pixbuf = targa_rgba + y*columns*4 + (x*4);
+	
+	*pixbuf=(byte)(rgb[0]);
+	*(pixbuf+1)=(byte)(rgb[1]);
+	*(pixbuf+2)=(byte)(rgb[2]);
+}
+
+/****************************
+NO BRAINER'S BLUR
+****************************/
+static void blur(int columns, int rows, byte *targa_rgba)
+{
+	int		row, column;
+	float sum;
+	
+	
+		for(row=0; row<rows; row++) 
+		{
+			//pixbuf = targa_rgba + row*columns*4;
+			for(column=0; column<columns; column++) 
+			{
+				sum=0;
+				sum+=getImageR(targa_rgba,column-1,row-1,columns,rows);
+				sum+=getImageR(targa_rgba,column,row-1,columns,rows);
+				sum+=getImageR(targa_rgba,column+1,row-1,columns,rows);
+				sum+=getImageR(targa_rgba,column-1,row,columns,rows);
+				sum+=getImageR(targa_rgba,column,row,columns,rows);
+				sum+=getImageR(targa_rgba,column+1,row,columns,rows);
+				sum+=getImageR(targa_rgba,column-1,row+1,columns,rows);
+				sum+=getImageR(targa_rgba,column,row+1,columns,rows);
+				sum+=getImageR(targa_rgba,column+1,row+1,columns,rows);
+				
+				sum/=9.0f;
+				
+				setImageR(targa_rgba, column, row, columns, rows, (byte)sum);
+				////////////////////
+				sum=0;
+				sum+=getImageG(targa_rgba,column-1,row-1,columns,rows);
+				sum+=getImageG(targa_rgba,column,row-1,columns,rows);
+				sum+=getImageG(targa_rgba,column+1,row-1,columns,rows);
+				sum+=getImageG(targa_rgba,column-1,row,columns,rows);
+				sum+=getImageG(targa_rgba,column,row,columns,rows);
+				sum+=getImageG(targa_rgba,column+1,row,columns,rows);
+				sum+=getImageG(targa_rgba,column-1,row+1,columns,rows);
+				sum+=getImageG(targa_rgba,column,row+1,columns,rows);
+				sum+=getImageG(targa_rgba,column+1,row+1,columns,rows);
+				
+				sum/=9.0f;
+				
+				setImageG(targa_rgba, column, row, columns, rows, (byte)sum);
+				////////////////////////
+				sum=0;
+				sum+=getImageB(targa_rgba,column-1,row-1,columns,rows);
+				sum+=getImageB(targa_rgba,column,row-1,columns,rows);
+				sum+=getImageB(targa_rgba,column+1,row-1,columns,rows);
+				sum+=getImageB(targa_rgba,column-1,row,columns,rows);
+				sum+=getImageB(targa_rgba,column,row,columns,rows);
+				sum+=getImageB(targa_rgba,column+1,row,columns,rows);
+				sum+=getImageB(targa_rgba,column-1,row+1,columns,rows);
+				sum+=getImageB(targa_rgba,column,row+1,columns,rows);
+				sum+=getImageB(targa_rgba,column+1,row+1,columns,rows);
+				
+				sum/=9.0f;
+				
+				setImageB(targa_rgba, column, row, columns, rows, (byte)sum);
+				
+				// "halftoning"
+				/*if((row%5==0)&&(column%5==1))
+				{
+					gris=0;
+					gris+=red;
+					gris+=green;
+					gris+=blue;
+					gris/=3;
+					
+					gris=255-gris;
+					if(gris<0)
+						gris=0;
+						
+						setImageR(targa_rgba, column, row, columns, rows, (byte)gris);
+						setImageG(targa_rgba, column, row, columns, rows, (byte)gris);
+						setImageB(targa_rgba, column, row, columns, rows, (byte)gris);
+					
+				}*/
+			
+			}
+		}
+
+}
+
+int diffSquare(int mean, int val){
+	float variance = (val-mean)/255.0f;
+	float radius = mean<128?mean:255-mean;
+	return mean+(radius*variance);
+}
+
+/****************************
+KUWAHARA ,FAILS SOMEWHERE
+****************************/
+#define KWH_RADIUS 2
+static void mean_variance(int x0, int y0, int x1, int y1, int columns, int rows, byte *targa_rgba, vec4_t mv )
+{
+	short min=255*3, max=0;
+	unsigned short count= 0;
+	short row, column;
+	unsigned short value;
+	vec3_t rgb;
+	
+	mv[0]=mv[1]=mv[2]=mv[3]=0;
+
+	for(row=y0;row<=y1;row++)
+	{
+		for(column=x0;column<=x1;column++)
+		{
+			getImageRGB(targa_rgba,column,row,columns,rows,rgb);
+			
+			VectorAdd(mv,rgb,mv);
+			
+			count++;
+			value=rgb[0]+rgb[1]+rgb[2];
+			if(value<min) min=value;
+			if(value>max) max=value;
+		}
+	}
+
+	mv[0]/=count;
+	mv[1]/=count;
+	mv[2]/=count;
+	mv[3]= (max-min)/3.0f;
+}
+
+
+static void rgb_kuwahara(int x, int y, int columns, int rows, byte *targa_rgba, vec4_t bmv)
+{
+  vec4_t mv;
+	bmv[0]=bmv[1]=bmv[2]=bmv[3]=255;
+	
+	mean_variance(x-KWH_RADIUS, y-KWH_RADIUS, x, y, columns, rows, targa_rgba, mv);
+	if( mv[3] < bmv[3] )
+	{
+		Vector4Copy(mv,bmv);
+	}
+	
+	mean_variance(x, y-KWH_RADIUS, x+KWH_RADIUS, y, columns, rows, targa_rgba, mv);
+	if( mv[3] < bmv[3] )
+	{
+		Vector4Copy(mv,bmv);
+	}
+	
+	mean_variance(x, y, x+KWH_RADIUS, y+KWH_RADIUS, columns, rows, targa_rgba, mv);
+	if( mv[3] < bmv[3] )
+	{
+		Vector4Copy(mv,bmv);
+	}
+	
+	mean_variance(x-KWH_RADIUS, y, x, y+KWH_RADIUS, columns, rows, targa_rgba, mv);
+	if( mv[3] < bmv[3] )
+	{
+		Vector4Copy(mv,bmv);
+	}
+}
+
+static void kuwahara(int columns, int rows, byte *targa_rgba){
+	int		row, column;
+	vec4_t rgbv;
+	
+	for(row=0;row<rows;row++){
+		for(column=0;column<columns;column++){
+			rgb_kuwahara(column, row, columns, rows, targa_rgba, rgbv);
+			setImageRGB(targa_rgba,column,row,columns,rows,rgbv);
+		}
+	}
+}
+
+/****************************
+Symmetric Nearest Neighbour
+****************************/
+
+#define SNN_RADIUS 3
+
+static int deltaE(int l1,int a1,int b1,int l2,int a2,int b2)
+{
+	return (l1-l2)*(l1-l2) + (a1-a2)*(a1-a2) + (b1-b2)*(b1-b2);
+}
+
+static void snn(int columns, int rows, byte *targa_rgba)
+{
+	
+	int row, column;
+	unsigned short sumR, sumG, sumB;
+	unsigned short count;
+	short u, v;
+	byte r, g, b;
+	byte r1, g1, b1;
+	byte r2, g2, b2;
+	for(row=0;row<rows;row++){
+		for(column=0;column<columns;column++){
+			sumR=0;
+			sumG=0;
+			sumB=0;
+			count=0;
+			
+			r=getImageR(targa_rgba,column,row,columns,rows);
+			g=getImageG(targa_rgba,column,row,columns,rows);
+			b=getImageB(targa_rgba,column,row,columns,rows);
+			
+			for(v=-SNN_RADIUS;v<=0;v++)
+			{
+				for(u=-SNN_RADIUS;u<=SNN_RADIUS;u++)
+				{
+					if(v==0&&u>=0) break;
+					// Sum pixels values
+					r1=getImageR(targa_rgba,column+u,row+v,columns,rows);
+					g1=getImageG(targa_rgba,column+u,row+v,columns,rows);
+					b1=getImageB(targa_rgba,column+u,row+v,columns,rows);
+					
+					r2=getImageR(targa_rgba,column-u,row-v,columns,rows);
+					g2=getImageG(targa_rgba,column-u,row-v,columns,rows);
+					b2=getImageB(targa_rgba,column-u,row-v,columns,rows);
+					
+					if ( deltaE(r,g,b,r1,g1,b1) < deltaE(r,g,b,r2,g2,b2))
+					{
+						sumR += r1;
+						sumG += g1;
+						sumB += b1;
+					}
+					else
+					{
+						sumR += r2;
+						sumG += g2;
+						sumB += b2;
+					}
+					count++;
+				}
+			}
+			
+			r=(byte)((int)(2*sumR+r)/(int)(2*count+1));
+			g=(byte)((int)(2*sumG+g)/(int)(2*count+1));
+			b=(byte)((int)(2*sumB+b)/(int)(2*count+1));
+			
+			setImageR(targa_rgba,column,row,columns,rows,r);
+			setImageG(targa_rgba,column,row,columns,rows,g);
+			setImageB(targa_rgba,column,row,columns,rows,b);
+		}
+	}
+}
+
 //===================================================================
 
 typedef struct
@@ -880,6 +1319,44 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height )
 			break;
 		}
 	}
+	
+	switch(r_celshadalgo->integer)
+	{
+		case 1:
+			kuwahara(*width,*height,*pic);
+			break;
+		case 2:
+			blur(*width,*height,*pic);
+			kuwahara(*width,*height,*pic);
+			break;
+		case 3:
+			kuwahara(*width,*height,*pic);
+			blur(*width,*height,*pic);
+			break;
+		case 4:
+			blur(*width,*height,*pic);
+			kuwahara(*width,*height,*pic);
+			blur(*width,*height,*pic);
+			break;
+		case 5:
+			snn(*width,*height,*pic);
+			break;
+		case 6:
+			blur(*width,*height,*pic);
+			snn(*width,*height,*pic);
+			break;
+		case 7:
+			snn(*width,*height,*pic);
+			blur(*width,*height,*pic);
+			break;
+		case 8:
+			blur(*width,*height,*pic);
+			snn(*width,*height,*pic);
+			blur(*width,*height,*pic);
+			break;
+		default:
+			break;
+	}
 }
 
 
@@ -968,7 +1445,7 @@ static void R_CreateDlightImage( void ) {
 			data[y][x][3] = 255;			
 		}
 	}
-	tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP );
+	tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 }
 
 
@@ -1058,7 +1535,7 @@ static void R_CreateFogImage( void ) {
 	// standard openGL clamping doesn't really do what we want -- it includes
 	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
 	// what we want.
-	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP );
+	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 	ri.Hunk_FreeTempMemory( data );
 
 	borderColor[0] = 1.0;
@@ -1136,7 +1613,7 @@ void R_CreateBuiltinImages( void ) {
 
 	for(x=0;x<32;x++) {
 		// scratchimage is usually used for cinematic drawing
-		tr.scratchImage[x] = R_CreateImage("*scratch", (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP );
+		tr.scratchImage[x] = R_CreateImage("*scratch", (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP_TO_EDGE );
 	}
 
 	R_CreateDlightImage();

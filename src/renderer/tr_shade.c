@@ -200,6 +200,85 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	// anything else will cause no drawing
 }
 
+//R_DRAWCEL
+static void R_DrawCel( int numIndexes, const glIndex_t *indexes ) {
+	int		primitives;
+	
+	if(
+		//. ignore the 2d projection. do i smell the HUD?
+		(backEnd.projection2D == qtrue) ||
+		//. ignore general entitites that are sprites. SEE NOTE #3.
+		(backEnd.currentEntity->e.reType == RT_SPRITE) ||
+		//. ignore these liquids. why? ever see liquid with tris on the surface? exactly. SEE NOTE #4.
+		(tess.shader->contentFlags & (CONTENTS_WATER | CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_FOG)) ||
+		//. ignore things that are two sided, meaning mostly things that have transparency. SEE NOTE #1.		
+		(tess.shader->cullType == CT_TWO_SIDED)
+		
+		) {
+		return;
+	}
+
+	primitives = r_primitives->integer;
+
+	// default is to use triangles if compiled vertex arrays are present
+	if ( primitives == 0 ) {
+		if ( qglLockArraysEXT ) {
+			primitives = 2;
+		} else {
+			primitives = 1;
+		}
+	}
+
+	//. correction for mirrors. SEE NOTE #2.
+	if(backEnd.viewParms.isMirror == qtrue) { qglCullFace (GL_FRONT); }
+	else { qglCullFace (GL_BACK); }	
+
+	qglEnable (GL_BLEND);
+	qglBlendFunc (GL_SRC_ALPHA ,GL_ONE_MINUS_SRC_ALPHA);
+	qglColor3f (0.0f,0.0f,0.0f);
+	qglLineWidth( (float) r_celoutline->integer );	
+
+	if(primitives == 2) {
+		qglDrawElements( GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes );
+	} else if(primitives == 1) {
+		R_DrawStripElements( numIndexes,  indexes, qglArrayElement );
+	} else if(primitives == 3) {
+		R_DrawStripElements( numIndexes,  indexes, R_ArrayElementDiscrete );
+	}
+
+	//. correction for mirrors. SEE NOTE #2.
+	if(backEnd.viewParms.isMirror == qtrue) { qglCullFace (GL_BACK); }
+	else { qglCullFace (GL_FRONT); }
+	
+	qglDisable (GL_BLEND);
+	
+	return;
+
+/* Notes
+
+1. this is going to be a pain in the arse. it fixes things like light `beams` from being cel'd but it
+also will ignore any other shader set with no culling. this usually is everything that is translucent.
+but this is a good hack to clean up the screen untill something more selective comes along. or who knows
+group desision might actually be that this is liked. if so i take back calling it a `hack`, lol.
+	= bob.
+
+2. mirrors display correctly because the normals of the displayed are inverted of normal space. so to
+continue to have them display correctly, we must invert them inversely from a normal inversion.
+	= bob.
+	
+3. this turns off a lot of space hogging sprite cel outlines. picture if you will five people in a small
+room all shooting rockets. each smoke puff gets a big black square around it, each explosion gets a big
+black square around it, and now nobody can see eachother because everyones screen is solid black.
+	= bob.
+
+4. ignoring liquids means you will not get black tris lines all over the top of your liquid. i put this in
+after seeing the lava on q3dm7 and water on q3ctf2 that had black lines all over the top, making the
+liquids look solid instead of... liquid.
+	= bob.
+
+*/
+}
+
 
 /*
 =============================================================
@@ -243,6 +322,33 @@ static void R_BindAnimatedImage( textureBundle_t *bundle ) {
 	index %= bundle->numImageAnimations;
 
 	GL_Bind( bundle->image[ index ] );
+}
+
+//DRAWCEL
+static void DrawCel (shaderCommands_t *input) {
+
+	GL_Bind( tr.whiteImage );
+	qglColor3f (1,1,1);
+
+	GL_State( GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE );
+
+	qglDisableClientState (GL_COLOR_ARRAY);
+	qglDisableClientState (GL_TEXTURE_COORD_ARRAY);
+
+	qglVertexPointer (3, GL_FLOAT, 16, input->xyz);	// padded for SIMD
+
+	if (qglLockArraysEXT) {
+		qglLockArraysEXT(0, input->numVertexes);
+		GLimp_LogComment( "glLockArraysEXT\n" );
+	}
+
+	R_DrawCel( input->numIndexes, input->indexes );
+
+	if (qglUnlockArraysEXT) {
+		qglUnlockArraysEXT();
+		GLimp_LogComment( "glUnlockArraysEXT\n" );
+	}
+
 }
 
 /*
@@ -456,9 +562,19 @@ static void ProjectDlightTexture_altivec( void ) {
 		radius = dl->radius;
 		scale = 1.0f / radius;
 
-		floatColor[0] = dl->color[0] * 255.0f;
-		floatColor[1] = dl->color[1] * 255.0f;
-		floatColor[2] = dl->color[2] * 255.0f;
+		if(r_greyscale->integer)
+		{
+			float luminance;
+			
+			luminance = (dl->color[0] * 255.0f + dl->color[1] * 255.0f + dl->color[2] * 255.0f) / 3;
+			floatColor[0] = floatColor[1] = floatColor[2] = luminance;
+		}
+		else
+		{
+			floatColor[0] = dl->color[0] * 255.0f;
+			floatColor[1] = dl->color[1] * 255.0f;
+			floatColor[2] = dl->color[2] * 255.0f;
+		}
 		floatColorVec0 = vec_ld(0, floatColor);
 		floatColorVec1 = vec_ld(11, floatColor);
 		floatColorVec0 = vec_perm(floatColorVec0,floatColorVec0,floatColorVecPerm);
@@ -600,9 +716,20 @@ static void ProjectDlightTexture_scalar( void ) {
 		radius = dl->radius;
 		scale = 1.0f / radius;
 
-		floatColor[0] = dl->color[0] * 255.0f;
-		floatColor[1] = dl->color[1] * 255.0f;
-		floatColor[2] = dl->color[2] * 255.0f;
+		if(r_greyscale->integer)
+		{
+			float luminance;
+			
+			luminance = (dl->color[0] * 255.0f + dl->color[1] * 255.0f + dl->color[2] * 255.0f) / 3;
+			floatColor[0] = floatColor[1] = floatColor[2] = luminance;
+		}
+		else
+		{
+			floatColor[0] = dl->color[0] * 255.0f;
+			floatColor[1] = dl->color[1] * 255.0f;
+			floatColor[2] = dl->color[2] * 255.0f;
+		}
+
 		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2, colors += 4 ) {
 			int		clip = 0;
 			vec3_t	dist;
@@ -939,6 +1066,18 @@ static void ComputeColors( shaderStage_t *pStage )
 			break;
 		}
 	}
+	
+	// if in greyscale rendering mode turn all color values into greyscale.
+	if(r_greyscale->integer)
+	{
+		int scale;
+		
+		for(i = 0; i < tess.numVertexes; i++)
+		{
+			scale = (tess.svars.colors[i][0] + tess.svars.colors[i][1] + tess.svars.colors[i][2]) / 3;
+			tess.svars.colors[i][0] = tess.svars.colors[i][1] = tess.svars.colors[i][2] = scale;
+		}
+	}
 }
 
 /*
@@ -1138,6 +1277,12 @@ void RB_StageIteratorGeneric( void )
 	{
 		qglEnable( GL_POLYGON_OFFSET_FILL );
 		qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
+	}
+	
+	//. show me cel outlines.
+	//. there has to be a better place to put this.
+	if(r_celoutline->integer > 0) {
+		DrawCel(&tess);
 	}
 
 	//

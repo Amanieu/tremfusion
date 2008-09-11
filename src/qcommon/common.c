@@ -80,7 +80,9 @@ cvar_t  *sv_packetdelay;
 cvar_t	*com_cameraMode;
 cvar_t	*com_ansiColor;
 cvar_t	*com_unfocused;
+cvar_t	*com_maxfpsUnfocused;
 cvar_t	*com_minimized;
+cvar_t	*com_maxfpsMinimized;
 
 // com_speeds times
 int		time_game;
@@ -268,38 +270,31 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	com_errorEntered = qtrue;
 
 	va_start (argptr,fmt);
-	vsprintf (com_errorMessage,fmt,argptr);
+	Q_vsnprintf (com_errorMessage, sizeof(com_errorMessage),fmt,argptr);
 	va_end (argptr);
 
-	if (code != ERR_DISCONNECT && code != ERR_NEED_CD)
+	if (code != ERR_DISCONNECT)
 		Cvar_Set("com_errorMessage", com_errorMessage);
 
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
-		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
+		SV_Shutdown( "Server disconnected" );
 		// make sure we can get at our local stuff
 		FS_PureServerSetLoadedPaks("", "");
+		CL_Disconnect( qtrue );
+		VM_Forced_Unload_Start();
+		CL_FlushMemory( qtrue );
+		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if (code == ERR_DROP) {
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
+		FS_PureServerSetLoadedPaks("", "");
 		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
-		FS_PureServerSetLoadedPaks("", "");
+		VM_Forced_Unload_Start();
+		CL_FlushMemory( qtrue );
+		VM_Forced_Unload_Done();
 		com_errorEntered = qfalse;
-		longjmp (abortframe, -1);
-	} else if ( code == ERR_NEED_CD ) {
-		SV_Shutdown( "Server didn't have CD" );
-		if ( com_cl_running && com_cl_running->integer ) {
-			CL_Disconnect( qtrue );
-			CL_FlushMemory( );
-			com_errorEntered = qfalse;
-			CL_CDDialog();
-		} else {
-			Com_Printf("Server didn't have CD\n" );
-		}
-		FS_PureServerSetLoadedPaks("", "");
 		longjmp (abortframe, -1);
 	} else {
 		CL_Shutdown ();
@@ -322,8 +317,9 @@ do the apropriate things.
 */
 void Com_Quit_f( void ) {
 	// don't try to shutdown if we are in a recursive error
+	char *p = Cmd_Args( );
 	if ( !com_errorEntered ) {
-		SV_Shutdown ("Server quit");
+		SV_Shutdown (p[0] ? p : "Server quit");
 		CL_Shutdown ();
 		Com_Shutdown ();
 		FS_Shutdown(qtrue);
@@ -463,10 +459,12 @@ qboolean Com_AddStartupCommands( void ) {
 			continue;
 		}
 
-		// set commands won't override menu startup
-		if ( Q_stricmpn( com_consoleLines[i], "set", 3 ) ) {
-			added = qtrue;
+		// set commands already added with Com_StartupVariable
+		if ( !Q_stricmpn( com_consoleLines[i], "set", 3 ) ) {
+			continue;
 		}
+
+		added = qtrue;
 		Cbuf_AddText( com_consoleLines[i] );
 		Cbuf_AddText( "\n" );
 	}
@@ -2224,9 +2222,18 @@ int Com_EventLoop( void ) {
 			CL_JoystickEvent( ev.evValue, ev.evValue2, ev.evTime );
 			break;
 		case SE_CONSOLE:
-			Cbuf_AddText( (char *)ev.evPtr );
+		{
+			char *cmd = (char *)ev.evPtr;
+#ifndef DEDICATED
+			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
+				cmd++;
+			else
+				Cbuf_AddText( "say " );
+#endif
+			Cbuf_AddText( cmd );
 			Cbuf_AddText( "\n" );
 			break;
+		}
 		case SE_PACKET:
 			// this cvar allows simulation of connections that
 			// drop a lot of packets.  Note that loopback connections
@@ -2376,6 +2383,10 @@ void Com_Init( char *commandLine ) {
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Init();
+#endif
+	
 	if ( setjmp (abortframe) ) {
 		Sys_Error ("Error during initialization");
 	}
@@ -2429,9 +2440,11 @@ void Com_Init( char *commandLine ) {
 
   // get dedicated here for proper hunk megs initialization
 #ifdef DEDICATED
-	com_dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
+	com_dedicated = Cvar_Get ("dedicated", "1", CVAR_INIT);
+	Cvar_CheckRange( com_dedicated, 1, 2, qtrue );
 #else
 	com_dedicated = Cvar_Get ("dedicated", "0", CVAR_LATCH);
+	Cvar_CheckRange( com_dedicated, 0, 2, qtrue );
 #endif
 	// allocate the stack based hunk allocator
 	Com_InitHunkMemory();
@@ -2444,7 +2457,7 @@ void Com_Init( char *commandLine ) {
 	// init commands and vars
 	//
 	com_altivec = Cvar_Get ("com_altivec", "1", CVAR_ARCHIVE);
-	com_maxfps = Cvar_Get ("com_maxfps", "85", CVAR_ARCHIVE);
+	com_maxfps = Cvar_Get ("com_maxfps", "77", CVAR_ARCHIVE);
 
 	com_developer = Cvar_Get ("developer", "0", CVAR_TEMP );
 	com_logfile = Cvar_Get ("logfile", "0", CVAR_TEMP );
@@ -2464,10 +2477,12 @@ void Com_Init( char *commandLine ) {
 	com_sv_running = Cvar_Get ("sv_running", "0", CVAR_ROM);
 	com_cl_running = Cvar_Get ("cl_running", "0", CVAR_ROM);
 	com_buildScript = Cvar_Get( "com_buildScript", "0", 0 );
-	com_ansiColor = Cvar_Get( "com_ansiColor", "0", CVAR_ARCHIVE );
+	com_ansiColor = Cvar_Get( "com_ansiColor", "1", CVAR_ARCHIVE );
 
 	com_unfocused = Cvar_Get( "com_unfocused", "0", CVAR_ROM );
+	com_maxfpsUnfocused = Cvar_Get( "com_maxfpsUnfocused", "25", CVAR_ARCHIVE );
 	com_minimized = Cvar_Get( "com_minimized", "0", CVAR_ROM );
+	com_maxfpsMinimized = Cvar_Get( "com_maxfpsMinimized", "10", CVAR_ARCHIVE );
 
 	if ( com_developer && com_developer->integer ) {
 		Cmd_AddCommand ("error", Com_Error_f);
@@ -2478,6 +2493,10 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
+#if defined USE_PYTHON && defined DEDICATED
+	Cmd_AddCommand ("pyexec", PY_ExecScript_f);
+#endif
+	
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
 
@@ -2536,8 +2555,18 @@ void Com_WriteConfigToFile( const char *filename ) {
 
 	FS_Printf (f, "// generated by tremulous, do not modify\n");
 	Key_WriteBindings (f);
-	Cvar_WriteVariables (f);
+	Cvar_WriteVariables (f, qtrue);
 	Cmd_WriteAliases (f);
+	FS_FCloseFile( f );
+
+	f = FS_SV_FOpenFileWrite( filename );
+	if ( !f ) {
+		Com_Printf ("Couldn't write %s.\n", filename );
+		return;
+	}
+
+	FS_Printf (f, "// generated by tremulous, do not modify\n");
+	Cvar_WriteVariables (f, qfalse);
 	FS_FCloseFile( f );
 }
 
@@ -2672,9 +2701,6 @@ void Com_Frame( void ) {
 	// old net chan encryption key
 	key = 0x87243987;
 
-	// write config file if anything changed
-	Com_WriteConfiguration(); 
-
 	//
 	// main event loop
 	//
@@ -2683,12 +2709,30 @@ void Com_Frame( void ) {
 	}
 
 	// we may want to spin here if things are going too fast
-	if ( !com_dedicated->integer && com_maxfps->integer > 0 && !com_timedemo->integer ) {
-		minMsec = 1000 / com_maxfps->integer;
+	if ( !com_dedicated->integer && !com_timedemo->integer ) {
+		if( com_minimized->integer && com_maxfpsMinimized->integer > 0 ) {
+			minMsec = 1000 / com_maxfpsMinimized->integer;
+		} else if( com_unfocused->integer && com_maxfpsUnfocused->integer > 0 ) {
+			minMsec = 1000 / com_maxfpsUnfocused->integer;
+		} else if( com_maxfps->integer > 0 ) {
+			minMsec = 1000 / com_maxfps->integer;
+		} else {
+			minMsec = 1;
+		}
 	} else {
 		minMsec = 1;
 	}
+
+	msec = minMsec;
 	do {
+		int timeRemaining = minMsec - msec;
+
+		// The existing Sys_Sleep implementations aren't really
+		// precise enough to be of use beyond 100fps
+		// FIXME: implement a more precise sleep (RDTSC or something)
+		if( timeRemaining >= 10 )
+			Sys_Sleep( timeRemaining );
+
 		com_frameTime = Com_EventLoop();
 		if ( lastTime > com_frameTime ) {
 			lastTime = com_frameTime;		// possible on first frame
@@ -2697,6 +2741,9 @@ void Com_Frame( void ) {
 	} while ( msec < minMsec );
 	Cbuf_Execute ();
 	Cdelay_Frame ();
+
+	// write config file if anything changed
+	Com_WriteConfiguration(); 
 
 	if (com_altivec->modified)
 	{
@@ -2729,7 +2776,7 @@ void Com_Frame( void ) {
 		com_dedicated->modified = qfalse;
 		if ( !com_dedicated->integer ) {
 			SV_Shutdown( "dedicated set to 0" );
-			CL_FlushMemory();
+			CL_FlushMemory(qtrue);
 		}
 	}
 
@@ -2761,7 +2808,9 @@ void Com_Frame( void ) {
 		timeAfter = Sys_Milliseconds ();
 	}
 #endif
-
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Frame();
+#endif
 	//
 	// report timing information
 	//
@@ -2816,6 +2865,9 @@ void Com_Shutdown (void) {
 		FS_FCloseFile( com_journalFile );
 		com_journalFile = 0;
 	}
+#if defined USE_PYTHON && defined DEDICATED
+	PY_Shutdown();
+#endif
 
 }
 
@@ -2949,6 +3001,37 @@ static char *Field_FindFirstSeparator( char *s )
 	return NULL;
 }
 
+/*
+===============
+Field_Complete
+===============
+*/
+static qboolean Field_Complete( void )
+{
+	int completionOffset;
+
+	if( matchCount == 0 )
+		return qtrue;
+
+	completionOffset = strlen( completionField->buffer ) - strlen( completionString );
+
+	Q_strncpyz( &completionField->buffer[ completionOffset ], shortestMatch,
+		sizeof( completionField->buffer ) - completionOffset );
+
+	completionField->cursor = strlen( completionField->buffer );
+
+	if( matchCount == 1 )
+	{
+		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+		completionField->cursor++;
+		return qtrue;
+	}
+
+	Com_Printf( "]%s\n", completionField->buffer );
+
+	return qfalse;
+}
+
 #ifndef DEDICATED
 /*
 ===============
@@ -2962,24 +3045,8 @@ static void Field_CompleteKeyname( void )
 
 	Key_KeynameCompletion( FindMatches );
 
-	if( matchCount == 0 )
-		return;
-
-	Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
-		strlen( completionString ) ], shortestMatch,
-		sizeof( completionField->buffer ) );
-	completionField->cursor = strlen( completionField->buffer );
-
-	if( matchCount == 1 )
-	{
-		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
-		completionField->cursor++;
-		return;
-	}
-
-	Com_Printf( "]%s\n", completionField->buffer );
-	
-	Key_KeynameCompletion( PrintMatches );
+	if( !Field_Complete( ) )
+		Key_KeynameCompletion( PrintMatches );
 }
 #endif
 
@@ -2988,13 +3055,13 @@ static void Field_CompleteKeyname( void )
 Field_CompleteFilename
 ===============
 */
-static void Field_CompleteFilename( const char *dir,
-		const char *ext, qboolean stripExt )
+static void Field_CompleteFilenameMuiltipleExtensions( const char *dir,
+		extensions_t *exts, qboolean stripExt )
 {
 	matchCount = 0;
 	shortestMatch[ 0 ] = 0;
 
-	FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+	FS_FilenameCompletion2( dir, exts, stripExt, FindMatches );
 
 	if( matchCount == 0 )
 		return;
@@ -3013,7 +3080,42 @@ static void Field_CompleteFilename( const char *dir,
 
 	Com_Printf( "]%s\n", completionField->buffer );
 	
-	FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
+    if( !Field_Complete( ) )
+      FS_FilenameCompletion2( dir, exts, stripExt, PrintMatches );
+}
+
+/*
+===============
+Field_CompleteFilename
+===============
+*/
+static void Field_CompleteFilename( const char *dir,
+    const char *ext, qboolean stripExt )
+{
+  matchCount = 0;
+  shortestMatch[ 0 ] = 0;
+
+  FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
+
+  if( matchCount == 0 )
+    return;
+
+  Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
+    strlen( completionString ) ], shortestMatch,
+    sizeof( completionField->buffer ) );
+  completionField->cursor = strlen( completionField->buffer );
+
+  if( matchCount == 1 )
+  {
+    Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+    completionField->cursor++;
+    return;
+  }
+
+  Com_Printf( "]%s\n", completionField->buffer );
+  
+  if( !Field_Complete( ) )
+    FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
 }
 
 /*
@@ -3097,6 +3199,19 @@ static void Field_CompleteCommand( char *cmd,
 			{
 				Field_CompleteFilename( "", "cfg", qfalse );
 			}
+			else if( ( !Q_stricmp( baseCmd, "script" ) ) &&
+			  completionArgument == 2 )
+      {
+			  extensions_t exts;
+			  exts.num_extensions = 0;
+			  #ifdef USE_LUA
+			  exts.extensions[exts.num_extensions++] = "lua";
+			  #endif
+			  #ifdef USE_PYTHON
+			  exts.extensions[exts.num_extensions++] = "py";
+			  #endif
+			  Field_CompleteFilenameMuiltipleExtensions( "scripts", &exts, qfalse );
+      }
 			else if( !Q_stricmp( baseCmd, "condump" ) &&
 					completionArgument == 2 )
 			{
@@ -3115,6 +3230,13 @@ static void Field_CompleteCommand( char *cmd,
 
 				if( p > cmd )
 					Field_CompleteCommand( p, qfalse, qtrue );
+			}
+			else if( !Q_stricmp( baseCmd, "demo_play" ) && completionArgument == 2 )
+			{
+				char demoExt[ 16 ];
+
+				Com_sprintf( demoExt, sizeof( demoExt ), ".svdm_%d", PROTOCOL_VERSION );
+				Field_CompleteFilename( "svdemos", demoExt, qtrue );
 			}
 #ifndef DEDICATED
 			else if( !Q_stricmp( baseCmd, "demo" ) && completionArgument == 2 )
@@ -3151,13 +3273,19 @@ static void Field_CompleteCommand( char *cmd,
 						Field_CompleteCommand( p, qtrue, qtrue );
 				}
 			}
+			else if( !Q_stricmp( baseCmd, "unbind" ) && completionArgument == 2 )
+			{
+				// Skip "unbind "
+				p = Com_SkipTokens( cmd, 1, " " );
+
+				if( p > cmd )
+					Field_CompleteKeyname( );
+			}
 #endif
 		}
 	}
 	else
 	{
-		int completionOffset;
-
 		if( completionString[0] == '\\' || completionString[0] == '/' )
 			completionString++;
 
@@ -3173,31 +3301,15 @@ static void Field_CompleteCommand( char *cmd,
 		if( doCvars )
 			Cvar_CommandCompletion( FindMatches );
 
-		if( matchCount == 0 )
-			return; // no matches
-
-		completionOffset = strlen( completionField->buffer ) - strlen( completionString );
-
-		Q_strncpyz( &completionField->buffer[ completionOffset ], shortestMatch,
-			sizeof( completionField->buffer ) - completionOffset );
-
-		completionField->cursor = strlen( completionField->buffer );
-
-		if( matchCount == 1 )
+		if( !Field_Complete( ) )
 		{
-			Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
-			completionField->cursor++;
-			return;
+			// run through again, printing matches
+			if( doCommands )
+				Cmd_CommandCompletion( PrintMatches );
+
+			if( doCvars )
+				Cvar_CommandCompletion( PrintCvarMatches );
 		}
-
-		Com_Printf( "]%s\n", completionField->buffer );
-
-		// run through again, printing matches
-		if( doCommands )
-			Cmd_CommandCompletion( PrintMatches );
-
-		if( doCvars )
-			Cvar_CommandCompletion( PrintCvarMatches );
 	}
 }
 

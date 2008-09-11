@@ -263,7 +263,7 @@ void CON_Init( void )
 
 	if (isatty(STDIN_FILENO)!=1)
 	{
-		Com_Printf( "stdin is not a tty, tty console mode disabled\n");
+		Com_DPrintf( "stdin is not a tty, tty console mode disabled\n");
 		ttycon_on = qfalse;
 		return;
 	}

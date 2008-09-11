@@ -121,6 +121,20 @@ void UI_RemoveCaptureFunc( void )
 
 static char   UI_memoryPool[MEM_POOL_SIZE];
 static int    allocPoint, outOfMemory;
+// Hacked new memory pool for hud
+static char   UI_hudmemoryPool[MEM_POOL_SIZE];
+static int    hudallocPoint, hudoutOfMemory;
+
+/*
+===============
+UI_ResetHUDMemory
+===============
+*/
+void UI_ResetHUDMemory( void )
+{
+  hudallocPoint = 0;
+  hudoutOfMemory = qfalse;
+}
 
 /*
 ===============
@@ -137,7 +151,6 @@ void *UI_Alloc( int size )
 
     if( DC->Print )
       DC->Print( "UI_Alloc: Failure. Out of memory!\n" );
-
     //DC->trap_Print(S_COLOR_YELLOW"WARNING: UI Out of Memory!\n");
     return NULL;
   }
@@ -151,6 +164,29 @@ void *UI_Alloc( int size )
 
 /*
 ===============
+UI_HUDAlloc
+===============
+*/
+void *UI_HUDAlloc( int size )
+{
+  char  *p;
+
+  if( hudallocPoint + size > MEM_POOL_SIZE )
+  {
+  DC->Print( "UI_HUDAlloc: Out of memory! Reinititing hud Memory!!\n" );
+    hudoutOfMemory = qtrue;
+    UI_ResetHUDMemory();
+  }
+
+  p = &UI_hudmemoryPool[ hudallocPoint ];
+
+  hudallocPoint += ( size + 15 ) & ~15;
+
+  return p;
+}
+
+/*
+===============
 UI_InitMemory
 ===============
 */
@@ -158,6 +194,8 @@ void UI_InitMemory( void )
 {
   allocPoint = 0;
   outOfMemory = qfalse;
+  hudallocPoint = 0;
+  hudoutOfMemory = qfalse;
 }
 
 qboolean UI_OutOfMemory( )
@@ -325,7 +363,7 @@ void PC_SourceWarning( int handle, char *format, ... )
   static char string[4096];
 
   va_start( argptr, format );
-  vsprintf( string, format, argptr );
+  Q_vsnprintf( string, sizeof( string ), format, argptr );
   va_end( argptr );
 
   filename[0] = '\0';
@@ -348,7 +386,7 @@ void PC_SourceError( int handle, char *format, ... )
   static char string[4096];
 
   va_start( argptr, format );
-  vsprintf( string, format, argptr );
+  Q_vsnprintf( string, sizeof( string ), format, argptr );
   va_end( argptr );
 
   filename[0] = '\0';
@@ -1536,7 +1574,7 @@ static void Menu_RunCloseScript( menuDef_t *menu )
   }
 }
 
-static void Menus_Close( menuDef_t *menu )
+void Menus_Close( menuDef_t *menu )
 {
   if( menu != NULL )
   {
@@ -1924,7 +1962,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
 
     while( s && *s && count < len )
     {
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
 
       if( Q_IsColorString( s ) )
       {
@@ -1988,7 +2026,7 @@ float UI_Text_Height( const char *text, float scale, int limit )
       }
       else
       {
-        glyph = &font->glyphs[( int )*s];
+        glyph = &font->glyphs[( unsigned char )*s];
 
         if( max < glyph->height )
           max = glyph->height;
@@ -2082,7 +2120,7 @@ void UI_Text_Paint_Limit( float *maxX, float x, float y, float scale,
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[ ( int )*s ];
+      glyph = &font->glyphs[ ( unsigned char )*s ];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2179,7 +2217,7 @@ void UI_Text_Paint( float x, float y, float scale, vec4_t color, const char *tex
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2334,7 +2372,7 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
       len = limit;
 
     count = 0;
-    glyph2 = &font->glyphs[ ( int ) cursor];
+    glyph2 = &font->glyphs[ ( unsigned char ) cursor];
     width2 = glyph2->imageWidth * DC->aspectScale;
     height2 = glyph2->imageHeight;
     skip2 = glyph2->xSkip * DC->aspectScale;
@@ -2342,12 +2380,19 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
     while( s && *s && count < len )
     {
       float width, height, skip;
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
 
       yadj = useScale * glyph->top;
+
+      if( Q_IsColorString( s ) )
+      {
+        memcpy( newColor, g_color_table[ColorIndex( *( s+1 ) )], sizeof( newColor ) );
+        newColor[3] = color[3];
+        DC->setColor( newColor );
+      }
 
       if( style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE )
       {
@@ -2473,6 +2518,8 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
   }
 }
 
+void Script_ScRun( itemDef_t *item, char **args );
+
 commandDef_t commandList[] =
   {
     {"fadein", &Script_FadeIn},                   // group/name
@@ -2495,7 +2542,10 @@ commandDef_t commandList[] =
     {"exec", &Script_Exec},           // group/name
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit}                      // group/name
+    {"orbit", &Script_Orbit},                      // group/name
+#ifdef ENABLE_SCRIPT_UI
+    {"sc_run", &Script_ScRun},
+#endif
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -3597,7 +3647,7 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
-      else if( key < 32 || !item->cvar )
+      else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars
         releaseFocus = qfalse;
@@ -4546,9 +4596,9 @@ void Item_TextColor( itemDef_t *item, vec4_t *newColor )
 
 static const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
-  static char   out[ 8192 ];
+  static char   out[ 8192 ] = "";
   char          *paint = out;
-  char          startcolour[ 3 ], endcolour[ 3 ];
+  char          c[ 3 ] = "^7";
   const char    *p = text;
   const char    *eol;
   const char    *q = NULL, *qMinus1 = NULL;
@@ -4564,17 +4614,14 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
   while( *p )
   {
-    Com_Memset( startcolour, 0, sizeof( startcolour ) );
-    Com_Memset( endcolour, 0, sizeof( endcolour ) );
-
     // Skip leading whitespace
 
     while( *p )
     {
       if( Q_IsColorString( p ) )
       {
-        startcolour[ 0 ] = p[ 0 ];
-        startcolour[ 1 ] = p[ 1 ];
+        c[ 0 ] = p[ 0 ];
+        c[ 1 ] = p[ 1 ];
         p += 2;
       }
       else if( *p != '\n' && isspace( *p ) )
@@ -4586,25 +4633,18 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( !*p )
       break;
 
+    Q_strcat( paint, out + sizeof( out ) - paint, c );
+
     testLength = 1;
 
     eol = p;
 
-    q = p;
+    q = p + 1;
 
     while( Q_IsColorString( q ) )
     {
-      startcolour[ 0 ] = q[ 0 ];
-      startcolour[ 1 ] = q[ 1 ];
-      q += 2;
-    }
-
-    q++;
-
-    while( Q_IsColorString( q ) )
-    {
-      startcolour[ 0 ] = q[ 0 ];
-      startcolour[ 1 ] = q[ 1 ];
+      c[ 0 ] = q[ 0 ];
+      c[ 1 ] = q[ 1 ];
       q += 2;
     }
 
@@ -4624,8 +4664,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
         // Skip color escapes
         while( Q_IsColorString( q ) )
         {
-          endcolour[ 0 ] = q[ 0 ];
-          endcolour[ 1 ] = q[ 1 ];
+          c[ 0 ] = q[ 0 ];
+          c[ 1 ] = q[ 1 ];
           q += 2;
         }
         while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4644,8 +4684,8 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
       // Some color escapes might still be present
       while( Q_IsColorString( q ) )
       {
-        endcolour[ 0 ] = q[ 0 ];
-        endcolour[ 1 ] = q[ 1 ];
+        c[ 0 ] = q[ 0 ];
+        c[ 1 ] = q[ 1 ];
         q += 2;
       }
       while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
@@ -4673,9 +4713,6 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( eol == p )
       eol = q;
 
-    // Add colour code (might be empty)
-    Q_strcat( out, sizeof( out ), startcolour );
-
     paint = out + strlen( out );
 
     // Copy text
@@ -4687,8 +4724,10 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     if( out[ strlen( out ) - 1 ] != '\n' )
     {
       Q_strcat( out, sizeof( out ), "\n " );
-      Q_strcat( out, sizeof( out ), endcolour );
+      Q_strcat( out, sizeof( out ), c );
     }
+    else
+      c[ 0 ] = '\0';
 
     paint = out + strlen( out );
 
@@ -5239,10 +5278,14 @@ static bind_t g_bindings[] =
     { "teamvote no",  K_F4,          -1, -1, -1 },
     { "scoresUp",      K_KP_PGUP,    -1, -1, -1 },
     { "scoresDown",    K_KP_PGDN,    -1, -1, -1 },
-    { "ui_messagemode",  -1,            -1, -1, -1 },
-    { "ui_messagemode2", -1,            -1, -1, -1 },
+    { "messagemode",  -1,            -1, -1, -1 },
+    { "messagemode2", -1,            -1, -1, -1 },
     { "messagemode3", -1,            -1, -1, -1 },
     { "messagemode4", -1,            -1, -1, -1 },
+    { "messagemode5", -1,            -1, -1, -1 },
+    { "messagemode6", -1,            -1, -1, -1 },
+    { "prompt",       -1,            -1, -1, -1 },
+    { "squadmark",    'k',           -1, -1, -1 },
   };
 
 
@@ -8080,7 +8123,10 @@ qboolean MenuParse_itemDef( itemDef_t *item, int handle )
 
   if( menu->itemCount < MAX_MENUITEMS )
   {
-    menu->items[menu->itemCount] = UI_Alloc( sizeof( itemDef_t ) );
+    if(DC->hudloading)
+      menu->items[menu->itemCount] = UI_HUDAlloc(sizeof(itemDef_t));
+    else
+      menu->items[menu->itemCount] = UI_Alloc(sizeof(itemDef_t));
     Item_Init( menu->items[menu->itemCount] );
 
     if( !Item_Parse( handle, menu->items[menu->itemCount] ) )
