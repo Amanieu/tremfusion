@@ -551,8 +551,13 @@ scDataTypeArray_t* SC_Lua_get_lua_array(lua_State *L, int index)
   lua_pushnil(L);
   while(lua_next(L, index-1) != 0)
   {
-    SC_Lua_pop_value(L, &val, TYPE_ANY);
-    SC_ArraySet(array, lua_tointeger(L, -1) - 1, &val);
+    if(lua_isnumber(L, -2))
+    {
+      SC_Lua_pop_value(L, &val, TYPE_ANY);
+      SC_ArraySet(array, lua_tointeger(L, -1) - 1, &val);
+    }
+    else
+      lua_pop(L, 1);
   }
 
   return array;
