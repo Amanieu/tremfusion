@@ -262,7 +262,7 @@ static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 
 
 
 void G_InitGame( int levelTime, int randomSeed, int restart );
-void G_RunFrame( int levelTime );
+int  G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
 void G_DemoSetClient( void );
@@ -1023,6 +1023,7 @@ void G_SpawnClients( team_t team )
   vec3_t        spawn_origin, spawn_angles;
   spawnQueue_t  *sq = NULL;
   int           numSpawns = 0;
+  spectatorState_t oldstate;
 
   if( team == TEAM_ALIENS )
   {
@@ -1051,9 +1052,11 @@ void G_SpawnClients( team_t team )
 
       ent = &g_entities[ clientNum ];
 
+      oldstate = ent->client->sess.spectatorState;
       ent->client->sess.spectatorState = SPECTATOR_NOT;
       ClientUserinfoChanged( clientNum );
-      ClientSpawn( ent, spawn, spawn_origin, spawn_angles );
+      if(!ClientSpawn( ent, spawn, spawn_origin, spawn_angles ))
+        ent->client->sess.spectatorState = oldstate;
     }
   }
 }
@@ -2436,35 +2439,77 @@ G_RunFrame
 Advances the non-player objects in the world
 ================
 */
-void G_RunFrame( int levelTime )
+int isLevelRestarting(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int       i;
-  gentity_t *ent;
-  int       msec;
-  int       start, end;
+  scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  // if we are waiting for the level to restart, do nothing
-  if( level.restarted )
-    return;
+  if(level.restarted)
+    // Skip but don't return an error: we simply don't have to run a frame here
+    SC_Event_Skip(event, "all", out);
+  return 0;
+}
+
+int updateCvars(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  // get any cvar changes
+  G_UpdateCvars();
+  return 0;
+}
+
+int seedRandom(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  // seed the rng
+  srand(level.framenum);
+  return 0;
+}
+
+int updateTime(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
+
+  SC_HashGet(hash, "levelTime", &value);
 
   level.framenum++;
   level.previousTime = level.time;
-  level.time = levelTime;
-  msec = level.time - level.previousTime;
+  level.time = value.data.integer;
 
-  // seed the rng
-  srand( level.framenum );
+  return 0;
+}
 
-  // get any cvar changes
-  G_UpdateCvars( );
+int initMsec(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
 
-  // check demo state
-  CheckDemo( );
+  SC_HashGet(hash, "levelTime", &value);
+  value.data.integer = value.data.integer - level.time;
+
+  SC_HashSet(hash, "msec", &value);
+  return 0;
+}
+
+int checkDemo(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  CheckDemo();
+  return 0;
+}
+
+int entityFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int        i;
+  gentity_t *ent;
+  int        msec;
+
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
+
+  SC_HashGet(hash, "msec", &value);
+  msec = value.data.integer;
 
   //
   // go through all allocated objects
   //
-  start = trap_Milliseconds( );
   ent = &g_entities[ 0 ];
 
   for( i = 0; i < level.num_entities; i++, ent++ )
@@ -2543,9 +2588,14 @@ void G_RunFrame( int levelTime )
 
     G_RunThink( ent );
   }
-  end = trap_Milliseconds();
 
-  start = trap_Milliseconds();
+  return 0;
+}
+
+int playerFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int        i;
+  gentity_t *ent;
 
   // perform final fixups on the players
   ent = &g_entities[ 0 ];
@@ -2556,25 +2606,63 @@ void G_RunFrame( int levelTime )
       ClientEndFrame( ent );
   }
 
+  return 0;
+}
+
+int unlaggedStore(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // save position information for all active clients
   G_UnlaggedStore( );
+  return 0;
+}
 
-  end = trap_Milliseconds();
-
+int countSpawns(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CountSpawns( );
+  return 0;
+}
+
+int calculateBuildPoints(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CalculateBuildPoints( );
+  return 0;
+}
+
+int calculateStages(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CalculateStages( );
+  return 0;
+}
+
+int spawnClients(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_SpawnClients( TEAM_ALIENS );
   G_SpawnClients( TEAM_HUMANS );
-  G_CalculateAvgPlayers( );
-  //G_UpdateZaps( msec );
+  return 0;
+}
 
+int calculateAvgPlayers(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  G_CalculateAvgPlayers( );
+  return 0;
+}
+
+int checkExitRules(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // see if it is time to end the level
   CheckExitRules( );
+  return 0;
+}
 
+int checkTeamStatus(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // update to team status?
   CheckTeamStatus( );
+  return 0;
+}
 
+int checkVotes(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // cancel vote if timed out
   CheckVote( );
 
@@ -2582,19 +2670,107 @@ void G_RunFrame( int levelTime )
   CheckTeamVote( TEAM_HUMANS );
   CheckTeamVote( TEAM_ALIENS );
 
+  return 0;
+}
+
+int checkCvars(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // for tracking changes
   CheckCvars( );
+  return 0;
+}
 
-  if( g_listEntity.integer )
-  {
-    for( i = 0; i < MAX_GENTITIES; i++ )
-      G_Printf( "%4i: %s\n", i, g_entities[ i ].classname );
-
-    trap_Cvar_Set( "g_listEntity", "0" );
-  }
-
-  // TODO: Call event here: game.on_think
-
+int updateFrameMsec(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   level.frameMsec = trap_Milliseconds();
+  return 0;
+}
+
+void G_InitEvent_GameFrame(void)
+{
+  scObject_t *self = SC_Event_NewObject();
+  scEvent_t *event = self->data.data.userdata;
+  scDataTypeValue_t value, out;
+  scEventNode_t *node, *parent, *action;
+
+  SC_Event_AddMainGroups(event, &out);
+
+  parent = SC_Event_Find(event, "check");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("IsLevelRestarting", isLevelRestarting), &out);
+
+  parent = SC_Event_Find(event, "init");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitMsec", initMsec), &out);
+
+  action = SC_Event_Find(event, "action");
+  node = SC_Event_NewGroup("init");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SeedRandom", seedRandom), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CountSpawns", countSpawns), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateCvars", updateCvars), &out);
+
+  parent = action;
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateTime", updateTime), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckDemo", checkDemo), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("EntityFrame", entityFrame), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("PlayerFrame", playerFrame), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UnlaggedStore", unlaggedStore), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateBuildPoints", calculateBuildPoints), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateStages", calculateStages), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SpawnClients", spawnClients), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateAvgPlayers", calculateAvgPlayers), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckExitRules", checkExitRules), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckTeamStatus", checkTeamStatus), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckVotes", checkVotes), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateFrameMsec", updateFrameMsec), &out);
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet("event.game.Frame", &value);
+}
+
+int G_RunFrame( int levelTime )
+{
+  scDataTypeHash_t   *hash = SC_HashNew();
+  scObject_t         *event;
+  scDataTypeValue_t   value;
+  scDataTypeValue_t   out;
+  int                 ret;
+
+  SC_HashGCInc(hash);
+
+  SC_NamespaceGet("event.game.Frame", &value);
+  event = value.data.object;
+
+  value.type = TYPE_INTEGER;
+  value.data.integer = levelTime;
+  SC_HashSet(hash, "levelTime", &value);
+
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
+    G_Error(SC_StringToChar(out.data.string));
+
+  SC_HashGCDec(hash);
+
+  return ret;
 }
 
