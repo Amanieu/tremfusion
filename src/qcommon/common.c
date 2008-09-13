@@ -2228,7 +2228,7 @@ int Com_EventLoop( void ) {
 			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
 				cmd++;
 			else
-				Cbuf_AddText( "say " );
+				Cbuf_AddText( "cmd say " );
 #endif
 			Cbuf_AddText( cmd );
 			Cbuf_AddText( "\n" );
