@@ -754,11 +754,10 @@ int FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp ) {
 				fsh[f].handleFiles.file.o = fopen( ospath, "rb" );
 				fsh[f].handleSync = qfalse;
 			}
-		}
-
-		if ( !fsh[f].handleFiles.file.o )
-		{
-			f = 0;
+			if ( !fsh[f].handleFiles.file.o )
+			{
+				f = 0;
+			}
 		}
 	}
 
@@ -2817,7 +2816,7 @@ static void FS_Startup( const char *gameName )
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
-	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	fs_basegame = Cvar_Get ("fs_basegame", "tremfusion", CVAR_INIT|CVAR_SYSTEMINFO );
 	homePath = Sys_DefaultHomePath(&homePath2);
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
@@ -2844,11 +2843,11 @@ static void FS_Startup( const char *gameName )
 	#endif
 
 	// NOTE: same filtering below for mods and basegame
-	if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
-		FS_AddGameDirectory ( fs_homepath->string, gameName );
-	}
 	if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
 		FS_AddGameDirectory ( fs_homepath2->string, gameName );
+	}
+	if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
+		FS_AddGameDirectory ( fs_homepath->string, gameName );
 	}
 
 	// check for additional base game so mods can be based upon other mods
@@ -2861,11 +2860,11 @@ static void FS_Startup( const char *gameName )
 			FS_AddGameDirectory(fs_apppath->string, fs_basegame->string);
 		}
 		#endif
-		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
-			FS_AddGameDirectory(fs_homepath->string, fs_basegame->string);
-		}
 		if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
 			FS_AddGameDirectory(fs_homepath2->string, fs_basegame->string);
+		}
+		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
+			FS_AddGameDirectory(fs_homepath->string, fs_basegame->string);
 		}
 	}
 
@@ -2879,11 +2878,11 @@ static void FS_Startup( const char *gameName )
 			FS_AddGameDirectory(fs_apppath->string, fs_gamedirvar->string);
 		}
 		#endif
-		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
-			FS_AddGameDirectory(fs_homepath->string, fs_gamedirvar->string);
-		}
 		if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
 			FS_AddGameDirectory(fs_homepath2->string, fs_gamedirvar->string);
+		}
+		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
+			FS_AddGameDirectory(fs_homepath->string, fs_gamedirvar->string);
 		}
 	}
 
@@ -2901,7 +2900,7 @@ static void FS_Startup( const char *gameName )
 	FS_ReorderExtraPaks();
 
 	// print the current search paths
-	if ( Cvar_VariableIntegerValue( "developer" ) )
+	if ( com_developer->integer )
 		FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
