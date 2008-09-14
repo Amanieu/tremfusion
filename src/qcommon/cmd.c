@@ -1478,7 +1478,7 @@ void Cmd_RemoveCommandSafe( const char *cmd_name )
 		return;
 	if( cmd->function )
 	{
-		Com_Error( ERR_DROP, "Untrusted source tried to remove system command "
+		Com_Printf( "^3WARNING: Untrusted source tried to remove system command "
 			"\"%s\"\n", cmd_name );
 		return;
 	}

@@ -571,10 +571,10 @@ void Cvar_SetSafe( const char *var_name, const char *value )
 	if( flags != CVAR_NONEXISTENT && flags & CVAR_PROTECTED )
 	{
 		if( value )
-			Com_Error( ERR_DROP, "Untrusted source tried to set protected cvar "
+			Com_Printf( "^3WARNING: Untrusted source tried to set protected cvar "
 				"\"%s\" to \"%s\"\n", var_name, value );
 		else
-			Com_Error( ERR_DROP, "Untrusted source tried to modify protected cvar "
+			Com_Printf( "^3WARNING: Untrusted source tried to modify protected cvar "
 				"\"%s\"\n", var_name );
 		return;
 	}
