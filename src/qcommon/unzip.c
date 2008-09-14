@@ -1346,9 +1346,9 @@ extern int ZEXPORT unzReadCurrentFile  (file, buf, len)
                 *(pfile_in_zip_read_info->stream.next_out+i) =
                         *(pfile_in_zip_read_info->stream.next_in+i);
 
-            pfile_in_zip_read_info->crc32 = crc32(pfile_in_zip_read_info->crc32,
+            /*pfile_in_zip_read_info->crc32 = crc32(pfile_in_zip_read_info->crc32,
                                 pfile_in_zip_read_info->stream.next_out,
-                                uDoCopy);
+                                uDoCopy);*/
             pfile_in_zip_read_info->rest_read_uncompressed-=uDoCopy;
             pfile_in_zip_read_info->stream.avail_in -= uDoCopy;
             pfile_in_zip_read_info->stream.avail_out -= uDoCopy;
@@ -1381,9 +1381,9 @@ extern int ZEXPORT unzReadCurrentFile  (file, buf, len)
             uTotalOutAfter = pfile_in_zip_read_info->stream.total_out;
             uOutThis = uTotalOutAfter-uTotalOutBefore;
 
-            pfile_in_zip_read_info->crc32 =
+            /*pfile_in_zip_read_info->crc32 =
                 crc32(pfile_in_zip_read_info->crc32,bufBefore,
-                        (uInt)(uOutThis));
+                        (uInt)(uOutThis));*/
 
             pfile_in_zip_read_info->rest_read_uncompressed -=
                 uOutThis;
