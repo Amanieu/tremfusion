@@ -2849,11 +2849,7 @@ void CL_InitRenderer( void ) {
 #endif
 
 	cls.whiteShader = re.RegisterShader( "white" );
-
-    // For committing to Trem SVN, use "console" and change core.shader to use white instead of black.tga, 
-    // so that the console background image can be configured via that file and still let user color configuration work. 
-    // For inclusion in 1.1 clients, use "white" so that custom colors can be set and just skip the "console" shader altogether.
-	cls.consoleShader = re.RegisterShader( "white" );
+	cls.consoleShader = re.RegisterShader( "console" );
 
 	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
