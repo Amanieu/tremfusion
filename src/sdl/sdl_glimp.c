@@ -271,6 +271,21 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	if( !failSafe )
 	{
+		if( r_customwidth->modified )
+		{
+			r_customwidth->modified = qfalse;
+			ri.Cvar_Set( "r_width", r_customwidth->string );
+		}
+		if( r_customheight->modified )
+		{
+			r_customheight->modified = qfalse;
+			ri.Cvar_Set( "r_height", r_customheight->string );
+		}
+		if( r_custompixelAspect->modified )
+		{
+			r_custompixelAspect->modified = qfalse;
+			ri.Cvar_Set( "r_pixelAspect", r_custompixelAspect->string );
+		}
 		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
 		{
 			for ( i = 0; i < numVidModes; i++ )
