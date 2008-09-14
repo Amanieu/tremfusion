@@ -2836,12 +2836,15 @@ void CL_InitRenderer( void ) {
 
     // Register console font specified by cl_consoleFont, if any
     // filehandle is unused but forces FS_FOpenFileRead() to heed purecheck because it does not when filehandle is NULL 
-    if( *cl_consoleFont->string && FS_FOpenFileRead( cl_consoleFont->string, &f, FS_READ ) >= 0 ) 
+    if( *cl_consoleFont->string )
     {
+      if( FS_FOpenFileRead( cl_consoleFont->string, &f, FS_READ ) >= 0 ) 
+      {
         re.RegisterFont( cl_consoleFont->string, cl_consoleFontSize->integer, &cls.consoleFont);
         cls.useLegacyConsoleFont = qfalse;
+      }
+      FS_FCloseFile( f );
     }
-    FS_FCloseFile( f );
 
 #endif
 
