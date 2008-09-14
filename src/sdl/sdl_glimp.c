@@ -271,21 +271,12 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	if( !failSafe )
 	{
-		if( r_customwidth->modified )
-		{
-			r_customwidth->modified = qfalse;
+		if( r_customwidth->modified && !r_width->modified )
 			ri.Cvar_Set( "r_width", r_customwidth->string );
-		}
-		if( r_customheight->modified )
-		{
-			r_customheight->modified = qfalse;
+		if( r_customheight->modified && !r_height->modified )
 			ri.Cvar_Set( "r_height", r_customheight->string );
-		}
-		if( r_custompixelAspect->modified )
-		{
-			r_custompixelAspect->modified = qfalse;
+		if( r_custompixelAspect->modified && !r_pixelAspect->modified )
 			ri.Cvar_Set( "r_pixelAspect", r_custompixelAspect->string );
-		}
 		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
 		{
 			for ( i = 0; i < numVidModes; i++ )
@@ -310,6 +301,9 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		r_width->modified = qfalse;
 		r_height->modified = qfalse;
 		r_pixelAspect->modified = qfalse;
+		r_customwidth->modified = qfalse;
+		r_customheight->modified = qfalse;
+		r_custompixelAspect->modified = qfalse;
 		glConfig.vidWidth = r_width->integer;
 		glConfig.vidHeight = r_height->integer;
 		glConfig.windowAspect = r_width->value /

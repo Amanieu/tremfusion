@@ -935,8 +935,8 @@ void R_Register( void )
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_mode = ri.Cvar_Get( "r_mode", "4", CVAR_ARCHIVE | CVAR_LATCH );
 	Cvar_CheckRange( r_mode, -1, 11, qtrue );
-	r_customwidth = ri.Cvar_Get( "r_customwidth", "640", CVAR_ARCHIVE | CVAR_LATCH );
-	r_customheight = ri.Cvar_Get( "r_customheight", "480", CVAR_ARCHIVE | CVAR_LATCH );
+	r_customwidth = ri.Cvar_Get( "r_customwidth", "800", CVAR_ARCHIVE | CVAR_LATCH );
+	r_customheight = ri.Cvar_Get( "r_customheight", "600", CVAR_ARCHIVE | CVAR_LATCH );
 	r_custompixelAspect = ri.Cvar_Get( "r_custompixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
