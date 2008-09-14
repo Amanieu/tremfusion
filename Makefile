@@ -146,6 +146,10 @@ ifndef USE_SCM_VERSION
 USE_SCM_VERSION=1
 endif
 
+ifndef USE_FREETYPE
+USE_FREETYPE=1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -262,6 +266,10 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
+  endif
+
   ifeq ($(USE_CURL),1)
     BASE_CFLAGS += -DUSE_CURL
     ifeq ($(USE_CURL_DLOPEN),1)
@@ -336,6 +344,10 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -I$(SDLHDIR)/include
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    CLIENT_LDFLAGS += -lfreetype
+  endif
+
   ifeq ($(ARCH),x86)
     # linux32 make ...
     BASE_CFLAGS += -m32
@@ -376,6 +388,10 @@ ifeq ($(PLATFORM),darwin)
 
   BASE_CFLAGS += -fno-strict-aliasing -DMACOS_X -fno-common -pipe
 
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
+  endif
+
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -392,6 +408,10 @@ ifeq ($(PLATFORM),darwin)
     else
       BASE_CFLAGS += -DUSE_CURL_DLOPEN
     endif
+  endif
+
+  ifeq ($(USE_FREETYPE),1)
+    CLIENT_LDFLAGS += $(shell freetype-config --libs)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -463,6 +483,11 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
+  ifeq ($(USE_FREETYPE),1)
+    BASE_CFLAGS += -DBUILD_FREETYPE
+    BASE_CFLAGS += -I/include/freetype2
+  endif
+
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
   endif
@@ -481,6 +506,10 @@ ifeq ($(PLATFORM),mingw32)
 
   LDFLAGS= -lws2_32 -lwinmm
   CLIENT_LDFLAGS = -mwindows -lgdi32 -lole32 -lopengl32
+
+  ifeq ($(USE_FREETYPE),1)
+    CLIENT_LDFLAGS += -lfreetype
+  endif
 
   ifeq ($(USE_CURL),1)
     BASE_CFLAGS += -DUSE_CURL

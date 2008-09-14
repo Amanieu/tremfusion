@@ -148,10 +148,36 @@ static void SCR_DrawChar( int x, int y, float size, int ch ) {
 	fcol = col*0.0625;
 	size = 0.0625;
 
-	re.DrawStretchPic( ax, ay, aw, ah,
+    re.DrawStretchPic( ax, ay, aw, ah,
 					   fcol, frow, 
 					   fcol + size, frow + size, 
 					   cls.charSetShader );
+}
+
+void SCR_DrawConsoleFontChar( float x, float y, int ch )
+{
+
+    if( cls.useLegacyConsoleFont )
+    {
+        SCR_DrawSmallChar( (int) x, (int) y, ch );
+        return;
+    }
+
+    if(ch==' ') return;
+
+    fontInfo_t *font = &cls.consoleFont;
+
+    glyphInfo_t *glyph = &font->glyphs[ch];
+
+    float yadj = glyph->top;
+
+
+    float xadj = (SCR_ConsoleFontCharWidth( ch ) - glyph->xSkip) / 2.0;
+
+    re.DrawStretchPic( x+xadj, y-yadj, glyph->imageWidth, glyph->imageHeight,
+					   glyph->s, glyph->t, 
+					   glyph->s2, glyph->t2, 
+					   glyph->glyph );
 }
 
 /*
@@ -184,6 +210,49 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
 					   fcol, frow, 
 					   fcol + size, frow + size, 
 					   cls.charSetShader );
+}
+
+float SCR_ConsoleFontCharWidth( int ch )
+{
+    fontInfo_t *font = &cls.consoleFont;
+    glyphInfo_t *glyph = &font->glyphs[ch];
+    float width = glyph->xSkip + cl_consoleFontKerning->value;
+
+    if( cls.useLegacyConsoleFont ) return SMALLCHAR_WIDTH;
+
+    return (width);
+}
+
+
+float SCR_ConsoleFontCharHeight( )
+{
+    fontInfo_t *font = &cls.consoleFont;
+    int ch = 'I' & 0xff;
+    glyphInfo_t *glyph = &font->glyphs[ch];
+    float vpadding = 0.3 * cl_consoleFontSize->value;
+
+    if( cls.useLegacyConsoleFont ) return SMALLCHAR_HEIGHT;
+
+
+    return (glyph->imageHeight + vpadding);
+}
+
+
+float SCR_ConsoleFontStringWidth( const char* s, int len )
+{
+    int i;
+    fontInfo_t *font = &cls.consoleFont;
+    float width = 0;
+
+    if( cls.useLegacyConsoleFont ) return len * SMALLCHAR_WIDTH;
+
+    for(i=0;i<len;i++)
+    {
+        int ch = s[i] & 0xff;
+        glyphInfo_t *glyph = &font->glyphs[ch];
+        width += glyph->xSkip + cl_consoleFontKerning->value;
+    }
+    return (width);
 }
 
 
@@ -269,7 +338,7 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 		qboolean noColorEscape ) {
 	vec4_t		color;
 	const char	*s;
-	int			xx;
+	float       xx;
 
 	// draw the colored text
 	s = string;
@@ -287,8 +356,8 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 				continue;
 			}
 		}
-		SCR_DrawSmallChar( xx, y, *s );
-		xx += SMALLCHAR_WIDTH;
+        SCR_DrawConsoleFontChar( xx, y, *s );
+        xx += SCR_ConsoleFontCharWidth( *s );
 		s++;
 	}
 	re.SetColor( NULL );

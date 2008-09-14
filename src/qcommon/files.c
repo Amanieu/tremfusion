@@ -1109,6 +1109,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 					if ( !(pak->referenced & FS_GENERAL_REF)) {
 						if ( Q_stricmp(filename + l - 7, ".shader") != 0 &&
 							Q_stricmp(filename + l - 4, ".txt") != 0 &&
+							Q_stricmp(filename + l - 4, ".ttf") != 0 &&
+							Q_stricmp(filename + l - 4, ".otf") != 0 &&
 							Q_stricmp(filename + l - 4, ".cfg") != 0 &&
 							Q_stricmp(filename + l - 7, ".config") != 0 &&
 							strstr(filename, "levelshots") == NULL &&
@@ -1174,6 +1176,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			if ( fs_numServerPaks && !fs_unpureAllowed ) {
 
 				if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
+					&& Q_stricmp( filename + l - 4, ".otf" )
+					&& Q_stricmp( filename + l - 4, ".ttf" )
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 					&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 					&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
@@ -1191,6 +1195,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			}
 
 			if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
+				&& Q_stricmp( filename + l - 4, ".ttf" )
+				&& Q_stricmp( filename + l - 4, ".otf" )
 				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
