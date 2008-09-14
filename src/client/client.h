@@ -407,6 +407,11 @@ extern	cvar_t	*cl_altTab;
 
 extern  cvar_t  *cl_dlURLOverride;
 
+extern  cvar_t  *cl_demoConfig;
+extern  cvar_t  *cl_humanConfig;
+extern  cvar_t  *cl_alienConfig;
+extern  cvar_t  *cl_spectatorConfig;
+
 extern  cvar_t  *cl_defaultUI;
 
 extern  cvar_t  *cl_clantag;
@@ -476,6 +481,8 @@ void CL_InitRef( void );
 int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);
+
+void CL_CheckTeamChange( void );
 
 //
 // cl_input

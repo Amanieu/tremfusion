@@ -105,6 +105,11 @@ cvar_t	*cl_altTab;
 
 cvar_t  *cl_dlURLOverride;
 
+cvar_t  *cl_demoConfig; 
+cvar_t  *cl_humanConfig; 
+cvar_t  *cl_alienConfig; 
+cvar_t  *cl_spectatorConfig; 
+
 cvar_t  *cl_defaultUI;
 
 cvar_t  *cl_persistantConsole;
@@ -975,6 +980,9 @@ void CL_PlayDemo_f( void ) {
 	cls.state = CA_CONNECTED;
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
+
+	if( *cl_demoConfig->string )
+		Cbuf_AddText ( va( "exec %s\n", cl_demoConfig->string ) );
 
 	// read demo messages until connected
 	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED ) {
@@ -2527,6 +2535,57 @@ void CL_CheckTimeout( void ) {
 
 /*
 ==================
+CL_CheckTeamChange
+
+Check whether client has changed teams so that we can exec specified bindsets for them
+==================
+*/
+void CL_CheckTeamChange(void)
+{
+	static int previousteam = -1;
+	char *t;
+	int team;
+
+	if( cls.state != CA_ACTIVE ) return;
+
+	t = Info_ValueForKey( &cl.gameState.stringData[
+		cl.gameState.stringOffsets[ CS_PLAYERS + clc.clientNum ] ],
+		"t" );
+	if( t[0] )
+		team = atoi( t );
+	else
+		return; // throw an error?
+
+	if( previousteam != team )
+	{
+		previousteam = team;
+
+		if( team == 0 )
+		{
+			if( *cl_spectatorConfig->string ) 
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_spectatorConfig->string ) );
+			}
+		}
+		else if( team == 1 )
+		{
+			if( *cl_alienConfig->string )
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_alienConfig->string ) );
+			}
+		}
+		else if( team == 2 )
+		{
+			if( *cl_humanConfig->string )
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_humanConfig->string ) );
+			}
+		}
+	} 
+}
+
+/*
+==================
 CL_CheckPaused
 Check whether client has been paused.
 ==================
@@ -2703,6 +2762,8 @@ void CL_Frame ( int msec ) {
 	SCR_RunCinematic();
 
 	Con_RunConsole();
+
+	CL_CheckTeamChange();
 
 	cls.framecount++;
 }
@@ -3135,6 +3196,11 @@ void CL_Init( void ) {
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
 	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
+
+	cl_demoConfig = Cvar_Get ("cl_demoConfig", "", CVAR_ARCHIVE);
+	cl_humanConfig = Cvar_Get ("cl_humanConfig", "", CVAR_ARCHIVE);
+	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
+	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
 	cl_defaultUI = Cvar_Get ("cl_defaultUI", "base", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
