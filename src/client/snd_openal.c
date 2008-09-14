@@ -1532,6 +1532,7 @@ S_AL_StopBackgroundTrack
 static
 void S_AL_StopBackgroundTrack( void )
 {
+	int num;
 	if(!musicPlaying)
 		return;
 
@@ -1539,6 +1540,9 @@ void S_AL_StopBackgroundTrack( void )
 	qalSourceStop(musicSource);
 
 	// De-queue the musicBuffers
+	qalGetSourcei(musicSource, AL_BUFFERS_PROCESSED, &num);
+	if(num < NUM_MUSIC_BUFFERS)
+		Com_Printf(S_COLOR_YELLOW "WARNING: fewer than NUM_MUSIC_BUFFERS buffers can be unqueued\n");
 	qalSourceUnqueueBuffers(musicSource, NUM_MUSIC_BUFFERS, musicBuffers);
 
 	// Destroy the musicBuffers
