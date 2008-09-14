@@ -113,7 +113,10 @@ void Con_MessageMode_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -131,7 +134,10 @@ void Con_MessageMode2_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -153,7 +159,10 @@ void Con_MessageMode3_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -175,7 +184,10 @@ void Con_MessageMode4_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -193,7 +205,10 @@ void Con_MessageMode5_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -240,7 +255,10 @@ void Con_MessageMode6_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
