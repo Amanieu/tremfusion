@@ -162,25 +162,21 @@ static int entity_field_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClo
   size_t addr = closure.s;
   gentity_t *entity = G_EntityFromScript(object);
 
-  switch(in[1].type)
+  switch(out[0].type)
   {
     case TYPE_BOOLEAN:
-      out[0].type = TYPE_BOOLEAN;
       out[0].data.boolean = *(qboolean*)((void*)entity + addr);
       break;
 
     case TYPE_INTEGER:
-      out[0].type = TYPE_INTEGER;
       out[0].data.integer = *(int*)((void*)entity + addr);
       break;
 
     case TYPE_FLOAT:
-      out[0].type = TYPE_FLOAT;
       out[0].data.floating = *(float*)((void*)entity + addr);
       break;
 
     case TYPE_STRING:
-      out[0].type = TYPE_STRING;
       out[0].data.string = SC_StringNewFromChar(*(char**)((void*)entity + addr));
       break;
 
@@ -188,7 +184,6 @@ static int entity_field_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClo
       SC_EXEC_ERROR(va("Internal error: unknow case in `entity_set', %s (%d)\n", __FILE__, __LINE__));
   }
 
-  out[1].type = TYPE_UNDEF;
   return 0;
 }
 
@@ -200,7 +195,6 @@ static int entity_object_vec3_set(scDataTypeValue_t *in, scDataTypeValue_t *out,
 
   memcpy(*(vec3_t**)((void*)entity + addr), (vec3_t*) in[1].data.object->data.data.userdata, sizeof(vec3_t));
 
-  out[0].type = TYPE_UNDEF;
   return 0;
 }
 
@@ -213,7 +207,6 @@ static int entity_object_vec3_get(scDataTypeValue_t *in, scDataTypeValue_t *out,
   out[0].type = TYPE_OBJECT;
   out[0].data.object = SC_Vec3FromVec3_t(*(float**)((void*)entity + addr));
 
-  out[1].type = TYPE_UNDEF;
   return 0;
 }
 
@@ -810,6 +803,22 @@ static int client_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scCl
 }
 
 static scLibObjectMember_t client_members[] = {
+  // Player state
+  { "stat_health", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_HEALTH]) } },
+  { "stat_items", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_ITEMS]) } },
+  { "stat_slots", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_SLOTS]) } },
+  { "stat_activeitems", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_ACTIVEITEMS]) } },
+  { "stat_weapons", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_WEAPONS]) } },
+  { "stat_weapons2", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_WEAPONS2]) } },
+  { "stat_max_health", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_MAX_HEALTH]) } },
+  { "stat_class", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_CLASS]) } },
+  { "stat_team", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_TEAM]) } },
+  { "stat_stamina", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_STAMINA]) } },
+  { "stat_state", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_STATE]) } },
+  { "stat_misc", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_MISC]) } },
+  { "stat_buildable", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_BUILDABLE]) } },
+  { "stat_falldist", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_FALLDIST]) } },
+  { "stat_viewlock", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_VIEWLOCK]) } },
   // Session
   { "spectatorTime", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorTime) } },
   { "spectatorState", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorState) } },

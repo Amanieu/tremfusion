@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * - module and require integration in scripting module engine
  * - optimize (exemple: make lua <=> lua function call faster)
  * - "if (lua.table({bool=false}))["false"]" should not be true ! (see src/lua/lvm.c:589)
+ * - `pairs' don't display table members in registered data (like constants)
  */
 
 #include "sc_public.h"

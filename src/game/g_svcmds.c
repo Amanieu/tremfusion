@@ -257,7 +257,7 @@ static void Svcmd_Script_f(void)
 {
   char filename[128];
   trap_Argv( 1, filename, 128 );
-  SC_RunScript( SC_LangageFromFilename(va("scripts/%s", filename) ), va("scripts/%s", filename) );
+  SC_RunScript( SC_LangageFromFilename(va("gscript/%s", filename) ), va("gscript/%s", filename) );
 }
 
 /*
@@ -465,11 +465,11 @@ qboolean  ConsoleCommand( void )
   if( G_admin_cmd_check( NULL, qfalse ) )
     return qtrue;
 
-//  if( !Q_stricmp(cmd, "script") )
-//  {
-//    Svcmd_Script_f();
-//    return qtrue;
-//  }
+  if( !Q_stricmp(cmd, "script") )
+  {
+    Svcmd_Script_f();
+    return qtrue;
+  }
 
   if( g_dedicated.integer )
   {
