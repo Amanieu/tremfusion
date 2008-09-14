@@ -954,6 +954,7 @@ void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
 
 void G_InitEvent_GameFrame(void);
+void G_InitEvent_GameInit(void);
 
 //
 // g_script.c

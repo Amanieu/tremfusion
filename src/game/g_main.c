@@ -261,7 +261,7 @@ static cvarTable_t   gameCvarTable[ ] =
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );
 
 
-void G_InitGame( int levelTime, int randomSeed, int restart );
+int  G_InitGame( int levelTime, int randomSeed, int restart );
 int  G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
@@ -536,24 +536,17 @@ G_InitGame
 
 ============
 */
-void G_InitGame( int levelTime, int randomSeed, int restart )
+
+int gameInit_InitLevel(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int i;
-  char buffer[ MAX_CVAR_VALUE_STRING ];
-  int a, b;
+  int               levelTime;
+  int               a, b;
+  char              buffer[ MAX_CVAR_VALUE_STRING ];
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
 
-  srand( randomSeed );
-
-  G_RegisterCvars( );
-
-  G_Printf( "------- Game Initialization -------\n" );
-  G_Printf( "gamename: %s\n", GAME_VERSION );
-  G_Printf( "gamedate: %s\n", __DATE__ );
-
-  BG_InitMemory( );
-
-  G_SVCommandsInit();
-  G_InitScript( );
+  SC_HashGet(hash, "levelTime", &value);
+  levelTime = value.data.integer;
 
   // set some level globals
   memset( &level, 0, sizeof( level ) );
@@ -569,6 +562,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
 
+  return 0;
+}
+
+int gameInit_InitLogs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   if( g_logFile.string[ 0 ] )
   {
     if( g_logFileSync.integer )
@@ -590,18 +588,30 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   }
   else
     G_Printf( "Not logging to disk\n" );
+  return 0;
+}
 
-  {
-    char map[ MAX_CVAR_VALUE_STRING ] = {""};
+int gameInit_MapConfig(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  char map[ MAX_CVAR_VALUE_STRING ] = {""};
 
-    trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
-    G_MapConfigs( map );
-  }
+  trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
+  G_MapConfigs( map );
 
   // we're done with g_mapConfigs, so reset this for the next map
   trap_Cvar_Set( "g_mapConfigsLoaded", "0" );
+  return 0;
+}
 
+int gameInit_ReadAdminConfig(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_admin_readconfig( NULL, 0 );
+  return 0;
+}
+
+int gameInit_InitEntities(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int i;
 
   // initialize all entities for this game
   memset( g_entities, 0, MAX_GENTITIES * sizeof( g_entities[ 0 ] ) );
@@ -620,15 +630,31 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   // even if they aren't all used, so numbers inside that
   // range are NEVER anything but clients
   level.num_entities = MAX_CLIENTS;
+  return 0;
+}
 
+int gameInit_LocateGameData(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // let the server system know where the entites are
   trap_LocateGameData( level.gentities, level.num_entities, sizeof( gentity_t ),
-    &level.clients[ 0 ].ps, sizeof( level.clients[ 0 ] ) );
+      &level.clients[ 0 ].ps, sizeof( level.clients[ 0 ] ) );
+  return 0;
+}
 
-  level.emoticonCount = BG_LoadEmoticons( level.emoticons, NULL );
-
+int gameInit_SetConfigstring(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   trap_SetConfigstring( CS_INTERMISSION, "0" );
+  return 0;
+}
 
+int gameInit_Emoticons(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  level.emoticonCount = BG_LoadEmoticons( level.emoticons, NULL );
+  return 0;
+}
+
+int gameInit_Layout(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // test to see if a custom buildable layout will be loaded
   G_LayoutSelect( );
 
@@ -638,41 +664,193 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   // load up a custom building layout if there is one
   G_LayoutLoad( );
 
+  return 0;
+}
+
+int gameInit_InitAllowedGameElements(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // the map might disable some things
   BG_InitAllowedGameElements( );
+  return 0;
+}
 
+int gameInit_FindTeams(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // general initialization
   G_FindTeams( );
+  return 0;
+}
 
+int gameInit_InitClassConfigs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   BG_InitClassConfigs( );
+  return 0;
+}
+
+int gameInit_InitBuildableConfigs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   BG_InitBuildableConfigs( );
+  return 0;
+}
+
+int gameInit_InitDamageLocations(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitDamageLocations( );
+  return 0;
+}
+
+int gameInit_InitMapRotations(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitMapRotations( );
+  return 0;
+}
+
+int gameInit_InitSpawnQueue(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitSpawnQueue( &level.alienSpawnQueue );
   G_InitSpawnQueue( &level.humanSpawnQueue );
+  return 0;
+}
 
-  if( g_debugMapRotation.integer )
-    G_PrintRotations( );
-
+int gameInit_InitVoices(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   level.voices = BG_VoiceInit( );
   BG_PrintVoices( level.voices, g_debugVoices.integer );
+  return 0;
+}
 
-  //reset stages
+int gameInit_ResetStages(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   trap_Cvar_Set( "g_alienStage", va( "%d", S1 ) );
   trap_Cvar_Set( "g_humanStage", va( "%d", S1 ) );
   trap_Cvar_Set( "g_alienCredits", 0 );
   trap_Cvar_Set( "g_humanCredits", 0 );
 
-  G_Printf( "-----------------------------------\n" );
+  return 0;
+}
 
+int gameInit_RemapTeamShaders(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_RemapTeamShaders( );
+  return 0;
+}
 
+int gameInit_CountSpawns(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // so the server counts the spawns without a client attached
   G_CountSpawns( );
+  return 0;
+}
 
+int gameInit_ResetPTRCConnections(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_ResetPTRConnections( );
+  return 0;
+}
 
-  // TODO: Call event here: game.on_init
+void G_InitEvent_GameInit(void)
+{
+  scObject_t *self = SC_Event_NewObject();
+  scEvent_t *event = self->data.data.userdata;
+  scDataTypeValue_t value, out;
+  scEventNode_t *parent;
+
+  SC_Event_AddMainGroups(event, &out);
+
+  parent = SC_Event_Find(event, "action");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitLevel", gameInit_InitLevel), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitLogs", gameInit_InitLogs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("MapConfig", gameInit_MapConfig), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ReadAdminConfig", gameInit_ReadAdminConfig), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitEntities", gameInit_InitEntities), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("LocateGameData", gameInit_LocateGameData), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SetConfigstring", gameInit_SetConfigstring), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("Emoticons", gameInit_Emoticons), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("Layout", gameInit_Layout), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitAllowedGameElements", gameInit_InitAllowedGameElements), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("FindTeams", gameInit_FindTeams), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitClassConfigs", gameInit_InitClassConfigs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitBuildableConfigs", gameInit_InitBuildableConfigs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitDamageLocations", gameInit_InitDamageLocations), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitMapRotations", gameInit_InitMapRotations), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitSpawnQueue", gameInit_InitSpawnQueue), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitVoices", gameInit_InitVoices), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ResetStages", gameInit_ResetStages), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("RemapTeamShaders", gameInit_RemapTeamShaders), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CountSpawns", gameInit_CountSpawns), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ResetPTRCConnections", gameInit_ResetPTRCConnections), &out);
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet("event.game.Init", &value);
+}
+
+int G_InitGame( int levelTime, int randomSeed, int restart )
+{
+  scDataTypeHash_t *hash;
+  scObject_t       *event;
+  scDataTypeValue_t value;
+  scDataTypeValue_t out;
+  int               ret;
+
+  // Core initialization stuff arn't registered under scripting events
+  srand( randomSeed );
+
+  G_RegisterCvars( );
+
+  G_Printf( "------- Game Initialization -------\n" );
+  G_Printf( "gamename: %s\n", GAME_VERSION );
+  G_Printf( "gamedate: %s\n", __DATE__ );
+
+  BG_InitMemory( );
+
+  G_SVCommandsInit();
+  G_InitScript( );
+
+  hash = SC_HashNew();
+  SC_HashGCInc(hash);
+
+  SC_NamespaceGet("event.game.Init", &value);
+  event = value.data.object;
+
+  value.type = TYPE_INTEGER;
+  value.data.integer = levelTime;
+  SC_HashSet(hash, "levelTime", &value);
+
+  value.type = TYPE_BOOLEAN;
+  value.data.boolean = restart;
+  SC_HashSet(hash, "restart", &value);
+
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
+    G_Error(SC_StringToChar(out.data.string));
+
+  SC_HashGCDec(hash);
+
+  G_Printf( "-----------------------------------\n" );
+
+  return ret;
 }
 
 /*
