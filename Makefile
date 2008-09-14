@@ -173,6 +173,7 @@ Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
 Q3LCCETCDIR=$(MOUNT_DIR)/tools/lcc/etc
 Q3LCCSRCDIR=$(MOUNT_DIR)/tools/lcc/src
 SDLHDIR=$(MOUNT_DIR)/SDL12
+FTDIR=$(MOUNT_DIR)/freetype2
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -485,7 +486,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ifeq ($(USE_FREETYPE),1)
     BASE_CFLAGS += -DBUILD_FREETYPE
-    BASE_CFLAGS += -I/include/freetype2
+    BASE_CFLAGS += -I$(FTDIR)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -508,7 +509,7 @@ ifeq ($(PLATFORM),mingw32)
   CLIENT_LDFLAGS = -mwindows -lgdi32 -lole32 -lopengl32
 
   ifeq ($(USE_FREETYPE),1)
-    CLIENT_LDFLAGS += -lfreetype
+    CLIENT_LDFLAGS += $(LIBSDIR)/win32/libfreetype.dll.a
   endif
 
   ifeq ($(USE_CURL),1)
