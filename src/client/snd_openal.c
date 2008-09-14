@@ -99,6 +99,22 @@ static const char *S_AL_ErrorMsg(ALenum error)
 	}
 }
 
+/*
+=================
+S_AL_ClearError
+=================
+*/
+static void S_AL_ClearError( qboolean quiet )
+{
+	int error = qalGetError();
+
+	if( quiet )
+		return;
+	if(error != AL_NO_ERROR)
+		Com_Printf(S_COLOR_YELLOW "WARNING: unhandled AL error: %s\n",
+			S_AL_ErrorMsg(error));
+}
+
 
 //===========================================================================
 
@@ -219,7 +235,8 @@ static void S_AL_BufferUnload(sfxHandle_t sfx)
 	if(!knownSfx[sfx].inMemory)
 		return;
 
-	// Delete it
+	// Delete it 
+	S_AL_ClearError( qfalse );
 	qalDeleteBuffers(1, &knownSfx[sfx].buffer);
 	if((error = qalGetError()) != AL_NO_ERROR)
 		Com_Printf( S_COLOR_RED "ERROR: Can't delete sound buffer for %s\n",
@@ -303,6 +320,7 @@ static void S_AL_BufferLoad(sfxHandle_t sfx)
 	format = S_AL_Format(info.width, info.channels);
 
 	// Create a buffer
+	S_AL_ClearError( qfalse );
 	qalGenBuffers(1, &knownSfx[sfx].buffer);
 	if((error = qalGetError()) != AL_NO_ERROR)
 	{
@@ -636,7 +654,8 @@ qboolean S_AL_SrcInit( void )
 		limit = MAX_SRC;
 	else if(limit < 16)
 		limit = 16;
-
+ 
+	S_AL_ClearError( qfalse );
 	// Allocate as many sources as possible
 	for(i = 0; i < limit; i++)
 	{
@@ -1547,6 +1566,8 @@ void S_AL_MusicProcess(ALuint b)
 	ALuint format;
 	snd_stream_t *curstream;
 
+	S_AL_ClearError( qfalse );
+
 	if(intro_stream)
 		curstream = intro_stream;
 	else
@@ -1921,7 +1942,7 @@ void S_AL_SoundInfo( void )
 	Com_Printf( "  Version:    %s\n", qalGetString( AL_VERSION ) );
 	Com_Printf( "  Renderer:   %s\n", qalGetString( AL_RENDERER ) );
 	Com_Printf( "  AL Extensions: %s\n", qalGetString( AL_EXTENSIONS ) );
-	Com_Printf( "  ALC Extensions: %s\n", qalcGetString( NULL, ALC_EXTENSIONS ) );
+	Com_Printf( "  ALC Extensions: %s\n", qalcGetString( alDevice, ALC_EXTENSIONS ) );
 	if(qalcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
 	{
 		Com_Printf("  Device:     %s\n", qalcGetString(alDevice, ALC_DEVICE_SPECIFIER));
