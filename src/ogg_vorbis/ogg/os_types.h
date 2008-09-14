@@ -131,7 +131,8 @@
 
 #else
 
-#  error Platform not supported
+#  include <sys/types.h>
+#  include <ogg/config_types.h>
 
 #endif
 
