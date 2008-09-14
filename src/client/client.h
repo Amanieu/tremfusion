@@ -425,7 +425,6 @@ extern	cvar_t	*cl_logs;
 
 extern	cvar_t	*cl_consoleKeys;
 
-extern  cvar_t  *cl_consoleHeight;
 extern  cvar_t  *cl_consoleFont;
 extern  cvar_t  *cl_consoleFontSize;
 extern  cvar_t  *cl_consoleFontKerning;

@@ -68,6 +68,8 @@ cvar_t		*scr_conColorRed;
 cvar_t		*scr_conColorBlue;
 cvar_t		*scr_conColorGreen;
 
+cvar_t		*scr_conHeight;
+
 // Color and alpha for bar under console
 cvar_t		*scr_conBarSize;
 
@@ -503,6 +505,8 @@ void Con_Init (void) {
 	scr_conColorRed = Cvar_Get ("scr_conColorRed", "0", CVAR_ARCHIVE);
 	scr_conColorBlue = Cvar_Get ("scr_conColorBlue", "0.1", CVAR_ARCHIVE);
 	scr_conColorGreen = Cvar_Get ("scr_conColorGreen", "0", CVAR_ARCHIVE);
+
+	scr_conHeight = Cvar_Get ("scr_conHeight", "50", CVAR_ARCHIVE);
 	
 	scr_conBarSize = Cvar_Get ("scr_conBarSize", "2", CVAR_ARCHIVE);
 	
@@ -902,7 +906,7 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-		con.finalFrac = MAX(0.10, 0.01 * cl_consoleHeight->integer);  // configured console percentage
+		con.finalFrac = MAX(0.10, 0.01 * scr_conHeight->integer);  // configured console percentage
 	else
 		con.finalFrac = 0;				// none visible
 	
