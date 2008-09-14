@@ -1130,6 +1130,7 @@ void CL_FlushMemory( qboolean defaultUI ) {
 	// get our menus back
 	if ( defaultUI ) {
 		Cvar_Set( "fs_game", cl_defaultUI->string );
+		Cvar_Set( "fs_basegame", "tremfusion" );
 		FS_ConditionalRestart( clc.checksumFeed );
 	}
 
@@ -3231,6 +3232,7 @@ void CL_Init( void ) {
 
 	cl_defaultUI = Cvar_Get ("cl_defaultUI", "base", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
+	Cvar_Set ("fs_basegame", "tremfusion");
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
 

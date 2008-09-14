@@ -3297,7 +3297,7 @@ restart if necessary
 =================
 */
 qboolean FS_ConditionalRestart( int checksumFeed ) {
-	if( fs_gamedirvar->modified || fs_extrapaks->modified || checksumFeed != fs_checksumFeed ) {
+	if( fs_gamedirvar->modified || fs_basegame->modified || fs_extrapaks->modified || checksumFeed != fs_checksumFeed ) {
 		FS_Restart( checksumFeed );
 		return qtrue;
 	}
