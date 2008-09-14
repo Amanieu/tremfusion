@@ -690,7 +690,7 @@ qboolean Cvar_Command( void ) {
 	}
 
 	// set the value if forcing isn't required
-	Cvar_Set2 (v->name, Cmd_Argv(1), qfalse);
+	Cvar_Set2 (v->name, Cmd_Args(), qfalse);
 	return qtrue;
 }
 
@@ -792,12 +792,12 @@ weren't declared in C code.
 ============
 */
 void Cvar_Set_f( void ) {
-	int		i, c, l, len;
-	char	cmd[5], combined[MAX_STRING_TOKENS];
+	int		c, flag;
+	char	*cmd;
 	cvar_t *v;
 
 	c = Cmd_Argc();
-	Q_strncpyz( cmd, Cmd_Argv(0), sizeof( cmd ) );
+	cmd = Cmd_Argv(0);
 
 	if ( c < 2 ) {
 		Com_Printf ("usage: %s <variable> <value>\n", cmd);
@@ -808,37 +808,25 @@ void Cvar_Set_f( void ) {
 		return;
 	}
 
-	combined[0] = 0;
-	l = 0;
-	for ( i = 2 ; i < c ; i++ ) {
-		len = strlen ( Cmd_Argv( i ) + 1 );
-		if ( l + len >= MAX_STRING_TOKENS - 2 ) {
-			break;
-		}
-		strcat( combined, Cmd_Argv( i ) );
-		if ( i != c-1 ) {
-			strcat( combined, " " );
-		}
-		l += len;
-	}
-	v = Cvar_Set2 (Cmd_Argv(1), combined, qfalse);
+	v = Cvar_Set2 (Cmd_Argv(1), Cmd_ArgsFrom(2), qfalse);
 	if( !v ) {
 		return;
 	}
 	switch( cmd[3] ) {
 		default:
-		case '\0':
-			break;
+			return;
 		case 'u':
-			v->flags |= CVAR_USERINFO;
+			flag = CVAR_USERINFO;
 			break;
 		case 's':
-			v->flags |= CVAR_SERVERINFO;
+			flag = CVAR_SERVERINFO;
 			break;
 		case 'a':
-			v->flags |= CVAR_ARCHIVE;
+			flag = CVAR_ARCHIVE;
 			break;
 	}
+	v->flags |= flag;
+	cvar_modifiedFlags |= flag;
 }
 
 /*
