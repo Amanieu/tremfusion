@@ -2900,7 +2900,7 @@ static void FS_Startup( const char *gameName )
 	FS_ReorderExtraPaks();
 
 	// print the current search paths
-	if ( com_developer->integer )
+	if ( com_developer && com_developer->integer )
 		FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
