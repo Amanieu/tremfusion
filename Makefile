@@ -346,7 +346,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_FREETYPE),1)
-    CLIENT_LDFLAGS += -lfreetype
+    CLIENT_LDFLAGS += $(shell freetype-config --libs)
   endif
 
   ifeq ($(ARCH),x86)
