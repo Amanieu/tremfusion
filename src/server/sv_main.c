@@ -35,6 +35,7 @@ cvar_t	*sv_fps;				// time rate for running non-clients
 cvar_t	*sv_timeout;			// seconds without any message
 cvar_t	*sv_zombietime;			// seconds to sink messages after disconnect
 cvar_t	*sv_rconPassword;		// password for remote server commands
+cvar_t	*sv_rconLog;			// log file for remote server commands
 cvar_t	*sv_privatePassword;	// password for the privateClient slots
 cvar_t	*sv_allowDownload;
 cvar_t	*sv_maxclients;
@@ -474,6 +475,7 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 	char		sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 	static unsigned int lasttime = 0;
 	char *cmd_aux;
+	fileHandle_t rconLog = 0;
 
 	// TTimo - https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=534
 	time = Com_Milliseconds();
@@ -482,15 +484,34 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 	}
 	lasttime = time;
 
+	if(strlen(sv_rconLog->string)) {
+		rconLog = FS_FOpenFileAppend(sv_rconLog->string);
+		if (!rconLog) {
+			Com_Printf("Warning: Unable to open sv_rconLog: \"%s\"", sv_rconLog->string);
+			Cvar_Set ("sv_rconLog", "");
+		}
+	}
+	
+	const char *message = "";
 	if ( !strlen( sv_rconPassword->string ) ||
 		strcmp (Cmd_Argv(1), sv_rconPassword->string) ) {
 		valid = qfalse;
-		Com_Printf ("Bad rcon from %s:\n%s\n", NET_AdrToString (from), Cmd_Argv(2) );
+		message = va("Bad rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2));
 	} else {
 		valid = qtrue;
-		Com_Printf ("Rcon from %s:\n%s\n", NET_AdrToString (from), Cmd_Argv(2) );
+		message = va("Rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2));
 	}
-
+	
+	Com_Printf (message);
+	if (rconLog) {
+		qtime_t qt;
+		Com_RealTime(&qt);
+		char *timestamp = va( "%02i/%02i/%02i %02i:%02i:%02i  ", qt.tm_mday, qt.tm_mon, qt.tm_year-100, qt.tm_hour, qt.tm_min, qt.tm_sec );
+		FS_Write(timestamp, strlen(timestamp), rconLog);
+		FS_Write(message, strlen(message), rconLog);
+		FS_FCloseFile(rconLog);
+	}
+	
 	// start redirecting all print outputs to the packet
 	svs.redirectAddress = from;
 	Com_BeginRedirect (sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);

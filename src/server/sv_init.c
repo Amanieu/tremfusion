@@ -619,6 +619,7 @@ void SV_Init (void) {
 
 	// server vars
 	sv_rconPassword = Cvar_Get ("rconPassword", "", CVAR_TEMP );
+	sv_rconLog = Cvar_Get ("sv_rconLog", "", CVAR_ARCHIVE );
 	sv_privatePassword = Cvar_Get ("sv_privatePassword", "", CVAR_TEMP );
 	sv_fps = Cvar_Get ("sv_fps", "20", CVAR_TEMP );
 	sv_timeout = Cvar_Get ("sv_timeout", "200", CVAR_TEMP );
