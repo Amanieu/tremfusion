@@ -2822,7 +2822,9 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
+#ifdef BUILD_FREETYPE
 	fileHandle_t f; 
+#endif
 
 	// this sets up the renderer and calls R_Init
 	re.BeginRegistration( &cls.glconfig );
@@ -2833,7 +2835,6 @@ void CL_InitRenderer( void ) {
     cls.useLegacyConsoleFont = qtrue;
 
 #ifdef BUILD_FREETYPE
-
     // Register console font specified by cl_consoleFont, if any
     // filehandle is unused but forces FS_FOpenFileRead() to heed purecheck because it does not when filehandle is NULL 
     if( *cl_consoleFont->string )
@@ -2845,7 +2846,6 @@ void CL_InitRenderer( void ) {
       }
       FS_FCloseFile( f );
     }
-
 #endif
 
 	cls.whiteShader = re.RegisterShader( "white" );
