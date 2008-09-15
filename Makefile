@@ -448,7 +448,7 @@ ifeq ($(PLATFORM),darwin)
   LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
   CLIENT_LDFLAGS += -framework Cocoa -framework IOKit -framework OpenGL \
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
-  LDFLAGS = -lz
+  LDFLAGS += -lz
 
   OPTIMIZE += -falign-loops=16
 
