@@ -3277,6 +3277,8 @@ void FS_Restart( int checksumFeed ) {
 	}
 
 	if ( Q_stricmp(fs_gamedirvar->string, lastValidGame) ) {
+		Cbuf_AddText ("exec default.cfg\n");
+
 		// skip the autogen.cfg if "safe" is on the command line
 		if ( !Com_SafeMode() ) {
 			Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
