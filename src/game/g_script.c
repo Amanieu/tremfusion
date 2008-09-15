@@ -981,6 +981,36 @@ static int autoload_dir(const char *dirname)
   return numFiles;
 }
 
+int G_ExecFileNow(const char *filename)
+{
+  char *text;
+  fileHandle_t h;
+  int len;
+  char *idx, *lidx;
+
+  Com_Printf(va("load \"%s\"\n", filename));
+  len = trap_FS_FOpenFile(filename, &h, FS_READ);
+  text = BG_Alloc(len+1);
+
+  trap_FS_Read(text, len, h);
+  text[len] = '\0';
+  trap_FS_FCloseFile(h);
+
+  lidx = text;
+  while((idx = strchr(lidx, '\n')))
+  {
+    *idx = '\0';
+
+    Com_Printf("exec %s\n", lidx);
+    trap_SendConsoleCommand(EXEC_NOW, lidx);
+    lidx = idx + 1;
+  }
+
+  BG_Free(text);
+
+  return 0;
+}
+
 void G_InitScript( void )
 {
   char            buf[MAX_STRING_CHARS];
@@ -1011,13 +1041,8 @@ void G_InitScript( void )
   numFiles = autoload_dir(va(GAME_SCRIPT_DIRECTORY "map-%s/", buf));
   Com_Printf("%i local files parsed\n", numFiles);
 
-  Com_Printf(va("load \"" GAME_SCRIPT_DIRECTORY "map-%s.cfg\"\n", buf));
-  trap_SendConsoleCommand(EXEC_APPEND,
-      va("exec \"" GAME_SCRIPT_DIRECTORY "map-%s.cfg\"\n", buf));
-
-  Com_Printf("load \"" GAME_SCRIPT_DIRECTORY "autoexec.cfg\"\n");
-  trap_SendConsoleCommand(EXEC_APPEND,
-      "exec \"" GAME_SCRIPT_DIRECTORY "autoexec.cfg\"\n");
+  G_ExecFileNow(va(GAME_SCRIPT_DIRECTORY "map-%s.cfg", buf));
+  G_ExecFileNow(GAME_SCRIPT_DIRECTORY "autoexec.cfg");
 
   Com_Printf("-----------------------------------\n");
 }
