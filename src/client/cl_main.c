@@ -67,7 +67,6 @@ cvar_t	*cl_showSend;
 cvar_t	*cl_timedemo;
 cvar_t	*cl_timedemoLog;
 cvar_t	*cl_autoRecordDemo;
-cvar_t	*cl_autoScreenshot;
 cvar_t	*cl_aviFrameRate;
 cvar_t	*cl_aviMotionJpeg;
 cvar_t	*cl_forceavidemo;
@@ -1203,17 +1202,6 @@ Called before parsing a gamestate
 =====================
 */
 void CL_ClearState (void) {
-	if( cl_autoScreenshot->integer && cls.state == CA_ACTIVE ) {
-		qtime_t now;
-		Com_RealTime( &now );
-		Cmd_ExecuteString( va( "screenshotJPEG %04d%02d%02d%02d%02d%02d",
-					1900 + now.tm_year,
-					1 + now.tm_mon,
-					now.tm_mday,
-					now.tm_hour,
-					now.tm_min,
-					now.tm_sec ) );
-	}
 
 //	S_StopAllSounds();
 
@@ -3173,7 +3161,6 @@ void CL_Init( void ) {
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_timedemoLog = Cvar_Get ("cl_timedemoLog", "", CVAR_ARCHIVE);
 	cl_autoRecordDemo = Cvar_Get ("cl_autoRecordDemo", "0", CVAR_ARCHIVE);
-	cl_autoScreenshot = Cvar_Get ("cl_autoScreenshot", "0", CVAR_ARCHIVE);
 	cl_aviFrameRate = Cvar_Get ("cl_aviFrameRate", "25", CVAR_ARCHIVE);
 	cl_aviMotionJpeg = Cvar_Get ("cl_aviMotionJpeg", "1", CVAR_ARCHIVE);
 	cl_forceavidemo = Cvar_Get ("cl_forceavidemo", "0", 0);
