@@ -464,9 +464,10 @@ void CL_SystemInfoChanged( void ) {
 	}
 	if ( clc.demoplaying ) {
 		Cvar_Set( "sv_pure", "0" );
+		Cvar_Set( "sv_restricted", "0" );
 		Cvar_Set( "sv_cheats", "1" );
 	} else
-		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
+		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" ) || Cvar_VariableValue( "sv_restricted" );
 }
 
 /*

@@ -277,6 +277,7 @@ extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_dequeuePeriod;
 extern	cvar_t	*sv_demoState;
 extern	cvar_t	*sv_autoDemo;
+extern	cvar_t	*sv_restricted;
 
 extern	cvar_t	*sv_minPing;
 #ifdef USE_VOIP
