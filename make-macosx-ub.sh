@@ -12,7 +12,7 @@ BIN_OBJ="
 	build/release-darwin-x86/tremulous-smp.x86
 "
 BIN_DEDOBJ="
-	build/release-darwin-ub/tremded.ppc
+	build/release-darwin-ppc/tremded.ppc
 	build/release-darwin-x86/tremded.x86
 "
 BASE_OBJ="
@@ -132,21 +132,10 @@ fi
 # For parallel make on multicore boxes...
 NCPU=`sysctl -n hw.ncpu`
 
-# ppc dedicated server
-echo "Building Dedicated Server using $PPC_SERVER_SDK"
-sleep 2
 if [ -d build/release-darwin-ppc ]; then
 	rm -r build/release-darwin-ppc
 fi
-(ARCH=ppc BUILD_CLIENT_SMP=0 BUILD_CLIENT=0 BUILD_GAME_VM=0 BUILD_GAME_SO=0 \
-	CFLAGS=$PPC_SERVER_CFLAGS LDFLAGS=$PPC_SERVER_LDFLAGS make -j$NCPU) || exit 1;
-cp build/release-darwin-ppc/tremded.ppc $DESTDIR
-
-# ppc client
-if [ -d build/release-darwin-ppc ]; then
-	rm -r build/release-darwin-ppc
-fi
-(ARCH=ppc USE_OPENAL_DLOPEN=1 BUILD_CLIENT_SMP=1 BUILD_SERVER=0 CC=$PPC_CLIENT_CC \
+(ARCH=ppc USE_OPENAL_DLOPEN=1 BUILD_CLIENT_SMP=1 CC=$PPC_CLIENT_CC \
 	CFLAGS=$PPC_CLIENT_CFLAGS LDFLAGS=$PPC_CLIENT_LDFLAGS make -j$NCPU) || exit 1;
 
 # intel client and server
@@ -206,7 +195,5 @@ echo "
 
 lipo -create -o $DESTDIR/$APPBUNDLE/Contents/MacOS/$BINARY $BIN_OBJ
 lipo -create -o $DESTDIR/$APPBUNDLE/Contents/MacOS/$DEDBIN $BIN_DEDOBJ
-rm $DESTDIR/tremded.ppc
-cp $BASE_OBJ $DESTDIR/$BASEDIR/
 cp src/libs/macosx/*.dylib $DESTDIR/$APPBUNDLE/Contents/MacOS/
 

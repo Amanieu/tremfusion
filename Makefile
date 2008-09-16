@@ -429,7 +429,6 @@ ifeq ($(PLATFORM),darwin)
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
     endif
-    CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
   endif
 
   BASE_CFLAGS += -D_THREAD_SAFE=1
@@ -444,6 +443,15 @@ ifeq ($(PLATFORM),darwin)
   LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
   CLIENT_LDFLAGS += -framework Cocoa -framework IOKit -framework OpenGL \
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
+
+  ifeq ($(USE_CODEC_VORBIS),1)
+    LIBVORBIS=$(B)/libvorbis.a
+    LIBVORBISSRC=$(LIBSDIR)/macosx/libvorbis.a
+    LIBVORBISFILE=$(B)/libvorbisfile.a
+    LIBVORBISFILESRC=$(LIBSDIR)/macosx/libvorbisfile.a
+    LIBOGG=$(B)/libogg.a
+    LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
+  endif
 
   OPTIMIZE += -falign-loops=16
 
@@ -1440,15 +1448,15 @@ ifneq ($(USE_TTY_CLIENT),1)
     $(B)/clientsmp/sdl_glimp.o
 endif
 
-$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN)
+$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LDFLAGS) \
-		$(LDFLAGS) $(LIBSDLMAIN)
+		$(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG)
 
-$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN)
+$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LDFLAGS) \
-		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN)
+		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
@@ -1458,7 +1466,29 @@ $(LIBSDLMAIN) : $(LIBSDLMAINSRC)
 endif
 endif
 
+ifneq ($(strip $(LIBOGG)),)
+ifneq ($(strip $(LIBOGGSRC)),)
+$(LIBOGG) : $(LIBOGGSRC)
+	cp $< $@
+	ranlib $@
+endif
+endif
 
+ifneq ($(strip $(LIBVORBIS)),)
+ifneq ($(strip $(LIBVORBISSRC)),)
+$(LIBVORBIS) : $(LIBVORBISSRC)
+	cp $< $@
+	ranlib $@
+endif
+endif
+
+ifneq ($(strip $(LIBVORBISFILE)),)
+ifneq ($(strip $(LIBVORBISFILESRC)),)
+$(LIBVORBISFILE) : $(LIBVORBISFILESRC)
+	cp $< $@
+	ranlib $@
+endif
+endif
 
 #############################################################################
 # DEDICATED SERVER
