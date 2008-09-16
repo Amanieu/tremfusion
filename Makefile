@@ -129,6 +129,10 @@ ifndef USE_INTERNAL_SPEEX
 USE_INTERNAL_SPEEX=1
 endif
 
+ifndef USE_INTERNAL_ZLIB
+USE_INTERNAL_ZLIB=1
+endif
+
 ifndef USE_TTY_CLIENT
 USE_TTY_CLIENT=0
 endif
@@ -313,16 +317,12 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -DNO_VM_COMPILED
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
-
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS)
 
   THREAD_LDFLAGS=-lpthread
-  LDFLAGS=-ldl -lm -lz
+  LDFLAGS=-ldl -lm
 
   CLIENT_LDFLAGS=
 
@@ -402,10 +402,6 @@ ifeq ($(PLATFORM),darwin)
     BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
-
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -448,7 +444,6 @@ ifeq ($(PLATFORM),darwin)
   LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
   CLIENT_LDFLAGS += -framework Cocoa -framework IOKit -framework OpenGL \
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
-  LDFLAGS += -lz
 
   OPTIMIZE += -falign-loops=16
 
@@ -505,10 +500,6 @@ ifeq ($(PLATFORM),mingw32)
     BASE_CFLAGS += -DBUILD_FREETYPE -I$(FTDIR)
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
-
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -528,7 +519,7 @@ ifeq ($(PLATFORM),mingw32)
 
   BINEXT=.exe
 
-  LDFLAGS= -lws2_32 -lwinmm $(LIBSDIR)/win32/libz.a
+  LDFLAGS= -lws2_32 -lwinmm
   CLIENT_LDFLAGS = -mwindows -lgdi32 -lole32 -lopengl32
 
   ifeq ($(USE_FREETYPE),1)
@@ -597,10 +588,6 @@ ifeq ($(PLATFORM),freebsd)
     endif
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
-
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -632,7 +619,7 @@ ifeq ($(PLATFORM),freebsd)
 
   THREAD_LDFLAGS=-lpthread
   # don't need -ldl (FreeBSD)
-  LDFLAGS=-lm -lz
+  LDFLAGS=-lm
 
   CLIENT_LDFLAGS =
 
@@ -670,10 +657,6 @@ ifeq ($(PLATFORM),openbsd)
     endif
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
-
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -695,7 +678,7 @@ ifeq ($(PLATFORM),openbsd)
   SHLIBLDFLAGS=-shared $(LDFLAGS)
 
   THREAD_LDFLAGS=-lpthread
-  LDFLAGS=-lm -lz
+  LDFLAGS=-lm
 
   CLIENT_LDFLAGS =
 
@@ -723,7 +706,7 @@ ifeq ($(PLATFORM),netbsd)
     ARCH=x86
   endif
 
-  LDFLAGS=-lm -lz
+  LDFLAGS=-lm
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS)
@@ -733,10 +716,6 @@ ifeq ($(PLATFORM),netbsd)
 
   ifneq ($(ARCH),x86)
     BASE_CFLAGS += -DNO_VM_COMPILED
-  endif
-
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
   endif
 
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
@@ -759,9 +738,6 @@ ifeq ($(PLATFORM),irix64)
 
   BASE_CFLAGS=-Dstricmp=strcasecmp -Xcpluscomm -woff 1185 \
     -I. $(shell sdl-config --cflags) -I$(ROOT)/usr/include -DNO_VM_COMPILED
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
   RELEASE_CFLAGS=$(BASE_CFLAGS) -O3
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
 
@@ -769,7 +745,7 @@ ifeq ($(PLATFORM),irix64)
   SHLIBCFLAGS=
   SHLIBLDFLAGS=-shared
 
-  LDFLAGS=-ldl -lm -lgen -lz
+  LDFLAGS=-ldl -lm -lgen
   # FIXME: The X libraries probably aren't necessary?
   CLIENT_LDFLAGS=-L/usr/X11/$(LIB) $(shell sdl-config --libs) -lGL \
     -lX11 -lXext -lm
@@ -802,10 +778,6 @@ ifeq ($(PLATFORM),sunos)
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
-
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
 
   OPTIMIZE = -O3 -funroll-loops
 
@@ -840,7 +812,7 @@ ifeq ($(PLATFORM),sunos)
   SHLIBLDFLAGS=-shared $(LDFLAGS)
 
   THREAD_LDFLAGS=-lpthread
-  LDFLAGS=-lsocket -lnsl -ldl -lm -lz
+  LDFLAGS=-lsocket -lnsl -ldl -lm
 
   CLIENT_LDFLAGS +=$(shell sdl-config --libs) -lGL
 
@@ -850,16 +822,12 @@ else # ifeq sunos
 # SETUP AND BUILD -- GENERIC
 #############################################################################
   BASE_CFLAGS=-DNO_VM_COMPILED
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(ZDIR)
-  endif
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared
-  LDFLAGS=-lz
 
 endif #Linux
 endif #darwin
@@ -910,6 +878,12 @@ ifeq ($(USE_VOIP),1)
   else
     CLIENT_LDFLAGS += -lspeex
   endif
+endif
+
+ifeq ($(USE_INTERNAL_ZLIB),1)
+  BASE_CFLAGS += -DNO_GZIP
+else
+  LDFLAGS += -lz
 endif
 
 ifdef DEFAULT_BASEDIR
@@ -1421,6 +1395,14 @@ Q3OBJ += \
 endif
 endif
 
+ifeq ($(USE_INTERNAL_ZLIB),1)
+Q3OBJ += \
+  $(B)/client/adler32.o \
+  $(B)/client/inffast.o \
+  $(B)/client/inflate.o \
+  $(B)/client/inftrees.o \
+  $(B)/client/zutil.o
+endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
@@ -1529,6 +1511,15 @@ ifeq ($(ARCH),x86)
       $(B)/ded/ftola.o \
       $(B)/ded/snapvectora.o \
       $(B)/ded/matha.o
+endif
+
+ifeq ($(USE_INTERNAL_ZLIB),1)
+Q3DOBJ += \
+  $(B)/ded/adler32.o \
+  $(B)/ded/inffast.o \
+  $(B)/ded/inflate.o \
+  $(B)/ded/inftrees.o \
+  $(B)/ded/zutil.o
 endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
@@ -1711,6 +1702,9 @@ $(B)/client/%.o: $(JPDIR)/%.c
 $(B)/client/%.o: $(SPEEXDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(ZDIR)/%.c
+	$(DO_CC)
+
 $(B)/client/%.o: $(RDIR)/%.c
 	$(DO_CC)
 
@@ -1737,6 +1731,9 @@ $(B)/ded/%.o: $(SDIR)/%.c
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(CMDIR)/%.c
+	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.c
