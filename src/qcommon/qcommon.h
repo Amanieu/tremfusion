@@ -422,8 +422,15 @@ void	Cmd_RemoveCommand( const char *cmd_name );
 // don't allow VMs to remove system commands
 void	Cmd_RemoveCommandSafe( const char *cmd_name );
 
+typedef void (*completionFunc_t)( char *args, int argNum );
+
 void	Cmd_CommandCompletion( void(*callback)(const char *s) );
+void	Cmd_AliasCompletion( void(*callback)(const char *s) );
 // callback with each valid string
+void Cmd_SetCommandCompletionFunc( const char *command,
+	completionFunc_t complete );
+void Cmd_CompleteArgument( const char *command, char *args, int argNum );
+void Cmd_CompleteCfgName( char *args, int argNum );
 
 int		Cmd_Argc (void);
 char	*Cmd_Argv (int arg);
@@ -547,6 +554,8 @@ void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
 void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral );
 
 void	Cvar_Restart_f( void );
+
+void Cvar_CompleteCvarName( char *args, int argNum );
 
 extern	int			cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
@@ -726,6 +735,12 @@ typedef struct {
 
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit );
+void Field_CompleteKeyname( void );
+void Field_CompleteFilename( const char *dir,
+		const char *ext, qboolean stripExt );
+void Field_CompleteAlias( void );
+void Field_CompleteCommand( char *cmd,
+		qboolean doCommands, qboolean doCvars );
 
 /*
 ==============================================================

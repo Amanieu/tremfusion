@@ -32,6 +32,21 @@ These commands can only be entered from stdin or by a remote operator datagram
 ===============================================================================
 */
 
+/*
+====================
+SV_CompleteDemoName
+====================
+*/
+static void SV_CompleteDemoName( char *args, int argNum )
+{
+	if( argNum == 2 )
+	{
+		char demoExt[ 16 ];
+
+		Com_sprintf( demoExt, sizeof( demoExt ), ".svdm_%d", PROTOCOL_VERSION );
+		Field_CompleteFilename( "svdemos", demoExt, qtrue );
+	}
+}
 
 /*
 ==================
@@ -602,6 +617,17 @@ static void SV_Demo_Stop_f( void ) {
 
 /*
 ==================
+SV_CompleteMapName
+==================
+*/
+static void SV_CompleteMapName( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteFilename( "maps", "bsp", qtrue );
+	}
+}
+
+/*
+==================
 SV_AddOperatorCommands
 ==================
 */
@@ -621,11 +647,14 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("map_restart", SV_MapRestart_f);
 	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
 	Cmd_AddCommand ("map", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "map", SV_CompleteMapName );
 	Cmd_AddCommand ("devmap", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "devmap", SV_CompleteMapName );
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
 	Cmd_AddCommand ("redirectClient", SV_RedirectClient_f);
 	Cmd_AddCommand ("demo_record", SV_Demo_Record_f);
 	Cmd_AddCommand ("demo_play", SV_Demo_Play_f);
+	Cmd_SetCommandCompletionFunc( "demo_play", SV_CompleteDemoName );
 	Cmd_AddCommand ("demo_stop", SV_Demo_Stop_f);
 }
 
