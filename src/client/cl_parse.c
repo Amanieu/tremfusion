@@ -388,7 +388,7 @@ void CL_SystemInfoChanged( void ) {
 #endif
 
 	if ( clc.demoplaying )
-		cl_connectedToCheatServer = 1;
+		cl_connectedToCheatServer = qtrue;
 	else {
 		s = Info_ValueForKey( systemInfo, "sv_cheats" );
 		cl_connectedToCheatServer = atoi( s );
@@ -466,6 +466,7 @@ void CL_SystemInfoChanged( void ) {
 		Cvar_Set( "sv_pure", "0" );
 		Cvar_Set( "sv_restricted", "0" );
 		Cvar_Set( "sv_cheats", "1" );
+		cl_connectedToPureServer = qfalse;
 	} else
 		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" ) || Cvar_VariableValue( "sv_restricted" );
 }
