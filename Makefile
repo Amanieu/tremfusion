@@ -194,6 +194,8 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
   # FIXME: introduce CLIENT_CFLAGS
   SDL_CFLAGS=$(shell pkg-config --cflags sdl|sed 's/-Dmain=SDL_main//')
   SDL_LIBS=$(shell pkg-config --libs sdl)
+  OGG_CFLAGS=$(shell pkg-config --cflags ogg vorbis vorbisfile)
+  OGG_LIBS=$(shell pkg-config --libs ogg vorbis vorbisfile)
 endif
 
 # version info
@@ -293,6 +295,8 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
 
@@ -329,8 +333,6 @@ ifeq ($(PLATFORM),linux)
   THREAD_LDFLAGS=-lpthread
   LDFLAGS=-ldl -lm
 
-  CLIENT_LDFLAGS=
-
   ifneq ($(USE_TTY_CLIENT),1)
     CLIENT_LDFLAGS += $(shell sdl-config --libs) -lGL
   endif
@@ -348,7 +350,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
-    CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
+    CLIENT_LDFLAGS += $(OGG_LIBS)
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -431,13 +433,19 @@ ifeq ($(PLATFORM),darwin)
   endif
 
   ifeq ($(USE_FREETYPE),1)
-    CLIENT_LDFLAGS += $(LIBSDIR)/macosx/libfreetype.6.dylib
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      CLIENT_LDFLAGS += $(LIBSDIR)/macosx/libfreetype.6.dylib
+    else
+      CLIENT_LDFLAGS += $(shell freetype-config --libs)
+    endif
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
 
@@ -455,12 +463,16 @@ ifeq ($(PLATFORM),darwin)
     $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
 
   ifeq ($(USE_CODEC_VORBIS),1)
-    LIBVORBIS=$(B)/libvorbis.a
-    LIBVORBISSRC=$(LIBSDIR)/macosx/libvorbis.a
-    LIBVORBISFILE=$(B)/libvorbisfile.a
-    LIBVORBISFILESRC=$(LIBSDIR)/macosx/libvorbisfile.a
-    LIBOGG=$(B)/libogg.a
-    LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      LIBVORBIS=$(B)/libvorbis.a
+      LIBVORBISSRC=$(LIBSDIR)/macosx/libvorbis.a
+      LIBVORBISFILE=$(B)/libvorbisfile.a
+      LIBVORBISFILESRC=$(LIBSDIR)/macosx/libvorbisfile.a
+      LIBOGG=$(B)/libogg.a
+      LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
+    else
+      CLIENT_LDFLAGS += $(OGG_LIBS)
+    endif
   endif
 
   OPTIMIZE += -falign-loops=16
@@ -527,6 +539,8 @@ ifeq ($(PLATFORM),mingw32)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
 
@@ -546,7 +560,11 @@ ifeq ($(PLATFORM),mingw32)
   CLIENT_LDFLAGS = -mwindows -lgdi32 -lole32 -lopengl32
 
   ifeq ($(USE_FREETYPE),1)
-    CLIENT_LDFLAGS += $(LIBSDIR)/win32/libfreetype.dll.a
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      CLIENT_LDFLAGS += $(LIBSDIR)/win32/libfreetype.dll.a
+    else
+      CLIENT_LDFLAGS += $(shell freetype-config --libs)
+    endif
   endif
 
   ifeq ($(USE_CURL),1)
@@ -563,7 +581,14 @@ ifeq ($(PLATFORM),mingw32)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
-    CLIENT_LDFLAGS += $(LIBSDIR)/win32/libvorbisfile.a $(LIBSDIR)/win32/libvorbis.a $(LIBSDIR)/win32/libogg.a
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      CLIENT_LDFLAGS += \
+        $(LIBSDIR)/win32/libvorbisfile.a \
+        $(LIBSDIR)/win32/libvorbis.a \
+        $(LIBSDIR)/win32/libogg.a
+    else
+      CLIENT_LDFLAGS += $(OGG_LIBS)
+    endif
   endif
 
   ifeq ($(ARCH),x86)
@@ -615,6 +640,8 @@ ifeq ($(PLATFORM),freebsd)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
 
@@ -655,7 +682,7 @@ ifeq ($(PLATFORM),freebsd)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
-    CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
+    CLIENT_LDFLAGS += $(OGG_LIBS)
   endif
 
 else # ifeq freebsd
@@ -684,6 +711,8 @@ ifeq ($(PLATFORM),openbsd)
     BASE_CFLAGS += -DUSE_CODEC_VORBIS
     ifeq ($(USE_LOCAL_HEADERS),1)
       BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
 
@@ -714,7 +743,7 @@ ifeq ($(PLATFORM),openbsd)
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
-    CLIENT_LDFLAGS += -lvorbisfile -lvorbis -logg
+    CLIENT_LDFLAGS += $(OGG_LIBS)
   endif
 
 else # ifeq openbsd
