@@ -274,7 +274,12 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_FREETYPE),1)
-    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
+    BASE_CFLAGS += -DBUILD_FREETYPE
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(FTDIR)
+    else
+      BASE_CFLAGS += $(shell freetype-config --cflags)
+    endif
   endif
 
   ifeq ($(USE_CURL),1)
@@ -399,7 +404,12 @@ ifeq ($(PLATFORM),darwin)
   BASE_CFLAGS += -fno-strict-aliasing -DMACOS_X -fno-common -pipe
 
   ifeq ($(USE_FREETYPE),1)
-    BASE_CFLAGS += -DBUILD_FREETYPE $(shell freetype-config --cflags)
+    BASE_CFLAGS += -DBUILD_FREETYPE
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(FTDIR)
+    else
+      BASE_CFLAGS += $(shell freetype-config --cflags)
+    endif
   endif
 
   ifeq ($(USE_OPENAL),1)
@@ -421,7 +431,7 @@ ifeq ($(PLATFORM),darwin)
   endif
 
   ifeq ($(USE_FREETYPE),1)
-    CLIENT_LDFLAGS += $(shell freetype-config --libs)
+    CLIENT_LDFLAGS += $(LIBSDIR)/macosx/libfreetype.6.dylib
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -505,7 +515,12 @@ ifeq ($(PLATFORM),mingw32)
   endif
 
   ifeq ($(USE_FREETYPE),1)
-    BASE_CFLAGS += -DBUILD_FREETYPE -I$(FTDIR)
+    BASE_CFLAGS += -DBUILD_FREETYPE
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(FTDIR)
+    else
+      BASE_CFLAGS += $(shell freetype-config --cflags)
+    endif
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
