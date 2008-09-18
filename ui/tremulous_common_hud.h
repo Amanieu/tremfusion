@@ -130,7 +130,6 @@ itemDef
   visible MENU_TRUE
   decoration
   forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 1
-  align ITEM_ALIGN_RIGHT
   textalign ALIGN_RIGHT
   textscale 0.3
   ownerdraw CG_SPEED
