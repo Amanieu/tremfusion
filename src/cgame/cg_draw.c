@@ -1626,7 +1626,7 @@ static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
 
   previousSpeed = speed;
 
-  s = va( "%.0fu/%.0f", speed, speedRecord );
+  s = va( "Speed: %.0f/%.0f", speed, speedRecord );
   w = UI_Text_Width( "0", scale, 0 );
   h = UI_Text_Height( "0", scale, 0 );
   strLength = CG_DrawStrlen( s );
@@ -1643,8 +1643,6 @@ static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
 
     UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, c, 0, 0, textStyle );
   }
-
-  UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, FPS_STRING, 0, 0, textStyle );
 }
 
 
