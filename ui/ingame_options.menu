@@ -4,7 +4,7 @@
   \\ INGAME OPTIONS BOX \\
 
 #define W             320
-#define H             290
+#define H             320
 #define X             10
 #define Y             60
 #define BORDER        10
@@ -410,6 +410,46 @@
       text "Show Charge Bar:"
       cvar "cg_drawChargeBar"
       rect CONTENT_X (CONTENT_Y+(13*ELEM_H)) CONTENT_W ELEM_H
+      textalign ALIGN_RIGHT
+      textvalign VALIGN_CENTER
+      textalignx CONTENT_OFF
+      textscale .25
+      forecolor 1 1 1 1
+      visible MENU_FALSE
+      action
+      {
+        play "sound/misc/menu1.wav";
+      }
+    }
+
+    itemDef
+    {
+      name game
+      group optionsGrp
+      type ITEM_TYPE_YESNO
+      text "Show Lag-o-meter:"
+      cvar "cg_lagometer"
+      rect CONTENT_X (CONTENT_Y+(14*ELEM_H)) CONTENT_W ELEM_H
+      textalign ALIGN_RIGHT
+      textvalign VALIGN_CENTER
+      textalignx CONTENT_OFF
+      textscale .25
+      forecolor 1 1 1 1
+      visible MENU_FALSE
+      action
+      {
+        play "sound/misc/menu1.wav";
+      }
+    }
+
+    itemDef
+    {
+      name game
+      group optionsGrp
+      type ITEM_TYPE_YESNO
+      text "Show Speed Meter:"
+      cvar "cg_drawSpeed"
+      rect CONTENT_X (CONTENT_Y+(15*ELEM_H)) CONTENT_W ELEM_H
       textalign ALIGN_RIGHT
       textvalign VALIGN_CENTER
       textalignx CONTENT_OFF
