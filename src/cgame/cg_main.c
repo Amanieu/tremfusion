@@ -112,6 +112,7 @@ vmCvar_t  cg_shadows;
 vmCvar_t  cg_drawTimer;
 vmCvar_t  cg_drawClock;
 vmCvar_t  cg_drawFPS;
+vmCvar_t  cg_drawSpeed;
 vmCvar_t  cg_drawDemoState;
 vmCvar_t  cg_drawSnapshot;
 vmCvar_t  cg_drawChargeBar;
@@ -239,6 +240,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_drawTimer, "cg_drawTimer", "1", CVAR_ARCHIVE  },
   { &cg_drawClock, "cg_drawClock", "0", CVAR_ARCHIVE  },
   { &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
+  { &cg_drawSpeed, "cg_drawSpeed", "1", CVAR_ARCHIVE  },
   { &cg_drawDemoState, "cg_drawDemoState", "1", CVAR_ARCHIVE  },
   { &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
   { &cg_drawChargeBar, "cg_drawChargeBar", "1", CVAR_ARCHIVE  },

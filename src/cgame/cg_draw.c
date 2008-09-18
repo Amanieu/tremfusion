@@ -1559,6 +1559,94 @@ static void CG_DrawFPS( rectDef_t *rect, float text_x, float text_y,
   }
 }
 
+/*
+==================
+CG_DrawSpeed
+==================
+*/
+#define SPEED_STRING  "u"
+static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
+                        float scale, vec4_t color,
+                        int textalign, int textvalign, int textStyle )
+{
+  char          *s;
+  float         tx, ty;
+  float         w, h, totalWidth;
+  int           i, strLength;
+  playerState_t *ps;
+  float         speed;
+  static float  speedRecord = 0;
+  static float  previousSpeed = 0;
+  static vec4_t previousColor = { 0, 1, 0, 1 };
+
+  if( cg.snap->ps.pm_type == PM_INTERMISSION )
+    return;
+
+  if( !cg_drawSpeed.integer )
+    return;
+
+  if ( cg_drawSpeed.integer > 1  )
+  {
+    speedRecord = 0;
+    trap_Cvar_Set("cg_drawSpeed", "1");
+  }
+
+  ps = &cg.snap->ps;
+  speed = sqrt( pow( (float)ps->velocity[0], 2) + pow( (float)ps->velocity[1], 2 ) );
+
+  if ( speed > speedRecord )
+    speedRecord = speed;
+
+  if ( floor(speed) > floor(previousSpeed) )
+  {
+    color[0] = 0;
+    color[1] = 1;
+    color[2] = 0;
+    color[3] = 1;
+  }
+  else if( floor(speed) < floor(previousSpeed) )
+  {
+    color[0] = 1;
+    color[1] = 0;
+    color[2] = 0;
+    color[3] = 1;
+  }
+  else
+  {
+    color[0] = previousColor[0];
+    color[1] = previousColor[1];
+    color[2] = previousColor[2];
+    color[3] = previousColor[3];
+  }
+
+  previousColor[0] = color[0];
+  previousColor[1] = color[1];
+  previousColor[2] = color[2];
+  previousColor[3] = color[3];
+
+  previousSpeed = speed;
+
+  s = va( "%.0fu/%.0f", speed, speedRecord );
+  w = UI_Text_Width( "0", scale, 0 );
+  h = UI_Text_Height( "0", scale, 0 );
+  strLength = CG_DrawStrlen( s );
+  totalWidth = UI_Text_Width( FPS_STRING, scale, 0 ) + w * strLength;
+
+  CG_AlignText( rect, s, 0.0f, totalWidth, h, textalign, textvalign, &tx, &ty );
+
+  for( i = 0; i < strLength; i++ )
+  {
+    char c[ 2 ];
+
+    c[ 0 ] = s[ i ];
+    c[ 1 ] = '\0';
+
+    UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, c, 0, 0, textStyle );
+  }
+
+  UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, FPS_STRING, 0, 0, textStyle );
+}
+
 
 /*
 =================
@@ -2551,6 +2639,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
       break;
     case CG_CLOCK:
       CG_DrawClock( &rect, text_x, text_y, scale, color, textalign, textvalign, textStyle );
+      break;
+    case CG_SPEED:
+      CG_DrawSpeed( &rect, text_x, text_y, scale, color, textalign, textvalign, textStyle );
       break;
     case CG_TIMER_MINS:
       CG_DrawTimerMins( &rect, color );
