@@ -180,5 +180,6 @@
 #define CG_PLAYER_CROSSHAIR               78
 #define CG_PLAYER_LOCATION                79
 #define CG_SQUAD_MARKERS                  80
+#define CG_SPEED                          81
 
 #endif
