@@ -291,8 +291,6 @@ static int entity_metaset(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
   struct entity_struct_s *cs = object->data.data.userdata;
 
   SC_HashSet(cs->userdata, SC_StringToChar(in[1].data.string), &in[2]);
-
-  out[0].type = TYPE_UNDEF;
   return 0;
 }
 
@@ -301,9 +299,7 @@ static int entity_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
   scObject_t *object = in[0].data.object;
   struct entity_struct_s *cs = object->data.data.userdata;
 
-  SC_HashSet(cs->userdata, SC_StringToChar(in[1].data.string), &out[0]);
-
-  out[1].type = TYPE_UNDEF;
+  SC_HashGet(cs->userdata, SC_StringToChar(in[1].data.string), out);
   return 0;
 }
 
@@ -329,7 +325,7 @@ static int entity_objectMethod(scDataTypeValue_t *in, scDataTypeValue_t *out, sc
 
 static int entity_classMethod(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  scClass_t *class = in[0].data.class;
+  //scClass_t *class = in[0].data.class;
   int type = closure.n;
 
   switch(type)
@@ -337,28 +333,36 @@ static int entity_classMethod(scDataTypeValue_t *in, scDataTypeValue_t *out, scC
     case ENTITY_FIND:
       {
         scDataTypeArray_t *storeArray = SC_ArrayNew();
-        scObjectMember_t *member = SC_ClassGetMember(class, SC_StringToChar(in[1].data.string));
-        const char *pattern = SC_StringToChar(in[2].data.string);
+        scDataTypeFunction_t *function = in[1].data.function;
         gentity_t *entity;
         scDataTypeValue_t value;
         int n = 0;
+        scDataTypeValue_t sin[2];
+        scDataTypeValue_t sout;
 
-        if(member->type != TYPE_STRING)
-          SC_EXEC_ERROR(va("Internal error: search pattern attempt a string but have a %s", SC_DataTypeToString(member->type)));
+        function->argument[0] = TYPE_OBJECT;
+        function->argument[1] = TYPE_UNDEF;
+        function->return_type = TYPE_BOOLEAN;
+        sin[0].type = TYPE_OBJECT;
+        sin[1].type = TYPE_UNDEF;
+        value.type = TYPE_OBJECT;
 
         for(entity = g_entities; entity < &g_entities[ level.num_entities ]; entity++)
         {
-          if(strcmp((const char*)((void*)entity + member->closure.s), pattern) == 0)
+          sin[0].data.object = G_GetScriptingEntity(entity);
+          if(SC_RunFunction(function, sin, &sout) == -1)
+            SC_EXEC_ERROR(va("error in functin pattern: %s", SC_StringToChar(sout.data.string)));
+
+          if(sout.data.boolean)
           {
-            value.type = TYPE_OBJECT;
             value.data.object = G_GetScriptingEntity(entity);
             SC_ArraySet(storeArray, n, &value);
             n++;
           }
         }
 
-        out[0].type = TYPE_ARRAY;
-        out[0].data.array = storeArray;
+        out->type = TYPE_ARRAY;
+        out->data.array = storeArray;
       }
       break;
 
@@ -381,7 +385,47 @@ static int entity_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scCl
   return 0;
 }
 
+static int entity_get_entity_number(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scObject_t *self = in[0].data.object;
+  gentity_t *entity = G_EntityFromScript(self);
+
+  out[0].data.integer = g_entities - entity;
+  return 0;
+}
+
 static scLibObjectMember_t entity_members[] = {
+  { "entityNumber", "", TYPE_INTEGER, NULL, entity_get_entity_number, { .v = NULL } },
+  // Entity State
+  { "number", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.number ) } },
+  { "eType", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.eType ) } },
+  { "eFlags", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.eFlags ) } },
+  /* TODO: need a "trajectory" API type */
+ /* { "pos", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.pos ) } },
+  { "apos", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.apos ) } },*/
+  { "time", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.time ) } },
+  { "time2", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.time2 ) } },
+  { "origin", "", TYPE_OBJECT, entity_object_vec3_set, entity_object_vec3_get, { .s = FIELD_ADDRESS(gentity_t, s.origin ) } },
+  { "origin2", "", TYPE_INTEGER, entity_object_vec3_set, entity_object_vec3_get, { .s = FIELD_ADDRESS(gentity_t, s.origin2 ) } },
+  { "angles", "", TYPE_INTEGER, entity_object_vec3_set, entity_object_vec3_get, { .s = FIELD_ADDRESS(gentity_t, s.angles ) } },
+  { "angles2", "", TYPE_INTEGER, entity_object_vec3_set, entity_object_vec3_get, { .s = FIELD_ADDRESS(gentity_t, s.angles2 ) } },
+  { "otherEntityNum", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.otherEntityNum ) } },
+  { "otherEntityNum2", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.otherEntityNum2 ) } },
+  { "groundEntityNum", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.groundEntityNum ) } },
+  { "constantLight", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.constantLight ) } },
+  { "loopSound", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.loopSound ) } },
+  { "modelindex", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.modelindex ) } },
+  { "modelindex2", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.modelindex2 ) } },
+  { "clientNum", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.clientNum ) } },
+  { "frame", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.frame ) } },
+  { "solid", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.solid ) } },
+  { "event", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.event ) } },
+  { "eventParm", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.eventParm ) } },
+  { "misc", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.misc ) } },
+  { "weapon", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.weapon ) } },
+  { "legsAnim", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.legsAnim ) } },
+  { "torsoAnim", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.torsoAnim ) } },
+  { "generic1", "", TYPE_INTEGER, entity_field_set, entity_field_get, { .s = FIELD_ADDRESS(gentity_t, s.generic1 ) } },
   // Vectors
   // DEPRECATED { "origin",    "", TYPE_OBJECT,  entity_set, entity_get, { .s = ENTITY_ORIGIN },
   // TODO:  entityState_t s and entityShared r
@@ -510,7 +554,7 @@ static scLibObjectMethod_t entity_objectMethods[] = {
 };
 
 static scLibObjectMethod_t entity_classMethods[] = {
-  { "find", "", entity_classMethod, { TYPE_STRING, TYPE_STRING }, TYPE_ARRAY, { .n = ENTITY_FIND } },
+  { "find", "", entity_classMethod, { TYPE_FUNCTION, TYPE_UNDEF }, TYPE_ARRAY, { .n = ENTITY_FIND } },
   { "" },
 };
 
@@ -756,6 +800,29 @@ static int client_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
   return 0;
 }
 
+static int client_vec3_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scObject_t *object = in[0].data.object;
+  int addr = closure.n;
+  gclient_t *client = G_ClientFromScript(object);
+
+  memcpy(*(vec3_t**)((void*)client + addr), (vec3_t*) in[1].data.object->data.data.userdata, sizeof(vec3_t));
+
+  return 0;
+}
+
+static int client_vec3_get(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scObject_t *object = in[0].data.object;
+  int addr = closure.n;
+  gclient_t *client = G_ClientFromScript(object);
+
+  out[0].type = TYPE_OBJECT;
+  out[0].data.object = SC_Vec3FromVec3_t(*(float**)((void*)client + addr));
+
+  return 0;
+}
+
 static int client_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
   scObject_t *object = in[0].data.object;
@@ -804,6 +871,37 @@ static int client_destructor(scDataTypeValue_t *in, scDataTypeValue_t *out, scCl
 
 static scLibObjectMember_t client_members[] = {
   // Player state
+  { "commandTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.commandTime) } },
+  { "pm_type", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.pm_type) } },
+  { "bobCycle", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.bobCycle) } },
+  { "pm_flags", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.pm_flags) } },
+  { "pm_time", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.pm_time) } },
+  { "origin", "", TYPE_OBJECT, client_vec3_set, client_vec3_get, { .s = FIELD_ADDRESS(gclient_t, ps.origin) } },
+  { "velocity", "", TYPE_OBJECT, client_vec3_set, client_vec3_get, { .s = FIELD_ADDRESS(gclient_t, ps.velocity) } },
+  { "weaponTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.weaponTime) } },
+  { "gravity", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.gravity) } },
+  { "speed", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.speed) } },
+  /*{ "delta_angles", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.delta_angles) } },*/
+  { "groundEntityNum", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.groundEntityNum) } },
+  { "legsTimer", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.legsTimer) } },
+  { "legsAnim", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.legsAnim) } },
+  { "torsoTimer", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.torsoTimer) } },
+  { "torsoAnim", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.torsoAnim) } },
+  { "movementDir", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.movementDir) } },
+  { "grapplePoint", "", TYPE_OBJECT, client_vec3_set, client_vec3_get, { .s = FIELD_ADDRESS(gclient_t, ps.grapplePoint) } },
+  { "eFlags", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.eFlags) } },
+  { "eventSequence", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.eventSequence) } },
+  { "events", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.events) } },
+  { "eventParms", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.eventParms) } },
+  { "externalEventTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.externalEventTime) } },
+  { "clientNum", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.clientNum) } },
+  { "weapon", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.weapon) } },
+  { "weaponstate", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.weaponstate) } },
+  { "viewangles", "", TYPE_OBJECT, client_vec3_set, client_vec3_get, { .s = FIELD_ADDRESS(gclient_t, ps.viewangles) } },
+  { "damageEvent", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.damageEvent) } },
+  { "damageYaw", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.damageYaw) } },
+  { "damagePitch", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.damagePitch) } },
+  { "damageCount", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.damageCount) } },
   { "stat_health", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_HEALTH]) } },
   { "stat_items", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_ITEMS]) } },
   { "stat_slots", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_SLOTS]) } },
@@ -813,12 +911,33 @@ static scLibObjectMember_t client_members[] = {
   { "stat_max_health", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_MAX_HEALTH]) } },
   { "stat_class", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_CLASS]) } },
   { "stat_team", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_TEAM]) } },
-  { "stat_stamina", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_STAMINA]) } },
   { "stat_state", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_STATE]) } },
   { "stat_misc", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_MISC]) } },
   { "stat_buildable", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_BUILDABLE]) } },
   { "stat_falldist", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_FALLDIST]) } },
   { "stat_viewlock", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.stats[STAT_VIEWLOCK]) } },
+  { "pers_score", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_SCORE]) } },
+  { "pers_hits", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_HITS]) } },
+  { "pers_spawns", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_SPAWNS]) } },
+  { "pers_specstate", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_SPECSTATE]) } },
+  { "pers_spawn_count", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_SPAWN_COUNT]) } },
+  { "pers_attacker", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_ATTACKER]) } },
+  { "pers_killed", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_KILLED]) } },
+  { "pers_state", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_STATE]) } },
+  { "pers_credit", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_CREDIT]) } },
+  { "pers_queuepos", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_QUEUEPOS]) } },
+  { "pers_newweapon", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.persistant[PERS_NEWWEAPON]) } },
+  /*{ "misc...", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.misc...) } },*/
+  { "ammo", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.ammo) } },
+  { "clips", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.clips) } },
+  { "ammo_extra", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.ammo_extra) } },
+  { "generic1", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.generic1) } },
+  { "loopSound", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.loopSound) } },
+  { "otherEntityNum", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.otherEntityNum) } },
+  { "ping", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.ping) } },
+  { "pmove_framecount", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.pmove_framecount) } },
+  { "jumppad_frame", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.jumppad_frame) } },
+  { "entityEventSequence", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.entityEventSequence) } },
   // Session
   { "spectatorTime", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorTime) } },
   { "spectatorState", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorState) } },
@@ -884,7 +1003,7 @@ static scLibObjectMember_t client_members[] = {
 };
 
 static scLibObjectMethod_t client_methods[] = {
-  { "spawn", "", client_method, { TYPE_OBJECT }, TYPE_UNDEF, { .n = CLIENT_SPAWN } },
+  { "spawn", "", client_method, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, { .n = CLIENT_SPAWN } },
   { "" },
 };
 
@@ -901,33 +1020,57 @@ static scLibObjectDef_t client_def = {
 };
 
 
-/*
-======================================================================
-
-Bot
-
-======================================================================
-*/
-
-/*static scLibObjectDef_t bot_def = { 
-  "Client", "",
-  bot_constructor, { TYPE_INTEGER, TYPE_UNDEF },
-  bot_destructor,
-  bot_members, 
-  bot_methods, 
-  bot_fields,
-  NULL
-};*/
-
 static scConstant_t constants[] = {
   { "TEAM_NONE", TYPE_INTEGER, { .n = TEAM_NONE } },
   { "TEAM_ALIENS", TYPE_INTEGER, { .n = TEAM_ALIENS } },
   { "TEAM_HUMANS", TYPE_INTEGER, { .n = TEAM_HUMANS } },
+
   { "SPECTATOR_NOT", TYPE_INTEGER, { .n = SPECTATOR_NOT } },
   { "SPECTATOR_FREE", TYPE_INTEGER, { .n = SPECTATOR_FREE } },
   { "SPECTATOR_LOCKED", TYPE_INTEGER, { .n = SPECTATOR_LOCKED } },
   { "SPECTATOR_FOLLOW", TYPE_INTEGER, { .n = SPECTATOR_FOLLOW } },
   { "SPECTATOR_SCOREBOARD", TYPE_INTEGER, { .n = SPECTATOR_SCOREBOARD } },
+
+  { "ET_GENERAL", TYPE_INTEGER, { .n = ET_GENERAL } },
+  { "ET_PLAYER", TYPE_INTEGER, { .n = ET_PLAYER } },
+  { "ET_ITEM", TYPE_INTEGER, { .n = ET_ITEM } },
+  { "ET_BUILDABLE", TYPE_INTEGER, { .n = ET_BUILDABLE } },
+  { "ET_MISSILE", TYPE_INTEGER, { .n = ET_MISSILE } },
+  { "ET_MOVER", TYPE_INTEGER, { .n = ET_MOVER } },
+  { "ET_BEAM", TYPE_INTEGER, { .n = ET_BEAM } },
+  { "ET_PORTAL", TYPE_INTEGER, { .n = ET_PORTAL } },
+  { "ET_SPEAKER", TYPE_INTEGER, { .n = ET_SPEAKER } },
+  { "ET_PUSH_TRIGGER", TYPE_INTEGER, { .n = ET_PUSH_TRIGGER } },
+  { "ET_TELEPORT_TRIGGER", TYPE_INTEGER, { .n = ET_TELEPORT_TRIGGER } },
+  { "ET_INVISIBLE", TYPE_INTEGER, { .n = ET_INVISIBLE } },
+  { "ET_GRAPPLE", TYPE_INTEGER, { .n = ET_GRAPPLE } },
+  { "ET_CORPSE", TYPE_INTEGER, { .n = ET_CORPSE } },
+  { "ET_PARTICLE_SYSTEM", TYPE_INTEGER, { .n = ET_PARTICLE_SYSTEM } },
+  { "ET_ANIMMAPOBJ", TYPE_INTEGER, { .n = ET_ANIMMAPOBJ } },
+  { "ET_MODELDOOR", TYPE_INTEGER, { .n = ET_MODELDOOR } },
+  { "ET_LIGHTFLARE", TYPE_INTEGER, { .n = ET_LIGHTFLARE } },
+  { "ET_EVENTS", TYPE_INTEGER, { .n = ET_EVENTS } },
+
+  { "BA_NONE", TYPE_INTEGER, { .n = BA_NONE } },
+  { "BA_A_SPAWN", TYPE_INTEGER, { .n = BA_A_SPAWN } },
+  { "BA_A_OVERMIND", TYPE_INTEGER, { .n = BA_A_OVERMIND } },
+  { "BA_A_BARRICADE", TYPE_INTEGER, { .n = BA_A_BARRICADE } },
+  { "BA_A_ACIDTUBE", TYPE_INTEGER, { .n = BA_A_ACIDTUBE } },
+  { "BA_A_TRAPPER", TYPE_INTEGER, { .n = BA_A_TRAPPER } },
+  { "BA_A_BOOSTER", TYPE_INTEGER, { .n = BA_A_BOOSTER } },
+  { "BA_A_HIVE", TYPE_INTEGER, { .n = BA_A_HIVE } },
+  { "BA_A_HOVEL", TYPE_INTEGER, { .n = BA_A_HOVEL } },
+  { "BA_H_SPAWN", TYPE_INTEGER, { .n = BA_H_SPAWN } },
+  { "BA_H_MGTURRET", TYPE_INTEGER, { .n = BA_H_MGTURRET } },
+  { "BA_H_TESLAGEN", TYPE_INTEGER, { .n = BA_H_TESLAGEN } },
+  { "BA_H_ARMOURY", TYPE_INTEGER, { .n = BA_H_ARMOURY } },
+  { "BA_H_DCC", TYPE_INTEGER, { .n = BA_H_DCC } },
+  { "BA_H_DCC", TYPE_INTEGER, { .n = BA_H_DCC } },
+  { "BA_H_MEDISTAT", TYPE_INTEGER, { .n = BA_H_MEDISTAT } },
+  { "BA_H_REACTOR", TYPE_INTEGER, { .n = BA_H_REACTOR } },
+  { "BA_H_REPEATER", TYPE_INTEGER, { .n = BA_H_REPEATER } },
+  { "BA_NUM_BUILDABLES", TYPE_INTEGER, { .n = BA_NUM_BUILDABLES } },
+
   { "" }
 };
 

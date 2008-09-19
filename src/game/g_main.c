@@ -632,7 +632,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   // test to see if a custom buildable layout will be loaded
   G_LayoutSelect( );
 
-  // parse the key/value pairs and spawn gentities
+  //parse the key/value pairs and spawn gentities
   G_SpawnEntitiesFromString( );
 
   // load up a custom building layout if there is one

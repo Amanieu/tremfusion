@@ -196,7 +196,7 @@ scClass_t *SC_AddClass( const char *namespace, scLibObjectDef_t *def )
     class->classMethods[i].method.gc.count = 1;
     class->classMethods[i].method.langage = LANGAGE_C;
     class->classMethods[i].method.data.ref = def->classMethods[i].method;
-    class->classMethods[i].method.argument[0] = TYPE_OBJECT;
+    class->classMethods[i].method.argument[0] = TYPE_CLASS;
     memcpy( class->classMethods[i].method.argument+1, def->classMethods[i].argument,
             sizeof(scDataType_t) * MAX_FUNCTION_ARGUMENTS);
     class->classMethods[i].method.return_type = def->classMethods[i].return_type;
