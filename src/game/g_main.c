@@ -171,8 +171,8 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_teamAutoJoin, "g_teamAutoJoin", "0", CVAR_ARCHIVE  },
   { &g_teamForceBalance, "g_teamForceBalance", "0", CVAR_ARCHIVE  },
 
-  { &g_warmup, "g_warmup", "20", CVAR_ARCHIVE, 0, qtrue  },
-  { &g_doWarmup, "g_doWarmup", "0", 0, 0, qtrue  },
+  /*{ &g_warmup, "g_warmup", "20", CVAR_ARCHIVE, 0, qtrue  },
+  { &g_doWarmup, "g_doWarmup", "0", 0, 0, qtrue  },*/
   { &g_logFile, "g_logFile", "games.log", CVAR_ARCHIVE, 0, qfalse  },
   { &g_logFileSync, "g_logFileSync", "0", CVAR_ARCHIVE, 0, qfalse  },
 
@@ -261,8 +261,8 @@ static cvarTable_t   gameCvarTable[ ] =
 static int gameCvarTableSize = sizeof( gameCvarTable ) / sizeof( gameCvarTable[ 0 ] );
 
 
-void G_InitGame( int levelTime, int randomSeed, int restart );
-void G_RunFrame( int levelTime );
+int  G_InitGame( int levelTime, int randomSeed, int restart );
+int  G_RunFrame( int levelTime );
 void G_ShutdownGame( int restart );
 void CheckExitRules( void );
 void G_DemoSetClient( void );
@@ -536,24 +536,17 @@ G_InitGame
 
 ============
 */
-void G_InitGame( int levelTime, int randomSeed, int restart )
+
+int gameInit_InitLevel(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int i;
-  char buffer[ MAX_CVAR_VALUE_STRING ];
-  int a, b;
+  int               levelTime;
+  int               a, b;
+  char              buffer[ MAX_CVAR_VALUE_STRING ];
+  scDataTypeHash_t *hash = in[1].data.hash;
+  scDataTypeValue_t value;
 
-  srand( randomSeed );
-
-  G_RegisterCvars( );
-
-  G_Printf( "------- Game Initialization -------\n" );
-  G_Printf( "gamename: %s\n", GAME_VERSION );
-  G_Printf( "gamedate: %s\n", __DATE__ );
-
-  BG_InitMemory( );
-
-  G_SVCommandsInit();
-  G_InitScript( );
+  SC_HashGet(hash, "levelTime", &value);
+  levelTime = value.data.integer;
 
   // set some level globals
   memset( &level, 0, sizeof( level ) );
@@ -569,6 +562,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
 
+  return 0;
+}
+
+int gameInit_InitLogs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   if( g_logFile.string[ 0 ] )
   {
     if( g_logFileSync.integer )
@@ -590,18 +588,30 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   }
   else
     G_Printf( "Not logging to disk\n" );
+  return 0;
+}
 
-  {
-    char map[ MAX_CVAR_VALUE_STRING ] = {""};
+int gameInit_MapConfig(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  char map[ MAX_CVAR_VALUE_STRING ] = {""};
 
-    trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
-    G_MapConfigs( map );
-  }
+  trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
+  G_MapConfigs( map );
 
   // we're done with g_mapConfigs, so reset this for the next map
   trap_Cvar_Set( "g_mapConfigsLoaded", "0" );
+  return 0;
+}
 
+int gameInit_ReadAdminConfig(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_admin_readconfig( NULL, 0 );
+  return 0;
+}
+
+int gameInit_InitEntities(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int i;
 
   // initialize all entities for this game
   memset( g_entities, 0, MAX_GENTITIES * sizeof( g_entities[ 0 ] ) );
@@ -620,15 +630,31 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   // even if they aren't all used, so numbers inside that
   // range are NEVER anything but clients
   level.num_entities = MAX_CLIENTS;
+  return 0;
+}
 
+int gameInit_LocateGameData(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // let the server system know where the entites are
   trap_LocateGameData( level.gentities, level.num_entities, sizeof( gentity_t ),
-    &level.clients[ 0 ].ps, sizeof( level.clients[ 0 ] ) );
+      &level.clients[ 0 ].ps, sizeof( level.clients[ 0 ] ) );
+  return 0;
+}
 
-  level.emoticonCount = BG_LoadEmoticons( level.emoticons, NULL );
-
+int gameInit_SetConfigstring(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   trap_SetConfigstring( CS_INTERMISSION, "0" );
+  return 0;
+}
 
+int gameInit_Emoticons(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  level.emoticonCount = BG_LoadEmoticons( level.emoticons, NULL );
+  return 0;
+}
+
+int gameInit_Layout(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // test to see if a custom buildable layout will be loaded
   G_LayoutSelect( );
 
@@ -638,41 +664,193 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
   // load up a custom building layout if there is one
   G_LayoutLoad( );
 
+  return 0;
+}
+
+int gameInit_InitAllowedGameElements(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // the map might disable some things
   BG_InitAllowedGameElements( );
+  return 0;
+}
 
+int gameInit_FindTeams(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // general initialization
   G_FindTeams( );
+  return 0;
+}
 
+int gameInit_InitClassConfigs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   BG_InitClassConfigs( );
+  return 0;
+}
+
+int gameInit_InitBuildableConfigs(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   BG_InitBuildableConfigs( );
+  return 0;
+}
+
+int gameInit_InitDamageLocations(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitDamageLocations( );
+  return 0;
+}
+
+int gameInit_InitMapRotations(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitMapRotations( );
+  return 0;
+}
+
+int gameInit_InitSpawnQueue(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_InitSpawnQueue( &level.alienSpawnQueue );
   G_InitSpawnQueue( &level.humanSpawnQueue );
+  return 0;
+}
 
-  if( g_debugMapRotation.integer )
-    G_PrintRotations( );
-
+int gameInit_InitVoices(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   level.voices = BG_VoiceInit( );
   BG_PrintVoices( level.voices, g_debugVoices.integer );
+  return 0;
+}
 
-  //reset stages
+int gameInit_ResetStages(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   trap_Cvar_Set( "g_alienStage", va( "%d", S1 ) );
   trap_Cvar_Set( "g_humanStage", va( "%d", S1 ) );
   trap_Cvar_Set( "g_alienCredits", 0 );
   trap_Cvar_Set( "g_humanCredits", 0 );
 
-  G_Printf( "-----------------------------------\n" );
+  return 0;
+}
 
+int gameInit_RemapTeamShaders(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_RemapTeamShaders( );
+  return 0;
+}
 
+int gameInit_CountSpawns(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // so the server counts the spawns without a client attached
   G_CountSpawns( );
+  return 0;
+}
 
+int gameInit_ResetPTRCConnections(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_ResetPTRConnections( );
+  return 0;
+}
 
-  // TODO: Call event here: game.on_init
+void G_InitEvent_GameInit(void)
+{
+  scObject_t *self = SC_Event_NewObject();
+  scEvent_t *event = self->data.data.userdata;
+  scDataTypeValue_t value, out;
+  scEventNode_t *parent;
+
+  SC_Event_AddMainGroups(event, &out);
+
+  parent = SC_Event_Find(event, "action");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitLevel", gameInit_InitLevel), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitLogs", gameInit_InitLogs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("MapConfig", gameInit_MapConfig), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ReadAdminConfig", gameInit_ReadAdminConfig), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitEntities", gameInit_InitEntities), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("LocateGameData", gameInit_LocateGameData), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SetConfigstring", gameInit_SetConfigstring), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("Emoticons", gameInit_Emoticons), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("Layout", gameInit_Layout), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitAllowedGameElements", gameInit_InitAllowedGameElements), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("FindTeams", gameInit_FindTeams), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitClassConfigs", gameInit_InitClassConfigs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitBuildableConfigs", gameInit_InitBuildableConfigs), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitDamageLocations", gameInit_InitDamageLocations), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitMapRotations", gameInit_InitMapRotations), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitSpawnQueue", gameInit_InitSpawnQueue), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitVoices", gameInit_InitVoices), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ResetStages", gameInit_ResetStages), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("RemapTeamShaders", gameInit_RemapTeamShaders), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CountSpawns", gameInit_CountSpawns), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("ResetPTRCConnections", gameInit_ResetPTRCConnections), &out);
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet("event.game.Init", &value);
+}
+
+int G_InitGame( int levelTime, int randomSeed, int restart )
+{
+  scDataTypeHash_t *hash;
+  scObject_t       *event;
+  scDataTypeValue_t value;
+  scDataTypeValue_t out;
+  int               ret;
+
+  // Core initialization stuff arn't registered under scripting events
+  srand( randomSeed );
+
+  G_RegisterCvars( );
+
+  G_Printf( "------- Game Initialization -------\n" );
+  G_Printf( "gamename: %s\n", GAME_VERSION );
+  G_Printf( "gamedate: %s\n", __DATE__ );
+
+  BG_InitMemory( );
+
+  G_SVCommandsInit();
+  G_InitScript( );
+
+  hash = SC_HashNew();
+  SC_HashGCInc(hash);
+
+  SC_NamespaceGet("event.game.Init", &value);
+  event = value.data.object;
+
+  value.type = TYPE_INTEGER;
+  value.data.integer = levelTime;
+  SC_HashSet(hash, "levelTime", &value);
+
+  value.type = TYPE_BOOLEAN;
+  value.data.boolean = restart;
+  SC_HashSet(hash, "restart", &value);
+
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
+    G_Error(SC_StringToChar(out.data.string));
+
+  SC_HashGCDec(hash);
+
+  G_Printf( "-----------------------------------\n" );
+
+  return ret;
 }
 
 /*
@@ -1023,6 +1201,7 @@ void G_SpawnClients( team_t team )
   vec3_t        spawn_origin, spawn_angles;
   spawnQueue_t  *sq = NULL;
   int           numSpawns = 0;
+  spectatorState_t oldstate;
 
   if( team == TEAM_ALIENS )
   {
@@ -1051,9 +1230,11 @@ void G_SpawnClients( team_t team )
 
       ent = &g_entities[ clientNum ];
 
+      oldstate = ent->client->sess.spectatorState;
       ent->client->sess.spectatorState = SPECTATOR_NOT;
       ClientUserinfoChanged( clientNum );
-      ClientSpawn( ent, spawn, spawn_origin, spawn_angles );
+      if(!ClientSpawn( ent, spawn, spawn_origin, spawn_angles ))
+        ent->client->sess.spectatorState = oldstate;
     }
   }
 }
@@ -2436,35 +2617,77 @@ G_RunFrame
 Advances the non-player objects in the world
 ================
 */
-void G_RunFrame( int levelTime )
+int isLevelRestarting(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
 {
-  int       i;
-  gentity_t *ent;
-  int       msec;
-  int       start, end;
+  scEvent_t *event = in[0].data.object->data.data.userdata;
 
-  // if we are waiting for the level to restart, do nothing
-  if( level.restarted )
-    return;
+  if(level.restarted)
+    // Skip but don't return an error: we simply don't have to run a frame here
+    SC_Event_Skip(event, "all", out);
+  return 0;
+}
+
+int updateCvars(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  // get any cvar changes
+  G_UpdateCvars();
+  return 0;
+}
+
+int seedRandom(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  // seed the rng
+  srand(level.framenum);
+  return 0;
+}
+
+int updateTime(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
+
+  SC_HashGet(hash, "levelTime", &value);
 
   level.framenum++;
   level.previousTime = level.time;
-  level.time = levelTime;
-  msec = level.time - level.previousTime;
+  level.time = value.data.integer;
 
-  // seed the rng
-  srand( level.framenum );
+  return 0;
+}
 
-  // get any cvar changes
-  G_UpdateCvars( );
+int initMsec(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
 
-  // check demo state
-  CheckDemo( );
+  SC_HashGet(hash, "levelTime", &value);
+  value.data.integer = value.data.integer - level.time;
+
+  SC_HashSet(hash, "msec", &value);
+  return 0;
+}
+
+int checkDemo(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  CheckDemo();
+  return 0;
+}
+
+int entityFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int        i;
+  gentity_t *ent;
+  int        msec;
+
+  scDataTypeValue_t value;
+  scDataTypeHash_t *hash = in[1].data.hash;
+
+  SC_HashGet(hash, "msec", &value);
+  msec = value.data.integer;
 
   //
   // go through all allocated objects
   //
-  start = trap_Milliseconds( );
   ent = &g_entities[ 0 ];
 
   for( i = 0; i < level.num_entities; i++, ent++ )
@@ -2543,9 +2766,14 @@ void G_RunFrame( int levelTime )
 
     G_RunThink( ent );
   }
-  end = trap_Milliseconds();
 
-  start = trap_Milliseconds();
+  return 0;
+}
+
+int playerFrame(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  int        i;
+  gentity_t *ent;
 
   // perform final fixups on the players
   ent = &g_entities[ 0 ];
@@ -2556,25 +2784,63 @@ void G_RunFrame( int levelTime )
       ClientEndFrame( ent );
   }
 
+  return 0;
+}
+
+int unlaggedStore(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // save position information for all active clients
   G_UnlaggedStore( );
+  return 0;
+}
 
-  end = trap_Milliseconds();
-
+int countSpawns(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CountSpawns( );
+  return 0;
+}
+
+int calculateBuildPoints(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CalculateBuildPoints( );
+  return 0;
+}
+
+int calculateStages(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_CalculateStages( );
+  return 0;
+}
+
+int spawnClients(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   G_SpawnClients( TEAM_ALIENS );
   G_SpawnClients( TEAM_HUMANS );
-  G_CalculateAvgPlayers( );
-  //G_UpdateZaps( msec );
+  return 0;
+}
 
+int calculateAvgPlayers(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
+  G_CalculateAvgPlayers( );
+  return 0;
+}
+
+int checkExitRules(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // see if it is time to end the level
   CheckExitRules( );
+  return 0;
+}
 
+int checkTeamStatus(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // update to team status?
   CheckTeamStatus( );
+  return 0;
+}
 
+int checkVotes(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // cancel vote if timed out
   CheckVote( );
 
@@ -2582,19 +2848,107 @@ void G_RunFrame( int levelTime )
   CheckTeamVote( TEAM_HUMANS );
   CheckTeamVote( TEAM_ALIENS );
 
+  return 0;
+}
+
+int checkCvars(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   // for tracking changes
   CheckCvars( );
+  return 0;
+}
 
-  if( g_listEntity.integer )
-  {
-    for( i = 0; i < MAX_GENTITIES; i++ )
-      G_Printf( "%4i: %s\n", i, g_entities[ i ].classname );
-
-    trap_Cvar_Set( "g_listEntity", "0" );
-  }
-
-  // TODO: Call event here: game.on_think
-
+int updateFrameMsec(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t closure)
+{
   level.frameMsec = trap_Milliseconds();
+  return 0;
+}
+
+void G_InitEvent_GameFrame(void)
+{
+  scObject_t *self = SC_Event_NewObject();
+  scEvent_t *event = self->data.data.userdata;
+  scDataTypeValue_t value, out;
+  scEventNode_t *node, *parent, *action;
+
+  SC_Event_AddMainGroups(event, &out);
+
+  parent = SC_Event_Find(event, "check");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("IsLevelRestarting", isLevelRestarting), &out);
+
+  parent = SC_Event_Find(event, "init");
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("InitMsec", initMsec), &out);
+
+  action = SC_Event_Find(event, "action");
+  node = SC_Event_NewGroup("init");
+  SC_Event_AddNode(action, action->last, node, &out);
+
+  parent = node;
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SeedRandom", seedRandom), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CountSpawns", countSpawns), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateCvars", updateCvars), &out);
+
+  parent = action;
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateTime", updateTime), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckDemo", checkDemo), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("EntityFrame", entityFrame), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("PlayerFrame", playerFrame), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UnlaggedStore", unlaggedStore), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateBuildPoints", calculateBuildPoints), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateStages", calculateStages), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("SpawnClients", spawnClients), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CalculateAvgPlayers", calculateAvgPlayers), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckExitRules", checkExitRules), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckTeamStatus", checkTeamStatus), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("CheckVotes", checkVotes), &out);
+  SC_Event_AddNode(parent, parent->last, 
+      SC_Event_NewCHook("UpdateFrameMsec", updateFrameMsec), &out);
+
+  value.type = TYPE_OBJECT;
+  value.data.object = self;
+  SC_NamespaceSet("event.game.Frame", &value);
+}
+
+int G_RunFrame( int levelTime )
+{
+  scDataTypeHash_t   *hash = SC_HashNew();
+  scObject_t         *event;
+  scDataTypeValue_t   value;
+  scDataTypeValue_t   out;
+  int                 ret;
+
+  SC_HashGCInc(hash);
+
+  SC_NamespaceGet("event.game.Frame", &value);
+  event = value.data.object;
+
+  value.type = TYPE_INTEGER;
+  value.data.integer = levelTime;
+  SC_HashSet(hash, "levelTime", &value);
+
+  ret = SC_Event_Call(event, hash, &out);
+  if(ret < 0)
+    G_Error(SC_StringToChar(out.data.string));
+
+  SC_HashGCDec(hash);
+
+  return ret;
 }
 

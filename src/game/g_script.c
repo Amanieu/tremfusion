@@ -1167,6 +1167,11 @@ void G_InitScript( void )
   client_class = SC_AddClass( "game", &client_def );
   SC_Constant_Add(constants);
 
+  G_InitEvent_GameFrame();
+  G_InitEvent_GameInit();
+
+  G_InitEvent_PlayerSpawn();
+
   SC_LoadLangages();
 
   // Autoload directories
