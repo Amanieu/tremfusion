@@ -1564,7 +1564,6 @@ static void CG_DrawFPS( rectDef_t *rect, float text_x, float text_y,
 CG_DrawSpeed
 ==================
 */
-#define SPEED_STRING  "u"
 static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
                         float scale, vec4_t color,
                         int textalign, int textvalign, int textStyle )
