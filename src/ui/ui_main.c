@@ -4075,6 +4075,9 @@ void UI_MouseEvent( int dx, int dy )
   else if( uiInfo.uiDC.cursory > SCREEN_HEIGHT )
     uiInfo.uiDC.cursory = SCREEN_HEIGHT;
 
+  uiInfo.uiDC.cursordx = dx;
+  uiInfo.uiDC.cursordy = dy;
+
   if( Menu_Count( ) > 0 )
     Display_MouseMove( NULL, uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory );
 }
@@ -4097,6 +4100,8 @@ UI_SetMousePosition
 */
 void UI_SetMousePosition( int x, int y )
 {
+  uiInfo.uiDC.cursordx = x - uiInfo.uiDC.cursorx;
+  uiInfo.uiDC.cursordy = y - uiInfo.uiDC.cursory;
   uiInfo.uiDC.cursorx = x;
   uiInfo.uiDC.cursory = y;
 

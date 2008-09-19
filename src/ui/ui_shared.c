@@ -4299,6 +4299,13 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   itemDef_t *item = NULL;
   qboolean inHandler = qfalse;
 
+  // KTW: Draggable Windows
+  if (key == K_MOUSE1 && down && Rect_ContainsPoint(&menu->window.rect, DC->cursorx, DC->cursory) &&
+        menu->window.style && menu->window.border) 
+      menu->window.flags |= WINDOW_DRAG;
+  else
+      menu->window.flags &= ~WINDOW_DRAG;
+
   inHandler = qtrue;
 
   if( g_waitingForKey && down )
@@ -6510,6 +6517,28 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
 
   if( g_waitingForKey || g_editingField )
     return;
+
+  // KTW: Draggable windows
+  if ( (menu->window.flags & WINDOW_HASFOCUS) && (menu->window.flags & WINDOW_DRAG))
+  {
+    menu->window.rect.x +=  DC->cursordx;
+    menu->window.rect.y +=  DC->cursordy;
+
+    if (menu->window.rect.x < 0)
+      menu->window.rect.x = 0;
+    if (menu->window.rect.x + menu->window.rect.w > SCREEN_WIDTH)
+      menu->window.rect.x = SCREEN_WIDTH-menu->window.rect.w;
+
+    if (menu->window.rect.y < 0)
+      menu->window.rect.y = 0;
+    if (menu->window.rect.y + menu->window.rect.h > SCREEN_HEIGHT)
+      menu->window.rect.y = SCREEN_HEIGHT-menu->window.rect.h;
+
+    Menu_UpdatePosition(menu);
+
+    for (i = 0; i < menu->itemCount; i++)
+      Item_UpdatePosition(menu->items[i]);
+  }
 
   // FIXME: this is the whole issue of focus vs. mouse over..
   // need a better overall solution as i don't like going through everything twice

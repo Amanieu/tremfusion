@@ -2685,17 +2685,17 @@ void CG_MouseEvent( int x, int y )
     return;
   }
 
-  cgs.cursorX += x;
+  cgs.cursorX += ( x * cgDC.aspectScale );
   if( cgs.cursorX < 0 )
     cgs.cursorX = 0;
-  else if( cgs.cursorX > 640 )
-    cgs.cursorX = 640;
+  else if( cgs.cursorX > SCREEN_WIDTH )
+    cgs.cursorX = SCREEN_WIDTH;
 
   cgs.cursorY += y;
   if( cgs.cursorY < 0 )
     cgs.cursorY = 0;
-  else if( cgs.cursorY > 480 )
-    cgs.cursorY = 480;
+  else if( cgs.cursorY > SCREEN_HEIGHT )
+    cgs.cursorY = SCREEN_HEIGHT;
 
   n = Display_CursorType( cgs.cursorX, cgs.cursorY );
   cgs.activeCursor = 0;
@@ -2703,6 +2703,9 @@ void CG_MouseEvent( int x, int y )
     cgs.activeCursor = cgs.media.selectCursor;
   else if( n == CURSOR_SIZER )
     cgs.activeCursor = cgs.media.sizeCursor;
+
+  cgDC.cursordx = x;
+  cgDC.cursordy = y;
 
   if( cgs.capturedItem )
     Display_MouseMove( cgs.capturedItem, x, y );
