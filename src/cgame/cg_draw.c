@@ -2706,6 +2706,8 @@ void CG_MouseEvent( int x, int y )
 
   cgDC.cursordx = x;
   cgDC.cursordy = y;
+  cgDC.cursorx = cgs.cursorX;
+  cgDC.cursory = cgs.cursorY;
 
   if( cgs.capturedItem )
     Display_MouseMove( cgs.capturedItem, x, y );

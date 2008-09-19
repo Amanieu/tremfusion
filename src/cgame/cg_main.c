@@ -77,7 +77,7 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
       return 0;
 
     case CG_MOUSE_EVENT:
-      // cgame doesn't care where the cursor is
+      CG_MouseEvent( arg0, arg1 );
       return 0;
 
     case CG_EVENT_HANDLING:
