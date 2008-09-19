@@ -420,8 +420,8 @@ static void IN_GetUIMousePosition( int *x, int *y )
 		*x = pos & 0xFFFF;
 		*y = ( pos >> 16 ) & 0xFFFF;
 
-		*x = glConfig.vidWidth * *x / 640;
-		*y = glConfig.vidHeight * *y / 480;
+		*x = ( glConfig.vidWidth * *x ) / 640;
+		*y = ( glConfig.vidHeight * *y ) / 480;
 	}
 	else
 	{
@@ -992,9 +992,7 @@ void IN_Frame( void )
 
 	// If not DISCONNECTED (main menu) or ACTIVE (in game), we're loading
 	loading = !!( cls.state != CA_DISCONNECTED && cls.state != CA_ACTIVE );
-	cursorShowing = ( Key_GetCatcher( ) == KEYCATCH_UI ) &&
-	                ( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) ) ==
-	                (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS);
+	cursorShowing = ( Key_GetCatcher( ) == KEYCATCH_UI );
 
 	if( !r_fullscreen->integer && ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) )
 	{
