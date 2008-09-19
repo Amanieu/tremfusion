@@ -109,7 +109,8 @@ void G_RemoveQueuedBotBegin( int clientNum ) {
 G_AddRandomBot
 ===============
 */
-void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill) {
+gentity_t *G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill)
+{
   int   i, n, num;
   //float skill;
   char  *value, netname[36], *teamstr;
@@ -117,67 +118,70 @@ void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill) {
   gclient_t *cl;
 
   num = 0;
-  for ( n = 0; n < g_numBots ; n++ ) {
+  for ( n = 0; n < g_numBots ; n++ )
+  {
     value = Info_ValueForKey( g_botInfos[n], "name" );
     //
-    for ( i=0 ; i< g_maxclients.integer ; i++ ) {
+    for ( i=0 ; i< g_maxclients.integer ; i++ )
+    {
       cl = level.clients + i;
-      if ( cl->pers.connected != CON_CONNECTED ) {
+      if ( cl->pers.connected != CON_CONNECTED )
         continue;
-      }
-      if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) ) {
+
+      if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) )
         continue;
-      }
-      if ( team >= 0 && cl->pers.teamSelection != team ) {
+
+      if ( team >= 0 && cl->pers.teamSelection != team )
         continue;
-      }
-      if ( !Q_stricmp( value, cl->pers.netname ) ) {
+
+      if ( !Q_stricmp( value, cl->pers.netname ) )
         break;
-      }
     }
-    if (i >= g_maxclients.integer) {
+    if (i >= g_maxclients.integer)
       num++;
-    }
   }
   num = random() * num;
-  for ( n = 0; n < g_numBots ; n++ ) {
+  for ( n = 0; n < g_numBots ; n++ )
+  {
     value = Info_ValueForKey( g_botInfos[n], "name" );
     //
-    for ( i=0 ; i< g_maxclients.integer ; i++ ) {
+    for ( i=0 ; i< g_maxclients.integer ; i++ )
+    {
       cl = level.clients + i;
-      if ( cl->pers.connected != CON_CONNECTED ) {
+      if ( cl->pers.connected != CON_CONNECTED )
         continue;
-      }
-      if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) ) {
+      if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) )
         continue;
-      }
-      if ( team >= 0 && cl->pers.teamSelection != team ) {
+      if ( team >= 0 && cl->pers.teamSelection != team )
         continue;
-      }
-      if ( !Q_stricmp( value, cl->pers.netname ) ) {
+      if ( !Q_stricmp( value, cl->pers.netname ) )
         break;
-      }
     }
-    if (i >= g_maxclients.integer) {
+    if (i >= g_maxclients.integer)
+    {
       num--;
-      if (num <= 0) {
+      if (num <= 0)
+      {
         if (*skill == -1.0)
           *skill = 2.0;
         //trap_Cvar_VariableValue( "g_spSkill" );
-        if (team == TEAM_ALIENS) teamstr = "aliens";
-        else if (team == TEAM_HUMANS) teamstr = "humans";
-        else teamstr = "";
+        if (team == TEAM_ALIENS)
+          teamstr = "aliens";
+        else if (team == TEAM_HUMANS)
+          teamstr = "humans";
+        else
+          teamstr = "";
         
         strncpy(netname, value, sizeof(netname)-1);
         netname[sizeof(netname)-1] = '\0';
         Q_CleanStr(netname);
         botinfo = G_GetBotInfoByName( netname );
-        G_BotAdd(ent, (name) ? name: netname, team, skill, botinfo);
         //trap_SendConsoleCommand( EXEC_INSERT, va("addbot %s %f %s %i\n", netname, skill, teamstr, 0) );
-        return;
+        return G_BotAdd(ent, (name) ? name: netname, team, skill, botinfo);
       }
     }
   }
+  return NULL;
 } 
 
 /*
@@ -185,21 +189,23 @@ void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill) {
 G_RemoveRandomBot
 ===============
 */
-int G_RemoveRandomBot( int team ) {
+int G_RemoveRandomBot( int team )
+{
   gclient_t *cl;
   int i;
 
-  for ( i=0 ; i< g_maxclients.integer ; i++ ) {
+  for ( i=0 ; i< g_maxclients.integer ; i++ )
+  {
     cl = level.clients + i;
-    if ( cl->pers.connected != CON_CONNECTED ) {
+    if ( cl->pers.connected != CON_CONNECTED )
       continue;
-    }
-    if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) ) {
+
+    if ( !(g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT) )
       continue;
-    }
-    if ( team >= 0 && cl->ps.stats[ STAT_TEAM ] != team ) {
+
+    if ( team >= 0 && cl->ps.stats[ STAT_TEAM ] != team ) 
       continue;
-    }
+
     //strcpy(netname, cl->pers.netname);
     //Q_CleanStr(netname);
     //trap_SendConsoleCommand( EXEC_INSERT, va("kick %s\n", netname) );
@@ -550,7 +556,8 @@ void G_InitBots( qboolean restart ) {
   //G_LoadArenas();
 }
 
-void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo ) {
+gentity_t *G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo )
+{
   int botsuffixnumber;
   int clientNum;
   //char      *botinfo;
@@ -574,10 +581,11 @@ void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo
   
   // find what clientNum to use for bot
   clientNum = trap_BotAllocateClient();
-  if ( clientNum == -1 ) {
+  if ( clientNum == -1 )
+  {
     G_Printf( S_COLOR_RED "Unable to add bot.  All player slots are in use.\n" );
     G_Printf( S_COLOR_RED "Start server with more 'open' slots (or check setting of sv_maxclients cvar).\n" );
-    return;
+    return NULL;
   }
   newname[0] = '\0';
   switch(team)
@@ -595,23 +603,24 @@ void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo
       Q_strcat( newname, MAX_NAME_LENGTH, name );
       break;
     default:
-      return;
+      return NULL;
   }
   //now make sure that we can add bots of the same name, but just incremented
   //numerically. We'll now use name as a temp buffer, since we have the
   //real name in newname.
   botsuffixnumber = 1;
-    if (!G_admin_name_check( NULL, newname, err, sizeof( err ) )){
-      while( botsuffixnumber < MAX_NUMBER_BOTS )
-        {
-          strcpy( name, va( "%s%d", newname, botsuffixnumber ) );
-          if ( G_admin_name_check( NULL, name, err, sizeof( err ) ) )
-          {
-            strcpy( newname, name );
-              break;
-          }
-          botsuffixnumber++; // Only increments if the last requested name was used.
-        }
+  if (!G_admin_name_check( NULL, newname, err, sizeof( err ) ))
+  {
+    while( botsuffixnumber < MAX_NUMBER_BOTS )
+    {
+      strcpy( name, va( "%s%d", newname, botsuffixnumber ) );
+      if ( G_admin_name_check( NULL, name, err, sizeof( err ) ) )
+      {
+        strcpy( newname, name );
+        break;
+      }
+      botsuffixnumber++; // Only increments if the last requested name was used.
+    }
   }
   
   bot = &g_entities[ clientNum ];
@@ -630,10 +639,11 @@ void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo
   trap_SetUserinfo( clientNum, userinfo );
 
   // have it connect to the game as a normal client
-  if(ClientConnect(clientNum, qtrue, qtrue) != NULL ) {
+  if(ClientConnect(clientNum, qtrue, qtrue) != NULL )
+  {
     // won't let us join
     
-    return;
+    return NULL;
   }
   if( team == TEAM_HUMANS)
     AP( va( "print \"^3!bot add: ^7%s^7 added bot: %s^7 to the %s^7 with character: %s and with skill level: %.0f\n\"", ( ent ) ? ent->client->pers.netname : "The Console" , bot->client->pers.netname, teamstring,Info_ValueForKey( botinfo, "name" ) , *skill ));
@@ -643,7 +653,10 @@ void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo
   BotBegin( clientNum );
   G_ChangeTeam( bot, team );
   level.numBots++;
+
+  return bot;
 }
+
 /*
 ===============
 G_ListChars

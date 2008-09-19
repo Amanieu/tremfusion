@@ -389,7 +389,7 @@ void HBotEnterChat(bot_state_t *bs);
 void BotAlienAI(bot_state_t* bs, float thinktime);
 
 //g_bot.c functions
-void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo );
+gentity_t *G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo );
 void G_BotDel( gentity_t *ent, int clientNum );
 
 void G_BotThink( gentity_t *self );
@@ -400,7 +400,7 @@ qboolean botTargetInRange( gentity_t *self, gentity_t *target );
 int botFindClosestEnemy( gentity_t *self, qboolean includeTeam );
 int botGetDistanceBetweenPlayer( gentity_t *self, gentity_t *player );
 void G_RemoveQueuedBotBegin( int clientNum );
-void G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill);
+gentity_t *G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill);
 int G_RemoveRandomBot( int team );
 int G_CountHumanPlayers( int team );
 int G_CountBotPlayers( int team );

@@ -1072,7 +1072,7 @@ connectionRecord_t  *G_FindConnectionForCode( int code );
 
 //g_bot.c
 //
-void G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo );
+gentity_t *G_BotAdd( gentity_t *ent, char *name, int team, float *skill, char *botinfo );
 qboolean G_BotConnect( int clientNum, qboolean restart );
 void G_RemoveQueuedBotBegin( int clientNum );
 void G_CheckBotSpawn( void );
