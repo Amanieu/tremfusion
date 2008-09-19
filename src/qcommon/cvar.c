@@ -608,10 +608,10 @@ void Cvar_SetValue( const char *var_name, float value) {
 
 /*
 ============
-Cvar_SetValueNoForce
+Cvar_SetValueLatched
 ============
 */
-void Cvar_SetValueNoForce( const char *var_name, float value) {
+void Cvar_SetValueLatched( const char *var_name, float value) {
 	char	val[32];
 
 	if ( value == (int)value ) {
