@@ -135,14 +135,14 @@ NCPU=`sysctl -n hw.ncpu`
 if [ -d build/release-darwin-ppc ]; then
 	rm -r build/release-darwin-ppc
 fi
-(ARCH=ppc USE_OPENAL_DLOPEN=1 BUILD_CLIENT_SMP=1 CC=$PPC_CLIENT_CC \
-	CFLAGS=$PPC_CLIENT_CFLAGS LDFLAGS=$PPC_CLIENT_LDFLAGS make -j$NCPU) || exit 1;
+(ARCH=ppc USE_OPENAL_DLOPEN=1 CC=$PPC_CLIENT_CC CFLAGS=$PPC_CLIENT_CFLAGS \
+	LDFLAGS=$PPC_CLIENT_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1) || exit 1;
 
 # intel client and server
 if [ -d build/release-darwin-x86 ]; then
 	rm -r build/release-darwin-x86
 fi
-(ARCH=x86 CFLAGS=$X86_CFLAGS LDFLAGS=$X86_LDFLAGS BUILD_CLIENT_SMP=1 make -j$NCPU) || exit 1;
+(ARCH=x86 CFLAGS=$X86_CFLAGS LDFLAGS=$X86_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1) || exit 1;
 
 echo "Creating .app bundle $DESTDIR/$APPBUNDLE"
 if [ ! -d $DESTDIR/$APPBUNDLE/Contents/MacOS/$BASEDIR ]; then
