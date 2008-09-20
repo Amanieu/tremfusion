@@ -2265,53 +2265,11 @@ UI_ParseCarriageList
 */
 static void UI_ParseCarriageList( void )
 {
-  int  i;
-  char carriageCvar[ MAX_TOKEN_CHARS ];
-  char *iterator;
-  char buffer[ MAX_TOKEN_CHARS ];
-  char *bufPointer;
+  char carriageCvar[ MAX_CVAR_VALUE_STRING ];
 
   trap_Cvar_VariableStringBuffer( "ui_carriage", carriageCvar, sizeof( carriageCvar ) );
-  iterator = carriageCvar;
 
-  uiInfo.weapons = 0;
-  uiInfo.upgrades = 0;
-
-  //simple parser to give rise to weapon/upgrade list
-
-  while( iterator && iterator[ 0 ] != '$' )
-  {
-    bufPointer = buffer;
-
-    if( iterator[ 0 ] == 'W' )
-    {
-      iterator++;
-
-      while( iterator[ 0 ] != ' ' )
-        *bufPointer++ = *iterator++;
-
-      *bufPointer++ = '\n';
-
-      i = atoi( buffer );
-
-      uiInfo.weapons |= ( 1 << i );
-    }
-    else if( iterator[ 0 ] == 'U' )
-    {
-      iterator++;
-
-      while( iterator[ 0 ] != ' ' )
-        *bufPointer++ = *iterator++;
-
-      *bufPointer++ = '\n';
-
-      i = atoi( buffer );
-
-      uiInfo.upgrades |= ( 1 << i );
-    }
-
-    iterator++;
-  }
+  sscanf( carriageCvar, "%d %d %d", &uiInfo.weapons, &uiInfo.upgrades, &uiInfo.credits );
 }
 
 /*
@@ -2321,7 +2279,7 @@ UI_LoadHumanArmouryBuys
 */
 static void UI_LoadHumanArmouryBuys( void )
 {
-  int i, j = 0;
+  int i, i2, j = 0;
   stage_t stage = UI_GetCurrentHumanStage( );
   int slots = 0;
 
@@ -2347,13 +2305,32 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_Weapon( i )->purchasable &&
         BG_WeaponAllowedInStage( i, stage ) &&
         BG_WeaponIsAllowed( i ) &&
-        !( BG_Weapon( i )->slots & slots ) &&
         !( uiInfo.weapons & ( 1 << i ) ) )
     {
-      uiInfo.humanArmouryBuyList[ j ].text =
-        String_Alloc( BG_Weapon( i )->humanName );
-      uiInfo.humanArmouryBuyList[ j ].cmd =
-        String_Alloc( va( "cmd buy %s\n", BG_Weapon( i )->name ) );
+      char buffer[ MAX_STRING_CHARS ] = "";
+      int price = BG_Weapon( i )->price;
+      for( i2 = WP_NONE + 1; i2 < WP_NUM_WEAPONS; i2++ )
+      {
+        if( ( uiInfo.weapons & ( 1 << i2 ) ) &&
+            ( BG_Weapon( i2 )->slots & BG_Weapon( i )->slots ) )
+        {
+          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Weapon( i2 )->name );
+          price -= BG_Weapon( i2 )->price;
+        }
+      }
+      for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
+      {
+        if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
+            ( BG_Upgrade( i2 )->slots & BG_Weapon( i )->slots ) )
+        {
+          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
+          price -= BG_Upgrade( i2 )->price;
+        }
+      }
+      uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
+        BG_Weapon( i )->humanName : va( "^1%s", BG_Weapon( i )->humanName ) );
+      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Weapon( i )->name );
+      uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_WEAPON;
       uiInfo.humanArmouryBuyList[ j ].v.weapon = i;
 
@@ -2369,13 +2346,32 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_Upgrade( i )->purchasable &&
         BG_UpgradeAllowedInStage( i, stage ) &&
         BG_UpgradeIsAllowed( i ) &&
-        !( BG_Upgrade( i )->slots & slots ) &&
         !( uiInfo.upgrades & ( 1 << i ) ) )
     {
-      uiInfo.humanArmouryBuyList[ j ].text =
-        String_Alloc( BG_Upgrade( i )->humanName );
-      uiInfo.humanArmouryBuyList[ j ].cmd =
-        String_Alloc( va( "cmd buy %s\n", BG_Upgrade( i )->name ) );
+      char buffer[ MAX_STRING_CHARS ] = "";
+      int price = BG_Weapon( i )->price;
+      for( i2 = WP_NONE + 1; i2 < WP_NUM_WEAPONS; i2++ )
+      {
+        if( ( uiInfo.weapons & ( 1 << i2 ) ) &&
+            ( BG_Weapon( i2 )->slots & BG_Upgrade( i )->slots ) )
+        {
+          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Weapon( i2 )->name );
+          price -= BG_Upgrade( i2 )->price;
+        }
+      }
+      for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
+      {
+        if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
+            ( BG_Upgrade( i2 )->slots & BG_Upgrade( i )->slots ) )
+        {
+          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
+          price -= BG_Upgrade( i2 )->price;
+        }
+      }
+      uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
+        BG_Upgrade( i )->humanName : va( "^1%s", BG_Upgrade( i )->humanName ) );
+      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Upgrade( i )->name );
+      uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_UPGRADE;
       uiInfo.humanArmouryBuyList[ j ].v.upgrade = i;
 
