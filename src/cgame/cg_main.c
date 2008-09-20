@@ -409,8 +409,7 @@ static void CG_SetUIVars( void )
       upgrades |= ( 1 << i );
   }
 
-  trap_Cvar_Set( "ui_carriage", va( "%d %d %d", weapons, upgrades,
-                 cg.snap->ps.persistant[ PERS_CREDIT ] ) );
+  trap_Cvar_Set( "ui_carriage", va( "%d %d", weapons, upgrades ) );
 
   trap_Cvar_Set( "ui_stages", va( "%d %d", cgs.alienStage, cgs.humanStage ) );
 }

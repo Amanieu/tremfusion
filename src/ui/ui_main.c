@@ -2265,11 +2265,16 @@ UI_ParseCarriageList
 */
 static void UI_ParseCarriageList( void )
 {
-  char carriageCvar[ MAX_CVAR_VALUE_STRING ];
+  char buffer[ MAX_CVAR_VALUE_STRING ];
+  int dummy;
 
-  trap_Cvar_VariableStringBuffer( "ui_carriage", carriageCvar, sizeof( carriageCvar ) );
+  trap_Cvar_VariableStringBuffer( "ui_carriage", buffer, sizeof( buffer ) );
 
-  sscanf( carriageCvar, "%d %d %d", &uiInfo.weapons, &uiInfo.upgrades, &uiInfo.credits );
+  sscanf( buffer, "%d %d", &uiInfo.weapons, &uiInfo.upgrades );
+
+  trap_Cvar_VariableStringBuffer( "ui_currentClass", buffer, sizeof( buffer ) );
+
+  sscanf( buffer, "%d %d", &dummy, &uiInfo.credits );
 }
 
 /*
@@ -2349,14 +2354,14 @@ static void UI_LoadHumanArmouryBuys( void )
         !( uiInfo.upgrades & ( 1 << i ) ) )
     {
       char buffer[ MAX_STRING_CHARS ] = "";
-      int price = BG_Weapon( i )->price;
+      int price = BG_Upgrade( i )->price;
       for( i2 = WP_NONE + 1; i2 < WP_NUM_WEAPONS; i2++ )
       {
         if( ( uiInfo.weapons & ( 1 << i2 ) ) &&
             ( BG_Weapon( i2 )->slots & BG_Upgrade( i )->slots ) )
         {
           Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Weapon( i2 )->name );
-          price -= BG_Upgrade( i2 )->price;
+          price -= BG_Weapon( i2 )->price;
         }
       }
       for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
