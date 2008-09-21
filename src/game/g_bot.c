@@ -182,7 +182,7 @@ gentity_t *G_AddRandomBot(gentity_t *ent, int team , char *name, float *skill)
     }
   }
   return NULL;
-} 
+}
 
 /*
 ===============

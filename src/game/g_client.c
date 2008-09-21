@@ -1366,6 +1366,9 @@ void BotBegin( int clientNum )
   gclient_t *client;
   int       flags;
   char      buffer[ MAX_INFO_STRING ] = "";
+  char      userinfo[ MAX_INFO_STRING ];
+
+  trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
   ent = g_entities + clientNum;
 
@@ -1381,6 +1384,7 @@ void BotBegin( int clientNum )
 
   client->pers.connected = CON_CONNECTED;
   client->pers.enterTime = level.time;
+  client->pers.classSelection = PCL_NONE;
 
   // save eflags around this, because changing teams will
   // cause this to happen with a valid entity, and we
