@@ -1122,8 +1122,6 @@ static int module_metaget(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosu
 
   hash = in[0].data.object->data.data.hash;
   SC_HashGet(hash, SC_StringToChar(in[1].data.string), out);
-  if(out->type == TYPE_UNDEF)
-    SC_EXEC_ERROR(va("can't get `%s' module field: unknow value", SC_StringToChar(in[1].data.string)));
 
   return 0;
 }

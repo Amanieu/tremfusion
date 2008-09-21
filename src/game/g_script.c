@@ -390,7 +390,7 @@ static int entity_get_entity_number(scDataTypeValue_t *in, scDataTypeValue_t *ou
   scObject_t *self = in[0].data.object;
   gentity_t *entity = G_EntityFromScript(self);
 
-  out[0].data.integer = g_entities - entity;
+  out[0].data.integer = entity - g_entities;
   return 0;
 }
 
@@ -591,6 +591,7 @@ enum client_closure_e
 {
   // methods
   CLIENT_SPAWN,
+  CLIENT_USERINFO_CHANGED,
 
   // fields
   CLIENT_OLDORIGIN,
@@ -639,6 +640,10 @@ static int client_set(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t
 
   switch(in[1].type)
   {
+    case TYPE_UNDEF:
+      SC_EXEC_ERROR("Can't set an object field to an undefinded value");
+      break;
+
     case TYPE_BOOLEAN:
       *(qboolean*)((void*)client + addr) = in[1].data.boolean;
       break;
@@ -851,6 +856,10 @@ static int client_method(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosur
       }
       break;
 
+    case CLIENT_USERINFO_CHANGED:
+      ClientUserinfoChanged(client->ps.clientNum);
+      break;
+
     default:
       SC_EXEC_ERROR(va("Internal error: unknow case in `client_method', %s (%d)\n", __FILE__, __LINE__));
   }
@@ -938,6 +947,39 @@ static scLibObjectMember_t client_members[] = {
   { "pmove_framecount", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.pmove_framecount) } },
   { "jumppad_frame", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.jumppad_frame) } },
   { "entityEventSequence", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, ps.entityEventSequence) } },
+  // Persistant
+  { "connected", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.connected) } },
+  /*{ "cmd", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.cmd) } },*/
+  { "localClient", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.localClient) } },
+  { "initialSpawn", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.initialSpawn) } },
+  { "stickySpec", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.stickySpec) } },
+  { "pmoveFixed", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.pmoveFixed) } },
+  { "netname", "", TYPE_STRING, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.netname) } },
+  { "maxHealth", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.maxHealth) } },
+  { "enterTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.enterTime) } },
+  { "location", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.location) } },
+  { "voteCount", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.voteCount) } },
+  { "teamInfo", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.teamInfo) } },
+  { "classSelection", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.classSelection) } },
+  { "evolveHealthFraction", "", TYPE_FLOAT, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.evolveHealthFraction) } },
+  { "humanItemSelection", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.humanItemSelection) } },
+  { "teamSelection", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.teamSelection) } },
+  { "teamChangeTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.teamChangeTime) } },
+  { "joinedATeam", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.joinedATeam) } },
+  /*{ "connection", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.connection) } },*/
+  { "nameChangeTime", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.nameChangeTime) } },
+  { "nameChanges", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.nameChanges) } },
+  { "savedCredit", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.savedCredit) } },
+  { "vote", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.vote) } },
+  { "teamVote", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.teamVote) } },
+  { "lastDeathLocation", "", TYPE_OBJECT, client_vec3_set, client_vec3_get, { .s = FIELD_ADDRESS(gclient_t, pers.lastDeathLocation) } },
+  { "guid", "", TYPE_STRING, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.guid) } },
+  { "ip", "", TYPE_STRING, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.ip) } },
+  { "muted", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.muted) } },
+  { "denyBuild", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.denyBuild) } },
+  { "demoClient", "", TYPE_BOOLEAN, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.demoClient) } },
+  { "adminLevel", "", TYPE_INTEGER, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.adminLevel) } },
+  { "voice", "", TYPE_STRING, client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, pers.voice) } },
   // Session
   { "spectatorTime", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorTime) } },
   { "spectatorState", "", TYPE_INTEGER,  client_set, client_get, { .s = FIELD_ADDRESS(gclient_t, sess.spectatorState) } },
@@ -1004,6 +1046,7 @@ static scLibObjectMember_t client_members[] = {
 
 static scLibObjectMethod_t client_methods[] = {
   { "spawn", "", client_method, { TYPE_OBJECT, TYPE_UNDEF }, TYPE_UNDEF, { .n = CLIENT_SPAWN } },
+  { "userinfoChanged", "", client_method, { TYPE_UNDEF }, TYPE_UNDEF, { .n = CLIENT_USERINFO_CHANGED } },
   { "" },
 };
 
@@ -1070,6 +1113,21 @@ static scConstant_t constants[] = {
   { "BA_H_REACTOR", TYPE_INTEGER, { .n = BA_H_REACTOR } },
   { "BA_H_REPEATER", TYPE_INTEGER, { .n = BA_H_REPEATER } },
   { "BA_NUM_BUILDABLES", TYPE_INTEGER, { .n = BA_NUM_BUILDABLES } },
+
+  { "PCL_NONE", TYPE_INTEGER, { .n = PCL_NONE } },
+  { "PCL_ALIEN_BUILDER0", TYPE_INTEGER, { .n = PCL_ALIEN_BUILDER0 } },
+  { "PCL_ALIEN_BUILDER0_UPG", TYPE_INTEGER, { .n = PCL_ALIEN_BUILDER0_UPG } },
+  { "PCL_ALIEN_LEVEL0", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL0 } },
+  { "PCL_ALIEN_LEVEL1", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL1 } },
+  { "PCL_ALIEN_LEVEL1_UPG", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL1_UPG } },
+  { "PCL_ALIEN_LEVEL2", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL2 } },
+  { "PCL_ALIEN_LEVEL2_UPG", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL2_UPG } },
+  { "PCL_ALIEN_LEVEL3", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL3 } },
+  { "PCL_ALIEN_LEVEL3_UPG", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL3_UPG } },
+  { "PCL_ALIEN_LEVEL4", TYPE_INTEGER, { .n = PCL_ALIEN_LEVEL4 } },
+  { "PCL_HUMAN", TYPE_INTEGER, { .n = PCL_HUMAN } },
+  { "PCL_HUMAN_BSUIT", TYPE_INTEGER, { .n = PCL_HUMAN_BSUIT } },
+  { "PCL_NUM_CLASSES", TYPE_INTEGER, { .n = PCL_NUM_CLASSES } },
 
   { "" }
 };

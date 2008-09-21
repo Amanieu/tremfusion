@@ -88,7 +88,7 @@ static int event_add(scDataTypeValue_t *in, scDataTypeValue_t *out, scClosure_t 
     function->argument[0] = TYPE_OBJECT;
     function->argument[1] = TYPE_HASH;
     function->argument[2] = TYPE_UNDEF;
-    function->return_type = TYPE_UNDEF;
+    function->return_type = TYPE_BOOLEAN;
     SC_FunctionGCInc(function);
     node->hook = function;
   }
@@ -263,10 +263,14 @@ int event_call_rec(scObject_t *event, scEventNode_t *node, scDataTypeHash_t *par
   in[2].type = TYPE_UNDEF;
 
   if(node == NULL)
+  {
+    out->type = TYPE_UNDEF;
     return 0;
+  }
 
   if(node->skip)
   {
+    out->type = TYPE_UNDEF;
     node->skip = qfalse;
     return 0;
   }
