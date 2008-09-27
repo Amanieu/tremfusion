@@ -434,7 +434,8 @@ ifeq ($(PLATFORM),darwin)
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
-      CLIENT_LDFLAGS += $(LIBSDIR)/macosx/libfreetype.6.dylib
+      LIBFREETYPE=$(B)/libfreetype.a
+      LIBFREETYPESRC=$(LIBSDIR)/macosx/libfreetype.a
     else
       CLIENT_LDFLAGS += $(shell freetype-config --libs)
     endif
@@ -1492,15 +1493,15 @@ ifneq ($(USE_TTY_CLIENT),1)
     $(B)/clientsmp/sdl_glimp.o
 endif
 
-$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE)
+$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LDFLAGS) \
-		$(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG)
+		$(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE)
+$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LDFLAGS) \
-		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG)
+		$(THREAD_LDFLAGS) $(LDFLAGS) $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
@@ -1529,6 +1530,14 @@ endif
 ifneq ($(strip $(LIBVORBISFILE)),)
 ifneq ($(strip $(LIBVORBISFILESRC)),)
 $(LIBVORBISFILE) : $(LIBVORBISFILESRC)
+	cp $< $@
+	ranlib $@
+endif
+endif
+
+ifneq ($(strip $(LIBFREETYPE)),)   
+ifneq ($(strip $(LIBFREETYPESRC)),)
+$(LIBFREETYPE) : $(LIBFREETYPESRC)
 	cp $< $@
 	ranlib $@
 endif
