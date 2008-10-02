@@ -1000,12 +1000,6 @@ void ClientUserinfoChanged( int clientNum )
   if( !Info_Validate(userinfo) )
     strcpy( userinfo, "\\name\\badinfo" );
 
-  // check for local client
-  s = Info_ValueForKey( userinfo, "ip" );
-
-  if( !strcmp( s, "localhost" ) )
-    client->pers.localClient = qtrue;
-
   // stickyspec toggle
   s = Info_ValueForKey( userinfo, "cg_stickySpec" );  
   client->pers.stickySpec = atoi( s ) != 0;
@@ -1017,10 +1011,6 @@ void ClientUserinfoChanged( int clientNum )
 
   if( strcmp( oldname, newname ) )
   {
-    // in case we need to revert and there's no oldname
-    if( client->pers.connected != CON_CONNECTED )
-        Q_strncpyz( oldname, "UnnamedPlayer", sizeof( oldname ) );
-
     if( client->pers.nameChangeTime &&
       ( level.time - client->pers.nameChangeTime )
       <= ( g_minNameChangePeriod.value * 1000 ) )
@@ -1046,7 +1036,7 @@ void ClientUserinfoChanged( int clientNum )
 
     if( revertName )
     {
-      Q_strncpyz( client->pers.netname, oldname,
+      Q_strncpyz( client->pers.netname, *oldname ? oldname : "UnnamedPlayer",
         sizeof( client->pers.netname ) );
       Info_SetValueForKey( userinfo, "name", oldname );
       trap_SetUserinfo( clientNum, userinfo );
@@ -1069,13 +1059,13 @@ void ClientUserinfoChanged( int clientNum )
   if( client->sess.spectatorState == SPECTATOR_SCOREBOARD )
     Q_strncpyz( client->pers.netname, "scoreboard", sizeof( client->pers.netname ) );
 
-  if( client->pers.connected == CON_CONNECTED )
+  if( *oldname )
   {
     if( strcmp( oldname, client->pers.netname ) )
     {
       trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE
         " renamed to %s\n\"", oldname, client->pers.netname ) );
-      G_LogPrintf( "ClientRename: %i [%s] (%s) \"%s\" -> \"%s\"\n", clientNum,
+      G_LogPrintf( "ClientRename: %i [%s] (%s) \"%s^7\" -> \"%s^7\"\n", clientNum,
          client->pers.ip, client->pers.guid, oldname, client->pers.netname );
       G_admin_namelog_update( client, qfalse );
     }
@@ -1084,9 +1074,6 @@ void ClientUserinfoChanged( int clientNum )
   // set max health
   health = atoi( Info_ValueForKey( userinfo, "handicap" ) );
   client->pers.maxHealth = health;
-
-  if( client->pers.maxHealth < 1 || client->pers.maxHealth > 100 )
-    client->pers.maxHealth = 100;
 
   if( client->pers.classSelection == PCL_NONE )
   {
@@ -1201,10 +1188,12 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   char      userinfo[ MAX_INFO_STRING ];
   gentity_t *ent;
   char      guid[ 33 ];
-  char      ip[ 16 ] = {""};
   char      reason[ MAX_STRING_CHARS ] = {""};
 
   ent = &g_entities[ clientNum ];
+  client = &level.clients[ clientNum ];
+  ent->client = client;
+  memset( client, 0, sizeof( *client ) );
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -1224,12 +1213,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
       strcmp( g_password.string, value ) != 0 )
     return "Invalid password";
 
-  // they can connect
-  ent->client = level.clients + clientNum;
-  client = ent->client;
-
-  memset( client, 0, sizeof(*client) );
-
   // add guid to session so we don't have to keep parsing userinfo everywhere
   if( !guid[0] )
   {
@@ -1240,7 +1223,14 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   {
     Q_strncpyz( client->pers.guid, guid, sizeof( client->pers.guid ) );
   }
-  Q_strncpyz( client->pers.ip, ip, sizeof( client->pers.ip ) );
+
+  // save ip
+  value = Info_ValueForKey( userinfo, "ip" );
+  Q_strncpyz( client->pers.ip, value, sizeof( client->pers.ip ) );
+
+  // check for local client
+  if( !strcmp( client->pers.ip, "localhost" ) )
+    client->pers.localClient = qtrue;
   client->pers.adminLevel = G_admin_level( ent );
 
   client->pers.connected = CON_CONNECTING;
@@ -1253,7 +1243,7 @@ char *ClientConnect( int clientNum, qboolean firstTime )
 
   // get and distribute relevent paramters
   ClientUserinfoChanged( clientNum );
-  G_LogPrintf( "ClientConnect: %i [%s] (%s) \"%s\"\n", clientNum,
+  G_LogPrintf( "ClientConnect: %i [%s] (%s) \"%s^7\"\n", clientNum,
    client->pers.ip, client->pers.guid, client->pers.netname );
 
   // don't do the "xxx connected" messages if they were caried over from previous level
@@ -1705,7 +1695,7 @@ void ClientDisconnect( int clientNum )
   if( ent->client->pers.connection )
     ent->client->pers.connection->clientNum = -1;
 
-  G_LogPrintf( "ClientDisconnect: %i [%s] (%s) \"%s\"\n", clientNum,
+  G_LogPrintf( "ClientDisconnect: %i [%s] (%s) \"%s^7\"\n", clientNum,
    ent->client->pers.ip, ent->client->pers.guid, ent->client->pers.netname );
 
   trap_UnlinkEntity( ent );
