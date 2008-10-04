@@ -1089,7 +1089,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   // do the damage
   if( take )
   {
-    if( attacker->client->pers.teamSelection == TEAM_ALIENS)
+    if( attacker->client && attacker->client->pers.teamSelection == TEAM_ALIENS)
       G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
 
     targ->health = targ->health - take;
