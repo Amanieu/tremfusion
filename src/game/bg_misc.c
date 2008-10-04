@@ -2800,6 +2800,10 @@ char *eventnames[ ] =
   "EV_DCC_ATTACK",      // dcc under attack
 
   "EV_RPTUSE_SOUND"     // trigger a sound
+ 
+  "EV_ALIEN_HIT"        // Alien feedback for hitting an enemy
+  "EV_ALIEN_MISS"       // Alien feedback for missing a strike
+  "EV_ALIEN_TEAMHIT"    // Alien feedback for hitting a teammate
 };
 
 /*

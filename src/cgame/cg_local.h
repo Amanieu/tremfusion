@@ -649,7 +649,8 @@ typedef struct centity_s
 
   buildableAnimNumber_t buildableAnim;    //persistant anim number
   buildableAnimNumber_t oldBuildableAnim; //to detect when new anims are set
-  particleSystem_t      *buildablePS;
+  particleSystem_t      *buildablePS;     //handles things like smoke/blood when heavily damaged
+  particleSystem_t      *buildableHitPS;  //handles when a buildable is hit
   buildableStatus_t     buildableStatus;
   buildableCache_t      buildableCache;   // so we don't recalculate things
   float                 lastBuildableHealthScale;
@@ -1075,8 +1076,8 @@ typedef struct
   int           itemPickupBlendTime;                // the pulse around the crosshair is timed seperately
 
   int           weaponSelectTime;
-  int           weaponAnimation;
-  int           weaponAnimationTime;
+  int           feedbackAnimation;
+  int           feedbackAnimationType;
 
   // blend blobs
   float         damageTime;
@@ -1282,12 +1283,18 @@ typedef struct
   sfxHandle_t alienEvolveSound;
 
   qhandle_t   humanBuildableDamagedPS;
+  qhandle_t   humanBuildableHitSmallPS;
+  qhandle_t   humanBuildableHitLargePS;
   qhandle_t   humanBuildableDestroyedPS;
   qhandle_t   alienBuildableDamagedPS;
+  qhandle_t   alienBuildableHitSmallPS;
+  qhandle_t   alienBuildableHitLargePS;
   qhandle_t   alienBuildableDestroyedPS;
 
   qhandle_t   alienBleedPS;
   qhandle_t   humanBleedPS;
+
+  qhandle_t alienAttackFeedbackShaders[11];
 
   qhandle_t   teslaZapTS;
   qhandle_t   massDriverTS;
@@ -1543,6 +1550,8 @@ extern  vmCvar_t    cg_debugRandom;
 extern  vmCvar_t    cg_optimizePrediction;
 extern  vmCvar_t    cg_projectileNudge;
 
+extern  vmCvar_t    cg_drawAlienFeedback;
+
 extern  vmCvar_t    cg_voice;
 
 extern  vmCvar_t    cg_suppressWAnimWarnings;
@@ -1738,6 +1747,7 @@ void        CG_MissileHitPlayer( weapon_t weapon, weaponMode_t weaponMode, vec3_
 void        CG_Bullet( vec3_t origin, int sourceEntityNum, vec3_t normal, qboolean flesh, int fleshEntityNum );
 void        CG_ShotgunFire( entityState_t *es );
 void        CG_MassDriverFire( entityState_t *es );
+void        CG_HandleAlienFeedback( centity_t* cent, alienFeedback_t feedbackType );
 
 void        CG_AddViewWeapon (playerState_t *ps);
 void        CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent );

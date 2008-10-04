@@ -1731,7 +1731,26 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
       trap_S_StartSound( NULL, es->number, CHAN_WEAPON, wi->wim[ weaponMode ].flashSound[ c ] );
   }
 }
+/*
+=================
+CG_HandleAlienFeedback
 
+Caused by an EV_ALIEN_HIT, EV_ALIEN_MISS, or EV_ALIEN_TEAMHIT event. Used to cause a ui feedback
+effect for visual information about a hit
+=================
+*/
+void CG_HandleAlienFeedback( centity_t *cent, alienFeedback_t feedbackType )
+{
+        entityState_t     *es;
+
+        es = &cent->currentState;
+
+        // show the alien feedback, if the entity matches this player
+        if(es->number == cg.predictedPlayerState.clientNum) {
+                cg.feedbackAnimation = 1;
+                cg.feedbackAnimationType = feedbackType;
+        }
+}
 
 /*
 =================

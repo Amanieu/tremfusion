@@ -182,4 +182,6 @@
 #define CG_SQUAD_MARKERS                  80
 #define CG_SPEED                          81
 
+#define CG_PLAYER_ATTACK_FEEDBACK         82
+
 #endif

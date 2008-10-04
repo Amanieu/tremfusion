@@ -303,6 +303,7 @@ typedef struct
   const char *onClose;              // run when the menu is closed
   const char *onESC;                // run when the menu is closed
   const char *soundName;            // background loop sound for menu
+  const char *listenCvar;           // Cvar to be executed as an uiscript
 
   vec4_t focusColor;                // focus color for items
   vec4_t disableColor;              // focus color for items

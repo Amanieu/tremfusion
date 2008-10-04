@@ -6602,7 +6602,9 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
 void Menu_Paint( menuDef_t *menu, qboolean forcePaint )
 {
   int i;
-
+  itemDef_t item;
+  char listened_text[1024];
+  
   if( menu == NULL )
     return;
 
@@ -6614,6 +6616,18 @@ void Menu_Paint( menuDef_t *menu, qboolean forcePaint )
 
   if( forcePaint )
     menu->window.flags |= WINDOW_FORCED;
+
+  //Executes the text stored in the listened cvar as an UIscript
+  if( menu->listenCvar && menu->listenCvar[0] )
+  {
+    DC->getCVarString( menu->listenCvar, listened_text, sizeof(listened_text) );
+    if( listened_text[0] )
+    {
+      item.parent = menu;
+      Item_RunScript( &item, listened_text );
+      DC->setCVar( menu->listenCvar, "" );
+    }
+  }
 
   // draw the background if necessary
   if( menu->fullScreen )
@@ -7099,6 +7113,7 @@ qboolean ItemParse_visible( itemDef_t *item, int handle )
   if( !PC_Int_Parse( handle, &i ) )
     return qfalse;
 
+  item->window.flags &= ~WINDOW_VISIBLE;
   if( i )
     item->window.flags |= WINDOW_VISIBLE;
 
@@ -8109,6 +8124,16 @@ qboolean MenuParse_soundLoop( itemDef_t *item, int handle )
   return qtrue;
 }
 
+qboolean MenuParse_listenTo( itemDef_t *item, int handle )
+{
+  menuDef_t *menu = ( menuDef_t* )item;
+
+  if( !PC_String_Parse( handle, &menu->listenCvar ) )
+    return qfalse;
+
+  return qtrue;
+}
+
 qboolean MenuParse_fadeClamp( itemDef_t *item, int handle )
 {
   menuDef_t *menu = ( menuDef_t* )item;
@@ -8188,6 +8213,7 @@ keywordHash_t menuParseKeywords[] = {
   {"ownerdrawFlag", MenuParse_ownerdrawFlag, NULL},
   {"outOfBoundsClick", MenuParse_outOfBounds, NULL},
   {"soundLoop", MenuParse_soundLoop, NULL},
+  {"listento", MenuParse_listenTo, NULL},
   {"itemDef", MenuParse_itemDef, NULL},
   {"cinematic", MenuParse_cinematic, NULL},
   {"popup", MenuParse_popup, NULL},
