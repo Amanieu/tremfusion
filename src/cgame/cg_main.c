@@ -1441,6 +1441,7 @@ static const char *CG_FeederItemText( float feederID, int index, int column, qha
   int           team = -1;
   score_t       *sp = NULL;
   qboolean      showIcons = qfalse;
+  int           readyMask = 0, readyMask2 = 0;
 
   *handle = -1;
 
@@ -1451,8 +1452,9 @@ static const char *CG_FeederItemText( float feederID, int index, int column, qha
 
   info = CG_InfoFromScoreIndex( index, team, &scoreIndex );
   sp = &cg.scores[ scoreIndex ];
+  sscanf( CG_ConfigString( CS_CLIENTS_READY ), "%d %d", &readyMask, &readyMask2 );
 
-  if( ( atoi( CG_ConfigString( CS_CLIENTS_READY ) ) & ( 1 << sp->client ) ) &&
+  if( ( ( sp->client < 32 ? readyMask : readyMask2 ) & ( 1 << ( sp->client % 32 ) ) ) &&
       cg.intermissionStarted )
     showIcons = qfalse;
   else if( cg.snap->ps.pm_type == PM_SPECTATOR || cg.snap->ps.pm_flags & PMF_FOLLOW ||
@@ -1495,7 +1497,7 @@ static const char *CG_FeederItemText( float feederID, int index, int column, qha
         break;
 
       case 2:
-        if( ( atoi( CG_ConfigString( CS_CLIENTS_READY ) ) & ( 1 << sp->client ) ) &&
+        if( ( ( sp->client < 32 ? readyMask : readyMask2 ) & ( 1 << ( sp->client % 32 ) ) ) &&
             cg.intermissionStarted )
           return "Ready";
         break;

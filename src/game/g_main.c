@@ -1849,7 +1849,7 @@ void CheckIntermissionExit( void )
   int       ready, notReady, numPlayers;
   int       i;
   gclient_t *cl;
-  int       readyMask;
+  int       readyMask, readyMask2;
 
   //if no clients are connected, just exit
   if( !level.numConnectedClients )
@@ -1862,6 +1862,7 @@ void CheckIntermissionExit( void )
   ready = 0;
   notReady = 0;
   readyMask = 0;
+  readyMask2 = 0;
   numPlayers = 0;
   for( i = 0; i < g_maxclients.integer; i++ )
   {
@@ -1875,8 +1876,10 @@ void CheckIntermissionExit( void )
     if( cl->readyToExit )
     {
       ready++;
-      if( i < 16 )
+      if( i < 32 )
         readyMask |= 1 << i;
+      else
+        readyMask2 |= 1 << i;
     }
     else
       notReady++;
@@ -1884,7 +1887,7 @@ void CheckIntermissionExit( void )
     numPlayers++;
   }
 
-  trap_SetConfigstring( CS_CLIENTS_READY, va( "%d", readyMask ) );
+  trap_SetConfigstring( CS_CLIENTS_READY, va( "%d %d", readyMask, readyMask2 ) );
 
   // never exit in less than five seconds
   if( level.time < level.intermissiontime + 5000 )
