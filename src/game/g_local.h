@@ -329,6 +329,10 @@ typedef struct
   qboolean            vote;
   qboolean            teamVote;
 
+  // flood protection
+  int                 floodDemerits;
+  int                 floodTime;
+
   vec3_t              lastDeathLocation;
   char                guid[ 33 ];
   char                ip[ 40 ];
@@ -1142,6 +1146,9 @@ extern  vmCvar_t  g_chatTeamPrefix;
 
 extern  vmCvar_t  g_debugVoices;
 extern  vmCvar_t  g_voiceChats;
+
+extern  vmCvar_t  g_floodMaxDemerits;
+extern  vmCvar_t  g_floodMinTime;
 
 extern  vmCvar_t  g_shove;
 

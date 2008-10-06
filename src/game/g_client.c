@@ -1473,9 +1473,6 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   // calculate each client's acceleration
   ent->evaluateAcceleration = qtrue;
 
-  client->ps.stats[ STAT_WEAPONS ] = 0;
-  client->ps.stats[ STAT_WEAPONS2 ] = 0;
-  client->ps.stats[ STAT_SLOTS ] = 0;
   client->ps.stats[ STAT_MISC ] = 0;
 
   client->ps.eFlags = flags;
@@ -1492,7 +1489,6 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
   // clear entity values
   if( ent->client->pers.classSelection == PCL_HUMAN )
   {
-    BG_AddWeaponToInventory( WP_BLASTER, client->ps.stats );
     BG_AddUpgradeToInventory( UP_MEDKIT, client->ps.stats );
     weapon = client->pers.humanItemSelection;
   }
@@ -1503,7 +1499,7 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
 
   maxAmmo = BG_Weapon( weapon )->maxAmmo;
   maxClips = BG_Weapon( weapon )->maxClips;
-  BG_AddWeaponToInventory( weapon, client->ps.stats );
+  client->ps.stats[ STAT_WEAPON ] = weapon;
   client->ps.ammo = maxAmmo;
   client->ps.clips = maxClips;
 

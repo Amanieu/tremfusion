@@ -3083,47 +3083,6 @@ qboolean BG_WeaponIsFull( weapon_t weapon, int stats[ ], int ammo, int clips )
 
 /*
 ========================
-BG_AddWeaponToInventory
-
-Give a player a weapon
-========================
-*/
-void BG_AddWeaponToInventory( int weapon, int stats[ ] )
-{
-  if( weapon <= 15 )
-    stats[ STAT_WEAPONS ] |= 1 << weapon;
-  else
-    stats[ STAT_WEAPONS2 ] |= 1 << ( weapon - 16 );
-
-  if( stats[ STAT_SLOTS ] & BG_Weapon( weapon )->slots )
-    Com_Printf( S_COLOR_YELLOW "WARNING: Held items conflict with weapon %d\n", weapon );
-
-  stats[ STAT_SLOTS ] |= BG_Weapon( weapon )->slots;
-}
-
-/*
-========================
-BG_RemoveWeaponToInventory
-
-Take a weapon from a player
-========================
-*/
-void BG_RemoveWeaponFromInventory( int weapon, int stats[ ] )
-{
-  int  weaponList;
-
-  weaponList = ( stats[ STAT_WEAPONS ] & 0x0000FFFF ) | ( ( stats[ STAT_WEAPONS2 ] << 16 ) & 0xFFFF0000 );
-
-  weaponList &= ~( 1 << weapon );
-
-  stats[ STAT_WEAPONS ] = weaponList & 0x0000FFFF;
-  stats[ STAT_WEAPONS2 ] = ( weaponList & 0xFFFF0000 ) >> 16;
-
-  stats[ STAT_SLOTS ] &= ~BG_Weapon( weapon )->slots;
-}
-
-/*
-========================
 BG_InventoryContainsWeapon
 
 Does the player hold a weapon?
@@ -3131,11 +3090,39 @@ Does the player hold a weapon?
 */
 qboolean BG_InventoryContainsWeapon( int weapon, int stats[ ] )
 {
-  int  weaponList;
+  // humans always have a blaster
+  if( stats[ STAT_TEAM ] == TEAM_HUMANS && weapon == WP_BLASTER )
+    return qtrue;
 
-  weaponList = ( stats[ STAT_WEAPONS ] & 0x0000FFFF ) | ( ( stats[ STAT_WEAPONS2 ] << 16 ) & 0xFFFF0000 );
+  return ( stats[ STAT_WEAPON ] == weapon );
+}
 
-  return( weaponList & ( 1 << weapon ) );
+/*
+========================
+BG_CalculateSlotsForInventory
+
+Calculate the slots used by an inventory and warn of conflicts
+========================
+*/
+int BG_CalculateSlotsForInventory( int stats[ ] )
+{
+  int i, slot, slots;
+
+  slots = BG_Weapon( stats[ STAT_WEAPON ] )->slots;
+  if( stats[ STAT_TEAM ] == TEAM_HUMANS )
+    slots |= BG_Weapon( WP_BLASTER )->slots;
+  for( i = UP_NONE; i < UP_NUM_UPGRADES; i++ )
+    if( BG_InventoryContainsUpgrade( i, stats ) )
+    {
+      slot = BG_Upgrade( i )->slots;
+      // this check should never be true
+      if( slots & slot )
+        Com_Printf( S_COLOR_YELLOW "WARNING: held item %d conflicts with "
+                    "inventory slot %d\n", i, slot );
+      slots |= slot;
+    }
+
+  return slots;
 }
 
 /*
@@ -3148,11 +3135,6 @@ Give the player an upgrade
 void BG_AddUpgradeToInventory( int item, int stats[ ] )
 {
   stats[ STAT_ITEMS ] |= ( 1 << item );
-
-  if( stats[ STAT_SLOTS ] & BG_Upgrade( item )->slots )
-    Com_Printf( S_COLOR_YELLOW "WARNING: Held items conflict with upgrade %d\n", item );
-
-  stats[ STAT_SLOTS ] |= BG_Upgrade( item )->slots;
 }
 
 /*
@@ -3165,8 +3147,6 @@ Take an upgrade from the player
 void BG_RemoveUpgradeFromInventory( int item, int stats[ ] )
 {
   stats[ STAT_ITEMS ] &= ~( 1 << item );
-
-  stats[ STAT_SLOTS ] &= ~BG_Upgrade( item )->slots;
 }
 
 /*
@@ -3408,27 +3388,6 @@ qboolean BG_PlayerCanChangeWeapon( playerState_t *ps )
     return qfalse;
 
   return qtrue;
-}
-
-/*
-=================
-BG_HasEnergyWeapon
-
-Returns true if the player has an energy weapon.
-=================
-*/
-qboolean BG_HasEnergyWeapon( playerState_t *ps )
-{
-  int i;
-  
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-  {
-    if( !BG_InventoryContainsWeapon( i, ps->stats ) ||
-        !BG_Weapon( i )->usesEnergy )
-      continue;
-    return qtrue;
-  }
-  return qfalse;
 }
 
 /*

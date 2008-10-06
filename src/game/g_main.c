@@ -113,6 +113,9 @@ vmCvar_t  g_shove;
 vmCvar_t  g_mapConfigs;
 vmCvar_t  g_chatTeamPrefix;
 
+vmCvar_t  g_floodMaxDemerits;
+vmCvar_t  g_floodMinTime;
+
 vmCvar_t  g_layouts;
 vmCvar_t  g_layoutAuto;
 
@@ -218,6 +221,9 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_disabledBuildables, "g_disabledBuildables", "", CVAR_ROM, 0, qfalse  },
 
   { &g_chatTeamPrefix, "g_chatTeamPrefix", "0", CVAR_ARCHIVE, 0, qfalse  },
+
+  { &g_floodMaxDemerits, "g_floodMaxDemerits", "5000", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_floodMinTime, "g_floodMinTime", "2000", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_markDeconstruct, "g_markDeconstruct", "1", CVAR_SERVERINFO | CVAR_ARCHIVE, 0, qfalse  },
 
@@ -1849,7 +1855,8 @@ void CheckIntermissionExit( void )
   int       ready, notReady, numPlayers;
   int       i;
   gclient_t *cl;
-  int       readyMask, readyMask2;
+  byte      readyMasks[ ( MAX_CLIENTS + 7 ) / 8 ];
+  char      readyString[ 2 * sizeof( readyMasks ) + 1 ];
 
   //if no clients are connected, just exit
   if( !level.numConnectedClients )
@@ -1861,9 +1868,8 @@ void CheckIntermissionExit( void )
   // see which players are ready
   ready = 0;
   notReady = 0;
-  readyMask = 0;
-  readyMask2 = 0;
   numPlayers = 0;
+  Com_Memset( readyMasks, 0, sizeof( readyMasks ) );
   for( i = 0; i < g_maxclients.integer; i++ )
   {
     cl = level.clients + i;
@@ -1876,10 +1882,8 @@ void CheckIntermissionExit( void )
     if( cl->readyToExit )
     {
       ready++;
-      if( i < 32 )
-        readyMask |= 1 << i;
-      else
-        readyMask2 |= 1 << i;
+      // the nth bit of readyMasks is for client (n - 1)
+      readyMasks[ i / 8 ] |= 1 << ( 7 - ( i % 8 ) );
     }
     else
       notReady++;
@@ -1887,7 +1891,14 @@ void CheckIntermissionExit( void )
     numPlayers++;
   }
 
-  trap_SetConfigstring( CS_CLIENTS_READY, va( "%d %d", readyMask, readyMask2 ) );
+  // this is hex because we can convert bits to a hex string in pieces, 
+  // whereas a decimal string would have to all be written at once 
+  // (and we can't fit a number that large in an int)
+  for( i = 0; i < ( g_maxclients.integer + 7 ) / 8; i++ )
+    Com_sprintf( &readyString[ i * 2 ], sizeof( readyString ) - i * 2,
+                 "%2.2x", readyMasks[ i ] );
+
+  trap_SetConfigstring( CS_CLIENTS_READY, readyString );
 
   // never exit in less than five seconds
   if( level.time < level.intermissiontime + 5000 )

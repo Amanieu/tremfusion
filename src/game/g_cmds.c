@@ -2089,8 +2089,9 @@ Cmd_Buy_f
 void Cmd_Buy_f( gentity_t *ent )
 {
   char      s[ MAX_TOKEN_CHARS ];
-  int weapon, upgrade;
-  qboolean energyOnly;
+  weapon_t  weapon;
+  upgrade_t upgrade;
+  qboolean  energyOnly;
 
   trap_Argv( 1, s, sizeof( s ) );
 
@@ -2100,7 +2101,8 @@ void Cmd_Buy_f( gentity_t *ent )
   // Only give energy from reactors or repeaters
   if( G_BuildableRange( ent->client->ps.origin, 100, BA_H_ARMOURY ) )
     energyOnly = qfalse;
-  else if( upgrade == UP_AMMO && BG_HasEnergyWeapon( &ent->client->ps ) &&
+  else if( upgrade == UP_AMMO &&
+           BG_Weapon( ent->client->ps.stats[ STAT_WEAPON ] )->usesEnergy &&
            ( G_BuildableRange( ent->client->ps.origin, 100, BA_H_REACTOR ) ||
              G_BuildableRange( ent->client->ps.origin, 100, BA_H_REPEATER ) ) )
     energyOnly = qtrue;
@@ -2152,7 +2154,7 @@ void Cmd_Buy_f( gentity_t *ent )
     }
 
     //have space to carry this?
-    if( BG_Weapon( weapon )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
+    if( BG_Weapon( weapon )->slots & BG_CalculateSlotsForInventory( ent->client->ps.stats ) )
     {
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
       return;
@@ -2162,8 +2164,7 @@ void Cmd_Buy_f( gentity_t *ent )
     if( !BG_PlayerCanChangeWeapon( &ent->client->ps ) )
       return;
 
-    //add to inventory
-    BG_AddWeaponToInventory( weapon, ent->client->ps.stats );
+    ent->client->ps.stats[ STAT_WEAPON ] = weapon;
     ent->client->ps.ammo = BG_Weapon( weapon )->maxAmmo;
     ent->client->ps.clips = BG_Weapon( weapon )->maxClips;
 
@@ -2196,7 +2197,7 @@ void Cmd_Buy_f( gentity_t *ent )
     }
 
     //have space to carry this?
-    if( BG_Upgrade( upgrade )->slots & ent->client->ps.stats[ STAT_SLOTS ] )
+    if( BG_Upgrade( upgrade )->slots & BG_CalculateSlotsForInventory( ent->client->ps.stats ) )
     {
       G_TriggerMenu( ent->client->ps.clientNum, MN_H_NOSLOTS );
       return;
@@ -2283,6 +2284,9 @@ void Cmd_Sell_f( gentity_t *ent )
   weapon = BG_WeaponByName( s )->number;
   upgrade = BG_UpgradeByName( s )->number;
 
+  if( !Q_stricmpn( s, "weapon", 6 ) )
+    weapon = ent->client->ps.stats[ STAT_WEAPON ];
+
   if( weapon != WP_NONE )
   {
     weapon_t selected = BG_GetPlayerWeapon( &ent->client->ps );
@@ -2307,7 +2311,7 @@ void Cmd_Sell_f( gentity_t *ent )
         return;
       }
 
-      BG_RemoveWeaponFromInventory( weapon, ent->client->ps.stats );
+      ent->client->ps.stats[ STAT_WEAPON ] = WP_NONE;
 
       //add to funds
       G_AddCreditToClient( ent->client, (short)BG_Weapon( weapon )->price, qfalse );
@@ -2373,7 +2377,7 @@ void Cmd_Sell_f( gentity_t *ent )
       if( BG_InventoryContainsWeapon( i, ent->client->ps.stats ) &&
           BG_Weapon( i )->purchasable )
       {
-        BG_RemoveWeaponFromInventory( i, ent->client->ps.stats );
+        ent->client->ps.stats[ STAT_WEAPON ] = WP_NONE;
 
         //add to funds
         G_AddCreditToClient( ent->client, (short)BG_Weapon( i )->price, qfalse );
@@ -3028,6 +3032,41 @@ void Cmd_Damage_f( gentity_t *ent )
             ( nonloc ? DAMAGE_NO_LOCDAMAGE : 0 ), MOD_TARGET_LASER );
 }
 
+/*
+==================
+G_FloodLimited
+
+Determine whether a user is flood limited, and adjust their flood demerits
+Notify them if this is the first time they were over the limit
+==================
+*/
+qboolean G_FloodLimited( gentity_t *ent )
+{
+  int deltatime = level.time - ent->client->pers.floodTime;
+  int flooding;
+
+  if( g_floodMinTime.integer <= 0 )
+    return qfalse;
+
+  if( G_admin_permission( ent, ADMF_NOCENSORFLOOD ) )
+    return qfalse;
+
+  ent->client->pers.floodDemerits += g_floodMinTime.integer - deltatime;
+  if( ent->client->pers.floodDemerits < 0 )
+    ent->client->pers.floodDemerits = 0;
+  ent->client->pers.floodTime = level.time;
+
+  flooding = ent->client->pers.floodDemerits - g_floodMaxDemerits.integer;
+  if( flooding <= 0 )
+    return qfalse;
+  // seconds (rounded up)
+  flooding = ( flooding + 999 ) / 1000;
+  trap_SendServerCommand( ent - g_entities, va( "print \"You are flooding: "
+                          "please wait %d second%s before trying again\n",
+                          flooding, ( flooding != 1 ) ? "s" : "" ) );
+  return qtrue;
+}
+
 commands_t cmds[ ] = {
   // normal commands
   { "team", 0, Cmd_Team_f },
@@ -3128,7 +3167,8 @@ void ClientCommand( int clientNum )
     return;
   }
 
-  if( cmds[ i ].cmdFlags & CMD_MESSAGE && ent->client->pers.muted )
+  if( cmds[ i ].cmdFlags & CMD_MESSAGE && ( ent->client->pers.muted ||
+      G_FloodLimited( ent ) ) )
     return;
 
   if( cmds[ i ].cmdFlags & CMD_TEAM &&
