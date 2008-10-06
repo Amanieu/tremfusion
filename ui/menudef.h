@@ -81,7 +81,7 @@
 #define FEEDER_IGNORE_LIST                20    // ignored players
 #define FEEDER_HELP_LIST                  21    // help topics
 
-#define FEEDER_RESOLUTIONS                21    // display resolutions
+#define FEEDER_RESOLUTIONS                22    // display resolutions
 
 // display flags
 #define UI_SHOW_FAVORITESERVERS           0x00000001
