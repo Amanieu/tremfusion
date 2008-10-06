@@ -2266,15 +2266,10 @@ UI_ParseCarriageList
 static void UI_ParseCarriageList( void )
 {
   char buffer[ MAX_CVAR_VALUE_STRING ];
-  int dummy;
 
   trap_Cvar_VariableStringBuffer( "ui_carriage", buffer, sizeof( buffer ) );
 
-  sscanf( buffer, "%d %d", &uiInfo.weapons, &uiInfo.upgrades );
-
-  trap_Cvar_VariableStringBuffer( "ui_currentClass", buffer, sizeof( buffer ) );
-
-  sscanf( buffer, "%d %d", &dummy, &uiInfo.credits );
+  sscanf( buffer, "%d %d %d", &uiInfo.weapon, &uiInfo.upgrades, &uiInfo.credits );
 }
 
 /*
@@ -2290,12 +2285,6 @@ static void UI_LoadHumanArmouryBuys( void )
 
   UI_ParseCarriageList( );
 
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-  {
-    if( uiInfo.weapons & ( 1 << i ) )
-      slots |= BG_Weapon( i )->slots;
-  }
-
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
     if( uiInfo.upgrades & ( 1 << i ) )
@@ -2310,27 +2299,14 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_Weapon( i )->purchasable &&
         BG_WeaponAllowedInStage( i, stage ) &&
         BG_WeaponIsAllowed( i ) &&
-        !( uiInfo.weapons & ( 1 << i ) ) )
+        i != uiInfo.weapon )
     {
-      char buffer[ MAX_STRING_CHARS ] = "";
+      char buffer[ MAX_STRING_CHARS ];
       int price = BG_Weapon( i )->price;
-      for( i2 = WP_NONE + 1; i2 < WP_NUM_WEAPONS; i2++ )
+      if( uiInfo.weapon != WP_NONE )
       {
-        if( ( uiInfo.weapons & ( 1 << i2 ) ) &&
-            ( BG_Weapon( i2 )->slots & BG_Weapon( i )->slots ) )
-        {
-          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Weapon( i2 )->name );
-          price -= BG_Weapon( i2 )->price;
-        }
-      }
-      for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
-      {
-        if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
-            ( BG_Upgrade( i2 )->slots & BG_Weapon( i )->slots ) )
-        {
-          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
-          price -= BG_Upgrade( i2 )->price;
-        }
+        Com_sprintf( buffer, sizeof( buffer ), "cmd sell %s;", BG_Weapon( uiInfo.weapon )->name );
+        price -= BG_Weapon( uiInfo.weapon )->price;
       }
       uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
         BG_Weapon( i )->humanName : va( "^1%s", BG_Weapon( i )->humanName ) );
@@ -2355,15 +2331,6 @@ static void UI_LoadHumanArmouryBuys( void )
     {
       char buffer[ MAX_STRING_CHARS ] = "";
       int price = BG_Upgrade( i )->price;
-      for( i2 = WP_NONE + 1; i2 < WP_NUM_WEAPONS; i2++ )
-      {
-        if( ( uiInfo.weapons & ( 1 << i2 ) ) &&
-            ( BG_Weapon( i2 )->slots & BG_Upgrade( i )->slots ) )
-        {
-          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Weapon( i2 )->name );
-          price -= BG_Weapon( i2 )->price;
-        }
-      }
       for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
       {
         if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
@@ -2399,20 +2366,17 @@ static void UI_LoadHumanArmourySells( void )
   uiInfo.humanArmourySellCount = 0;
   UI_ParseCarriageList( );
 
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
+  if( uiInfo.weapon != WP_NONE )
   {
-    if( uiInfo.weapons & ( 1 << i ) )
-    {
-      uiInfo.humanArmourySellList[ j ].text = String_Alloc( BG_Weapon( i )->humanName );
-      uiInfo.humanArmourySellList[ j ].cmd =
-        String_Alloc( va( "cmd sell %s\n", BG_Weapon( i )->name ) );
-      uiInfo.humanArmourySellList[ j ].type = INFOTYPE_WEAPON;
-      uiInfo.humanArmourySellList[ j ].v.weapon = i;
+    uiInfo.humanArmourySellList[ j ].text = String_Alloc( BG_Weapon( uiInfo.weapon )->humanName );
+    uiInfo.humanArmourySellList[ j ].cmd =
+      String_Alloc( va( "cmd sell %s\n", BG_Weapon( uiInfo.weapon )->name ) );
+    uiInfo.humanArmourySellList[ j ].type = INFOTYPE_WEAPON;
+    uiInfo.humanArmourySellList[ j ].v.weapon = uiInfo.weapon;
 
-      j++;
+    j++;
 
-      uiInfo.humanArmourySellCount++;
-    }
+    uiInfo.humanArmourySellCount++;
   }
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
@@ -2439,12 +2403,12 @@ UI_ArmouryRefreshCb
 */
 static void UI_ArmouryRefreshCb( void *data )
 {
-  int oldWeapons  = uiInfo.weapons;
+  int oldWeapon  = uiInfo.weapon;
   int oldUpgrades = uiInfo.upgrades;
 
   UI_ParseCarriageList( );
 
-  if( uiInfo.weapons != oldWeapons || uiInfo.upgrades != oldUpgrades )
+  if( uiInfo.weapon != oldWeapon || uiInfo.upgrades != oldUpgrades )
   {
     UI_LoadHumanArmouryBuys( );
     UI_LoadHumanArmourySells( );
@@ -2506,7 +2470,7 @@ static void UI_LoadAlienBuilds( void )
   for( i = BA_NONE + 1; i < BA_NUM_BUILDABLES; i++ )
   {
     if( BG_Buildable( i )->team == TEAM_ALIENS &&
-        BG_Buildable( i )->buildWeapon & uiInfo.weapons &&
+        ( BG_Buildable( i )->buildWeapon & ( 1 << uiInfo.weapon ) ) &&
         BG_BuildableAllowedInStage( i, stage ) &&
         BG_BuildableIsAllowed( i ) )
     {
@@ -2542,7 +2506,7 @@ static void UI_LoadHumanBuilds( void )
   for( i = BA_NONE + 1; i < BA_NUM_BUILDABLES; i++ )
   {
     if( BG_Buildable( i )->team == TEAM_HUMANS &&
-        BG_Buildable( i )->buildWeapon & uiInfo.weapons &&
+        ( BG_Buildable( i )->buildWeapon & ( 1 << uiInfo.weapon ) ) &&
         BG_BuildableAllowedInStage( i, stage ) &&
         BG_BuildableIsAllowed( i ) )
     {

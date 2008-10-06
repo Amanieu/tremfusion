@@ -388,18 +388,12 @@ Set some cvars used by the UI
 */
 static void CG_SetUIVars( void )
 {
-  int   i, weapons = 0, upgrades = 0;
+  int   i, upgrades = 0;
 
   if( !cg.snap )
     return;
 
   //determine what the player is carrying
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-  {
-    if( BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) &&
-        BG_Weapon( i )->purchasable )
-      weapons |= ( 1 << i );
-  }
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
     if( BG_InventoryContainsUpgrade( i, cg.snap->ps.stats ) &&
@@ -407,7 +401,8 @@ static void CG_SetUIVars( void )
       upgrades |= ( 1 << i );
   }
 
-  trap_Cvar_Set( "ui_carriage", va( "%d %d", weapons, upgrades ) );
+  trap_Cvar_Set( "ui_carriage", va( "%d %d %d", cg.snap->ps.stats[ STAT_WEAPON ],
+                 upgrades, cg.snap->ps.persistant[ PERS_CREDIT ] ) );
 
   trap_Cvar_Set( "ui_stages", va( "%d %d", cgs.alienStage, cgs.humanStage ) );
 }
