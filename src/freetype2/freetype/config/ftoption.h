@@ -223,8 +223,8 @@ FT_BEGIN_HEADER
 #  define FREETYPE2_DLL_IMPEXP     __DLL_IMPORT__
 # elif defined (USE_FREETYPE2_STATIC)
 #  define FREETYPE2_DLL_IMPEXP      
-# else /* assume USE_FREETYPE2_DLL */
-#  define FREETYPE2_DLL_IMPEXP     __DLL_IMPORT__
+# else /* assume USE_FREETYPE2_STATIC */
+#  define FREETYPE2_DLL_IMPEXP     
 # endif
 #else /* __WIN32__ */
 # define FREETYPE2_DLL_IMPEXP  

@@ -562,7 +562,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
-      CLIENT_LDFLAGS += $(LIBSDIR)/win32/libfreetype.dll.a
+      CLIENT_LDFLAGS += $(LIBSDIR)/win32/libfreetype.a
     else
       CLIENT_LDFLAGS += $(shell freetype-config --libs)
     endif
