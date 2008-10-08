@@ -38,27 +38,21 @@ Q3_VERSION=`grep '^VERSION=' Makefile | sed -e 's/.*=\(.*\)/\1/'`
 TIGERHOST=`uname -r |perl -w -p -e 's/\A(\d+)\..*\Z/$1/; $_ = (($_ >= 8) ? "1" : "0");'`
 
 # we want to use the oldest available SDK for max compatiblity
-unset PPC_CLIENT_SDK
-PPC_CLIENT_CC=gcc
-unset PPC_CLIENT_CFLAGS
-unset PPC_CLIENT_LDFLAGS
-unset PPC_SERVER_SDK
-unset PPC_SERVER_CFLAGS
-unset PPC_SERVER_LDFLAGS
+unset PPC_SDK
+PPC_CC=gcc
+unset PPC_CFLAGS
+unset PPC_LDFLAGS
 unset X86_SDK
 unset X86_CFLAGS
 unset X86_LDFLAGS
 if [ -d /Developer/SDKs/MacOSX10.5.sdk ]; then
-	PPC_CLIENT_SDK=/Developer/SDKs/MacOSX10.5.sdk
-	PPC_CLIENT_CC=gcc-4.0
-	PPC_CLIENT_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.5.sdk \
+	PPC_SDK=/Developer/SDKs/MacOSX10.5.sdk
+	PPC_CC=gcc-4.0
+	PPC_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.5.sdk \
 			-DMAC_OS_X_VERSION_MIN_REQUIRED=1050"
-	PPC_CLIENT_LDFLAGS="-arch ppc \
+	PPC_LDFLAGS="-arch ppc \
 			-isysroot /Developer/SDKs/MacOSX10.5.sdk \
 			-mmacosx-version-min=10.5"
-	PPC_SERVER_SDK=/Developer/SDKs/MacOSX10.5.sdk
-	PPC_SERVER_CFLAGS=$PPC_CLIENT_CFLAGS
-	PPC_SERVER_LDFLAGS=$PPC_CLIENT_LDFLAGS
 
 	X86_SDK=/Developer/SDKs/MacOSX10.5.sdk
 	X86_CFLAGS="-arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk \
@@ -70,16 +64,13 @@ if [ -d /Developer/SDKs/MacOSX10.5.sdk ]; then
 fi
 
 if [ -d /Developer/SDKs/MacOSX10.4u.sdk ]; then
-	PPC_CLIENT_SDK=/Developer/SDKs/MacOSX10.4u.sdk
-	PPC_CLIENT_CC=gcc-4.0
-	PPC_CLIENT_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
+	PPC_SDK=/Developer/SDKs/MacOSX10.4u.sdk
+	PPC_CC=gcc-4.0
+	PPC_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
 			-DMAC_OS_X_VERSION_MIN_REQUIRED=1040"
-	PPC_CLIENT_LDFLAGS="-arch ppc \
+	PPC_LDFLAGS="-arch ppc \
 			-isysroot /Developer/SDKs/MacOSX10.4u.sdk \
 			-mmacosx-version-min=10.4"
-	PPC_SERVER_SDK=/Developer/SDKs/MacOSX10.4u.sdk
-	PPC_SERVER_CFLAGS=$PPC_CLIENT_CFLAGS
-	PPC_SERVER_LDFLAGS=$PPC_CLIENT_LDFLAGS
 
 	X86_SDK=/Developer/SDKs/MacOSX10.4u.sdk
 	X86_CFLAGS="-arch i386 -isysroot /Developer/SDKs/MacOSX10.4u.sdk \
@@ -91,19 +82,16 @@ if [ -d /Developer/SDKs/MacOSX10.4u.sdk ]; then
 fi
 
 if [ -d /Developer/SDKs/MacOSX10.3.9.sdk ] && [ $TIGERHOST ]; then
-	PPC_CLIENT_SDK=/Developer/SDKs/MacOSX10.3.9.sdk
-	PPC_CLIENT_CC=gcc-4.0
-	PPC_CLIENT_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.3.9.sdk \
+	PPC_SDK=/Developer/SDKs/MacOSX10.3.9.sdk
+	PPC_CC=gcc-4.0
+	PPC_CFLAGS="-arch ppc -isysroot /Developer/SDKs/MacOSX10.3.9.sdk \
 			-DMAC_OS_X_VERSION_MIN_REQUIRED=1030"
-	PPC_CLIENT_LDFLAGS="-arch ppc \
+	PPC_LDFLAGS="-arch ppc \
 			-isysroot /Developer/SDKs/MacOSX10.3.9.sdk \
 			-mmacosx-version-min=10.3"
-	PPC_SERVER_SDK=/Developer/SDKs/MacOSX10.3.9.sdk
-	PPC_SERVER_CFLAGS=$PPC_CLIENT_CFLAGS
-	PPC_SERVER_LDFLAGS=$PPC_CLIENT_LDFLAGS
 fi
 
-if [ -z $PPC_CLIENT_SDK ] || [ -z $PPC_SERVER_SDK ] || [ -z $X86_SDK ]; then
+if [ -z $PPC_SDK ] || [ -z $X86_SDK ]; then
 	echo "\
 ERROR: This script is for building a Universal Binary.  You cannot build
        for a different architecture unless you have the proper Mac OS X SDKs
@@ -112,10 +100,9 @@ ERROR: This script is for building a Universal Binary.  You cannot build
 	exit 1
 fi
 
-echo "Building PPC Dedicated Server against \"$PPC_SERVER_SDK\""
-echo "Building PPC Client against \"$PPC_CLIENT_SDK\""
+echo "Building PPC Client/Dedicated Server against \"$PPC_SDK\""
 echo "Building X86 Client/Dedicated Server against \"$X86_SDK\""
-if [ "$PPC_SERVER_SDK" != "/Developer/SDKs/MacOSX10.3.9.sdk" ] || \
+if [ "$PPC_SDK" != "/Developer/SDKs/MacOSX10.3.9.sdk" ] || \
 	[ "$X86_SDK" != "/Developer/SDKs/MacOSX10.4u.sdk" ]; then
 	echo "\
 WARNING: in order to build a binary with maximum compatibility you must
@@ -132,11 +119,12 @@ fi
 # For parallel make on multicore boxes...
 NCPU=`sysctl -n hw.ncpu`
 
+# ppc client and server
 if [ -d build/release-darwin-ppc ]; then
 	rm -r build/release-darwin-ppc
 fi
-(ARCH=ppc USE_OPENAL_DLOPEN=1 CC=$PPC_CLIENT_CC CFLAGS=$PPC_CLIENT_CFLAGS \
-	LDFLAGS=$PPC_CLIENT_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1) || exit 1;
+(ARCH=ppc USE_OPENAL_DLOPEN=1 CC=$PPC_CC CFLAGS=$PPC_CFLAGS \
+	LDFLAGS=$PPC_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1) || exit 1;
 
 # intel client and server
 if [ -d build/release-darwin-x86 ]; then
