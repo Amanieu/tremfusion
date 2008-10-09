@@ -302,6 +302,8 @@ void SV_ChangeMaxClients( void ) {
 	sv_maxclients->modified = qfalse;
 	sv_democlients->modified = qfalse;
 	// make sure we have enough room for all clients
+	if ( sv_democlients->integer + count > MAX_CLIENTS )
+		Cvar_SetValue( "sv_democlients", MAX_CLIENTS - count );
 	if ( sv_maxclients->integer < sv_democlients->integer + count ) {
 		Cvar_SetValue( "sv_maxclients", sv_democlients->integer + count );
 	}

@@ -38,7 +38,10 @@ typedef enum {
 } demo_ops_e;
 
 // Big fat buffer to store all our stuff
-byte buf[0x400000];
+static byte buf[0x400000];
+
+// Save maxclients and democlients and restore them after the demo
+static int savedMaxClients, savedDemoClients;
 
 /*
 ====================
@@ -393,13 +396,8 @@ void SV_DemoStartPlayback(void)
 	}
 
 	// Check slots, time and map
-	clients = MSG_ReadBits(&msg, CLIENTNUM_BITS);
-	if (sv_democlients->integer < clients)
-	{
-		Com_Printf("Not enough demo slots, increase sv_democlients to %d.\n", clients);
-		SV_DemoStopPlayback();
-		return;
-	}
+	savedMaxClients = sv_maxclients->integer;
+	savedDemoClients = sv_democlients->integer;
 	r = MSG_ReadLong(&msg);
 	if (r < 400)
 	{
@@ -414,11 +412,31 @@ void SV_DemoStartPlayback(void)
 		SV_DemoStopPlayback();
 		return;
 	}
-	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) ||
-	    !Cvar_VariableIntegerValue("sv_cheats") || r < sv.time)
+	clients = MSG_ReadBits(&msg, CLIENTNUM_BITS);
+	if (sv_democlients->integer < clients)
 	{
-		// Change to the right map and start the demo with a 20 second delay
-		Cbuf_AddText(va("devmap %s\ndelay 20000 %s\n", s, Cmd_Cmd()));
+		int count;
+		// get the number of clients in use
+		for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
+			if ( svs.clients[i].state >= CS_CONNECTED ) {
+				count++;
+			}
+		}
+		if ( clients + count > MAX_CLIENTS ) {
+			Com_Printf("Not enough slots to fit all connected clients and all demo clients." \
+			           "%d clients needs to disconnect.\n", clients + count - MAX_CLIENTS);
+			SV_DemoStopPlayback();
+			return;
+		}
+		Cvar_SetValue("sv_democlients", clients);
+		Cvar_SetValue("sv_maxclients", clients + count);
+	}
+	if (!com_sv_running->integer || strcmp(sv_mapname->string, s) ||
+	    !Cvar_VariableIntegerValue("sv_cheats") || r < sv.time ||
+	    sv_maxclients->modified || sv_democlients->modified)
+	{
+		// Change to the right map and start the demo with a g_warmup second delay
+		Cbuf_AddText(va("devmap %s\ndelay %d %s\n", s, Cvar_VariableIntegerValue("g_warmup") * 1000, Cmd_Cmd()));
 		SV_DemoStopPlayback();
 		return;
 	}
@@ -453,6 +471,10 @@ void SV_DemoStopPlayback(void)
 	sv.demoState = DS_NONE;
 	Cvar_SetValue("sv_demoState", DS_NONE);
 	Com_Printf("Stopped playing demo %s.\n", sv.demoName);
+
+	// restore maxclients and democlients
+	Cvar_SetValue("sv_maxclients", savedMaxClients);
+	Cvar_SetValue("sv_democlients", savedDemoClients);
 
 	// demo hasn't actually started yet
 	if (sv.demoState != DS_PLAYBACK)
