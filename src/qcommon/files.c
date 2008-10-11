@@ -54,7 +54,7 @@ etc) will be created reletive to the base path, so base path should usually be w
 
 The "home path" is the path used for all write access. On win32 systems we have "base path"
 == "home path", but on *nix systems the base installation is usually readonly, and
-"home path" points to ~/.q3a or similar
+"home path" points to ~/.tremfusion or similar
 
 The user can also install custom mods and content in "home path", so it should be searched
 along with "home path" for game content.

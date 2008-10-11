@@ -154,6 +154,10 @@ ifndef USE_FREETYPE
 USE_FREETYPE=1
 endif
 
+ifndef USE_OLD_HOMEPATH
+USE_OLD_HOMEPATH=1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -955,6 +959,7 @@ else
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
+BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
 ifeq ($(V),1)
 echo_cmd=@:

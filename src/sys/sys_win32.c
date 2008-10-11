@@ -76,7 +76,11 @@ char *Sys_DefaultHomePath( const char **path2 )
 			return NULL;
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
+#ifdef USE_OLD_HOMEPATH
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
+#else
+		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
+#endif
 
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
@@ -86,7 +90,11 @@ char *Sys_DefaultHomePath( const char **path2 )
 			return NULL;
 		}
 		Q_strncpyz( homePath2, szPath, sizeof( homePath ) );
+#ifdef USE_OLD_HOMEPATH
 		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremulous" );
+#else
+		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremfusion" );
+#endif
 		*path2 = homePath2;
 		FreeLibrary(shfolder);
 		if( !CreateDirectory( homePath2, NULL ) )
