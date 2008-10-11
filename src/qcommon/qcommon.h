@@ -579,7 +579,6 @@ issues.
 #define FS_GENERAL_REF	0x01
 #define FS_UI_REF		0x02
 #define FS_CGAME_REF	0x04
-#define FS_EXTRA_REF	0x08
 
 #define	MAX_FILE_HANDLES	64
 

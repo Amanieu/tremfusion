@@ -2786,7 +2786,6 @@ static void FS_ReorderExtraPaks( void )
 				if (s->dir) {
 					fs_unpureAllowed = qtrue;
 				} else {
-					s->pack->referenced |= FS_EXTRA_REF;
 					break; // iterate to next server pack
 				}
 			}
@@ -2819,7 +2818,7 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", "tremfusion-base . @", CVAR_ARCHIVE );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". @ tremfusion-base", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
