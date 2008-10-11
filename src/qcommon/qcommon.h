@@ -717,6 +717,8 @@ void FS_HomeRemove( const char *homePath );
 void	FS_FilenameCompletion( const char *dir, const char *ext,
 		qboolean stripExt, void(*callback)(const char *s) );
 
+extern cvar_t *fs_autogen;
+
 /*
 ==============================================================
 

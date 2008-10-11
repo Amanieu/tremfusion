@@ -218,6 +218,7 @@ static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
 static	cvar_t		*fs_extrapaks;
+        cvar_t		*fs_autogen;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
 static	int			fs_loadCount;			// total files read
@@ -2819,6 +2820,7 @@ static void FS_Startup( const char *gameName )
 	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", "tremfusion-base . @", CVAR_ARCHIVE );
+	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {
@@ -3223,6 +3225,7 @@ void FS_InitFilesystem( void ) {
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_homepath2" );
 	Com_StartupVariable( "fs_game" );
+	Com_StartupVariable( "fs_autogen" );
 
 	// try to start up normally
 	FS_Startup( BASEGAME );
@@ -3279,7 +3282,7 @@ void FS_Restart( int checksumFeed ) {
 	if ( Q_stricmp(fs_gamedirvar->string, lastValidGame) ) {
 		// skip the autogen.cfg if "safe" is on the command line
 		if ( !Com_SafeMode() ) {
-			Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
+			Cbuf_AddText (va("exec %s\n", fs_autogen->string));
 		}
 
 		Cbuf_AddText ("exec autoexec.cfg\n");

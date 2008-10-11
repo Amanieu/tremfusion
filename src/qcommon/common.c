@@ -2424,7 +2424,7 @@ void Com_Init( char *commandLine ) {
 
 	// skip the autogen.cfg if "safe" is on the command line
 	if ( !Com_SafeMode() ) {
-		Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
+		Cbuf_AddText (va("exec %s\n", fs_autogen->string));
 	}
 
 	Cbuf_AddText ("exec autoexec.cfg\n");
@@ -2583,7 +2583,7 @@ void Com_WriteConfiguration( void ) {
 	}
 	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
-	Com_WriteConfigToFile( Q3CONFIG_CFG );
+	Com_WriteConfigToFile( fs_autogen->string );
 }
 
 
