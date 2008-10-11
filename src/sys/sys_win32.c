@@ -68,10 +68,10 @@ char *Sys_DefaultHomePath( const char **path2 )
 			return NULL;
 		}
 
-		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
-			Com_Printf("Unable to detect CSIDL_LOCAL_APPDATA\n");
+			Com_Printf("Unable to detect CSIDL_APPDATA\n");
 			FreeLibrary(shfolder);
 			return NULL;
 		}
@@ -82,10 +82,10 @@ char *Sys_DefaultHomePath( const char **path2 )
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
 #endif
 
-		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
-			Com_Printf("Unable to detect CSIDL_APPDATA\n");
+			Com_Printf("Unable to detect CSIDL_LOCAL_APPDATA\n");
 			FreeLibrary(shfolder);
 			return NULL;
 		}
