@@ -155,12 +155,17 @@ static void G_WideTrace( trace_t *tr, gentity_t *ent, float range,
   VectorMA( muzzle, range, forward, end );
 
   G_UnlaggedOn( ent, muzzle, range );
+
   //prefer the target in the crosshairs
   trap_Trace( tr, muzzle, NULL, NULL, end, ent->s.number, CONTENTS_BODY );
 
   if( tr->entityNum == ENTITYNUM_NONE )
     // Trace against entities
     trap_Trace( tr, muzzle, mins, maxs, end, ent->s.number, CONTENTS_BODY );
+  else
+    //if the first trace hit, we need to set width to 0 to avoid
+    //"missing" in some rare cases
+    width = 0;
 
   // If we started in a solid that means someone is within our muzzle box,
   // depending on which tremded is used the trace may not give us the entity 
@@ -266,10 +271,10 @@ static void WideBloodSpurt( gentity_t *attacker, gentity_t *victim, trace_t *tr 
     return;
 
   if( tr )
-    VectorSubtract( tr->endpos, victim->client->ps.origin, normal );
+    VectorSubtract( tr->endpos, victim->s.origin, normal );
   else
     VectorSubtract( attacker->client->ps.origin,
-                    victim->client->ps.origin, normal );
+                    victim->s.origin, normal );
 
   // Normalize the horizontal components of the vector difference to the
   // "radius" of the bounding box
@@ -287,7 +292,7 @@ static void WideBloodSpurt( gentity_t *attacker, gentity_t *victim, trace_t *tr 
   if( normal[ 2 ] < victim->r.mins[ 2 ] )
     normal[ 2 ] = victim->r.mins[ 2 ];
 
-  VectorAdd( victim->client->ps.origin, normal, origin );
+  VectorAdd( victim->s.origin, normal, origin );
   VectorNegate( normal, normal );
   VectorNormalize( normal );
 

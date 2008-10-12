@@ -1160,6 +1160,8 @@ typedef enum
 
   ET_BUILDABLE,       // buildable type
 
+  ET_LOCATION,
+
   ET_MISSILE,
   ET_MOVER,
   ET_BEAM,
