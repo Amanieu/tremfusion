@@ -408,6 +408,48 @@ static void CG_SetUIVars( void )
 }
 
 /*
+===============
+CG_SetPVars
+
+Set the p_* cvars
+===============
+*/
+static void CG_SetPVars( void )
+{
+  playerState_t *ps;
+
+  if( !cg.snap )
+    return;
+
+  ps = &cg.snap->ps;
+
+  trap_Cvar_Set( "p_hp", va( "%d", ps->stats[ STAT_HEALTH ] ) );
+  trap_Cvar_Set( "p_maxhp", va( "%d", ps->stats[ STAT_MAX_HEALTH ] ) );
+  trap_Cvar_Set( "p_team", va( "%d", ps->stats[ STAT_TEAM ] ) );
+  switch( ps->stats[ STAT_TEAM ] )
+  {
+  case TEAM_NONE:
+    trap_Cvar_Set( "p_teamname", "^3Spectator" );
+  case TEAM_ALIENS:
+    trap_Cvar_Set( "p_teamname", "^1Alien" );
+  case TEAM_HUMANS:
+    trap_Cvar_Set( "p_teamname", "^4Human" );
+  }
+  trap_Cvar_Set( "p_class", va( "%d", ps->stats[ STAT_CLASS ] ) );
+  trap_Cvar_Set( "p_classname", BG_ClassConfig( ps->stats[ STAT_CLASS ] )->humanName );
+  trap_Cvar_Set( "p_weapon", va( "%d", ps->stats[ STAT_WEAPON ] ) );
+  trap_Cvar_Set( "p_weaponname", BG_Weapon( ps->stats[ STAT_WEAPON ] )->humanName );
+  trap_Cvar_Set( "p_ammo", va( "%d", ps->ammo ) );
+  trap_Cvar_Set( "p_clips", va( "%d", ps->clips ) );
+  trap_Cvar_Set( "p_credits", va( "%d", ps->persistant[ PERS_CREDIT ] ) );
+  trap_Cvar_Set( "p_score", va( "%d", ps->persistant[ PERS_SCORE ] ) );
+  trap_Cvar_Set( "p_attacker", va( "%d", CG_LastAttacker( ) ) );
+  trap_Cvar_Set( "p_attackername", cgs.clientinfo[ CG_LastAttacker( ) ].name );
+  trap_Cvar_Set( "p_crosshair", va( "%d", CG_CrosshairPlayer( ) ) );
+  trap_Cvar_Set( "p_crosshairrname", cgs.clientinfo[ CG_CrosshairPlayer( ) ].name );
+}
+
+/*
 =================
 CG_UpdateCvars
 =================
@@ -423,6 +465,7 @@ void CG_UpdateCvars( void )
   // check for modications here
 
   CG_SetUIVars( );
+  CG_SetPVars( );
 }
 
 
