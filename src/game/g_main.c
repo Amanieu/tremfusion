@@ -33,7 +33,6 @@ typedef struct
   int     cvarFlags;
   int     modificationCount;  // for tracking changes
   qboolean  trackChange;  // track this variable, and announce if changed
-  qboolean teamShader;        // track and if changed, update shader state
 } cvarTable_t;
 
 gentity_t   g_entities[ MAX_GENTITIES ];
@@ -246,7 +245,7 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_adminLog, "g_adminLog", "admin.log", CVAR_ARCHIVE, 0, qfalse  },
   { &g_adminParseSay, "g_adminParseSay", "1", CVAR_ARCHIVE, 0, qfalse  },
   { &g_adminNameProtect, "g_adminNameProtect", "1", CVAR_ARCHIVE, 0, qfalse  },
-  { &g_adminTempBan, "g_adminTempBan", "120", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_adminTempBan, "g_adminTempBan", "2m", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_dretchPunt, "g_dretchPunt", "0", CVAR_ARCHIVE, 0, qfalse  },
 
@@ -428,10 +427,6 @@ void G_FindTeams( void )
   G_Printf( "%i teams with %i entities\n", c, c2 );
 }
 
-void G_RemapTeamShaders( void )
-{
-}
-
 
 /*
 =================
@@ -442,7 +437,6 @@ void G_RegisterCvars( void )
 {
   int         i;
   cvarTable_t *cv;
-  qboolean    remapped = qfalse;
 
   for( i = 0, cv = gameCvarTable; i < gameCvarTableSize; i++, cv++ )
   {
@@ -451,13 +445,7 @@ void G_RegisterCvars( void )
 
     if( cv->vmCvar )
       cv->modificationCount = cv->vmCvar->modificationCount;
-
-    if( cv->teamShader )
-      remapped = qtrue;
   }
-
-  if( remapped )
-    G_RemapTeamShaders( );
 
   // check some things
   level.warmupModificationCount = g_warmup.modificationCount;
@@ -472,7 +460,6 @@ void G_UpdateCvars( void )
 {
   int         i;
   cvarTable_t *cv;
-  qboolean    remapped = qfalse;
 
   for( i = 0, cv = gameCvarTable; i < gameCvarTableSize; i++, cv++ )
   {
@@ -491,15 +478,9 @@ void G_UpdateCvars( void )
           // update serverinfo in case this cvar is passed to clients indirectly
           CalculateRanks( );
         }
-
-        if( cv->teamShader )
-          remapped = qtrue;
       }
     }
   }
-
-  if( remapped )
-    G_RemapTeamShaders( );
 }
 
 /*
@@ -657,8 +638,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
 
   G_Printf( "-----------------------------------\n" );
 
-  G_RemapTeamShaders( );
-
   // so the server counts the spawns without a client attached
   G_CountSpawns( );
 
@@ -793,20 +772,14 @@ void G_InitSpawnQueue( spawnQueue_t *sq )
 ============
 G_GetSpawnQueueLength
 
-Return tha length of a spawn queue
+Return the length of a spawn queue
 ============
 */
 int G_GetSpawnQueueLength( spawnQueue_t *sq )
 {
   int length = sq->back - sq->front + 1;
 
-  while( length < 0 )
-    length += MAX_CLIENTS;
-
-  while( length >= MAX_CLIENTS )
-    length -= MAX_CLIENTS;
-
-  return length;
+  return length % MAX_CLIENTS;
 }
 
 /*

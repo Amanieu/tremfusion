@@ -1427,6 +1427,12 @@ typedef struct
   clientList_t  ignoreList;
 } cgs_t;
 
+typedef struct
+{
+  char *cmd;
+  void ( *function )( void );
+} consoleCommand_t;
+
 //==============================================================================
 
 extern  cgs_t     cgs;

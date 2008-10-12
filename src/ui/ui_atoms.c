@@ -103,257 +103,17 @@ static void  UI_Cache_f( void )
   Display_CacheAll();
 }
 
-/*
-=================
-UI_ConsoleCommand
- 
-FIXME: lookup table
-=================
-*/
-qboolean UI_ConsoleCommand( int realTime )
+static void UI_Menu_f( void )
 {
-  char  * cmd;
-  char  *arg1;
-
-  uiInfo.uiDC.frameTime = realTime - uiInfo.uiDC.realTime;
-  uiInfo.uiDC.realTime = realTime;
-
-  cmd = UI_Argv( 0 );
-
-  // ensure minimum menu data is available
-  //Menu_Cache();
-
-  if( Q_stricmp ( cmd, "ui_report" ) == 0 )
-  {
-    UI_Report();
-    return qtrue;
-  }
-
-  if( Q_stricmp ( cmd, "ui_load" ) == 0 )
-  {
-    UI_Load();
-    return qtrue;
-  }
-
-  if( Q_stricmp ( cmd, "remapShader" ) == 0 )
-  {
-    if( trap_Argc() == 4 )
-    {
-      char shader1[MAX_QPATH];
-      char shader2[MAX_QPATH];
-      Q_strncpyz( shader1, UI_Argv( 1 ), sizeof( shader1 ) );
-      Q_strncpyz( shader2, UI_Argv( 2 ), sizeof( shader2 ) );
-      trap_R_RemapShader( shader1, shader2, UI_Argv( 3 ) );
-      return qtrue;
-    }
-  }
-
-  if( Q_stricmp ( cmd, "ui_cache" ) == 0 )
-  {
-    UI_Cache_f();
-    return qtrue;
-  }
-
-  if( Q_stricmp ( cmd, "ui_teamOrders" ) == 0 )
-  {
-    //UI_TeamOrdersMenu_f();
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = -1;
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode2" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = -1;
-    uiInfo.chatTeam = qtrue;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_team" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode3" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = trap_CrosshairPlayer();
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
-      Menus_ActivateByName( "say_crosshair" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode4" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = trap_LastAttacker();
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    if ( uiInfo.chatTargetClientNum >= 0 || uiInfo.chatTargetClientNum < MAX_CLIENTS )
-      Menus_ActivateByName( "say_attacker" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode5" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = -1;
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qtrue;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_admins" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "messagemode6" ) == 0 )
-  {
-    char buffer[ MAX_SAY_TEXT ] = "";
-    int i;
-    for ( i = 1; i < trap_Argc( ); i++ )
-        Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
-    trap_Cvar_Set( "ui_sayBuffer", buffer );
-    uiInfo.chatTargetClientNum = -1;
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qtrue;
-    uiInfo.chatPrompt = qfalse;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    Menus_ActivateByName( "say_clan" );
-    return qtrue;
-  }
-
-  if( Q_stricmp( cmd, "prompt" ) == 0 )
-  {
-    static char buffer[ MAX_SAY_TEXT ];
-    itemDef_t *item;
-    if ( trap_Argc( ) < 3 )
-    {
-      Com_Printf( "prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n" );
-      return qfalse;
-    }
-    trap_Argv( 1, uiInfo.chatPromptCallback, sizeof( uiInfo.chatPromptCallback ) );
-    trap_Argv( 2, buffer, sizeof( buffer ) );
-    trap_Cvar_Set( "ui_sayBuffer", "" );
-    uiInfo.chatTargetClientNum = -1;
-    uiInfo.chatTeam = qfalse;
-    uiInfo.chatAdmins = qfalse;
-    uiInfo.chatClan = qfalse;
-    uiInfo.chatPrompt = qtrue;
-    trap_Key_SetCatcher( KEYCATCH_UI );
-    Menus_CloseByName( "say" );
-    Menus_CloseByName( "say_team" );
-    Menus_CloseByName( "say_crosshair" );
-    Menus_CloseByName( "say_attacker" );
-    Menus_CloseByName( "say_admins" );
-    Menus_CloseByName( "say_prompt" );
-    Menus_CloseByName( "say_clan" );
-    item = Menu_FindItemByName( Menus_ActivateByName( "say_prompt" ), "say_field" );
-    if ( item )
-    {
-      trap_Argv( 2, buffer, sizeof( buffer ) );
-      item->text = buffer;
-    }
-    return qtrue;
-  }
-
-  if( Q_stricmp ( cmd, "menu" ) == 0 )
-  {
-    arg1 = UI_Argv( 1 );
-
     if( Menu_Count( ) > 0 )
     {
       trap_Key_SetCatcher( KEYCATCH_UI );
-      Menus_ActivateByName( arg1 );
-      return qtrue;
+      Menus_ActivateByName( UI_Argv( 1 ) );
     }
-  }
+}
 
-  if( Q_stricmp ( cmd, "closemenus" ) == 0 )
-  {
+static void UI_CloseMenus_f( void )
+{
     if( Menu_Count( ) )
     {
       Menus_CloseAll( qfalse );
@@ -364,7 +124,131 @@ qboolean UI_ConsoleCommand( int realTime )
         trap_Cvar_Set( "cl_paused", "0" );
       }
     }
-    return qtrue;    
+}
+
+static void UI_MessageMode_f( void )
+{
+  char *arg = UI_Argv( 0 );
+  char buffer[ MAX_SAY_TEXT ] = "";
+  int i;
+  for ( i = 1; i < trap_Argc( ); i++ )
+      Q_strcat( buffer, sizeof( buffer ), UI_Argv( i ) );
+  trap_Cvar_Set( "ui_sayBuffer", buffer );
+  uiInfo.chatTargetClientNum = -1;
+  uiInfo.chatTeam = qfalse;
+  uiInfo.chatAdmins = qfalse;
+  uiInfo.chatClan = qfalse;
+  uiInfo.chatPrompt = qfalse;
+  trap_Key_SetCatcher( KEYCATCH_UI );
+  Menus_CloseByName( "say" );
+  Menus_CloseByName( "say_team" );
+  Menus_CloseByName( "say_crosshair" );
+  Menus_CloseByName( "say_attacker" );
+  Menus_CloseByName( "say_admins" );
+  Menus_CloseByName( "say_prompt" );
+  Menus_CloseByName( "say_clan" );
+  switch( arg[ 11 ] )
+  {
+    default:
+    case '\0':
+      Menus_ActivateByName( "say" );
+      break;
+    case '2':
+      uiInfo.chatTeam = qtrue;
+      Menus_ActivateByName( "say_team" );
+      break;
+    case '3':
+      uiInfo.chatTargetClientNum = trap_CrosshairPlayer();
+      Menus_ActivateByName( "say_crosshair" );
+      break;
+    case '4':
+      uiInfo.chatTargetClientNum = trap_LastAttacker();
+      Menus_ActivateByName( "say_attacker" );
+      break;
+    case '5':
+      uiInfo.chatAdmins = qtrue;
+      Menus_ActivateByName( "say_admins" );
+      break;
+    case '6':
+      uiInfo.chatClan = qtrue;
+      Menus_ActivateByName( "say_clan" );
+      break;
+  }
+}
+
+static void UI_Prompt_f( void )
+{
+  static char buffer[ MAX_SAY_TEXT ];
+  itemDef_t *item;
+  if ( trap_Argc( ) < 3 )
+  {
+    Com_Printf( "prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n" );
+    return;
+  }
+  trap_Argv( 1, uiInfo.chatPromptCallback, sizeof( uiInfo.chatPromptCallback ) );
+  trap_Argv( 2, buffer, sizeof( buffer ) );
+  trap_Cvar_Set( "ui_sayBuffer", "" );
+  uiInfo.chatTargetClientNum = -1;
+  uiInfo.chatTeam = qfalse;
+  uiInfo.chatAdmins = qfalse;
+  uiInfo.chatClan = qfalse;
+  uiInfo.chatPrompt = qtrue;
+  trap_Key_SetCatcher( KEYCATCH_UI );
+  Menus_CloseByName( "say" );
+  Menus_CloseByName( "say_team" );
+  Menus_CloseByName( "say_crosshair" );
+  Menus_CloseByName( "say_attacker" );
+  Menus_CloseByName( "say_admins" );
+  Menus_CloseByName( "say_prompt" );
+  Menus_CloseByName( "say_clan" );
+  item = Menu_FindItemByName( Menus_ActivateByName( "say_prompt" ), "say_field" );
+  if ( item )
+  {
+    trap_Argv( 2, buffer, sizeof( buffer ) );
+    item->text = buffer;
+  }
+}
+
+struct
+{
+  char *cmd;
+  void ( *function )( void );
+} commands[ ] = {
+  { "ui_load", UI_Load },
+  { "ui_report", UI_Report },
+  { "ui_cache", UI_Cache_f },
+  { "messagemode", UI_MessageMode_f },
+  { "messagemode2", UI_MessageMode_f },
+  { "messagemode3", UI_MessageMode_f },
+  { "messagemode4", UI_MessageMode_f },
+  { "messagemode5", UI_MessageMode_f },
+  { "messagemode6", UI_MessageMode_f },
+  { "prompt", UI_Prompt_f },
+  { "menu", UI_Menu_f },
+  { "closemenus", UI_CloseMenus_f }
+};
+
+/*
+=================
+UI_ConsoleCommand
+=================
+*/
+qboolean UI_ConsoleCommand( int realTime )
+{
+  char  *cmd;
+  int   i;
+
+  uiInfo.uiDC.frameTime = realTime - uiInfo.uiDC.realTime;
+  uiInfo.uiDC.realTime = realTime;
+
+  cmd = UI_Argv( 0 );
+  for( i = 0; i < sizeof( commands ) / sizeof( commands[ 0 ] ); i++ )
+  {
+    if( Q_stricmp( commands[ i ].cmd, cmd ) == 0 )
+    {
+      commands[ i ].function( );
+      return qtrue;
+    }
   }
 
   return qfalse;
