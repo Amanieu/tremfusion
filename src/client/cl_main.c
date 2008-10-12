@@ -3252,7 +3252,7 @@ void CL_Init( void ) {
 
 	cl_lanForcePackets = Cvar_Get ("cl_lanForcePackets", "1", CVAR_ARCHIVE);
 
-	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "0", CVAR_ARCHIVE);
+	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE);
 
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
