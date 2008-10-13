@@ -186,14 +186,37 @@ static void CG_TellAttacker_f( void )
   trap_SendClientCommand( command );
 }
 
-typedef struct
+static void CG_SquadMark_f( void )
 {
-  char  *cmd;
-  void  (*function)( void );
-} consoleCommand_t;
+  centity_t *cent;
+  vec3_t end;
+  trace_t trace;
+  
+  // Find the player we are looking at
+  VectorMA( cg.refdef.vieworg, 131072, cg.refdef.viewaxis[ 0 ], end );
+  CG_Trace( &trace, cg.refdef.vieworg, NULL, NULL, end,
+            cg.snap->ps.clientNum, CONTENTS_SOLID | CONTENTS_BODY );
+  if( trace.entityNum >= MAX_CLIENTS )
+    return;
+
+  // Only mark teammates
+  cent = cg_entities + trace.entityNum;
+  if( cent->currentState.eType != ET_PLAYER ||
+      cgs.clientinfo[ trace.entityNum ].team !=
+      cg.snap->ps.stats[ STAT_TEAM ] )
+    return;
+      
+  cent->pe.squadMarked = !cent->pe.squadMarked;
+}
+
+static void CG_UIMenu_f( void )
+{
+  trap_SendConsoleCommand( va( "menu %s\n", CG_Argv( 1 ) ) );
+}
 
 static consoleCommand_t commands[ ] =
 {
+  { "ui_menu", CG_UIMenu_f },
   { "testgun", CG_TestGun_f },
   { "testmodel", CG_TestModel_f },
   { "nextframe", CG_TestModelNextFrame_f },
@@ -218,6 +241,7 @@ static consoleCommand_t commands[ ] =
   { "testTS", CG_TestTS_f },
   { "destroyTestTS", CG_DestroyTestTS_f },
   { "reloadhud", CG_LoadHudMenu },
+  { "squadmark", CG_SquadMark_f },
 };
 
 
@@ -232,18 +256,9 @@ Cmd_Argc() / Cmd_Argv()
 qboolean CG_ConsoleCommand( void )
 {
   const char  *cmd;
-  const char  *arg1;
   int         i;
 
   cmd = CG_Argv( 0 );
-
-  // ugly hacky special case
-  if( !Q_stricmp( cmd, "ui_menu" ) )
-  {
-    arg1 = CG_Argv( 1 );
-    trap_SendConsoleCommand( va( "menu %s\n", arg1 ) );
-    return qtrue;
-  }
 
   for( i = 0; i < sizeof( commands ) / sizeof( commands[ 0 ] ); i++ )
   {
@@ -280,10 +295,18 @@ void CG_InitConsoleCommands( void )
   trap_AddCommand( "kill" );
   trap_AddCommand( "messagemode" );
   trap_AddCommand( "messagemode2" );
+  trap_AddCommand( "messagemode3" );
+  trap_AddCommand( "messagemode4" );
   trap_AddCommand( "messagemode5" );
+  trap_AddCommand( "messagemode6" );
   trap_AddCommand( "prompt" );
   trap_AddCommand( "say" );
   trap_AddCommand( "say_team" );
+  trap_AddCommand( "vsay" );
+  trap_AddCommand( "vsay_team" );
+  trap_AddCommand( "vsay_local" );
+  trap_AddCommand( "m" );
+  trap_AddCommand( "mt" );
   trap_AddCommand( "tell" );
   trap_AddCommand( "give" );
   trap_AddCommand( "god" );
@@ -292,28 +315,22 @@ void CG_InitConsoleCommands( void )
   trap_AddCommand( "team" );
   trap_AddCommand( "follow" );
   trap_AddCommand( "levelshot" );
-  trap_AddCommand( "addbot" );
   trap_AddCommand( "setviewpos" );
   trap_AddCommand( "callvote" );
   trap_AddCommand( "vote" );
   trap_AddCommand( "callteamvote" );
   trap_AddCommand( "teamvote" );
-  trap_AddCommand( "stats" );
   trap_AddCommand( "class" );
   trap_AddCommand( "build" );
   trap_AddCommand( "buy" );
   trap_AddCommand( "sell" );
   trap_AddCommand( "reload" );
+  trap_AddCommand( "boost" );
   trap_AddCommand( "itemact" );
   trap_AddCommand( "itemdeact" );
   trap_AddCommand( "itemtoggle" );
   trap_AddCommand( "destroy" );
   trap_AddCommand( "deconstruct" );
-  trap_AddCommand( "menu" );
-  trap_AddCommand( "ui_menu" );
-  trap_AddCommand( "mapRotation" );
-  trap_AddCommand( "stopMapRotation" );
-  trap_AddCommand( "advanceMapRotation" );
-  trap_AddCommand( "alienWin" );
-  trap_AddCommand( "humanWin" );
+  trap_AddCommand( "ignore" );
+  trap_AddCommand( "unignore" );
 }

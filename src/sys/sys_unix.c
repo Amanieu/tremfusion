@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
 
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -43,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(const char **path2)
 {
 	char *p;
 
@@ -53,9 +54,17 @@ char *Sys_DefaultHomePath(void)
 		{
 			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
+#ifdef USE_OLD_HOMEPATH
 			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremulous" );
 #else
+			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremfusion" );
+#endif
+#else
+#ifdef USE_OLD_HOMEPATH
 			Q_strcat( homePath, sizeof( homePath ), "/.tremulous" );
+#else
+			Q_strcat( homePath, sizeof( homePath ), "/.tremfusion" );
+#endif
 #endif
 			if( mkdir( homePath, 0777 ) )
 			{
@@ -68,6 +77,7 @@ char *Sys_DefaultHomePath(void)
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
 }
 
@@ -537,4 +547,32 @@ void Sys_ErrorDialog( const char *error )
 		FS_Write( buffer, size, f );
 
 	FS_FCloseFile( f );
+}
+
+/*
+==============
+Sys_GLimpInit
+
+Unix specific GL implementation initialisation
+==============
+*/
+void Sys_GLimpInit( void )
+{
+	// NOP
+}
+
+/*
+==============
+Sys_PlatformInit
+
+Unix specific initialisation
+==============
+*/
+void Sys_PlatformInit( void )
+{
+	signal( SIGHUP, Sys_SigHandler );
+	signal( SIGQUIT, Sys_SigHandler );
+	signal( SIGTRAP, Sys_SigHandler );
+	signal( SIGIOT, Sys_SigHandler );
+	signal( SIGBUS, Sys_SigHandler );
 }

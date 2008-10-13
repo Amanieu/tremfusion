@@ -4,7 +4,7 @@
   \\ INGAME OPTIONS BOX \\
 
 #define W             320
-#define H             290
+#define H             320
 #define X             10
 #define Y             60
 #define BORDER        10
@@ -410,6 +410,46 @@
       text "Show Charge Bar:"
       cvar "cg_drawChargeBar"
       rect CONTENT_X (CONTENT_Y+(13*ELEM_H)) CONTENT_W ELEM_H
+      textalign ALIGN_RIGHT
+      textvalign VALIGN_CENTER
+      textalignx CONTENT_OFF
+      textscale .25
+      forecolor 1 1 1 1
+      visible MENU_FALSE
+      action
+      {
+        play "sound/misc/menu1.wav";
+      }
+    }
+
+    itemDef
+    {
+      name game
+      group optionsGrp
+      type ITEM_TYPE_YESNO
+      text "Show Lag-o-meter:"
+      cvar "cg_lagometer"
+      rect CONTENT_X (CONTENT_Y+(14*ELEM_H)) CONTENT_W ELEM_H
+      textalign ALIGN_RIGHT
+      textvalign VALIGN_CENTER
+      textalignx CONTENT_OFF
+      textscale .25
+      forecolor 1 1 1 1
+      visible MENU_FALSE
+      action
+      {
+        play "sound/misc/menu1.wav";
+      }
+    }
+
+    itemDef
+    {
+      name game
+      group optionsGrp
+      type ITEM_TYPE_YESNO
+      text "Show Speed Meter:"
+      cvar "cg_drawSpeed"
+      rect CONTENT_X (CONTENT_Y+(15*ELEM_H)) CONTENT_W ELEM_H
       textalign ALIGN_RIGHT
       textvalign VALIGN_CENTER
       textalignx CONTENT_OFF
@@ -1206,7 +1246,7 @@
       group optionsGrp
       type ITEM_TYPE_BIND
       text "Chat:"
-      cvar "ui_messagemode"
+      cvar "messagemode"
       rect SCONTENT_X (SCONTENT_Y+(6*ELEM_H)) SCONTENT_W ELEM_H
       textalign ALIGN_RIGHT
       textvalign VALIGN_CENTER
@@ -1226,7 +1266,7 @@
       group optionsGrp
       type ITEM_TYPE_BIND
       text "Team Chat:"
-      cvar "ui_messagemode2"
+      cvar "messagemode2"
       rect SCONTENT_X (SCONTENT_Y+(7*ELEM_H)) SCONTENT_W ELEM_H
       textalign ALIGN_RIGHT
       textvalign VALIGN_CENTER
@@ -1320,6 +1360,26 @@
       }
     }
 
+    itemDef
+    {
+      name misc
+      group optionsGrp
+      type ITEM_TYPE_BIND
+      text "Toggle Squad Mark:"
+      cvar "squadmark"
+      rect SCONTENT_X (SCONTENT_Y+(12*ELEM_H)) SCONTENT_W ELEM_H
+      textalign ALIGN_RIGHT
+      textvalign VALIGN_CENTER
+      textalignx SCONTENT_OFF
+      textscale .25
+      forecolor 1 1 1 1
+      visible MENU_FALSE
+      action
+      {
+        play "sound/misc/menu1.wav";
+      }
+    }
+
 //////// SYSTEM
 
     //System menu
@@ -1394,12 +1454,9 @@
     {
       name ghardware
       group optionsGrp
-      type ITEM_TYPE_MULTI
+      type ITEM_TYPE_COMBO
       text "Video Mode:"
-      cvar "r_mode"
-      cvarFloatList { "320x240" 0 "400x300" 1 "512x384" 2 "640x480" 3
-                      "800x600" 4 "960x720" 5 "1024x768" 6 "1152x864" 7
-                      "1280x1024" 8 "1600x1200" 9 "2048x1536" 10 "856x480 wide screen" 11 }
+      feeder FEEDER_RESOLUTIONS
       rect SCONTENT_X (SCONTENT_Y+(2*ELEM_H)) SCONTENT_W ELEM_H
       textalign ALIGN_RIGHT
       textvalign VALIGN_CENTER
@@ -1410,7 +1467,6 @@
       action
       {
         play "sound/misc/menu1.wav";
-        uiScript glCustom
       }
     }
 

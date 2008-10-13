@@ -2228,9 +2228,10 @@ int Com_EventLoop( void ) {
 			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
 				cmd++;
 			else
-				Cbuf_AddText( "say " );
-#endif
+				Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
+#else
 			Cbuf_AddText( cmd );
+#endif
 			Cbuf_AddText( "\n" );
 			break;
 		}
@@ -2424,7 +2425,7 @@ void Com_Init( char *commandLine ) {
 
 	// skip the autogen.cfg if "safe" is on the command line
 	if ( !Com_SafeMode() ) {
-		Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
+		Cbuf_AddText (va("exec %s\n", fs_autogen->string));
 	}
 
 	Cbuf_AddText ("exec autoexec.cfg\n");
@@ -2488,6 +2489,7 @@ void Com_Init( char *commandLine ) {
 	Cmd_AddCommand ("quit", Com_Quit_f);
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
+	Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
 
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
@@ -2582,7 +2584,7 @@ void Com_WriteConfiguration( void ) {
 	}
 	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
-	Com_WriteConfigToFile( Q3CONFIG_CFG );
+	Com_WriteConfigToFile( fs_autogen->string );
 }
 
 
@@ -2717,7 +2719,14 @@ void Com_Frame( void ) {
 
 	msec = minMsec;
 	do {
-		Sys_Sleep( minMsec - msec );
+		int timeRemaining = minMsec - msec;
+
+		// The existing Sys_Sleep implementations aren't really
+		// precise enough to be of use beyond 100fps
+		// FIXME: implement a more precise sleep (RDTSC or something)
+		if( timeRemaining >= 10 )
+			Sys_Sleep( timeRemaining );
+
 		com_frameTime = Com_EventLoop();
 		if ( lastTime > com_frameTime ) {
 			lastTime = com_frameTime;		// possible on first frame
@@ -2981,37 +2990,52 @@ static char *Field_FindFirstSeparator( char *s )
 	return NULL;
 }
 
-#ifndef DEDICATED
 /*
 ===============
-Field_CompleteKeyname
+Field_Complete
 ===============
 */
-static void Field_CompleteKeyname( void )
+static qboolean Field_Complete( void )
 {
-	matchCount = 0;
-	shortestMatch[ 0 ] = 0;
-
-	Key_KeynameCompletion( FindMatches );
+	int completionOffset;
 
 	if( matchCount == 0 )
-		return;
+		return qtrue;
 
-	Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
-		strlen( completionString ) ], shortestMatch,
-		sizeof( completionField->buffer ) );
+	completionOffset = strlen( completionField->buffer ) - strlen( completionString );
+
+	Q_strncpyz( &completionField->buffer[ completionOffset ], shortestMatch,
+		sizeof( completionField->buffer ) - completionOffset );
+
 	completionField->cursor = strlen( completionField->buffer );
 
 	if( matchCount == 1 )
 	{
 		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
 		completionField->cursor++;
-		return;
+		return qtrue;
 	}
 
 	Com_Printf( "]%s\n", completionField->buffer );
-	
-	Key_KeynameCompletion( PrintMatches );
+
+	return qfalse;
+}
+
+#ifndef DEDICATED
+/*
+===============
+Field_CompleteKeyname
+===============
+*/
+void Field_CompleteKeyname( void )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	Key_KeynameCompletion( FindMatches );
+
+	if( !Field_Complete( ) )
+		Key_KeynameCompletion( PrintMatches );
 }
 #endif
 
@@ -3020,7 +3044,7 @@ static void Field_CompleteKeyname( void )
 Field_CompleteFilename
 ===============
 */
-static void Field_CompleteFilename( const char *dir,
+void Field_CompleteFilename( const char *dir,
 		const char *ext, qboolean stripExt )
 {
 	matchCount = 0;
@@ -3028,24 +3052,24 @@ static void Field_CompleteFilename( const char *dir,
 
 	FS_FilenameCompletion( dir, ext, stripExt, FindMatches );
 
-	if( matchCount == 0 )
-		return;
+	if( !Field_Complete( ) )
+		FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
+}
 
-	Q_strncpyz( &completionField->buffer[ strlen( completionField->buffer ) -
-		strlen( completionString ) ], shortestMatch,
-		sizeof( completionField->buffer ) );
-	completionField->cursor = strlen( completionField->buffer );
+/*
+===============
+Field_CompleteAlias
+===============
+*/
+void Field_CompleteAlias( void )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
 
-	if( matchCount == 1 )
-	{
-		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
-		completionField->cursor++;
-		return;
-	}
+	Cmd_AliasCompletion( FindMatches );
 
-	Com_Printf( "]%s\n", completionField->buffer );
-	
-	FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
+	if( !Field_Complete( ) )
+		Cmd_AliasCompletion( PrintMatches );
 }
 
 /*
@@ -3053,11 +3077,10 @@ static void Field_CompleteFilename( const char *dir,
 Field_CompleteCommand
 ===============
 */
-static void Field_CompleteCommand( char *cmd,
+void Field_CompleteCommand( char *cmd,
 		qboolean doCommands, qboolean doCvars )
 {
 	int		completionArgument = 0;
-	char	*p;
 
 	// Skip leading whitespace and quotes
 	cmd = Com_SkipCharset( cmd, " \"" );
@@ -3099,6 +3122,7 @@ static void Field_CompleteCommand( char *cmd,
 	if( completionArgument > 1 )
 	{
 		const char *baseCmd = Cmd_Argv( 0 );
+		char *p;
 
 #ifndef DEDICATED
 		// This should always be true
@@ -3107,89 +3131,12 @@ static void Field_CompleteCommand( char *cmd,
 #endif
 
 		if( ( p = Field_FindFirstSeparator( cmd ) ) )
-		{
-			// Compound command
-			Field_CompleteCommand( p + 1, qtrue, qtrue );
-		}
+			Field_CompleteCommand( p + 1, qtrue, qtrue ); // Compound command
 		else
-		{
-			// FIXME: all this junk should really be associated with the respective
-			// commands, instead of being hard coded here
-			if( ( !Q_stricmp( baseCmd, "map" ) ||
-						!Q_stricmp( baseCmd, "devmap" ) ||
-						!Q_stricmp( baseCmd, "spmap" ) ||
-						!Q_stricmp( baseCmd, "spdevmap" ) ) &&
-					completionArgument == 2 )
-			{
-				Field_CompleteFilename( "maps", "bsp", qtrue );
-			}
-			else if( ( !Q_stricmp( baseCmd, "exec" ) ||
-						!Q_stricmp( baseCmd, "writeconfig" ) ) &&
-					completionArgument == 2 )
-			{
-				Field_CompleteFilename( "", "cfg", qfalse );
-			}
-			else if( !Q_stricmp( baseCmd, "condump" ) &&
-					completionArgument == 2 )
-			{
-				Field_CompleteFilename( "", "txt", qfalse );
-			}
-			else if( ( !Q_stricmp( baseCmd, "toggle" ) ||
-						!Q_stricmp( baseCmd, "vstr" ) ||
-						!Q_stricmp( baseCmd, "set" ) ||
-						!Q_stricmp( baseCmd, "seta" ) ||
-						!Q_stricmp( baseCmd, "setu" ) ||
-						!Q_stricmp( baseCmd, "sets" ) ) &&
-					completionArgument == 2 )
-			{
-				// Skip "<cmd> "
-				p = Com_SkipTokens( cmd, 1, " " );
-
-				if( p > cmd )
-					Field_CompleteCommand( p, qfalse, qtrue );
-			}
-#ifndef DEDICATED
-			else if( !Q_stricmp( baseCmd, "demo" ) && completionArgument == 2 )
-			{
-				char demoExt[ 16 ];
-
-				Com_sprintf( demoExt, sizeof( demoExt ), ".dm_%d", PROTOCOL_VERSION );
-				Field_CompleteFilename( "demos", demoExt, qtrue );
-			}
-			else if( !Q_stricmp( baseCmd, "rcon" ) && completionArgument == 2 )
-			{
-				// Skip "rcon "
-				p = Com_SkipTokens( cmd, 1, " " );
-
-				if( p > cmd )
-					Field_CompleteCommand( p, qtrue, qtrue );
-			}
-			else if( !Q_stricmp( baseCmd, "bind" ) )
-			{
-				if( completionArgument == 2 )
-				{
-					// Skip "bind "
-					p = Com_SkipTokens( cmd, 1, " " );
-
-					if( p > cmd )
-						Field_CompleteKeyname( );
-				}
-				else if( completionArgument >= 3 )
-				{
-					// Skip "bind <key> "
-					p = Com_SkipTokens( cmd, 2, " " );
-
-					if( p > cmd )
-						Field_CompleteCommand( p, qtrue, qtrue );
-				}
-			}
-#endif
-		}
+			Cmd_CompleteArgument( baseCmd, cmd, completionArgument );
 	}
 	else
 	{
-		int completionOffset;
-
 		if( completionString[0] == '\\' || completionString[0] == '/' )
 			completionString++;
 
@@ -3205,31 +3152,15 @@ static void Field_CompleteCommand( char *cmd,
 		if( doCvars )
 			Cvar_CommandCompletion( FindMatches );
 
-		if( matchCount == 0 )
-			return; // no matches
-
-		completionOffset = strlen( completionField->buffer ) - strlen( completionString );
-
-		Q_strncpyz( &completionField->buffer[ completionOffset ], shortestMatch,
-			sizeof( completionField->buffer ) - completionOffset );
-
-		completionField->cursor = strlen( completionField->buffer );
-
-		if( matchCount == 1 )
+		if( !Field_Complete( ) )
 		{
-			Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
-			completionField->cursor++;
-			return;
+			// run through again, printing matches
+			if( doCommands )
+				Cmd_CommandCompletion( PrintMatches );
+
+			if( doCvars )
+				Cvar_CommandCompletion( PrintCvarMatches );
 		}
-
-		Com_Printf( "]%s\n", completionField->buffer );
-
-		// run through again, printing matches
-		if( doCommands )
-			Cmd_CommandCompletion( PrintMatches );
-
-		if( doCvars )
-			Cvar_CommandCompletion( PrintCvarMatches );
 	}
 }
 

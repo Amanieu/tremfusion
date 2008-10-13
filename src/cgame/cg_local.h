@@ -573,6 +573,8 @@ typedef struct
   int         painTime;
   int         painDirection;  // flip from 0 to 1
 
+  qboolean    squadMarked;    // player has been marked as a squadmember
+
   // machinegun spinning
   float       barrelAngle;
   int         barrelTime;
@@ -647,7 +649,8 @@ typedef struct centity_s
 
   buildableAnimNumber_t buildableAnim;    //persistant anim number
   buildableAnimNumber_t oldBuildableAnim; //to detect when new anims are set
-  particleSystem_t      *buildablePS;
+  particleSystem_t      *buildablePS;     //handles things like smoke/blood when heavily damaged
+  particleSystem_t      *buildableHitPS;  //handles when a buildable is hit
   buildableStatus_t     buildableStatus;
   buildableCache_t      buildableCache;   // so we don't recalculate things
   float                 lastBuildableHealthScale;
@@ -680,6 +683,7 @@ typedef struct centity_s
 
   qboolean              valid;
   qboolean              oldValid;
+  struct centity_s      *nextLocation;
 } centity_t;
 
 
@@ -825,6 +829,10 @@ typedef struct weaponInfo_s
   qhandle_t         weaponModel;
   qhandle_t         barrelModel;
   qhandle_t         flashModel;
+
+  qhandle_t         weaponModel3rdPerson;
+  qhandle_t         barrelModel3rdPerson;
+  qhandle_t         flashModel3rdPerson;
 
   animation_t       animations[ MAX_WEAPON_ANIMATIONS ];
   qboolean          noDrift;
@@ -1029,6 +1037,7 @@ typedef struct
   int           lastKillTime;
 
   // crosshair client ID
+  int           crosshairBuildable;
   int           crosshairClientNum;
   int           crosshairClientTime;
 
@@ -1068,8 +1077,8 @@ typedef struct
   int           itemPickupBlendTime;                // the pulse around the crosshair is timed seperately
 
   int           weaponSelectTime;
-  int           weaponAnimation;
-  int           weaponAnimationTime;
+  int           feedbackAnimation;
+  int           feedbackAnimationType;
 
   // blend blobs
   float         damageTime;
@@ -1154,6 +1163,8 @@ typedef struct
   float         healthCrossFade;
   
   int           nextWeaponClickTime;
+
+  centity_t     *locationHead;
 } cg_t;
 
 
@@ -1275,14 +1286,21 @@ typedef struct
   sfxHandle_t alienEvolveSound;
 
   qhandle_t   humanBuildableDamagedPS;
+  qhandle_t   humanBuildableHitSmallPS;
+  qhandle_t   humanBuildableHitLargePS;
   qhandle_t   humanBuildableDestroyedPS;
   qhandle_t   alienBuildableDamagedPS;
+  qhandle_t   alienBuildableHitSmallPS;
+  qhandle_t   alienBuildableHitLargePS;
   qhandle_t   alienBuildableDestroyedPS;
 
   qhandle_t   alienBleedPS;
   qhandle_t   humanBleedPS;
 
+  qhandle_t alienAttackFeedbackShaders[11];
+
   qhandle_t   teslaZapTS;
+  qhandle_t   massDriverTS;
 
   sfxHandle_t lCannonWarningSound;
   sfxHandle_t lCannonWarningSound2;
@@ -1294,6 +1312,9 @@ typedef struct
   qhandle_t   healthCross3X;
   qhandle_t   healthCrossMedkit;
   qhandle_t   healthCrossPoisoned;
+  
+  qhandle_t   squadMarkerH;
+  qhandle_t   squadMarkerV;
 } cgMedia_t;
 
 typedef struct
@@ -1409,6 +1430,12 @@ typedef struct
   clientList_t  ignoreList;
 } cgs_t;
 
+typedef struct
+{
+  char *cmd;
+  void ( *function )( void );
+} consoleCommand_t;
+
 //==============================================================================
 
 extern  cgs_t     cgs;
@@ -1433,13 +1460,12 @@ extern  vmCvar_t    cg_shadows;
 extern  vmCvar_t    cg_drawTimer;
 extern  vmCvar_t    cg_drawClock;
 extern  vmCvar_t    cg_drawFPS;
+extern  vmCvar_t    cg_drawSpeed;
 extern  vmCvar_t    cg_drawDemoState;
 extern  vmCvar_t    cg_drawSnapshot;
 extern  vmCvar_t    cg_drawChargeBar;
 extern  vmCvar_t    cg_drawCrosshair;
 extern  vmCvar_t    cg_drawCrosshairNames;
-extern  vmCvar_t    cg_crosshairX;
-extern  vmCvar_t    cg_crosshairY;
 extern  vmCvar_t    cg_crosshairSize;
 extern  vmCvar_t    cg_draw2D;
 extern  vmCvar_t    cg_drawStatus;
@@ -1514,6 +1540,7 @@ extern  vmCvar_t    cg_painBlendZoom;
 
 extern  vmCvar_t    cg_stickySpec;
 extern  vmCvar_t    cg_alwaysSprint;
+extern  vmCvar_t    cg_unlagged;
 
 extern  vmCvar_t    cg_debugVoices;
 
@@ -1529,6 +1556,8 @@ extern  vmCvar_t    cg_debugRandom;
 
 extern  vmCvar_t    cg_optimizePrediction;
 extern  vmCvar_t    cg_projectileNudge;
+
+extern  vmCvar_t    cg_drawAlienFeedback;
 
 extern  vmCvar_t    cg_voice;
 
@@ -1599,6 +1628,7 @@ void        CG_DrawRect( float x, float y, float width, float height, float size
 void        CG_DrawSides(float x, float y, float w, float h, float size);
 void        CG_DrawTopBottom(float x, float y, float w, float h, float size);
 qboolean    CG_WorldToScreen( vec3_t point, float *x, float *y );
+qboolean    CG_WorldToScreenWrap( vec3_t point, float *x, float *y );
 char        *CG_KeyBinding( const char *bind );
 
 
@@ -1640,6 +1670,7 @@ void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
+centity_t   *CG_GetLocation( centity_t *cent );
 
 //
 // cg_buildable.c
@@ -1686,6 +1717,8 @@ void        CG_PredictPlayerState( void );
 void        CG_CheckEvents( centity_t *cent );
 void        CG_EntityEvent( centity_t *cent, vec3_t position );
 void        CG_PainEvent( centity_t *cent, int health );
+void        CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
+                vec3_t origin, vec3_t dir, int entityNum, int charge );
 
 
 //
@@ -1701,7 +1734,7 @@ void        CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *pare
                                     qhandle_t parentModel, char *tagName );
 void        CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
                                            qhandle_t parentModel, char *tagName );
-
+void        CG_LinkLocation( centity_t* cent );
 
 
 
@@ -1723,6 +1756,8 @@ void        CG_MissileHitWall( weapon_t weapon, weaponMode_t weaponMode, int cli
 void        CG_MissileHitPlayer( weapon_t weapon, weaponMode_t weaponMode, vec3_t origin, vec3_t dir, int entityNum, int charge );
 void        CG_Bullet( vec3_t origin, int sourceEntityNum, vec3_t normal, qboolean flesh, int fleshEntityNum );
 void        CG_ShotgunFire( entityState_t *es );
+void        CG_MassDriverFire( entityState_t *es );
+void        CG_HandleAlienFeedback( centity_t* cent, alienFeedback_t feedbackType );
 
 void        CG_AddViewWeapon (playerState_t *ps);
 void        CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent );
@@ -1977,6 +2012,7 @@ void          trap_R_AddRefEntityToScene( const refEntity_t *re );
 // significant construction
 void          trap_R_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts );
 void          trap_R_AddPolysToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int numPolys );
+qboolean      trap_R_inPVS( const vec3_t p1, const vec3_t p2 );
 void          trap_R_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void          trap_R_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 int           trap_R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );

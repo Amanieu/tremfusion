@@ -427,7 +427,7 @@ static void CG_HumanText( char *text, playerState_t *ps )
     upgrade = cg.weaponSelect - 32;
   }
 
-  if( !ps->ammo[0] && !ps->ammo[1] && !BG_Weapon( ps->weapon )->infiniteAmmo )
+  if( !ps->ammo && !ps->clips && !BG_Weapon( ps->weapon )->infiniteAmmo )
   {
     //no ammo
     switch( ps->weapon )

@@ -56,6 +56,8 @@ extern	console_t	con;
 
 console_t	con;
 
+cvar_t		*cl_autoNamelog;
+
 cvar_t		*con_conspeed;
 
 // Color and alpha for console
@@ -65,6 +67,8 @@ cvar_t		*scr_conColorAlpha;
 cvar_t		*scr_conColorRed;
 cvar_t		*scr_conColorBlue;
 cvar_t		*scr_conColorGreen;
+
+cvar_t		*scr_conHeight;
 
 // Color and alpha for bar under console
 cvar_t		*scr_conBarSize;
@@ -76,9 +80,6 @@ cvar_t		*scr_conBarColorGreen;
 
 
 #define	DEFAULT_CONSOLE_WIDTH	78
-
-vec4_t	console_color = {1.0, 1.0, 1.0, 1.0};
-
 
 /*
 ================
@@ -104,7 +105,6 @@ Con_MessageMode_f
 ================
 */
 void Con_MessageMode_f (void) {
-	int i;
 	chat_playerNum = -1;
 	chat_team = qfalse;
 	chat_admins = qfalse;
@@ -112,11 +112,10 @@ void Con_MessageMode_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	for(i = 1; i < Cmd_Argc(); i++)
-	{
-		Com_sprintf(chatField.buffer, MAX_SAY_TEXT, "%s%s ", chatField.buffer, Cmd_Argv(i));
-	}
-	chatField.cursor += strlen(chatField.buffer);
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -127,7 +126,6 @@ Con_MessageMode2_f
 ================
 */
 void Con_MessageMode2_f (void) {
-	int i;
 	chat_playerNum = -1;
 	chat_team = qtrue;
 	chat_admins = qfalse;
@@ -135,11 +133,10 @@ void Con_MessageMode2_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	for(i = 1; i < Cmd_Argc(); i++)
-	{
-		Com_sprintf(chatField.buffer, MAX_SAY_TEXT, "%s%s ", chatField.buffer, Cmd_Argv(i));
-	}
-	chatField.cursor += strlen(chatField.buffer);
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -150,7 +147,6 @@ Con_MessageMode3_f
 ================
 */
 void Con_MessageMode3_f (void) {
-	int i;
 	chat_playerNum = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
 	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
 		chat_playerNum = -1;
@@ -162,11 +158,10 @@ void Con_MessageMode3_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	for(i = 1; i < Cmd_Argc(); i++)
-	{
-		Com_sprintf(chatField.buffer, MAX_SAY_TEXT, "%s%s ", chatField.buffer, Cmd_Argv(i));
-	}
-	chatField.cursor += strlen(chatField.buffer);
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -177,7 +172,6 @@ Con_MessageMode4_f
 ================
 */
 void Con_MessageMode4_f (void) {
-	int i;
 	chat_playerNum = VM_Call( cgvm, CG_LAST_ATTACKER );
 	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
 		chat_playerNum = -1;
@@ -189,11 +183,10 @@ void Con_MessageMode4_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	for(i = 1; i < Cmd_Argc(); i++)
-	{
-		Com_sprintf(chatField.buffer, MAX_SAY_TEXT, "%s%s ", chatField.buffer, Cmd_Argv(i));
-	}
-	chatField.cursor += strlen(chatField.buffer);
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -204,7 +197,6 @@ Con_MessageMode5_f
 ================
 */
 void Con_MessageMode5_f (void) {
-	int i;
 	chat_playerNum = -1;
 	chat_team = qfalse;
 	chat_admins = qtrue;
@@ -212,11 +204,10 @@ void Con_MessageMode5_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	for(i = 1; i < Cmd_Argc(); i++)
-	{
-		Com_sprintf(chatField.buffer, MAX_SAY_TEXT, "%s%s ", chatField.buffer, Cmd_Argv(i));
-	}
-	chatField.cursor += strlen(chatField.buffer);
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -235,7 +226,8 @@ void Con_Prompt_f (void) {
 
 	chat_playerNum = -1;
 	chat_team = qfalse;
-
+	chat_admins = qfalse;
+	chat_clans = qfalse;
 	prompt.active = qtrue;
 
 	strcpy(prompt.callback, Cmd_Argv(1));
@@ -259,8 +251,13 @@ void Con_MessageMode6_f (void) {
 	chat_team = qfalse;
 	chat_admins = qfalse;
 	chat_clans = qtrue;
+	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
+	if( Cmd_Argc( ) > 1 )
+		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
+	else
+		chatField.cursor = 0;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
@@ -342,6 +339,76 @@ void Con_Dump_f (void)
 	FS_FCloseFile( f );
 }
 
+/*
+================
+Con_Grep_f
+
+Find all console lines containing a string
+================
+*/
+void Con_Grep_f (void)
+{
+	int		l, x, i;
+	short	*line;
+	char	buffer[1024];
+	char	buffer2[1024];
+	char	printbuf[CON_TEXTSIZE];
+	char	*search;
+	char	lastcolor;
+
+	if (Cmd_Argc() != 2)
+	{
+		Com_Printf ("usage: grep <string>\n");
+		return;
+	}
+
+	// skip empty lines
+	for (l = con.current - con.totallines + 1 ; l <= con.current ; l++)
+	{
+		line = con.text + (l%con.totallines)*con.linewidth;
+		for (x=0 ; x<con.linewidth ; x++)
+			if ((line[x] & 0xff) != ' ')
+				break;
+		if (x != con.linewidth)
+			break;
+	}
+
+	// check the remaining lines
+	buffer[con.linewidth] = 0;
+	search = Cmd_Argv( 1 );
+	printbuf[0] = '\0';
+	lastcolor = 7;
+	for ( ; l <= con.current ; l++)
+	{
+		line = con.text + (l%con.totallines)*con.linewidth;
+		for(i=0,x=0; i<con.linewidth; i++)
+		{
+			if (line[i] >> 8 != lastcolor)
+			{
+				lastcolor = line[i] >> 8;
+				buffer[x++] = Q_COLOR_ESCAPE;
+				buffer[x++] = lastcolor + '0';
+			}
+			buffer[x++] = line[i] & 0xff;
+		}
+		for (x=con.linewidth-1 ; x>=0 ; x--)
+		{
+			if (buffer[x] == ' ')
+				buffer[x] = 0;
+			else
+				break;
+		}
+		strcpy(buffer2, buffer);
+		Q_CleanStr(buffer2);
+		if (Q_stristr(buffer2, search))
+		{
+			strcat( printbuf, buffer );
+			strcat( printbuf, "\n" );
+		}
+	}
+	if ( printbuf[0] )
+		Com_Printf( "%s", printbuf );
+}
 						
 /*
 ================
@@ -418,6 +485,17 @@ void Con_CheckResize (void)
 	con.display = con.current;
 }
 
+/*
+==================
+Cmd_CompleteTxtName
+==================
+*/
+void Cmd_CompleteTxtName( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteFilename( "", "txt", qfalse );
+	}
+}
+
 
 /*
 ================
@@ -426,7 +504,9 @@ Con_Init
 */
 void Con_Init (void) {
 	int		i;
-
+	
+	cl_autoNamelog = Cvar_Get ("cl_autoNamelog", "0", CVAR_ARCHIVE);
+	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
 	
 	// Defines cvar for color and alpha for console/bar under console
@@ -436,6 +516,8 @@ void Con_Init (void) {
 	scr_conColorRed = Cvar_Get ("scr_conColorRed", "0", CVAR_ARCHIVE);
 	scr_conColorBlue = Cvar_Get ("scr_conColorBlue", "0.1", CVAR_ARCHIVE);
 	scr_conColorGreen = Cvar_Get ("scr_conColorGreen", "0", CVAR_ARCHIVE);
+
+	scr_conHeight = Cvar_Get ("scr_conHeight", "50", CVAR_ARCHIVE);
 	
 	scr_conBarSize = Cvar_Get ("scr_conBarSize", "2", CVAR_ARCHIVE);
 	
@@ -461,8 +543,11 @@ void Con_Init (void) {
 	Cmd_AddCommand ("messagemode5", Con_MessageMode5_f);
 	Cmd_AddCommand ("messagemode6", Con_MessageMode6_f);
 	Cmd_AddCommand ("prompt", Con_Prompt_f);
+	Cmd_SetCommandCompletionFunc( "prompt", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
+	Cmd_SetCommandCompletionFunc( "condump", Cmd_CompleteTxtName );
+	Cmd_AddCommand ("grep", Con_Grep_f);
 }
 
 
@@ -497,7 +582,29 @@ void CL_ConsolePrint( char *txt ) {
 	int		c, l;
 	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
+	
+	CL_WriteClientChatLog( txt );
+	
+/* auto-namelog code */
+    if (( strstr(txt, "^7 connected\n") != NULL ) && !clc.demoplaying && cl_autoNamelog->integer)
+	{
+	char *p;
+	char text[MAX_SAY_TEXT];
 
+	Q_strncpyz( text, txt, MAX_SAY_TEXT );
+	p = strstr(text, "^7 connected\n");
+	if (p)
+		{
+		char buf[MAX_SAY_TEXT];
+
+		*p = '\0';
+
+		Com_sprintf( buf, sizeof(buf), "!namelog %s", text );
+		CL_AddReliableCommand( buf );
+		}
+	}
+/* end auto-namelog code */
+	
 	// TTimo - prefix for text that shows up in console but not in notify
 	// backported from RTCW
 	if ( !Q_strncmp( txt, "[skipnotify]", 12 ) ) {
@@ -541,7 +648,7 @@ void CL_ConsolePrint( char *txt ) {
 
 		// count word length
 		for (l=0 ; l< con.linewidth ; l++) {
-			if ( txt[l] <= ' ') {
+			if ( txt[l] <= ' ' && txt[l] >= 0) {
 				break;
 			}
 
@@ -565,7 +672,7 @@ void CL_ConsolePrint( char *txt ) {
 			break;
 		default:	// display character and advance
 			y = con.current % con.totallines;
-			con.text[y*con.linewidth+con.x] = (color << 8) | c;
+			con.text[y*con.linewidth+con.x] = (color << 8) | (unsigned char)c;
 			con.x++;
 			if (con.x >= con.linewidth) {
 				Con_Linefeed(skipnotify);
@@ -600,14 +707,14 @@ void Con_DrawInput (void) {
 		return;
 	}
 
-	y = con.vislines - ( SMALLCHAR_HEIGHT * 2 );
+	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
 	re.SetColor( con.color );
 
-	SCR_DrawSmallChar( con.xadjust + 1 * SMALLCHAR_WIDTH, y, ']' );
+	SCR_DrawConsoleFontChar( con.xadjust + cl_conXOffset->integer, y, ']' );
 
-	Field_Draw( &g_consoleField, con.xadjust + 2 * SMALLCHAR_WIDTH, y,
-		SCREEN_WIDTH - 3 * SMALLCHAR_WIDTH, qtrue, qtrue );
+	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontCharWidth(']'), y,
+		SCREEN_WIDTH - 3 * SCR_ConsoleFontCharWidth(' '), qtrue, qtrue );
 }
 
 /*
@@ -673,30 +780,31 @@ void Con_DrawSolidConsole( float frac ) {
 	re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
 
 	i = strlen( Q3_VERSION );
-
+    float totalwidth = SCR_ConsoleFontStringWidth( Q3_VERSION, i ) + cl_conXOffset->integer;
+    float currentWidthLocation = 0;
 	for (x=0 ; x<i ; x++) {
 
-		SCR_DrawSmallChar( cls.glconfig.vidWidth - ( i - x ) * SMALLCHAR_WIDTH, 
-			(lines-(SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), Q3_VERSION[x] );
+        SCR_DrawConsoleFontChar( cls.glconfig.vidWidth - totalwidth + currentWidthLocation, lines-SCR_ConsoleFontCharHeight(), Q3_VERSION[x] );
+        currentWidthLocation += SCR_ConsoleFontCharWidth( Q3_VERSION[x] );
 
 	}
 
 
 	// draw the text
 	con.vislines = lines;
-	rows = (lines-SMALLCHAR_WIDTH)/SMALLCHAR_WIDTH;		// rows of text to draw
+	rows = (lines)/SCR_ConsoleFontCharHeight();		// rows of text to draw
 
-	y = lines - (SMALLCHAR_HEIGHT*3);
+	y = lines - (SCR_ConsoleFontCharHeight()*3);
 
 	// draw from the bottom up
 	if (con.display != con.current)
 	{
 	// draw arrows to show the buffer is backscrolled
-		re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
-		for (x=0 ; x<con.linewidth ; x+=4)
-			SCR_DrawSmallChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, '^' );
-		y -= SMALLCHAR_HEIGHT;
-		rows--;
+	    re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
+        for (x=0 ; x<con.linewidth ; x+=4)
+            SCR_DrawConsoleFontChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, '^' );
+        y -= SCR_ConsoleFontCharHeight();
+        rows--;
 	}
 	
 	row = con.display;
@@ -708,7 +816,7 @@ void Con_DrawSolidConsole( float frac ) {
 	currentColor = 7;
 	re.SetColor( g_color_table[currentColor] );
 
-	for (i=0 ; i<rows ; i++, y -= SMALLCHAR_HEIGHT, row--)
+	for (i=0 ; i<rows ; i++, y -= SCR_ConsoleFontCharHeight(), row--)
 	{
 		if (row < 0)
 			break;
@@ -719,16 +827,15 @@ void Con_DrawSolidConsole( float frac ) {
 
 		text = con.text + (row % con.totallines)*con.linewidth;
 
+        float currentWidthLocation = cl_conXOffset->integer;
 		for (x=0 ; x<con.linewidth ; x++) {
-			if ( ( text[x] & 0xff ) == ' ' ) {
-				continue;
-			}
-
 			if ( ( (text[x]>>8)&7 ) != currentColor ) {
 				currentColor = (text[x]>>8)&7;
 				re.SetColor( g_color_table[currentColor] );
 			}
-			SCR_DrawSmallChar(  con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, text[x] & 0xff );
+            
+            SCR_DrawConsoleFontChar(  con.xadjust + currentWidthLocation, y, text[x] & 0xff );
+            currentWidthLocation += SCR_ConsoleFontCharWidth( text[x] & 0xff );
 		}
 	}
 
@@ -812,7 +919,7 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-		con.finalFrac = 0.5;		// half screen
+		con.finalFrac = MAX(0.10, 0.01 * scr_conHeight->integer);  // configured console percentage
 	else
 		con.finalFrac = 0;				// none visible
 	

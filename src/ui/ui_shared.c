@@ -1962,7 +1962,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
 
     while( s && *s && count < len )
     {
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
 
       if( Q_IsColorString( s ) )
       {
@@ -2026,7 +2026,7 @@ float UI_Text_Height( const char *text, float scale, int limit )
       }
       else
       {
-        glyph = &font->glyphs[( int )*s];
+        glyph = &font->glyphs[( unsigned char )*s];
 
         if( max < glyph->height )
           max = glyph->height;
@@ -2120,7 +2120,7 @@ void UI_Text_Paint_Limit( float *maxX, float x, float y, float scale,
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[ ( int )*s ];
+      glyph = &font->glyphs[ ( unsigned char )*s ];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2217,7 +2217,7 @@ void UI_Text_Paint( float x, float y, float scale, vec4_t color, const char *tex
     {
       float width, height, skip, yadj;
 
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
@@ -2372,7 +2372,7 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
       len = limit;
 
     count = 0;
-    glyph2 = &font->glyphs[ ( int ) cursor];
+    glyph2 = &font->glyphs[ ( unsigned char ) cursor];
     width2 = glyph2->imageWidth * DC->aspectScale;
     height2 = glyph2->imageHeight;
     skip2 = glyph2->xSkip * DC->aspectScale;
@@ -2380,12 +2380,19 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
     while( s && *s && count < len )
     {
       float width, height, skip;
-      glyph = &font->glyphs[( int )*s];
+      glyph = &font->glyphs[( unsigned char )*s];
       width = glyph->imageWidth * DC->aspectScale;
       height = glyph->imageHeight;
       skip = glyph->xSkip * DC->aspectScale;
 
       yadj = useScale * glyph->top;
+
+      if( Q_IsColorString( s ) )
+      {
+        memcpy( newColor, g_color_table[ColorIndex( *( s+1 ) )], sizeof( newColor ) );
+        newColor[3] = color[3];
+        DC->setColor( newColor );
+      }
 
       if( style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE )
       {
@@ -3635,7 +3642,7 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
-      else if( key < 32 || !item->cvar )
+      else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars
         releaseFocus = qfalse;
@@ -4291,6 +4298,13 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   int i;
   itemDef_t *item = NULL;
   qboolean inHandler = qfalse;
+
+  // KTW: Draggable Windows
+  if (key == K_MOUSE1 && down && Rect_ContainsPoint(&menu->window.rect, DC->cursorx, DC->cursory) &&
+        menu->window.style && menu->window.border) 
+      menu->window.flags |= WINDOW_DRAG;
+  else
+      menu->window.flags &= ~WINDOW_DRAG;
 
   inHandler = qtrue;
 
@@ -5273,6 +5287,7 @@ static bind_t g_bindings[] =
     { "messagemode5", -1,            -1, -1, -1 },
     { "messagemode6", -1,            -1, -1, -1 },
     { "prompt",       -1,            -1, -1, -1 },
+    { "squadmark",    'k',           -1, -1, -1 },
   };
 
 
@@ -6503,6 +6518,28 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
   if( g_waitingForKey || g_editingField )
     return;
 
+  // KTW: Draggable windows
+  if ( (menu->window.flags & WINDOW_HASFOCUS) && (menu->window.flags & WINDOW_DRAG))
+  {
+    menu->window.rect.x +=  DC->cursordx;
+    menu->window.rect.y +=  DC->cursordy;
+
+    if (menu->window.rect.x < 0)
+      menu->window.rect.x = 0;
+    if (menu->window.rect.x + menu->window.rect.w > SCREEN_WIDTH)
+      menu->window.rect.x = SCREEN_WIDTH-menu->window.rect.w;
+
+    if (menu->window.rect.y < 0)
+      menu->window.rect.y = 0;
+    if (menu->window.rect.y + menu->window.rect.h > SCREEN_HEIGHT)
+      menu->window.rect.y = SCREEN_HEIGHT-menu->window.rect.h;
+
+    Menu_UpdatePosition(menu);
+
+    for (i = 0; i < menu->itemCount; i++)
+      Item_UpdatePosition(menu->items[i]);
+  }
+
   // FIXME: this is the whole issue of focus vs. mouse over..
   // need a better overall solution as i don't like going through everything twice
   for( pass = 0; pass < 2; pass++ )
@@ -6565,7 +6602,9 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
 void Menu_Paint( menuDef_t *menu, qboolean forcePaint )
 {
   int i;
-
+  itemDef_t item;
+  char listened_text[1024];
+  
   if( menu == NULL )
     return;
 
@@ -6577,6 +6616,18 @@ void Menu_Paint( menuDef_t *menu, qboolean forcePaint )
 
   if( forcePaint )
     menu->window.flags |= WINDOW_FORCED;
+
+  //Executes the text stored in the listened cvar as an UIscript
+  if( menu->listenCvar && menu->listenCvar[0] )
+  {
+    DC->getCVarString( menu->listenCvar, listened_text, sizeof(listened_text) );
+    if( listened_text[0] )
+    {
+      item.parent = menu;
+      Item_RunScript( &item, listened_text );
+      DC->setCVar( menu->listenCvar, "" );
+    }
+  }
 
   // draw the background if necessary
   if( menu->fullScreen )
@@ -7062,6 +7113,7 @@ qboolean ItemParse_visible( itemDef_t *item, int handle )
   if( !PC_Int_Parse( handle, &i ) )
     return qfalse;
 
+  item->window.flags &= ~WINDOW_VISIBLE;
   if( i )
     item->window.flags |= WINDOW_VISIBLE;
 
@@ -8072,6 +8124,16 @@ qboolean MenuParse_soundLoop( itemDef_t *item, int handle )
   return qtrue;
 }
 
+qboolean MenuParse_listenTo( itemDef_t *item, int handle )
+{
+  menuDef_t *menu = ( menuDef_t* )item;
+
+  if( !PC_String_Parse( handle, &menu->listenCvar ) )
+    return qfalse;
+
+  return qtrue;
+}
+
 qboolean MenuParse_fadeClamp( itemDef_t *item, int handle )
 {
   menuDef_t *menu = ( menuDef_t* )item;
@@ -8151,6 +8213,7 @@ keywordHash_t menuParseKeywords[] = {
   {"ownerdrawFlag", MenuParse_ownerdrawFlag, NULL},
   {"outOfBoundsClick", MenuParse_outOfBounds, NULL},
   {"soundLoop", MenuParse_soundLoop, NULL},
+  {"listento", MenuParse_listenTo, NULL},
   {"itemDef", MenuParse_itemDef, NULL},
   {"cinematic", MenuParse_cinematic, NULL},
   {"popup", MenuParse_popup, NULL},

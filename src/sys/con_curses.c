@@ -1,6 +1,6 @@
 /*
  * ===========================================================================
- * Copyleft (]) 2008 Griffon Bowman
+ * Copyright (C) 2008 Griffon Bowman
  *
  * This file is part of Tremfusion.
  *

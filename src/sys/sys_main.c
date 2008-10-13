@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
-#ifndef DEDICATED
+#if !DEDICATED && !USE_TTY_CLIENT
 #ifdef USE_LOCAL_HEADERS
 #	include "SDL.h"
 #	include "SDL_cpuinfo.h"
@@ -112,8 +112,7 @@ Restart the input subsystem
 */
 void Sys_In_Restart_f( void )
 {
-	IN_Shutdown();
-	IN_Init();
+	IN_Restart( );
 }
 
 /*
@@ -139,7 +138,7 @@ void Sys_Exit( int ex )
 {
 	CON_Shutdown( );
 
-#ifndef DEDICATED
+#if !DEDICATED && !USE_TTY_CLIENT
 	SDL_Quit( );
 #endif
 
@@ -172,7 +171,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 {
 	cpuFeatures_t features = 0;
 
-#ifndef DEDICATED
+#if !DEDICATED && !USE_TTY_CLIENT
 	if( SDL_HasRDTSC( ) )    features |= CF_RDTSC;
 	if( SDL_HasMMX( ) )      features |= CF_MMX;
 	if( SDL_HasMMXExt( ) )   features |= CF_MMX_EXT;
@@ -396,6 +395,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	char  fname[MAX_OSPATH];
 	char  *basepath;
 	char  *homepath;
+	char  *homepath2;
 	char  *pwdpath;
 	char  *gamedir;
 
@@ -407,12 +407,16 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	pwdpath = Sys_Cwd();
 	basepath = Cvar_VariableString( "fs_basepath" );
 	homepath = Cvar_VariableString( "fs_homepath" );
+	homepath2 = Cvar_VariableString( "fs_homepath2" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
 	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
 
 	if(!libHandle && homepath)
 		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
+
+	if(!libHandle && homepath)
+		libHandle = Sys_TryLibraryLoad(homepath2, gamedir, fname, fqpath);
 
 	if(!libHandle && basepath)
 		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
@@ -507,7 +511,7 @@ int main( int argc, char **argv )
 	int   i;
 	char  commandLine[ MAX_STRING_CHARS ] = { 0 };
 
-#ifndef DEDICATED
+#if !DEDICATED && !USE_TTY_CLIENT
 	// SDL version check
 
 	// Compile time
@@ -533,6 +537,8 @@ int main( int argc, char **argv )
 	}
 #endif
 
+	Sys_PlatformInit( );
+
 	Sys_ParseArgs( argc, argv );
 	Sys_SetBinaryPath( Sys_Dirname( Sys_ResolveLink( argv[ 0 ] ) ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
@@ -554,16 +560,6 @@ int main( int argc, char **argv )
 	Com_Init( commandLine );
 	NET_Init( );
 
-#ifndef _WIN32
-	// Windows doesn't have these signals
-	// see CON_CtrlHandler() in con_win32.c
-	signal( SIGHUP, Sys_SigHandler );
-	signal( SIGQUIT, Sys_SigHandler );
-	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGIOT, Sys_SigHandler );
-	signal( SIGBUS, Sys_SigHandler );
-#endif
-
 	signal( SIGILL, Sys_SigHandler );
 	signal( SIGFPE, Sys_SigHandler );
 	signal( SIGSEGV, Sys_SigHandler );
@@ -571,7 +567,7 @@ int main( int argc, char **argv )
 
 	while( 1 )
 	{
-#ifndef DEDICATED
+#if !DEDICATED && !USE_TTY_CLIENT
 		int appState = SDL_GetAppState( );
 
 		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );

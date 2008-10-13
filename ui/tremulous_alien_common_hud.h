@@ -176,6 +176,18 @@ itemDef
   ownerdraw CG_PLAYER_WEAPONICON
 }
 
+//ALIEN ATTACK FEEDBACK
+itemDef
+{
+  name "attack-feedback"
+  rect 40.0 40.0 560 400
+  visible 1
+  decoration
+  //forecolor makes no difference - it's handled programmatically in cg_draw.c:CG_DrawAttackFeedback
+  forecolor 1.0 0.0 0.0 .5
+  ownerdraw CG_PLAYER_ATTACK_FEEDBACK
+}
+
 //ORGANS
 itemDef
 {

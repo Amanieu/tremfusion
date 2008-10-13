@@ -24,61 +24,68 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#if WINVER < 0x501
-#include <wspiapi.h>
-#else
-#include <ws2spi.h>
-#endif
+#	include <winsock2.h>
+#	include <ws2tcpip.h>
+#	if WINVER < 0x501
+#		ifdef __MINGW32__
+			// wspiapi.h isn't available on MinGW, so if it's
+			// present it's because the end user has added it
+			// and we should look for it in our tree
+#			include "wspiapi.h"
+#		else
+#			include <wspiapi.h>
+#		endif
+#	else
+#		include <ws2spi.h>
+#	endif
 
 typedef int socklen_t;
-#ifdef ADDRESS_FAMILY
-#define sa_family_t	ADDRESS_FAMILY
-#else
+#	ifdef ADDRESS_FAMILY
+#		define sa_family_t	ADDRESS_FAMILY
+#	else
 typedef unsigned short sa_family_t;
-#endif
+#	endif
 
-#define EAGAIN				WSAEWOULDBLOCK
-#define EADDRNOTAVAIL	WSAEADDRNOTAVAIL
-#define EAFNOSUPPORT	WSAEAFNOSUPPORT
-#define ECONNRESET		WSAECONNRESET
-#define socketError		WSAGetLastError( )
+#	define EAGAIN					WSAEWOULDBLOCK
+#	define EADDRNOTAVAIL	WSAEADDRNOTAVAIL
+#	define EAFNOSUPPORT		WSAEAFNOSUPPORT
+#	define ECONNRESET			WSAECONNRESET
+#	define socketError		WSAGetLastError( )
 
 static WSADATA	winsockdata;
 static qboolean	winsockInitialized = qfalse;
 
 #else
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED == 1020
-	// needed for socklen_t on OSX 10.2
-#	define _BSD_SOCKLEN_T_
-#endif
+#	if MAC_OS_X_VERSION_MIN_REQUIRED == 1020
+		// needed for socklen_t on OSX 10.2
+#		define _BSD_SOCKLEN_T_
+#	endif
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#if !defined(__sun) && !defined(__sgi)
-#include <ifaddrs.h>
-#endif
+#	include <arpa/inet.h>
+#	include <errno.h>
+#	include <netdb.h>
+#	include <netinet/in.h>
+#	include <sys/socket.h>
+#	include <net/if.h>
+#	include <sys/ioctl.h>
+#	include <sys/types.h>
+#	include <sys/time.h>
+#	include <unistd.h>
+#	if !defined(__sun) && !defined(__sgi)
+#		include <ifaddrs.h>
+#	endif
 
-#ifdef __sun
-#include <sys/filio.h>
-#endif
+#	ifdef __sun
+#		include <sys/filio.h>
+#	endif
 
 typedef int SOCKET;
-#define INVALID_SOCKET		-1
-#define SOCKET_ERROR			-1
-#define closesocket				close
-#define ioctlsocket				ioctl
-#define socketError				errno
+#	define INVALID_SOCKET		-1
+#	define SOCKET_ERROR			-1
+#	define closesocket			close
+#	define ioctlsocket			ioctl
+#	define socketError			errno
 
 #endif
 
@@ -220,6 +227,7 @@ static void NetadrToSockadr( netadr_t *a, struct sockaddr *s ) {
 		((struct sockaddr_in6 *)s)->sin6_family = AF_INET6;
 		((struct sockaddr_in6 *)s)->sin6_addr = * ((struct in6_addr *) &a->ip6);
 		((struct sockaddr_in6 *)s)->sin6_port = a->port;
+		((struct sockaddr_in6 *)s)->sin6_scope_id = a->scope_id;
 	}
 	else if(a->type == NA_MULTICAST6)
 	{
@@ -241,6 +249,7 @@ static void SockadrToNetadr( struct sockaddr *s, netadr_t *a ) {
 		a->type = NA_IP6;
 		memcpy(a->ip6, &((struct sockaddr_in6 *)s)->sin6_addr, sizeof(a->ip6));
 		a->port = ((struct sockaddr_in6 *)s)->sin6_port;
+		a->scope_id = ((struct sockaddr_in6 *)s)->sin6_scope_id;
 	}
 }
 
@@ -272,14 +281,11 @@ static qboolean Sys_StringToSockaddr(const char *s, struct sockaddr *sadr, int s
 	memset(sadr, '\0', sizeof(*sadr));
 	memset(&hints, '\0', sizeof(hints));
 
-	// workaround for buggy MacOSX getaddrinfo implementation that doesn't handle AF_UNSPEC in hints correctly.
-	if(family == AF_UNSPEC)
-		hintsp = NULL;
-	else
-	{
-		hintsp = &hints;
-		hintsp->ai_family = family;
-	}
+	hintsp = &hints;
+	hintsp->ai_family = family;
+	hintsp->ai_socktype = SOCK_DGRAM;
+	// FIXME: we should set "->ai_flags" to AI_PASSIVE if we intend
+	//        to use this structure for a bind() - instead of a sendto()
 	
 	retval = getaddrinfo(s, NULL, hintsp, &res);
 
@@ -392,7 +398,7 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
 	
 	if (a.type == NA_IP6)
 	{
-		if(!memcmp(a.ip6, b.ip6, sizeof(a.ip6)))
+		if(!memcmp(a.ip6, b.ip6, sizeof(a.ip6)) && a.scope_id == b.scope_id)
 				  return qtrue;
 		
 		return qfalse;
@@ -711,6 +717,8 @@ qboolean Sys_IsLANAddress( netadr_t adr ) {
 			}
 			else
 			{
+				// TODO? should we check the scope_id here?
+
 				compareip = (byte *) &((struct sockaddr_in6 *) &localIP[index].addr)->sin6_addr;
 				comparemask = (byte *) &((struct sockaddr_in6 *) &localIP[index].netmask)->sin6_addr;
 				compareadr = adr.ip6;

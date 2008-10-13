@@ -376,7 +376,8 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 		i = drawLen - strlen( str );
 
 		if ( size == SMALLCHAR_WIDTH ) {
-			SCR_DrawSmallChar( x + ( edit->cursor - prestep - i ) * size, y, cursorChar );
+            float xlocation = x + SCR_ConsoleFontStringWidth( str, edit->cursor) ;
+            SCR_DrawConsoleFontChar( xlocation , y, cursorChar );
 		} else {
 			str[0] = cursorChar;
 			str[1] = 0;
@@ -534,7 +535,7 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	//
 	// ignore any other non printable chars
 	//
-	if ( ch < 32 ) {
+	if ( ch < 32 && ch >= 0 ) {
 		return;
 	}
 
@@ -806,7 +807,6 @@ qboolean Key_IsDown( int keynum ) {
 	return keys[keynum].down;
 }
 
-
 /*
 ===================
 Key_StringToKeynum
@@ -831,28 +831,12 @@ int Key_StringToKeynum( char *str ) {
 	}
 
 	// check for hex code
-	if ( str[0] == '0' && str[1] == 'x' && strlen( str ) == 4) {
-		int		n1, n2;
-		
-		n1 = str[2];
-		if ( n1 >= '0' && n1 <= '9' ) {
-			n1 -= '0';
-		} else if ( n1 >= 'a' && n1 <= 'f' ) {
-			n1 = n1 - 'a' + 10;
-		} else {
-			n1 = 0;
-		}
+	if ( strlen( str ) == 4 ) {
+		int n = Com_HexStrToInt( str );
 
-		n2 = str[3];
-		if ( n2 >= '0' && n2 <= '9' ) {
-			n2 -= '0';
-		} else if ( n2 >= 'a' && n2 <= 'f' ) {
-			n2 = n2 - 'a' + 10;
-		} else {
-			n2 = 0;
+		if ( n >= 0 ) {
+			return n;
 		}
-
-		return n1 * 16 + n2;
 	}
 
 	// scan for a text match
@@ -925,19 +909,37 @@ void Key_SetBindingByMode( int keynum, const char *binding, qboolean mode ) {
 		return;
 	}
 
-	// free old bindings
-	if ( keys[ keynum ].pushBinding && mode == KEY_PUSH ) {
-		Z_Free( keys[ keynum ].pushBinding );
-	} else if ( keys[ keynum ].releaseBinding && mode == KEY_RELEASE ) {
-		Z_Free( keys[ keynum ].releaseBinding );
-	}		
-
-	// allocate memory for new binding
-	if (mode == KEY_PUSH) {
-		keys[keynum].pushBinding = CopyString( binding );
-	} else {
-		keys[keynum].releaseBinding = CopyString( binding );
+	// free old bindings and allocate memory for new bindings
+	if( mode == KEY_RELEASE ) {
+		if( keys[ keynum ].releaseBinding )
+			Z_Free( keys[ keynum ].releaseBinding );
+		if( binding && binding[0] ) {
+			size_t size = strlen( binding ) + 1;
+			keys[ keynum ].releaseBinding = S_Malloc( size );
+			strcpy( keys[ keynum ].releaseBinding, binding );
+		}
+		else {
+			keys[ keynum ].releaseBinding = NULL;
+		}
 	}
+	else {
+		if( keys[ keynum ].pushBinding )
+			Z_Free( keys[ keynum ].pushBinding );
+		if( binding && binding[0] ) {
+			size_t size = strlen( binding ) + 1;
+			keys[ keynum ].pushBinding = S_Malloc( size );
+			strcpy( keys[ keynum ].pushBinding, binding );
+		}
+		else {
+			keys[ keynum ].pushBinding = NULL;
+		}
+	}
+
+	// don't lose the advanced properties
+	if( keys[ keynum ].releaseBinding || keys[ keynum ].releaseBinding )
+		keys[ keynum ].detailed = qtrue;
+	else // unbound
+		keys[ keynum ].detailed = qfalse;
 
 	// consider this like modifying an archived cvar, so the
 	// file write will be triggered at the next oportunity
@@ -945,7 +947,41 @@ void Key_SetBindingByMode( int keynum, const char *binding, qboolean mode ) {
 }
 
 void Key_SetBinding( int keynum, const char *binding ) {
+	char up[ BIG_INFO_STRING ]; // FIXME: safety?
+	char *u = up;
+	qboolean gotOne = qfalse;
+
 	Key_SetBindingByMode( keynum, binding, KEY_PUSH );
+	
+	// compensate +commands with -commands
+	for(;;) {
+		if( !*binding ) {
+			break;
+		}
+		else if( *binding == ';' ) {
+			binding++;
+		}
+		else if( *binding == '+' ) {
+			if( gotOne )
+				*u++ = ';';
+			else
+				gotOne = qtrue;
+			*u++ = '-';
+			binding++;
+			while( *binding && *binding != ';' )
+				*u++ = *binding++;
+		}
+		else {
+			do {
+				binding++;
+			} while( *binding && *binding != ';' );
+		}
+	}
+	*u = '\0';
+
+	Key_SetBindingByMode( keynum, up, KEY_RELEASE );
+
+	keys[ keynum ].detailed = qfalse;
 }
 
 /*
@@ -960,7 +996,7 @@ char *Key_GetBindingByMode( int keynum, qboolean mode ) {
 		return "";
 	}
 
-	return ( mode == KEY_PUSH ) ? keys[ keynum ].pushBinding : keys[ keynum ].releaseBinding;
+	return ( mode == KEY_RELEASE ) ? keys[ keynum ].releaseBinding : keys[ keynum ].pushBinding;
 }
 
 char *Key_GetBinding( int keynum ) {
@@ -978,13 +1014,20 @@ int Key_GetKeyByMode(const char *binding, qboolean mode) {
 	int i;
 
 	if (binding) {
-		for (i=0 ; i < MAX_KEYS ; i++) {
-			if ( mode == KEY_PUSH && keys[i].pushBinding && 
-				Q_stricmp(binding, keys[i].pushBinding) == 0) {
-				return i;
-			} else if ( mode == KEY_RELEASE && keys[i].releaseBinding && 
-				Q_stricmp(binding, keys[i].releaseBinding) == 0) {
-				return i;
+		if (mode == KEY_RELEASE) {
+			for (i = 0; i < MAX_KEYS; i++) {
+				if( keys[i].releaseBinding && 
+				    Q_stricmp(binding, keys[i].releaseBinding) == 0 ) {
+					return i;
+				}
+			}
+		}
+		else {
+			for (i = 0; i < MAX_KEYS; i++) {
+				if( keys[i].pushBinding && 
+				    Q_stricmp(binding, keys[i].pushBinding) == 0 ) {
+					return i;
+				}
 			}
 		}
 	}
@@ -1002,10 +1045,10 @@ Key_Unbind_f
 */
 void Key_Unbind_f (void)
 {
-	int		b;
-	char		*keyName;
-	qboolean	detailed = qfalse;
-	qboolean	mode = KEY_PUSH;
+	int         b;
+	char        *keyName;
+	qboolean    detailed = qfalse;
+	qboolean    mode = KEY_PUSH;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -1014,31 +1057,32 @@ void Key_Unbind_f (void)
 	}
 
 	keyName = Cmd_Argv(1);
-	if ( keyName[0]=='-') {
+	if ( keyName[0] == '-' && keyName[1] ) {
 		mode = KEY_RELEASE;
 		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
-	} else if (keyName[0]=='+') {
+		keyName++;
+	} else if ( keyName[0] == '+' && keyName[1] ) {
 		mode = KEY_PUSH;
 		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
+		keyName++;
 	}
 
 	b = Key_StringToKeynum (keyName);
 
-	if (b==-1)
+	if (b == -1)
 	{
 		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
 		return;
 	}
 
 	if ( !detailed || mode == KEY_PUSH ) {
-		Key_SetBindingByMode(b, "", KEY_PUSH);
+		Key_SetBindingByMode(b, NULL, KEY_PUSH);
 	}
 	if ( !detailed || mode == KEY_RELEASE ) {
-		Key_SetBindingByMode(b, "", KEY_RELEASE);
+		Key_SetBindingByMode(b, NULL, KEY_RELEASE);
 	}
 
+	keys[b].detailed = detailed;
 }
 
 /*
@@ -1051,8 +1095,9 @@ void Key_Unbindall_f (void)
 	int		b;
 
 	for (b=0 ; b < MAX_KEYS; b++) {
-		Key_SetBindingByMode(b, "", KEY_PUSH);
-		Key_SetBindingByMode(b, "", KEY_RELEASE);
+		Key_SetBindingByMode(b, NULL, KEY_PUSH);
+		Key_SetBindingByMode(b, NULL, KEY_RELEASE);
+		keys[b].detailed = qfalse;
 	}
 }
 
@@ -1064,11 +1109,10 @@ Key_Bind_f
 */
 void Key_Bind_f (void)
 {
-	int			c, b;
-	qboolean	bound = qfalse;
-	qboolean	detailed = qfalse;
-	qboolean	mode = KEY_PUSH;
-	char		*keyName;
+	int         c, b;
+	qboolean    detailed = qfalse;
+	qboolean    mode = KEY_PUSH;
+	char        *keyName;
 
 	c = Cmd_Argc();
 
@@ -1079,19 +1123,21 @@ void Key_Bind_f (void)
 	}
 
 	keyName = Cmd_Argv(1);
-	if ( keyName[0]=='-' && keyName[1]) {
-		mode = KEY_RELEASE;
-		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
-	} else if (keyName[0]=='+' && keyName[1]) {
-		mode = KEY_PUSH;
-		detailed = qtrue;
-		keyName = CopyString( &keyName[1] );
+	if ( keyName[0] && keyName[1] ) {
+		if ( keyName[0] == '-' && keyName[1] ) {
+			mode = KEY_RELEASE;
+			detailed = qtrue;
+			keyName++;
+		} else if ( keyName[0] == '+' && keyName[1] ) {
+			mode = KEY_PUSH;
+			detailed = qtrue;
+			keyName++;
+		}
 	}
 
 	b = Key_StringToKeynum (keyName);
 
-	if (b==-1)
+	if (b == -1)
 	{
 		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
 		return;
@@ -1100,21 +1146,28 @@ void Key_Bind_f (void)
 	// the user asks for the bound action
 	if (c == 2)
 	{
-		if ( ( !detailed || mode == KEY_PUSH ) && keys[b].pushBinding && keys[b].pushBinding[0]) {
-			Com_Printf ("\"+%s\" = \"%s\"\n", keyName, keys[b].pushBinding );
-			bound = qtrue;
+		if( keys[b].detailed ) {
+			if( keys[b].pushBinding )
+				Com_Printf ("\"+%s\" = \"%s\"\n", keyName, keys[b].pushBinding );
+			if( keys[b].releaseBinding )
+				Com_Printf ("\"-%s\" = \"%s\"\n", keyName, keys[b].releaseBinding );
+			if( !keys[b].pushBinding && !keys[b].releaseBinding )
+				Com_Printf ("\"%s\" is not bound\n", keyName );
 		}
-		if ( ( !detailed || mode == KEY_RELEASE ) && keys[b].releaseBinding && keys[b].releaseBinding[0]) {
-			Com_Printf ("\"-%s\" = \"%s\"\n", keyName, keys[b].releaseBinding );
-			bound = qtrue;
+		else {
+			if( keys[b].pushBinding )
+				Com_Printf ("\"%s\" = \"%s\"\n", keyName, keys[b].pushBinding );
+			else
+				Com_Printf ("\"%s\" is not bound\n", keyName );
 		}
-		if ( !bound ) {
-			Com_Printf ("\"%s\" is not bound\n", keyName );
-		}
+
 		return;
 	}
 
-	Key_SetBindingByMode (b, Cmd_ArgsFrom(2), mode);
+	if( mode == KEY_RELEASE )
+		Key_SetBindingByMode (b, Cmd_ArgsFrom(2), KEY_RELEASE);
+	else
+		Key_SetBinding (b, Cmd_ArgsFrom(2));
 }
 
 /*
@@ -1130,11 +1183,18 @@ void Key_WriteBindings( fileHandle_t f ) {
 	FS_Printf (f, "unbindall\n" );
 
 	for (i=0 ; i<MAX_KEYS ; i++) {
-		if (keys[i].pushBinding && keys[i].pushBinding[0] ) {
-			FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding);
+		if (keys[i].detailed) {
+			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
+				FS_Printf (f, "bind +%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
+			}
+			if ( keys[i].releaseBinding && keys[i].releaseBinding[0] ) {
+				FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].releaseBinding));
+			}
 		}
-		if (keys[i].releaseBinding && keys[i].releaseBinding[0] ) {
-			FS_Printf (f, "bind -%s \"%s\"\n", Key_KeynumToString(i), keys[i].releaseBinding);
+		else {
+			if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
+				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), Cmd_EscapeString(keys[i].pushBinding));
+			}
 		}
 	}
 }
@@ -1150,11 +1210,18 @@ void Key_Bindlist_f( void ) {
 	int		i;
 
 	for ( i = 0 ; i < MAX_KEYS ; i++ ) {
-		if ( keys[i].pushBinding && keys[i].pushBinding[0] ) {
-			Com_Printf( "+%s \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding );
+		if( keys[i].detailed ) {
+			if ( keys[i].pushBinding ) {
+				Com_Printf( "\"+%s\" = \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding );
+			}
+			if ( keys[i].releaseBinding ) {
+				Com_Printf( "\"-%s\" = \"%s\"\n", Key_KeynumToString(i), keys[i].releaseBinding );
+			}
 		}
-		if ( keys[i].releaseBinding && keys[i].releaseBinding[0] ) {
-			Com_Printf( "-%s \"%s\"\n", Key_KeynumToString(i), keys[i].releaseBinding );
+		else {
+			if ( keys[i].pushBinding ) {
+				Com_Printf( "\"%s\" = \"%s\"\n", Key_KeynumToString(i), keys[i].pushBinding );
+			}
 		}
 	}
 }
@@ -1172,6 +1239,50 @@ void Key_KeynameCompletion( void(*callback)(const char *s) ) {
 }
 
 /*
+====================
+Key_CompleteUnbind
+====================
+*/
+static void Key_CompleteUnbind( char *args, int argNum )
+{
+	if( argNum == 2 )
+	{
+		// Skip "unbind "
+		char *p = Com_SkipTokens( args, 1, " " );
+
+		if( p > args )
+			Field_CompleteKeyname( );
+	}
+}
+
+/*
+====================
+Key_CompleteBind
+====================
+*/
+static void Key_CompleteBind( char *args, int argNum )
+{
+	char *p;
+
+	if( argNum == 2 )
+	{
+		// Skip "bind "
+		p = Com_SkipTokens( args, 1, " " );
+
+		if( p > args )
+			Field_CompleteKeyname( );
+	}
+	else if( argNum >= 3 )
+	{
+		// Skip "bind <key> "
+		p = Com_SkipTokens( args, 2, " " );
+
+		if( p > args )
+			Field_CompleteCommand( p, qtrue, qtrue );
+	}
+}
+
+/*
 ===================
 CL_InitKeyCommands
 ===================
@@ -1179,53 +1290,11 @@ CL_InitKeyCommands
 void CL_InitKeyCommands( void ) {
 	// register our functions
 	Cmd_AddCommand ("bind",Key_Bind_f);
+	Cmd_SetCommandCompletionFunc( "bind", Key_CompleteBind );
 	Cmd_AddCommand ("unbind",Key_Unbind_f);
+	Cmd_SetCommandCompletionFunc( "unbind", Key_CompleteUnbind );
 	Cmd_AddCommand ("unbindall",Key_Unbindall_f);
 	Cmd_AddCommand ("bindlist",Key_Bindlist_f);
-}
-
-/*
-===================
-CL_AddKeyUpCommands
-===================
-*/
-void CL_AddKeyUpCommands( int key, char *kb, unsigned time) {
-	int i;
-	char button[1024], *buttonPtr;
-	char	cmd[1024];
-	qboolean keyevent;
-
-	if ( !kb ) {
-		return;
-	}
-	keyevent = qfalse;
-	buttonPtr = button;
-	for ( i = 0; ; i++ ) {
-		if ( kb[i] == ';' || !kb[i] ) {
-			*buttonPtr = '\0';
-			if ( button[0] == '+') {
-				// button commands add keynum and time as parms so that multiple
-				// sources can be discriminated and subframe corrected
-				Com_sprintf (cmd, sizeof(cmd), "-%s %i %i\n", button+1, key, time);
-				Cbuf_AddText (cmd);
-				keyevent = qtrue;
-			} else {
-				if (keyevent) {
-					// down-only command
-					Cbuf_AddText (button);
-					Cbuf_AddText ("\n");
-				}
-			}
-			buttonPtr = button;
-			while ( (kb[i] <= ' ' || kb[i] == ';') && kb[i] != 0 ) {
-				i++;
-			}
-		}
-		*buttonPtr++ = kb[i];
-		if ( !kb[i] ) {
-			break;
-		}
-	}
 }
 
 /*
@@ -1236,8 +1305,10 @@ Called by the system for both key up and key down events
 ===================
 */
 void CL_KeyEvent (int key, qboolean down, unsigned time) {
-	char	*kb;
-	char	cmd[1024];
+	int i;
+	char *kb;
+	char cmd[1024];
+	char button[1024], *buttonPtr;
 
 	// update auto-repeat status and BUTTON_ANY status
 	keys[key].down = down;
@@ -1261,7 +1332,6 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 		{
 			if (keys[K_ALT].down)
 			{
-//				Key_ClearStates();  // Thilo: why should we clear the key states here?
 				Cvar_SetValue( "r_fullscreen",
 						!Cvar_VariableIntegerValue( "r_fullscreen" ) );
 				return;
@@ -1277,7 +1347,7 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 	}
 
 	// console key is hardcoded, so the user can never unbind it
-	if (key == '`' || key == '~' ||
+	if (key == K_CONSOLE ||
 		( key == K_ESCAPE && keys[K_SHIFT].down ) ) {
 		if (!down) {
 			return;
@@ -1336,11 +1406,33 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 	// console mode and menu mode, to keep the character from continuing
 	// an action started before a mode switch.
 	//
-	if (!down ) {
-		if ( cls.state != CA_DISCONNECTED ) {
-			kb = keys[key].pushBinding;
-
-			CL_AddKeyUpCommands( key, kb, time );
+	if ( !down ) {
+		kb = keys[key].releaseBinding;
+		if( kb && kb[0] && cls.state != CA_DISCONNECTED && !Key_GetCatcher() ) {
+			buttonPtr = button;
+			for ( i = 0; ; i++ ) {
+				if ( kb[i] == ';' || !kb[i] ) {
+					*buttonPtr = '\0';
+					if ( button[0] == '-') {
+						// button commands add keynum and time as parms so that multiple
+						// sources can be discriminated and subframe corrected
+						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
+						Cbuf_AddText (cmd);
+					} else {
+						// down-only command
+						Cbuf_AddText (button);
+						Cbuf_AddText ("\n");
+					}
+					buttonPtr = button;
+					while ( (kb[i] <= ' ' || kb[i] == ';') && kb[i] != 0 ) {
+						i++;
+					}
+				}
+				*buttonPtr++ = kb[i];
+				if ( !kb[i] ) {
+					break;
+				}
+			}
 		}
 
 		if ( Key_GetCatcher( ) & KEYCATCH_UI && uivm ) {
@@ -1371,26 +1463,18 @@ void CL_KeyEvent (int key, qboolean down, unsigned time) {
 		Console_Key( key );
 	} else if ( !( (Key_GetCatcher( ) & (KEYCATCH_CONSOLE|KEYCATCH_UI|KEYCATCH_CGAME|KEYCATCH_MESSAGE) ) || cls.state == CA_DISCONNECTED) ) {
 		// send the bound action
-		kb = ( down == KEY_PUSH ) ? keys[key].pushBinding : keys[key].releaseBinding;
-		if ( !kb ) {
-			if (key >= 200) {
-				Com_Printf ("%s is unbound, use controls menu to set.\n"
-					, Key_KeynumToString( key ) );
-			}
-		} else {
-			int i;
-			char button[1024], *buttonPtr;
+		kb = keys[key].pushBinding;
+		if( kb && kb[0] ) {
 			buttonPtr = button;
 			for ( i = 0; ; i++ ) {
 				if ( kb[i] == ';' || !kb[i] ) {
 					*buttonPtr = '\0';
-					// drop +something commands if it is a release event
-					if ( button[0] == '+' && down == KEY_PUSH) {
+					if ( button[0] == '+') {
 						// button commands add keynum and time as parms so that multiple
 						// sources can be discriminated and subframe corrected
 						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
 						Cbuf_AddText (cmd);
-					} else if ( button[0] != '+' ) {
+					} else {
 						// down-only command
 						Cbuf_AddText (button);
 						Cbuf_AddText ("\n");
@@ -1418,11 +1502,6 @@ Normal keyboard characters, already shifted / capslocked / etc
 ===================
 */
 void CL_CharEvent( int key ) {
-	// the console key should never be used as a char
-	if ( key == '`' || key == '~' ) {
-		return;
-	}
-
 	// delete is not a printable character and is
 	// otherwise handled by Field_KeyDownEvent
 	if ( key == 127 ) {

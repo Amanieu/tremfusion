@@ -256,8 +256,9 @@ typedef struct
   int         helpCount;
   int         helpIndex;
 
-  int         weapons;
+  int         weapon;
   int         upgrades;
+  int         credits;
 
   serverStatus_t serverStatus;
 
@@ -277,6 +278,7 @@ typedef struct
 
   resolution_t  resolutions[ MAX_RESOLUTIONS ];
   int numResolutions;
+  qboolean oldResolutions;
 
   qboolean inGameLoad;
 

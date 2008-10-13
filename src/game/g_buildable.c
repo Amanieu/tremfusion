@@ -23,9 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-// from g_combat.c
-extern char *modNames[ ];
-
 /*
 ================
 G_SetBuildableAnim
@@ -40,7 +37,14 @@ void G_SetBuildableAnim( gentity_t *ent, buildableAnimNumber_t anim, qboolean fo
   if( force )
     localAnim |= ANIM_FORCEBIT;
 
-  localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+  // don't toggle the togglebit more than once per frame
+  if( ent->animTime != level.time )
+  {
+    localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
+    ent->animTime = level.time;
+  }
+  else
+    localAnim |= ent->s.legsAnim & ANIM_TOGGLEBIT;
 
   ent->s.legsAnim = localAnim;
 }
@@ -82,46 +86,29 @@ gentity_t *G_CheckSpawnPoint( int spawnNum, vec3_t origin, vec3_t normal,
 
     displacement = ( maxs[ 2 ] + MAX_ALIEN_BBOX ) * M_ROOT3;
     VectorMA( origin, displacement, normal, localOrigin );
-
-    trap_Trace( &tr, origin, NULL, NULL, localOrigin, spawnNum, MASK_SHOT );
-
-    if( tr.entityNum != ENTITYNUM_NONE )
-      return &g_entities[ tr.entityNum ];
-
-    trap_Trace( &tr, localOrigin, cmins, cmaxs, localOrigin, -1, MASK_PLAYERSOLID );
-
-    if( tr.entityNum == ENTITYNUM_NONE )
-    {
-      if( spawnOrigin != NULL )
-        VectorCopy( localOrigin, spawnOrigin );
-
-      return NULL;
-    }
-    return &g_entities[ tr.entityNum ];
   }
-  if( spawn == BA_H_SPAWN )
+  else if( spawn == BA_H_SPAWN )
   {
     BG_ClassBoundingBox( PCL_HUMAN, cmins, cmaxs, NULL, NULL, NULL );
 
     VectorCopy( origin, localOrigin );
     localOrigin[ 2 ] += maxs[ 2 ] + fabs( cmins[ 2 ] ) + 1.0f;
-
-    trap_Trace( &tr, origin, NULL, NULL, localOrigin, spawnNum, MASK_SHOT );
-
-    if( tr.entityNum != ENTITYNUM_NONE )
-      return &g_entities[ tr.entityNum ];
-
-    trap_Trace( &tr, localOrigin, cmins, cmaxs, localOrigin, -1, MASK_PLAYERSOLID );
-
-    if( tr.entityNum == ENTITYNUM_NONE )
-    {
-      if( spawnOrigin != NULL )
-        VectorCopy( localOrigin, spawnOrigin );
-
-      return NULL;
-    }
-    return &g_entities[ tr.entityNum ];
   }
+  else
+    return NULL;
+
+  trap_Trace( &tr, origin, NULL, NULL, localOrigin, spawnNum, MASK_SHOT );
+
+  if( tr.entityNum != ENTITYNUM_NONE )
+    return &g_entities[ tr.entityNum ];
+
+  trap_Trace( &tr, localOrigin, cmins, cmaxs, localOrigin, -1, MASK_PLAYERSOLID );
+
+  if( tr.entityNum != ENTITYNUM_NONE )
+    return &g_entities[ tr.entityNum ];
+
+  if( spawnOrigin != NULL )
+    VectorCopy( localOrigin, spawnOrigin );
 
   return NULL;
 }
@@ -599,19 +586,7 @@ void AGeneric_Die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, i
     self->nextthink = level.time; //blast immediately
 
   if( attacker && attacker->client )
-  {
-    if( attacker->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS &&
-        !self->deconstruct )
-      G_TeamCommand( TEAM_ALIENS,
-        va( "print \"%s ^3DESTROYED^7 by teammate %s^7\n\"",
-          BG_Buildable( self->s.modelindex )->humanName,
-          attacker->client->pers.netname ) );
-    G_LogPrintf( "Decon: %i %i %i: %s destroyed %s by %s\n",
-      attacker->client->ps.clientNum, self->s.modelindex, mod,
-      attacker->client->pers.netname,
-      BG_Buildable( self->s.modelindex )->name,
-      modNames[ mod ] );
-  }
+    G_LogDestruction( self, attacker, mod );
 }
 
 /*
@@ -721,8 +696,14 @@ void ASpawn_Think( gentity_t *self )
       if( ( ent = G_CheckSpawnPoint( self->s.number, self->s.origin,
               self->s.origin2, BA_A_SPAWN, NULL ) ) != NULL )
       {
-        if( ent->s.eType == ET_BUILDABLE || ent->s.number == ENTITYNUM_WORLD ||
-            ent->s.eType == ET_MOVER )
+        // If the thing blocking the spawn is a buildable, kill it. 
+        // If it's part of the map, kill self. 
+        if( ent->s.eType == ET_BUILDABLE )
+        {
+          G_Damage( ent, NULL, NULL, NULL, NULL, 10000, 0, MOD_SUICIDE );
+          G_SetBuildableAnim( self, BANIM_SPAWN1, qtrue );
+        }
+        else if( ent->s.number == ENTITYNUM_WORLD || ent->s.eType == ET_MOVER )
         {
           G_Damage( self, NULL, NULL, NULL, NULL, 10000, 0, MOD_SUICIDE );
           return;
@@ -2299,19 +2280,7 @@ void HSpawn_Die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   }
 
   if( attacker && attacker->client )
-  {
-    if( attacker->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS &&
-        !self->deconstruct )
-      G_TeamCommand( TEAM_HUMANS,
-        va( "print \"%s ^3DESTROYED^7 by teammate %s^7\n\"",
-          BG_Buildable( self->s.modelindex )->humanName,
-          attacker->client->pers.netname ) );
-    G_LogPrintf( "Decon: %i %i %i: %s destroyed %s by %s\n",
-      attacker->client->ps.clientNum, self->s.modelindex, mod,
-      attacker->client->pers.netname,
-      BG_Buildable( self->s.modelindex )->name,
-      modNames[ mod ] );
-  }
+    G_LogDestruction( self, attacker, mod );
 }
 
 /*
@@ -2336,10 +2305,16 @@ void HSpawn_Think( gentity_t *self )
       if( ( ent = G_CheckSpawnPoint( self->s.number, self->s.origin,
               self->s.origin2, BA_H_SPAWN, NULL ) ) != NULL )
       {
-        if( ent->s.eType == ET_BUILDABLE || ent->s.number == ENTITYNUM_WORLD ||
-            ent->s.eType == ET_MOVER )
+        // If the thing blocking the spawn is a buildable, kill it. 
+        // If it's part of the map, kill self. 
+        if( ent->s.eType == ET_BUILDABLE )
         {
-          G_Damage( self, NULL, NULL, NULL, NULL, self->health, 0, MOD_SUICIDE );
+          G_Damage( ent, NULL, NULL, NULL, NULL, 10000, 0, MOD_SUICIDE );
+          G_SetBuildableAnim( self, BANIM_SPAWN1, qtrue );
+        }
+        else if( ent->s.number == ENTITYNUM_WORLD || ent->s.eType == ET_MOVER )
+        {
+          G_Damage( self, NULL, NULL, NULL, NULL, 10000, 0, MOD_SUICIDE );
           return;
         }
 
@@ -2459,8 +2434,14 @@ void G_BuildableThink( gentity_t *ent, int msec )
       }
     }
 
-    if( ent->health > bHealth )
+    if( ent->health >= bHealth )
+    {
+      int i;
       ent->health = bHealth;
+      for( i = 0; i < MAX_CLIENTS; i++ )
+        ent->credits[ i ] = 0;
+    }
+    
   }
 
   if( ent->lev1Grabbed && ent->lev1GrabTime + LEVEL1_GRAB_TIME < level.time )
@@ -2962,10 +2943,6 @@ itemBuildError_t G_CanBuild( gentity_t *ent, buildable_t buildable, int distance
   if( tr1.entityNum != ENTITYNUM_WORLD )
     reason = IBE_NORMAL;
 
-  //check there is enough room to spawn from (presuming this is a spawn)
-  if( G_CheckSpawnPoint( -1, origin, normal, buildable, NULL ) != NULL )
-    reason = IBE_NORMAL;
-
   contents = trap_PointContents( entity_origin, -1 );
   buildPoints = BG_Buildable( buildable )->buildPoints;
 
@@ -3072,15 +3049,19 @@ itemBuildError_t G_CanBuild( gentity_t *ent, buildable_t buildable, int distance
   if( ( tempReason = G_SufficientBPAvailable( buildable, origin ) ) != IBE_NONE )
     reason = tempReason;
 
+  // Relink buildables
+  G_SetBuildableLinkState( qtrue );
+
+  //check there is enough room to spawn from (presuming this is a spawn)
+  if( G_CheckSpawnPoint( ENTITYNUM_NONE, origin, normal, buildable, NULL ) != NULL )
+    reason = IBE_NORMAL;
+
   //this item does not fit here
   if( reason == IBE_NONE && ( tr2.fraction < 1.0 || tr3.fraction < 1.0 ) )
     reason = IBE_NOROOM;
 
   if( reason != IBE_NONE )
     level.numBuildablesForRemoval = 0;
-
-  // Relink buildables
-  G_SetBuildableLinkState( qtrue );
 
   return reason;
 }

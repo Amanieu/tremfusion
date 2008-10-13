@@ -87,6 +87,15 @@ typedef struct {
 	int				gentitySize;
 	int				num_entities;		// current number, <= MAX_GENTITIES
 
+	// demo recording
+	fileHandle_t	demoFile;
+	demoState_t		demoState;
+	char			demoName[MAX_QPATH];
+
+	// previous frame for delta compression
+	sharedEntity_t	demoEntities[MAX_GENTITIES];
+	playerState_t	demoPlayerStates[MAX_CLIENTS];
+
 	playerState_t	*gameClients;
 	int				gameClientSize;		// will be > sizeof(playerState_t) due to game private data
 
@@ -168,6 +177,8 @@ typedef struct client_s {
 	int				timeoutCount;		// must timeout a few frames in a row so debugging doesn't break
 	clientSnapshot_t	frames[PACKET_BACKUP];	// updates can be delta'd from here
 	int				ping;
+	int				delayRate;
+	int				lastCheck;
 	int				rate;				// bytes / second
 	int				snapshotMsec;		// requests a snapshot every snapshotMsec unless rate choked
 	netchan_t		netchan;
@@ -243,9 +254,11 @@ extern	cvar_t	*sv_fps;
 extern	cvar_t	*sv_timeout;
 extern	cvar_t	*sv_zombietime;
 extern	cvar_t	*sv_rconPassword;
+extern	cvar_t	*sv_rconLog;
 extern	cvar_t	*sv_privatePassword;
 extern	cvar_t	*sv_allowDownload;
 extern	cvar_t	*sv_maxclients;
+extern	cvar_t	*sv_democlients;
 
 extern	cvar_t	*sv_privateClients;
 extern	cvar_t	*sv_hostname;
@@ -262,7 +275,11 @@ extern	cvar_t	*sv_maxRate;
 extern	cvar_t	*sv_maxPing;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_dequeuePeriod;
+extern	cvar_t	*sv_demoState;
+extern	cvar_t	*sv_autoDemo;
+extern	cvar_t	*sv_restricted;
 
+extern	cvar_t	*sv_minPing;
 #ifdef USE_VOIP
 extern	cvar_t	*sv_voip;
 #endif
@@ -290,7 +307,7 @@ void SV_MasterGameStat( const char *data );
 //
 // sv_init.c
 //
-void SV_SetConfigstring( int index, const char *val );
+void SV_SetConfigstring( int index, const char *val, qboolean force );
 void SV_GetConfigstring( int index, char *buffer, int bufferSize );
 void SV_UpdateConfigstrings( client_t *client );
 
@@ -341,6 +358,19 @@ void SV_SendClientMessages( void );
 void SV_SendClientSnapshot( client_t *client );
 
 //
+// sv_demo.c
+//
+void SV_DemoStartRecord(void);
+void SV_DemoStopRecord(void);
+void SV_DemoStartPlayback(void);
+void SV_DemoStopPlayback(void);
+void SV_DemoReadFrame(void);
+void SV_DemoWriteFrame(void);
+void SV_DemoWriteServerCommand(const char *str);
+void SV_DemoWriteGameCommand(int cmd, const char *str);
+void SV_DemoWriteConfigString(int client);
+
+//
 // sv_game.c
 //
 int	SV_NumForGentity( sharedEntity_t *ent );
@@ -352,22 +382,6 @@ void		SV_InitGameProgs ( void );
 void		SV_ShutdownGameProgs ( void );
 void		SV_RestartGameProgs( void );
 qboolean	SV_inPVS (const vec3_t p1, const vec3_t p2);
-
-//
-// sv_bot.c
-//
-void		SV_BotFrame( int time );
-int			SV_BotAllocateClient(void);
-void		SV_BotFreeClient( int clientNum );
-
-void		SV_BotInitCvars(void);
-int			SV_BotLibSetup( void );
-int			SV_BotLibShutdown( void );
-int			SV_BotGetSnapshotEntity( int client, int ent );
-int			SV_BotGetConsoleMessage( int client, char *buf, int size );
-
-int BotImport_DebugPolygonCreate(int color, int numPoints, vec3_t *points);
-void BotImport_DebugPolygonDelete(int id);
 
 //============================================================
 //

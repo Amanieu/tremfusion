@@ -75,6 +75,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 #ifdef BUILD_FREETYPE
+
 #include <ft2build.h>
 #include <freetype/fterrors.h>
 #include <freetype/ftsystem.h>
@@ -89,7 +90,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 FT_Library ftLibrary = NULL;  
 #endif
 
-#define MAX_FONTS 6
+#define MAX_FONTS 12
 static int registeredFontCount = 0;
 static fontInfo_t registeredFont[MAX_FONTS];
 
@@ -146,11 +147,13 @@ FT_Bitmap *R_RenderGlyph(FT_GlyphSlot glyph, glyphInfo_t* glyphOut) {
   return NULL;
 }
 
-void WriteTGA (char *filename, byte *data, int width, int height) {
+static void WriteTGA(char *filename, byte * data, int width, int height)
+{
 	byte	*buffer;
 	int		i, c;
 
 	buffer = Z_Malloc(width*height*4 + 18);
+
 	Com_Memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = width&255;
@@ -169,11 +172,26 @@ void WriteTGA (char *filename, byte *data, int width, int height) {
 		buffer[i+3] = data[i-18+3];		// alpha
 	}
 
-	ri.FS_WriteFile(filename, buffer, c);
+	// Tr3B: flip upside down
+	{
+		int             row;
+		unsigned char  *flip;
+		unsigned char  *src, *dst;
 
-	//f = fopen (filename, "wb");
-	//fwrite (buffer, 1, c, f);
-	//fclose (f);
+		flip = (unsigned char *)malloc(width * 4);
+		for(row = 0; row < height / 2; row++)
+		{
+			src = buffer + 18 + (row * 4 * width);
+			dst = buffer + 18 + ((height - row - 1) * 4 * width);
+
+			memcpy(flip, src, width * 4);
+			memcpy(src, dst, width * 4);
+			memcpy(dst, flip, width * 4);
+		}
+		free(flip);
+	}
+
+	ri.FS_WriteFile(filename, buffer, c);
 
 	Z_Free (buffer);
 }
@@ -340,7 +358,8 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
 #endif
   void *faceData;
 	int i, len;
-  char name[1024];
+	char  name[MAX_QPATH];
+	char  strippedName[MAX_QPATH];
 	float dpi = 72;											//
 	float glyphScale =  72.0f / dpi; 		// change the scale to be relative to 1 based on 72 dpi ( so dpi of 144 means a scale of .5 )
 
@@ -364,13 +383,23 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     return;
   }
 
-	Com_sprintf(name, sizeof(name), "fonts/fontImage_%i.dat",pointSize);
-	for (i = 0; i < registeredFontCount; i++) {
-		if (Q_stricmp(name, registeredFont[i].name) == 0) {
-			Com_Memcpy(font, &registeredFont[i], sizeof(fontInfo_t));
-			return;
-		}
-	}
+	COM_StripExtension(fontName, strippedName, sizeof(strippedName));
+    //Compatibility: If there is no extension, assume this is loading one of the legacy fonts
+    if(!Q_stricmp(strippedName, fontName))
+    {
+        Com_sprintf(name, sizeof(name), "fonts/fontImage_%i.dat",pointSize);
+    }
+    else
+    {
+        Com_sprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
+    }
+
+    for (i = 0; i < registeredFontCount; i++) {
+        if (Q_stricmp(name, registeredFont[i].name) == 0) {
+            Com_Memcpy(font, &registeredFont[i], sizeof(fontInfo_t));
+            return;
+        }
+    }
 
 	len = ri.FS_ReadFile(name, NULL);
 	if (len == sizeof(fontInfo_t)) {
@@ -413,9 +442,11 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     return;
   }
 
+  Com_sprintf(name, sizeof(name), "%s", fontName);
+
   len = ri.FS_ReadFile(fontName, &faceData);
   if (len <= 0) {
-    ri.Printf(PRINT_ALL, "RE_RegisterFont: Unable to read font file\n");
+    ri.Printf(PRINT_ALL, "RE_RegisterFont: Unable to read font file %s\n", name);
     return;
   }
 
@@ -430,6 +461,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     ri.Printf(PRINT_ALL, "RE_RegisterFont: FreeType2, Unable to set face char size.\n");
     return;
   }
+
 
   //*font = &registeredFonts[registeredFontCount++];
 
@@ -455,32 +487,40 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
   lastStart = i;
   imageNumber = 0;
 
-  while ( i <= GLYPH_END ) {
-
+	while(i <= GLYPH_END)
+	{
     glyph = RE_ConstructGlyphInfo(out, &xOut, &yOut, &maxHeight, face, (unsigned char)i, qfalse);
 
-    if (xOut == -1 || yOut == -1 || i == GLYPH_END)  {
+		if(xOut == -1 || yOut == -1 || i == GLYPH_END)
+		{
+			if(xOut == -1 || yOut == -1)
+			{
+				//ri.Printf(PRINT_WARNING, "RE_RegisterFont: character %c does not fit image number %i\n", (unsigned char) i, imageNumber);
+			}
+
       // ran out of room
       // we need to create an image from the bitmap, set all the handles in the glyphs to this point
-      // 
-
       scaledSize = 256*256;
       newSize = scaledSize * 4;
       imageBuff = Z_Malloc(newSize);
       left = 0;
       max = 0;
       satLevels = 255;
-      for ( k = 0; k < (scaledSize) ; k++ ) {
-        if (max < out[k]) {
+			for(k = 0; k < (scaledSize); k++)
+			{
+				if(max < out[k])
+				{
           max = out[k];
         }
       }
 
-			if (max > 0) {
+			if(max > 0)
+			{
 				max = 255/max;
 			}
 
-      for ( k = 0; k < (scaledSize) ; k++ ) {
+			for(k = 0; k < (scaledSize); k++)
+			{
         imageBuff[left++] = 255;
         imageBuff[left++] = 255;
         imageBuff[left++] = 255;
@@ -488,25 +528,43 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
         imageBuff[left++] = ((float)out[k] * max);
       }
 
-			Com_sprintf (name, sizeof(name), "fonts/fontImage_%i_%i.tga", imageNumber++, pointSize);
-			if (r_saveFontData->integer) { 
+			Com_sprintf(name, sizeof(name), "%s_%i_%i.tga", strippedName, imageNumber++, pointSize);
+			if(!ri.FS_FileExists(name) && r_saveFontData->integer)  
+			{
 			  WriteTGA(name, imageBuff, 256, 256);
 			}
 
-    	//Com_sprintf (name, sizeof(name), "fonts/fontImage_%i_%i", imageNumber++, pointSize);
-      image = R_CreateImage(name, imageBuff, 256, 256, qfalse, qfalse, GL_CLAMP);
-      h = RE_RegisterShaderFromImage(name, LIGHTMAP_2D, image, qfalse);
-      for (j = lastStart; j < i; j++) {
-        font->glyphs[j].glyph = h;
-				Q_strncpyz(font->glyphs[j].shaderName, name, sizeof(font->glyphs[j].shaderName));
-      }
-      lastStart = i;
+            /*`image = R_CreateImage(name, imageBuff, 256, 256, IF_NOPICMIP, FT_LINEAR, WT_CLAMP);`*/
+            image = R_CreateImage(name, imageBuff, 256, 256, qfalse, qfalse, GL_CLAMP_TO_EDGE);
+            /*`h = RE_RegisterShaderFromImage(name, image, qfalse);`*/
+            h = RE_RegisterShaderFromImage(name, LIGHTMAP_2D, image, qfalse);
+			
 		  Com_Memset(out, 0, 1024*1024);
       xOut = 0;
       yOut = 0;
       Z_Free(imageBuff);
-			i++;
-    } else {
+
+			if(i == GLYPH_END)
+			{
+				for(j = lastStart; j <= GLYPH_END; j++)
+				{
+					font->glyphs[j].glyph = h;
+					Q_strncpyz(font->glyphs[j].shaderName, name, sizeof(font->glyphs[j].shaderName));
+				}
+				break;
+			}
+			else
+			{
+				for(j = lastStart; j < i; j++)
+				{
+					font->glyphs[j].glyph = h;
+					Q_strncpyz(font->glyphs[j].shaderName, name, sizeof(font->glyphs[j].shaderName));
+				}
+				lastStart = i;
+			}
+		}
+		else
+		{
       Com_Memcpy(&font->glyphs[i], glyph, sizeof(glyphInfo_t));
       i++;
     }
@@ -514,10 +572,14 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
 
 	registeredFont[registeredFontCount].glyphScale = glyphScale;
 	font->glyphScale = glyphScale;
-  Com_Memcpy(&registeredFont[registeredFontCount++], font, sizeof(fontInfo_t));
 
-	if (r_saveFontData->integer) { 
-		ri.FS_WriteFile(va("fonts/fontImage_%i.dat", pointSize), font, sizeof(fontInfo_t));
+	Com_sprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
+	Q_strncpyz(font->name, name, sizeof(font->name));
+	Com_Memcpy(&registeredFont[registeredFontCount++], font, sizeof(fontInfo_t));
+
+	if(!ri.FS_FileExists(name) && r_saveFontData->integer) 
+	{
+        ri.FS_WriteFile(name, font, sizeof(fontInfo_t));
 	}
 
   Z_Free(out);

@@ -440,7 +440,7 @@ void Cmd_If_f( void ) {
     Com_Printf ("if <value1> <operator> <value2> <cmdthen> (<cmdelse>) : compares the first two values and executes <cmdthen> if true, <cmdelse> if false\n");
     return;
   }
-  Cbuf_InsertText( va("%s\n", v ) );
+  Cbuf_InsertText( va("vstr %s\n", v ) );
 }
 
 /*
@@ -461,11 +461,11 @@ void Cmd_Math_f( void ) {
     op = Cmd_Argv( 2 );
     if ( !strcmp( op, "++" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) + 1 ) );
+      Cvar_SetValueLatched( v, ( atoi( v ) + 1 ) );
     }
     else if ( !strcmp( op, "--" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) - 1 ) );
+      Cvar_SetValueLatched( v, ( atoi( v ) - 1 ) );
     }
     else
     {
@@ -480,22 +480,24 @@ void Cmd_Math_f( void ) {
     v1 = Cmd_Argv( 3 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) + atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v ) + atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) - atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v ) - atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v ) * atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v ) * atoi( v1 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( ! ( Cvar_VariableValue( v1 ) == 0 ) )
+      if ( atoi( v1 ) == 0 )
       {
-        Cvar_SetValueSafe( v, ( atoi( v ) / atoi( v1 ) ) );
-      }
+      	Com_Printf ("Cannot divide by 0!\n");
+      	return;
+	  }
+      Cvar_SetValueLatched( v, ( atoi( v ) / atoi( v1 ) ) );
     }
     else
     {
@@ -511,22 +513,24 @@ void Cmd_Math_f( void ) {
     v2 = Cmd_Argv( 5 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) + atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v1 ) + atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) - atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v1 ) - atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueSafe( v, ( atoi( v1 ) * atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atoi( v1 ) * atoi( v2 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( ! ( atoi( v2 ) == 0 ) )
+      if ( atoi( v2 ) == 0 )
       {
-        Cvar_SetValueSafe( v, ( atoi( v1 ) / atoi( v2 ) ) );
-      }
+      	Com_Printf ("Cannot divide by 0!\n");
+      	return;
+	  }
+      Cvar_SetValueLatched( v, ( atoi( v1 ) / atoi( v2 ) ) );
     }
     else
     {
@@ -585,7 +589,7 @@ void Cmd_Strcmp_f( void ) {
     }
   }
   else {
-    Com_Printf ("strcmp <string1> <operator> <string22> <cmdthen> (<cmdelse>) : compares the first two strings and executes <cmdthen> if true, <cmdelse> if false\n");
+    Com_Printf ("strcmp <string1> <operator> <string2> <cmdthen> (<cmdelse>) : compares the first two strings and executes <cmdthen> if true, <cmdelse> if false\n");
     return;
   }
   Cbuf_InsertText( va("%s\n", v ) );
@@ -610,6 +614,65 @@ void Cmd_Concat_f( void ) {
   	Q_strcat( vc, sizeof(vc), Cvar_VariableString( Cmd_Argv(i) ) );
 
   Cvar_Set( Cmd_Argv( 1 ), vc );
+}
+
+/*
+===============
+Cmd_Calc_f
+
+Does math and displays the value into the chat/console, this is used for basic math functions
+===============
+*/
+void Cmd_Calc_f( void ) {
+  char	*arg1;
+  char	*arg2;
+  char	*func;
+  
+  if (Cmd_Argc () < 3)
+  {
+      Com_Printf ("calc <number> <function> <number>, accepted functions: +, -, /, */x\n");
+      return;
+  }
+  
+  arg1 = Cmd_Argv( 1 );
+  func = Cmd_Argv( 2 );
+  arg2 = Cmd_Argv( 3 );
+  
+  // Add
+  if( !strcmp( func, "+"  ) )
+  {
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) + atoi(arg2)) );
+ 	return;
+  }
+  
+  // Subtract
+  else if( !strcmp( func, "-"  ) )
+  {
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) - atoi(arg2)) );
+ 	return;
+  }
+  
+  // Divide
+  else if( !strcmp( func, "/"  ) )
+  {
+     if( atoi(arg2) == 0 )
+     {
+      Com_Printf ("Cannot divide by zero!\n" );
+      return;
+     }
+  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) / atoi(arg2)) );
+ 	return;
+  }
+  
+  // Multiply
+  else if( !strcmp( func, "*"  ) || !strcmp( func, "x"  ) )
+  {
+ 	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) * atoi(arg2)) );
+	return;
+  }
+  
+  // Invalid function, help the poor guy out
+  Com_Printf ("calc <number> <function> <number>, accepted functions: +, -, /, */x\n");
 }
 
 // 
@@ -745,7 +808,7 @@ void Cmd_WriteAliases(fileHandle_t f)
 	FS_Write(buffer, strlen(buffer), f);
 	while (alias)
 	{
-		Com_sprintf(buffer, sizeof(buffer), "alias %s %s\n", alias->name, alias->exec);
+		Com_sprintf(buffer, sizeof(buffer), "alias %s %s\n", alias->name, Cmd_EscapeString(alias->exec));
 		FS_Write(buffer, strlen(buffer), f);
 		alias = alias->next;
 	}
@@ -911,6 +974,19 @@ void Cmd_Alias_f(void)
 	cvar_modifiedFlags |= CVAR_ARCHIVE;
 }
 
+/*
+============
+Cmd_AliasCompletion
+============
+*/
+void	Cmd_AliasCompletion( void(*callback)(const char *s) ) {
+	cmd_alias_t	*alias;
+	
+	for (alias=cmd_aliases ; alias ; alias=alias->next) {
+		callback( alias->name );
+	}
+}
+
 
 /*
 =============================================================================
@@ -925,6 +1001,7 @@ typedef struct cmd_function_s
 	struct cmd_function_s	*next;
 	char					*name;
 	xcommand_t				function;
+	completionFunc_t	complete;
 } cmd_function_t;
 
 
@@ -1080,6 +1157,35 @@ char *Cmd_Cmd(void)
 
 /*
 ============
+Cmd_EscapeString
+
+Escape all \$ in a string into \$$
+============
+*/
+char *Cmd_EscapeString(const char *in)
+{
+	static char buffer[MAX_STRING_CHARS];
+	char *out = buffer;
+	while (*in) {
+		if (out + 3 - buffer >= sizeof(buffer)) {
+			break;
+		}
+		if (in[0] == '\\' && in[1] == '$') {
+			out[0] = '\\';
+			out[1] = '$';
+			out[2] = '$';
+			in += 2;
+			out += 3;
+		} else {
+			*out++ = *in++;
+		}
+	}
+	*out = '\0';
+	return buffer;
+}
+
+/*
+============
 Cmd_TokenizeString
 
 Parses the given string into command line tokens.
@@ -1156,8 +1262,8 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 				else
 				{
 					cvarName -= 2;
-					while ( *cvarName++ && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
-						*textOut++ = *cvarName;
+					while ( *cvarName && textOut < sizeof(cmd.cmd) + cmd.cmd - 1 )
+						*textOut++ = *cvarName++;
 					if ( textOut == sizeof(cmd.cmd) + cmd.cmd - 1 )
 						break;
 					*textOut++ = '\\';
@@ -1174,6 +1280,22 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 			}
 		}
 		*textOut = 0;
+
+		// "\$$" --> "\$"
+		text = textOut = cmd.cmd;
+		while (text[0])
+		{
+			if ( text[0] == '\\'  && text[1]  && text[1] == '$'&& text[2] && text[2] == '$' )
+			{
+				textOut[0] = '\\';
+				textOut[1] = '$';
+				textOut += 2;
+				text += 3;
+			}
+			else
+				*textOut++ = *text++;
+		}
+		*textOut = '\0';
 	}
 	else
 		Q_strncpyz( cmd.cmd, text_in, sizeof(cmd.cmd) );
@@ -1188,7 +1310,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 
 		while ( 1 ) {
 			// skip whitespace
-			while ( *text && *text <= ' ' ) {
+			while ( *text > '\0' && *text <= ' ' ) {
 				text++;
 			}
 			if ( !*text ) {
@@ -1236,7 +1358,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 		cmd.argc++;
 
 		// skip until whitespace, quote, or command
-		while ( *text > ' ' ) {
+		while ( *text > ' ' || *text < '\0' ) {
 			if ( !ignoreQuotes && text[0] == '"' ) {
 				break;
 			}
@@ -1291,6 +1413,20 @@ void Cmd_TokenizeStringParseCvar( const char *text_in ) {
 
 /*
 ============
+Cmd_FindCommand
+============
+*/
+cmd_function_t *Cmd_FindCommand( const char *cmd_name )
+{
+	cmd_function_t *cmd;
+	for( cmd = cmd_functions; cmd; cmd = cmd->next )
+		if( !Q_stricmp( cmd_name, cmd->name ) )
+			return cmd;
+	return NULL;
+}
+
+/*
+============
 Cmd_AddCommand
 ============
 */
@@ -1298,22 +1434,36 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function ) {
 	cmd_function_t	*cmd;
 	
 	// fail if the command already exists
-	for ( cmd = cmd_functions ; cmd ; cmd=cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
-			// allow completion-only commands to be silently doubled
-			if ( function != NULL ) {
-				Com_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
-			}
-			return;
-		}
+	if( Cmd_FindCommand( cmd_name ) )
+	{
+		// allow completion-only commands to be silently doubled
+		if( function != NULL )
+			Com_Printf( "Cmd_AddCommand: %s already defined\n", cmd_name );
+		return;
 	}
 
 	// use a small malloc to avoid zone fragmentation
 	cmd = S_Malloc (sizeof(cmd_function_t));
 	cmd->name = CopyString( cmd_name );
 	cmd->function = function;
+	cmd->complete = NULL;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
+}
+
+/*
+============
+Cmd_SetCommandCompletionFunc
+============
+*/
+void Cmd_SetCommandCompletionFunc( const char *command, completionFunc_t complete ) {
+	cmd_function_t	*cmd;
+
+	for( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if( !Q_stricmp( command, cmd->name ) ) {
+			cmd->complete = complete;
+		}
+	}
 }
 
 /*
@@ -1343,6 +1493,28 @@ void	Cmd_RemoveCommand( const char *cmd_name ) {
 	}
 }
 
+/*
+============
+Cmd_RemoveCommandSafe
+
+Only remove commands with no associated function
+============
+*/
+void Cmd_RemoveCommandSafe( const char *cmd_name )
+{
+	cmd_function_t *cmd = Cmd_FindCommand( cmd_name );
+
+	if( !cmd )
+		return;
+	if( cmd->function )
+	{
+		Com_Error( ERR_DROP, "Untrusted source tried to remove system command "
+			"\"%s\"\n", cmd_name );
+		return;
+	}
+
+	Cmd_RemoveCommand( cmd_name );
+}
 
 /*
 ============
@@ -1354,6 +1526,21 @@ void	Cmd_CommandCompletion( void(*callback)(const char *s) ) {
 	
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next) {
 		callback( cmd->name );
+	}
+}
+
+/*
+============
+Cmd_CompleteArgument
+============
+*/
+void Cmd_CompleteArgument( const char *command, char *args, int argNum ) {
+	cmd_function_t	*cmd;
+
+	for( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if( !Q_stricmp( command, cmd->name ) && cmd->complete ) {
+			cmd->complete( args, argNum );
+		}
 	}
 }
 
@@ -1417,7 +1604,7 @@ void	Cmd_ExecuteString( const char *text ) {
 
 	// send it as a server command if we are connected
 	// this will usually result in a chat message
-	CL_ForwardCommandToServer ( text );
+	CL_ForwardCommandToServer ( cmd.cmd );
 }
 
 /*
@@ -1448,6 +1635,76 @@ void Cmd_List_f (void)
 }
 
 /*
+==================
+Cmd_CompleteCfgName
+==================
+*/
+void Cmd_CompleteCfgName( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteFilename( "", "cfg", qfalse );
+	}
+}
+
+/*
+==================
+Cmd_CompleteAliasName
+==================
+*/
+void Cmd_CompleteAliasName( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteAlias( );
+	}
+}
+
+/*
+==================
+Cmd_CompleteConcat
+==================
+*/
+void Cmd_CompleteConcat( char *args, int argNum )
+{
+	// Skip
+	char *p = Com_SkipTokens( args, argNum - 1, " " );
+
+	if( p > args )
+		Field_CompleteCommand( p, qfalse, qtrue );
+}
+
+/*
+==================
+Cmd_CompleteIf
+==================
+*/
+void Cmd_CompleteIf( char *args, int argNum )
+{
+	if( argNum == 5 || argNum == 6 )
+	{
+		// Skip
+		char *p = Com_SkipTokens( args, argNum - 1, " " );
+
+		if( p > args )
+			Field_CompleteCommand( p, qfalse, qtrue );
+	}
+}
+
+/*
+==================
+Cmd_CompleteDelay
+==================
+*/
+void Cmd_CompleteDelay( char *args, int argNum )
+{
+	if( argNum == 3 )
+	{
+		// Skip "delay "
+		char *p = Com_SkipTokens( args, 1, " " );
+
+		if( p > args )
+			Field_CompleteCommand( p, qtrue, qtrue );
+	}
+}
+
+/*
 ============
 Cmd_Init
 ============
@@ -1455,17 +1712,27 @@ Cmd_Init
 void Cmd_Init (void) {
 	Cmd_AddCommand ("cmdlist",Cmd_List_f);
 	Cmd_AddCommand ("exec",Cmd_Exec_f);
+	Cmd_SetCommandCompletionFunc( "exec", Cmd_CompleteCfgName );
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
+	Cmd_SetCommandCompletionFunc( "vstr", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("if",Cmd_If_f);
+	Cmd_SetCommandCompletionFunc( "if", Cmd_CompleteIf );
+	Cmd_AddCommand ("calc",Cmd_Calc_f);
 	Cmd_AddCommand ("math",Cmd_Math_f);
+	Cmd_SetCommandCompletionFunc( "math", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("concat",Cmd_Concat_f);
+	Cmd_SetCommandCompletionFunc( "concat", Cmd_CompleteConcat );
 	Cmd_AddCommand ("strcmp",Cmd_Strcmp_f);
+	Cmd_SetCommandCompletionFunc( "strcmp", Cmd_CompleteIf );
 	Cmd_AddCommand ("echo",Cmd_Echo_f);
 	Cmd_AddCommand ("wait", Cmd_Wait_f);
 	Cmd_AddCommand ("alias", Cmd_Alias_f);
+	Cmd_SetCommandCompletionFunc( "alias", Cmd_CompleteAliasName );
 	Cmd_AddCommand ("unalias", Cmd_UnAlias_f);
+	Cmd_SetCommandCompletionFunc( "unalias", Cmd_CompleteAliasName );
 	Cmd_AddCommand ("aliaslist", Cmd_AliasList_f);
 	Cmd_AddCommand ("clearaliases", Cmd_ClearAliases_f);
 	Cmd_AddCommand ("delay", Cmd_Delay_f);
+	Cmd_SetCommandCompletionFunc( "delay", Cmd_CompleteDelay );
 }
 

@@ -350,6 +350,7 @@ void CL_SystemInfoChanged( void ) {
 	char			key[BIG_INFO_KEY];
 	char			value[BIG_INFO_VALUE];
 	qboolean		gameSet;
+	qboolean		baseGameSet;
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
 	// NOTE TTimo:
@@ -358,11 +359,6 @@ void CL_SystemInfoChanged( void ) {
 	// in some cases, outdated cp commands might get sent with this news serverId
 	cl.serverId = atoi( Info_ValueForKey( systemInfo, "sv_serverid" ) );
 
-	// don't set any vars when playing a demo
-	if ( clc.demoplaying ) {
-		return;
-	}
-
 #ifdef USE_VOIP
 	// in the future, (val) will be a protocol version string, so only
 	//  accept explicitly 1, not generally non-zero.
@@ -370,10 +366,14 @@ void CL_SystemInfoChanged( void ) {
 	cl_connectedToVoipServer = (atoi( s ) == 1);
 #endif
 
-	s = Info_ValueForKey( systemInfo, "sv_cheats" );
-	cl_connectedToCheatServer = atoi( s );
-	if ( !cl_connectedToCheatServer ) {
-		Cvar_SetCheatState();
+	if ( clc.demoplaying )
+		cl_connectedToCheatServer = qtrue;
+	else {
+		s = Info_ValueForKey( systemInfo, "sv_cheats" );
+		cl_connectedToCheatServer = atoi( s );
+		if ( !cl_connectedToCheatServer ) {
+			Cvar_SetCheatState();
+		}
 	}
 
 	// check pure server string
@@ -407,6 +407,18 @@ void CL_SystemInfoChanged( void ) {
 				
 			gameSet = qtrue;
 		}
+		
+		// ehw!
+		if (!Q_stricmp(key, "fs_basegame"))
+		{
+			if(FS_CheckDirTraversal(value))
+			{
+				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_basegame value %s\n", value);
+				continue;
+			}
+				
+			baseGameSet = qtrue;
+		}
 
 		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
 			Cvar_Get(key, value, CVAR_SERVER_CREATED | CVAR_ROM);
@@ -419,14 +431,23 @@ void CL_SystemInfoChanged( void ) {
 				continue;
 			}
 
-			Cvar_Set(key, value);
+			Cvar_SetSafe(key, value);
 		}
 	}
 	// if game folder should not be set and it is set at the client side
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
 		Cvar_Set( "fs_game", "" );
 	}
-	cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
+	if ( !baseGameSet && *Cvar_VariableString("fs_basegame") ) {
+		Cvar_Set( "fs_basegame", "" );
+	}
+	if ( clc.demoplaying ) {
+		Cvar_Set( "sv_pure", "0" );
+		Cvar_Set( "sv_restricted", "0" );
+		Cvar_Set( "sv_cheats", "1" );
+		cl_connectedToPureServer = qfalse;
+	} else
+		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" ) || Cvar_VariableValue( "sv_restricted" );
 }
 
 /*
@@ -647,6 +668,9 @@ void CL_ParseDownload ( msg_t *msg ) {
 }
 
 #ifdef USE_VOIP
+
+void SCR_DrawVoipSender( int sender );
+
 static
 qboolean CL_ShouldIgnoreVoipSender(int sender)
 {
@@ -724,6 +748,9 @@ void CL_ParseVoip ( msg_t *msg ) {
 	// !!! FIXME: make sure data is narrowband? Does decoder handle this?
 
 	Com_DPrintf("VoIP: packet accepted!\n");
+	
+	cls.voipTime = cls.realtime + 500; // Aka half a second
+	cls.voipSender = sender;
 
 	// This is a new "generation" ... a new recording started, reset the bits.
 	if (generation != clc.voipIncomingGeneration[sender]) {
@@ -771,7 +798,7 @@ void CL_ParseVoip ( msg_t *msg ) {
 			Com_DPrintf("VoIP: playback %d bytes, %d samples, %d frames\n",
 			            written * 2, written, i);
 			S_RawSamples(sender + 1, written, clc.speexSampleRate, 2, 1,
-			             (const byte *) decoded, clc.voipGain[sender]);
+			             (const byte *) decoded, ( clc.voipGain[sender] + cl_voipDefaultGain->value ) );
 			written = 0;
 		}
 
@@ -796,7 +823,7 @@ void CL_ParseVoip ( msg_t *msg ) {
 
 	if (written > 0) {
 		S_RawSamples(sender + 1, written, clc.speexSampleRate, 2, 1,
-		             (const byte *) decoded, clc.voipGain[sender]);
+		             (const byte *) decoded, ( clc.voipGain[sender] + cl_voipDefaultGain->value ) );
 	}
 
 	clc.voipIncomingSequence[sender] = sequence + frames;

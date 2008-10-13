@@ -104,6 +104,11 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to, 
 						 int number );
 
+void MSG_WriteDeltaSharedEntity( msg_t *msg, void *from, void *to
+						   , qboolean force, int number );
+void MSG_ReadDeltaSharedEntity( msg_t *msg, void *from, void *to, 
+						 int number );
+
 void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
 void MSG_ReadDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
 
@@ -153,6 +158,7 @@ typedef struct {
 	byte	ip6[16];
 
 	unsigned short	port;
+	unsigned long	scope_id;	// Needed for IPv6 link-local addresses
 } netadr_t;
 
 void		NET_Init( void );
@@ -160,7 +166,7 @@ void		NET_Shutdown( void );
 void		NET_Restart( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
-void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
+void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, int delay);
 void		QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 void		QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
@@ -215,8 +221,8 @@ typedef struct {
 void Netchan_Init( int qport );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
 
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data );
-void Netchan_TransmitNextFragment( netchan_t *chan );
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data, int delay );
+void Netchan_TransmitNextFragment( netchan_t *chan, int delay );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
 
@@ -413,8 +419,18 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 
 void	Cmd_RemoveCommand( const char *cmd_name );
 
+// don't allow VMs to remove system commands
+void	Cmd_RemoveCommandSafe( const char *cmd_name );
+
+typedef void (*completionFunc_t)( char *args, int argNum );
+
 void	Cmd_CommandCompletion( void(*callback)(const char *s) );
+void	Cmd_AliasCompletion( void(*callback)(const char *s) );
 // callback with each valid string
+void Cmd_SetCommandCompletionFunc( const char *command,
+	completionFunc_t complete );
+void Cmd_CompleteArgument( const char *command, char *args, int argNum );
+void Cmd_CompleteCfgName( char *args, int argNum );
 
 int		Cmd_Argc (void);
 char	*Cmd_Argv (int arg);
@@ -424,6 +440,7 @@ char	*Cmd_ArgsFrom( int arg );
 void	Cmd_ArgsBuffer( char *buffer, int bufferLength );
 void	Cmd_LiteralArgsBuffer( char *buffer, int bufferLength );
 char	*Cmd_Cmd (void);
+char	*Cmd_EscapeString(const char *in);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
 // if arg > argc, so string operations are allways safe.
@@ -487,16 +504,16 @@ void	Cvar_Update( vmCvar_t *vmCvar );
 void 	Cvar_Set( const char *var_name, const char *value );
 // will create the variable with no flags if it doesn't exist
 
-void 	Cvar_SetVM( const char *var_name, const char *value );
-// will fail if the cvar has the CVAR_VM_PROTECT flag
+void	Cvar_SetSafe( const char *var_name, const char *value );
+// sometimes we set variables from an untrusted source: fail if flags & CVAR_PROTECTED
 
 void Cvar_SetLatched( const char *var_name, const char *value);
 // don't set the cvar immediately
 
 void	Cvar_SetValue( const char *var_name, float value );
+void	Cvar_SetValueLatched( const char *var_name, float value );
 void	Cvar_SetValueSafe( const char *var_name, float value );
-void	Cvar_SetValueVM( const char *var_name, float value );
-// expands value to a string and calls Cvar_Set
+// expands value to a string and calls Cvar_Set/Cvar_SetSafe
 
 float	Cvar_VariableValue( const char *var_name );
 int		Cvar_VariableIntegerValue( const char *var_name );
@@ -538,6 +555,8 @@ void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeI
 
 void	Cvar_Restart_f( void );
 
+void Cvar_CompleteCvarName( char *args, int argNum );
+
 extern	int			cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,
@@ -560,7 +579,6 @@ issues.
 #define FS_GENERAL_REF	0x01
 #define FS_UI_REF		0x02
 #define FS_CGAME_REF	0x04
-#define FS_EXTRA_REF	0x08
 
 #define	MAX_FILE_HANDLES	64
 
@@ -603,7 +621,6 @@ fileHandle_t	FS_FOpenFileWrite( const char *qpath );
 fileHandle_t	FS_FOpenFileAppend( const char *filename );
 // will properly create any needed paths and deal with seperater character issues
 
-int		FS_filelength( fileHandle_t f );
 fileHandle_t FS_SV_FOpenFileWrite( const char *filename );
 int		FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp );
 void	FS_SV_Rename( const char *from, const char *to );
@@ -699,6 +716,8 @@ void FS_HomeRemove( const char *homePath );
 void	FS_FilenameCompletion( const char *dir, const char *ext,
 		qboolean stripExt, void(*callback)(const char *s) );
 
+extern cvar_t *fs_autogen;
+
 /*
 ==============================================================
 
@@ -717,6 +736,12 @@ typedef struct {
 
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit );
+void Field_CompleteKeyname( void );
+void Field_CompleteFilename( const char *dir,
+		const char *ext, qboolean stripExt );
+void Field_CompleteAlias( void );
+void Field_CompleteCommand( char *cmd,
+		qboolean doCommands, qboolean doCvars );
 
 /*
 ==============================================================
@@ -1054,8 +1079,7 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-void  Sys_SetDefaultHomePath(const char *path);
-char	*Sys_DefaultHomePath(void);
+char	*Sys_DefaultHomePath(const char **path2);
 const char *Sys_Dirname( char *path );
 const char *Sys_Basename( char *path );
 char *Sys_ConsoleInput(void);

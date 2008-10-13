@@ -142,6 +142,8 @@ void UI_MouseEvent( int dx, int dy );
 void UI_Refresh( int realtime );
 qboolean UI_IsFullscreen( void );
 void UI_SetActiveMenu( uiMenuCommand_t menu );
+int UI_MousePosition( void );
+void UI_SetMousePosition( int x, int y );
 intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
                  int arg4, int arg5, int arg6, int arg7,
                  int arg8, int arg9, int arg10, int arg11  )
@@ -183,6 +185,13 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
 
     case UI_DRAW_CONNECT_SCREEN:
       UI_DrawConnectScreen( arg0 );
+      return 0;
+
+    case UI_MOUSE_POSITION:
+      return UI_MousePosition( );
+
+    case UI_SET_MOUSE_POSITION:
+      UI_SetMousePosition( arg0, arg1 );
       return 0;
   }
 
@@ -1076,7 +1085,6 @@ void UI_Refresh( int realtime )
 {
   static int index;
   static int  previousTimes[UI_FPS_FRAMES];
-  uiClientState_t cstate;
 
   //if( !( trap_Key_GetCatcher() & KEYCATCH_UI ) ) {
   //  return;
@@ -1119,11 +1127,6 @@ void UI_Refresh( int realtime )
 
   // draw cursor
   UI_SetColor( NULL );
-
-  // don't draw the cursor if we are loading
-  trap_GetClientState( &cstate );
-  if( cstate.connState == CA_LOADING )
-    return;
 
   if( Menu_Count( ) > 0 && !trap_Cvar_VariableValue( "ui_hideCursor" ) )
   {
@@ -2262,53 +2265,11 @@ UI_ParseCarriageList
 */
 static void UI_ParseCarriageList( void )
 {
-  int  i;
-  char carriageCvar[ MAX_TOKEN_CHARS ];
-  char *iterator;
-  char buffer[ MAX_TOKEN_CHARS ];
-  char *bufPointer;
+  char buffer[ MAX_CVAR_VALUE_STRING ];
 
-  trap_Cvar_VariableStringBuffer( "ui_carriage", carriageCvar, sizeof( carriageCvar ) );
-  iterator = carriageCvar;
+  trap_Cvar_VariableStringBuffer( "ui_carriage", buffer, sizeof( buffer ) );
 
-  uiInfo.weapons = 0;
-  uiInfo.upgrades = 0;
-
-  //simple parser to give rise to weapon/upgrade list
-
-  while( iterator && iterator[ 0 ] != '$' )
-  {
-    bufPointer = buffer;
-
-    if( iterator[ 0 ] == 'W' )
-    {
-      iterator++;
-
-      while( iterator[ 0 ] != ' ' )
-        *bufPointer++ = *iterator++;
-
-      *bufPointer++ = '\n';
-
-      i = atoi( buffer );
-
-      uiInfo.weapons |= ( 1 << i );
-    }
-    else if( iterator[ 0 ] == 'U' )
-    {
-      iterator++;
-
-      while( iterator[ 0 ] != ' ' )
-        *bufPointer++ = *iterator++;
-
-      *bufPointer++ = '\n';
-
-      i = atoi( buffer );
-
-      uiInfo.upgrades |= ( 1 << i );
-    }
-
-    iterator++;
-  }
+  sscanf( buffer, "%d %d %d", &uiInfo.weapon, &uiInfo.upgrades, &uiInfo.credits );
 }
 
 /*
@@ -2318,17 +2279,11 @@ UI_LoadHumanArmouryBuys
 */
 static void UI_LoadHumanArmouryBuys( void )
 {
-  int i, j = 0;
+  int i, i2, j = 0;
   stage_t stage = UI_GetCurrentHumanStage( );
   int slots = 0;
 
   UI_ParseCarriageList( );
-
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-  {
-    if( uiInfo.weapons & ( 1 << i ) )
-      slots |= BG_Weapon( i )->slots;
-  }
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
@@ -2344,13 +2299,19 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_Weapon( i )->purchasable &&
         BG_WeaponAllowedInStage( i, stage ) &&
         BG_WeaponIsAllowed( i ) &&
-        !( BG_Weapon( i )->slots & slots ) &&
-        !( uiInfo.weapons & ( 1 << i ) ) )
+        i != uiInfo.weapon )
     {
-      uiInfo.humanArmouryBuyList[ j ].text =
-        String_Alloc( BG_Weapon( i )->humanName );
-      uiInfo.humanArmouryBuyList[ j ].cmd =
-        String_Alloc( va( "cmd buy %s\n", BG_Weapon( i )->name ) );
+      char buffer[ MAX_STRING_CHARS ];
+      int price = BG_Weapon( i )->price;
+      if( uiInfo.weapon != WP_NONE )
+      {
+        Com_sprintf( buffer, sizeof( buffer ), "cmd sell %s;", BG_Weapon( uiInfo.weapon )->name );
+        price -= BG_Weapon( uiInfo.weapon )->price;
+      }
+      uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
+        BG_Weapon( i )->humanName : va( "^1%s", BG_Weapon( i )->humanName ) );
+      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Weapon( i )->name );
+      uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_WEAPON;
       uiInfo.humanArmouryBuyList[ j ].v.weapon = i;
 
@@ -2366,13 +2327,23 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_Upgrade( i )->purchasable &&
         BG_UpgradeAllowedInStage( i, stage ) &&
         BG_UpgradeIsAllowed( i ) &&
-        !( BG_Upgrade( i )->slots & slots ) &&
         !( uiInfo.upgrades & ( 1 << i ) ) )
     {
-      uiInfo.humanArmouryBuyList[ j ].text =
-        String_Alloc( BG_Upgrade( i )->humanName );
-      uiInfo.humanArmouryBuyList[ j ].cmd =
-        String_Alloc( va( "cmd buy %s\n", BG_Upgrade( i )->name ) );
+      char buffer[ MAX_STRING_CHARS ] = "";
+      int price = BG_Upgrade( i )->price;
+      for( i2 = UP_NONE + 1; i2 < UP_NUM_UPGRADES; i2++ )
+      {
+        if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
+            ( BG_Upgrade( i2 )->slots & BG_Upgrade( i )->slots ) )
+        {
+          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
+          price -= BG_Upgrade( i2 )->price;
+        }
+      }
+      uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
+        BG_Upgrade( i )->humanName : va( "^1%s", BG_Upgrade( i )->humanName ) );
+      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Upgrade( i )->name );
+      uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_UPGRADE;
       uiInfo.humanArmouryBuyList[ j ].v.upgrade = i;
 
@@ -2395,20 +2366,17 @@ static void UI_LoadHumanArmourySells( void )
   uiInfo.humanArmourySellCount = 0;
   UI_ParseCarriageList( );
 
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
+  if( uiInfo.weapon != WP_NONE )
   {
-    if( uiInfo.weapons & ( 1 << i ) )
-    {
-      uiInfo.humanArmourySellList[ j ].text = String_Alloc( BG_Weapon( i )->humanName );
-      uiInfo.humanArmourySellList[ j ].cmd =
-        String_Alloc( va( "cmd sell %s\n", BG_Weapon( i )->name ) );
-      uiInfo.humanArmourySellList[ j ].type = INFOTYPE_WEAPON;
-      uiInfo.humanArmourySellList[ j ].v.weapon = i;
+    uiInfo.humanArmourySellList[ j ].text = String_Alloc( BG_Weapon( uiInfo.weapon )->humanName );
+    uiInfo.humanArmourySellList[ j ].cmd =
+      String_Alloc( va( "cmd sell %s\n", BG_Weapon( uiInfo.weapon )->name ) );
+    uiInfo.humanArmourySellList[ j ].type = INFOTYPE_WEAPON;
+    uiInfo.humanArmourySellList[ j ].v.weapon = uiInfo.weapon;
 
-      j++;
+    j++;
 
-      uiInfo.humanArmourySellCount++;
-    }
+    uiInfo.humanArmourySellCount++;
   }
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
@@ -2435,12 +2403,12 @@ UI_ArmouryRefreshCb
 */
 static void UI_ArmouryRefreshCb( void *data )
 {
-  int oldWeapons  = uiInfo.weapons;
+  int oldWeapon  = uiInfo.weapon;
   int oldUpgrades = uiInfo.upgrades;
 
   UI_ParseCarriageList( );
 
-  if( uiInfo.weapons != oldWeapons || uiInfo.upgrades != oldUpgrades )
+  if( uiInfo.weapon != oldWeapon || uiInfo.upgrades != oldUpgrades )
   {
     UI_LoadHumanArmouryBuys( );
     UI_LoadHumanArmourySells( );
@@ -2502,7 +2470,7 @@ static void UI_LoadAlienBuilds( void )
   for( i = BA_NONE + 1; i < BA_NUM_BUILDABLES; i++ )
   {
     if( BG_Buildable( i )->team == TEAM_ALIENS &&
-        BG_Buildable( i )->buildWeapon & uiInfo.weapons &&
+        ( BG_Buildable( i )->buildWeapon & ( 1 << uiInfo.weapon ) ) &&
         BG_BuildableAllowedInStage( i, stage ) &&
         BG_BuildableIsAllowed( i ) )
     {
@@ -2538,7 +2506,7 @@ static void UI_LoadHumanBuilds( void )
   for( i = BA_NONE + 1; i < BA_NUM_BUILDABLES; i++ )
   {
     if( BG_Buildable( i )->team == TEAM_HUMANS &&
-        BG_Buildable( i )->buildWeapon & uiInfo.weapons &&
+        ( BG_Buildable( i )->buildWeapon & ( 1 << uiInfo.weapon ) ) &&
         BG_BuildableAllowedInStage( i, stage ) &&
         BG_BuildableIsAllowed( i ) )
     {
@@ -3620,21 +3588,41 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+      int mode = trap_Cvar_VariableValue( "r_mode" );
+      if ( mode < 0 || mode >= uiInfo.numResolutions )
       {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
-        return resolution;
+        Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)",
+                     (int)trap_Cvar_VariableValue( "r_customWidth" ),
+                     (int)trap_Cvar_VariableValue( "r_customHeight" ) );
       }
+      else
+      {
+        Com_sprintf( resolution, sizeof( resolution ), "%dx%d",
+                     uiInfo.resolutions[ mode ].w,
+                     uiInfo.resolutions[ mode ].h );
+      }
+      return resolution;
     }
+    else
+    {
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
 
-    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
-    return resolution;
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+        {
+          Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+          return resolution;
+        }
+      }
+
+      Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+      return resolution;
+    }
   }
 
   return "";
@@ -3764,8 +3752,13 @@ static void UI_FeederSelection( float feederID, int index )
     uiInfo.humanBuildIndex = index;
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
-    trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    if ( uiInfo.oldResolutions )
+      trap_Cvar_Set( "r_mode", va( "%d", index ) );
+    else
+    {
+      trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
+      trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
+    }
   }
 }
 
@@ -3773,14 +3766,19 @@ static int UI_FeederInitialise( float feederID )
 {
   if( feederID == FEEDER_RESOLUTIONS )
   {
-    int i;
-    int w = trap_Cvar_VariableValue( "r_width" );
-    int h = trap_Cvar_VariableValue( "r_height" );
-
-    for( i = 0; i < uiInfo.numResolutions; i++ )
+    if ( uiInfo.oldResolutions )
+      return trap_Cvar_VariableValue( "r_mode" );
+    else
     {
-      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-        return i;
+      int i;
+      int w = trap_Cvar_VariableValue( "r_width" );
+      int h = trap_Cvar_VariableValue( "r_height" );
+
+      for( i = 0; i < uiInfo.numResolutions; i++ )
+      {
+        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+          return i;
+      }
     }
   }
 
@@ -3858,7 +3856,16 @@ void UI_ParseResolutions( void )
   char        *s = NULL;
 
   trap_Cvar_VariableStringBuffer( "r_availableModes", buf, sizeof( buf ) );
-  p = buf;
+  if ( buf[0] )
+  {
+    p = buf;
+    uiInfo.oldResolutions = qfalse;
+  }
+  else
+  {
+    p = "320x240 400x300 512x384 640x480 800x600 960x720 1024x768 1152x864 1280x1024 1600x1200 2048x1536 856x480";
+    uiInfo.oldResolutions = qtrue;
+  }
   uiInfo.numResolutions = 0;
 
   while( String_Parse( &p, &out ) )
@@ -4033,7 +4040,37 @@ void UI_MouseEvent( int dx, int dy )
   else if( uiInfo.uiDC.cursory > SCREEN_HEIGHT )
     uiInfo.uiDC.cursory = SCREEN_HEIGHT;
 
-  if( Menu_Count() > 0 )
+  uiInfo.uiDC.cursordx = dx;
+  uiInfo.uiDC.cursordy = dy;
+
+  if( Menu_Count( ) > 0 )
+    Display_MouseMove( NULL, uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory );
+}
+
+/*
+=================
+UI_MousePosition
+=================
+*/
+int UI_MousePosition( void )
+{
+  return (int)rint( uiInfo.uiDC.cursorx ) |
+         (int)rint( uiInfo.uiDC.cursory ) << 16;
+}
+
+/*
+=================
+UI_SetMousePosition
+=================
+*/
+void UI_SetMousePosition( int x, int y )
+{
+  uiInfo.uiDC.cursordx = x - uiInfo.uiDC.cursorx;
+  uiInfo.uiDC.cursordy = y - uiInfo.uiDC.cursory;
+  uiInfo.uiDC.cursorx = x;
+  uiInfo.uiDC.cursory = y;
+
+  if( Menu_Count( ) > 0 )
     Display_MouseMove( NULL, uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory );
 }
 

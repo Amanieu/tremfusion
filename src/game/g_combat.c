@@ -138,7 +138,7 @@ Returns the total damage dealt.
 float G_RewardAttackers( gentity_t *self )
 {
   float value, totalDamage = 0;
-  int team, i;
+  int team, i, maxHealth = 0;
 
   // Total up all the damage done by every client
   for( i = 0; i < MAX_CLIENTS; i++ )
@@ -151,16 +151,17 @@ float G_RewardAttackers( gentity_t *self )
   {
     value = BG_GetValueOfPlayer( &self->client->ps );
     team = self->client->pers.teamSelection;
+    maxHealth = self->client->ps.stats[ STAT_MAX_HEALTH ];
   }
   else if( self->s.eType == ET_BUILDABLE )
   {
     value = BG_Buildable( self->s.modelindex )->value;
-
     // only give partial credits for a buildable not yet completed
     if( !self->spawned )
       value *= (float)( level.time - self->buildTime ) /
           BG_Buildable( self->s.modelindex )->buildTime;
     team = self->buildableTeam;
+    maxHealth = BG_Buildable( self->s.modelindex )->health;
   }
   else
     return totalDamage;
@@ -170,6 +171,9 @@ float G_RewardAttackers( gentity_t *self )
   {
     gentity_t *player = g_entities + i;
     short num = value * self->credits[ i ] / totalDamage;
+    int stageValue = num;
+    if( totalDamage < maxHealth )
+      stageValue *= totalDamage / maxHealth;
 
     if( !player->client || !self->credits[ i ] ||
         player->client->ps.stats[ STAT_TEAM ] == team )
@@ -178,9 +182,9 @@ float G_RewardAttackers( gentity_t *self )
 
     // add to stage counters
     if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
-      trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + num ) );
+      trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + stageValue ) );
     else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
-      trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + num ) );
+      trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + stageValue ) );
 
     self->credits[ i ] = 0;
   }
@@ -237,7 +241,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   else
     obit = modNames[ meansOfDeath ];
 
-  G_LogPrintf("Kill: %i %i %i: %s killed %s by %s\n",
+  G_LogPrintf("Kill: %i %i %i: %s^7 killed %s^7 by %s\n",
     killer, self->s.number, meansOfDeath, killerName,
     self->client->pers.netname, obit );
 
@@ -868,6 +872,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     if( targ->use && ( targ->moverState == MOVER_POS1 ||
                        targ->moverState == ROTATOR_POS1 ) )
       targ->use( targ, inflictor, attacker );
+    if( attacker->client->pers.teamSelection == TEAM_ALIENS)
+      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
 
     return;
   }
@@ -975,8 +981,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         if( !g_friendlyFireAliens.integer &&
              targ->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
         {
+          G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
           return;
         }
+        else
+          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
       }
     }
 
@@ -984,8 +993,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     {
       if( targ->buildableTeam == attacker->client->pers.teamSelection )
       {
-        if( !g_friendlyBuildableFire.integer )
+        if( !g_friendlyBuildableFire.integer ) {
+          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
           return;
+        }
+        else
+          G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
       }
 
       // base is under attack warning if DCC'd
@@ -1076,6 +1089,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   // do the damage
   if( take )
   {
+    if( attacker->client && attacker->client->pers.teamSelection == TEAM_ALIENS)
+      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+
     targ->health = targ->health - take;
 
     if( targ->client )
@@ -1304,4 +1320,43 @@ qboolean G_RadiusDamage( vec3_t origin, gentity_t *attacker, float damage,
   }
 
   return hitClient;
+}
+
+/*
+================
+G_LogDestruction
+
+Log deconstruct/destroy events
+================
+*/
+void G_LogDestruction( gentity_t *self, gentity_t *actor, int mod )
+{
+  if( !actor || !actor->client )
+    return;
+
+  if( actor->client->ps.stats[ STAT_TEAM ] ==
+    BG_Buildable( self->s.modelindex )->team )
+  {
+    G_TeamCommand( actor->client->ps.stats[ STAT_TEAM ],
+      va( "print \"%s ^3%s^7 by %s\n\"",
+        BG_Buildable( self->s.modelindex )->humanName,
+        mod == MOD_DECONSTRUCT ? "DECONSTRUCTED" : "DESTROYED",
+        actor->client->pers.netname ) );
+  }
+
+  if( mod == MOD_DECONSTRUCT )
+    G_LogPrintf( "Decon: %d %d %d: %s^7 deconstructed %s\n",
+      actor->client->ps.clientNum,
+      self->s.modelindex,
+      mod,
+      actor->client->pers.netname,
+      BG_Buildable( self->s.modelindex )->name );
+  else
+    G_LogPrintf( "Decon: %d %d %d: %s^7 destroyed %s by %s\n",
+      actor->client->ps.clientNum,
+      self->s.modelindex,
+      mod,
+      actor->client->pers.netname,
+      BG_Buildable( self->s.modelindex )->name,
+      modNames[ mod ] );
 }

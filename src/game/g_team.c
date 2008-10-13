@@ -235,7 +235,7 @@ void CheckTeamStatus( void )
         loc = Team_GetLocation( ent );
 
         if( loc )
-          ent->client->pers.location = loc->health;
+          ent->client->pers.location = loc->s.generic1;
         else
           ent->client->pers.location = 0;
       }

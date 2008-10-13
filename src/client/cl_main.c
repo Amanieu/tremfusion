@@ -42,7 +42,9 @@ cvar_t	*cl_voipSendTarget;
 cvar_t	*cl_voipGainDuringCapture;
 cvar_t	*cl_voipCaptureMult;
 cvar_t	*cl_voipShowMeter;
+cvar_t	*cl_voipShowSender;
 cvar_t	*cl_voip;
+cvar_t	*cl_voipDefaultGain;
 #endif
 
 cvar_t	*cl_nodelta;
@@ -103,9 +105,23 @@ cvar_t	*cl_altTab;
 
 cvar_t  *cl_dlURLOverride;
 
+cvar_t  *cl_demoConfig; 
+cvar_t  *cl_humanConfig; 
+cvar_t  *cl_alienConfig; 
+cvar_t  *cl_spectatorConfig; 
+
 cvar_t  *cl_defaultUI;
 
 cvar_t  *cl_persistantConsole;
+
+cvar_t	*cl_logs;
+
+cvar_t	*cl_consoleKeys;
+
+cvar_t  *cl_consoleFont;
+cvar_t  *cl_consoleFontSize;
+cvar_t  *cl_consoleFontKerning;
+
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -224,7 +240,47 @@ void CL_Voip_f( void )
 		Com_Printf("VoIP: command ignored: %s\n", reason);
 		return;
 	}
-
+	
+	if (!*cmd )
+	{
+		Com_Printf("Invalid VoIP command, please use one listed below:\n\n"
+		
+		"^3help: ^1Display a menu for the usage of following commands.\n\n"
+		
+		"^3ignore: ^1Disable the client from speaking.\n\n"
+		
+		"^3unignore: ^1Enable the client to speak again.\n\n"
+		
+		"^3muteall: ^1Stop all incoming voice chat from all clients.\n\n"
+		
+		"^3unmuteall: ^1Allow all incoming voice chat from all clients.\n\n"
+		
+		"^3gain: ^1Modify how loud a client is.\n");
+	}
+	if ( !strcmp(cmd, "help") )
+	{
+		Com_Printf("^6Help menu:\n\n"
+		
+		"^3help: ^1Display this menu.\n"
+		"^5Usage: /voip help\n\n"
+		
+		"^3ignore: ^1Disable the client from speaking.\n"
+		"^5Usage: /voip ignore <client number>\n\n"
+		
+		"^3unignore: ^1Enable the client to speak again.\n"
+		"^5Usage: /voip unignore <client number>\n\n"
+		
+		"^3muteall: ^1Stop all incoming voice chat from all clients.\n"
+		"^5Usage: /voip muteall\n\n"
+		
+		"^3unmuteall: ^1Allow all incoming voice chat from all clients.\n"
+		"^5Usage: /voip unmuteall\n\n"
+		
+		"^3gain: ^1Modify how loud a client is\n"
+		"^5Usage: /voip gain <client number> <gain>\n\n"
+		
+		"^7If you do not know the clients number, it should be displayed in the lower right-hand corner when the client speaks.\n");
+	}
 	if (strcmp(cmd, "ignore") == 0) {
 		CL_UpdateVoipIgnore(Cmd_Argv(2), qtrue);
 	} else if (strcmp(cmd, "unignore") == 0) {
@@ -866,6 +922,22 @@ static void CL_WalkDemoExt(char *arg, char *name, int *demofile)
 
 /*
 ====================
+CL_CompleteDemoName
+====================
+*/
+static void CL_CompleteDemoName( char *args, int argNum )
+{
+	if( argNum == 2 )
+	{
+		char demoExt[ 16 ];
+
+		Com_sprintf( demoExt, sizeof( demoExt ), ".dm_%d", PROTOCOL_VERSION );
+		Field_CompleteFilename( "demos", demoExt, qtrue );
+	}
+}
+
+/*
+====================
 CL_PlayDemo_f
 
 demo <demoname>
@@ -929,6 +1001,9 @@ void CL_PlayDemo_f( void ) {
 	cls.state = CA_CONNECTED;
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
+
+	if( *cl_demoConfig->string )
+		Cbuf_AddText ( va( "exec %s\n", cl_demoConfig->string ) );
 
 	// read demo messages until connected
 	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED ) {
@@ -1071,6 +1146,7 @@ void CL_FlushMemory( qboolean defaultUI ) {
 	// get our menus back
 	if ( defaultUI ) {
 		Cvar_Set( "fs_game", cl_defaultUI->string );
+		Cvar_Set( "fs_basegame", "" );
 		FS_ConditionalRestart( clc.checksumFeed );
 	}
 
@@ -1527,6 +1603,23 @@ void CL_Connect_f( void ) {
 #define MAX_RCON_MESSAGE 1024
 
 /*
+==================
+CL_CompleteRcon
+==================
+*/
+static void CL_CompleteRcon( char *args, int argNum )
+{
+	if( argNum == 2 )
+	{
+		// Skip "rcon "
+		char *p = Com_SkipTokens( args, 1, " " );
+
+		if( p > args )
+			Field_CompleteCommand( p, qtrue, qtrue );
+	}
+}
+
+/*
 =====================
 CL_Rcon_f
 
@@ -1574,7 +1667,7 @@ void CL_Rcon_f( void ) {
 		}
 	}
 	
-	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
+	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to, 0);
 }
 
 /*
@@ -1723,6 +1816,36 @@ void CL_Configstrings_f( void ) {
 		}
 		Com_Printf( "%4i: %s\n", i, cl.gameState.stringData + ofs );
 	}
+}
+
+/*
+==================
+CL_MapInfo_f
+==================
+*/
+void CL_MapInfo_f( void ) {
+	
+	if ( cls.state != CA_ACTIVE ) {
+		Com_Printf( "Not connected to a server.\n");
+		return;
+	}
+	
+	Com_Printf( "^3Map info:^7 %s\n", (!cl.gameState.stringOffsets[ CS_MESSAGE ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ CS_MESSAGE ] );
+}
+
+/*
+==================
+CL_LastVoteCalled_f
+==================
+*/
+void CL_LastVoteCalled_f( void ) {
+
+	if ( cls.state != CA_ACTIVE ) {
+		Com_Printf( "Not connected to a server.\n");
+		return;
+	}
+		
+	Com_Printf( "^3Last vote called:^7 %s\n", (!cl.gameState.stringOffsets[ CS_VOTE_STRING ]) ? "none" : cl.gameState.stringData + cl.gameState.stringOffsets[ CS_VOTE_STRING ]  );
 }
 
 /*
@@ -2137,7 +2260,7 @@ void CL_InitServerInfo( serverInfo_t *server, netadr_t *address ) {
 CL_ServersResponsePacket
 ===================
 */
-void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
+void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extended ) {
 	int				i, count, total;
 	netadr_t addresses[MAX_SERVERSPERPACKET];
 	int				numservers;
@@ -2160,7 +2283,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 	// advance to initial token
 	do
 	{
-		if(*buffptr == '\\' || *buffptr == '/')
+		if(*buffptr == '\\' || (extended && *buffptr == '/'))
 			break;
 		
 		buffptr++;
@@ -2168,6 +2291,7 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 
 	while (buffptr + 1 < buffend)
 	{
+		// IPv4 address
 		if (*buffptr == '\\')
 		{
 			buffptr++;
@@ -2180,7 +2304,8 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 
 			addresses[numservers].type = NA_IP;
 		}
-		else
+		// IPv6 address, if it's an extended response
+		else if (extended && *buffptr == '/')
 		{
 			buffptr++;
 
@@ -2191,7 +2316,11 @@ void CL_ServersResponsePacket( netadr_t from, msg_t *msg ) {
 				addresses[numservers].ip6[i] = *buffptr++;
 			
 			addresses[numservers].type = NA_IP6;
+			addresses[numservers].scope_id = from->scope_id;
 		}
+		else
+			// syntax error!
+			break;
 			
 		// parse out port
 		addresses[numservers].port = (*buffptr++) << 8;
@@ -2344,9 +2473,15 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 		return;
 	}
 
-	// echo request from server
+	// list of servers sent back by a master server (classic)
 	if ( !Q_strncmp(c, "getserversResponse", 18) ) {
-		CL_ServersResponsePacket( from, msg );
+		CL_ServersResponsePacket( &from, msg, qfalse );
+		return;
+	}
+
+	// list of servers sent back by a master server (extended)
+	if ( !Q_strncmp(c, "getserversExtResponse", 21) ) {
+		CL_ServersResponsePacket( &from, msg, qtrue );
 		return;
 	}
 
@@ -2435,6 +2570,57 @@ void CL_CheckTimeout( void ) {
 	} else {
 		cl.timeoutcount = 0;
 	}
+}
+
+/*
+==================
+CL_CheckTeamChange
+
+Check whether client has changed teams so that we can exec specified bindsets for them
+==================
+*/
+void CL_CheckTeamChange(void)
+{
+	static int previousteam = -1;
+	char *t;
+	int team;
+
+	if( cls.state != CA_ACTIVE ) return;
+
+	t = Info_ValueForKey( &cl.gameState.stringData[
+		cl.gameState.stringOffsets[ CS_PLAYERS + clc.clientNum ] ],
+		"t" );
+	if( t[0] )
+		team = atoi( t );
+	else
+		return; // throw an error?
+
+	if( previousteam != team )
+	{
+		previousteam = team;
+
+		if( team == 0 )
+		{
+			if( *cl_spectatorConfig->string ) 
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_spectatorConfig->string ) );
+			}
+		}
+		else if( team == 1 )
+		{
+			if( *cl_alienConfig->string )
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_alienConfig->string ) );
+			}
+		}
+		else if( team == 2 )
+		{
+			if( *cl_humanConfig->string )
+			{
+				Cbuf_AddText( va( "exec %s\n", cl_humanConfig->string ) );
+			}
+		}
+	} 
 }
 
 /*
@@ -2616,6 +2802,8 @@ void CL_Frame ( int msec ) {
 
 	Con_RunConsole();
 
+	CL_CheckTeamChange();
+
 	cls.framecount++;
 }
 
@@ -2667,13 +2855,35 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
+#ifdef BUILD_FREETYPE
+	fileHandle_t f; 
+#endif
+
 	// this sets up the renderer and calls R_Init
 	re.BeginRegistration( &cls.glconfig );
 
 	// load character sets
 	cls.charSetShader = re.RegisterShader( "gfx/2d/bigchars" );
+
+    cls.useLegacyConsoleFont = qtrue;
+
+#ifdef BUILD_FREETYPE
+    // Register console font specified by cl_consoleFont, if any
+    // filehandle is unused but forces FS_FOpenFileRead() to heed purecheck because it does not when filehandle is NULL 
+    if( *cl_consoleFont->string )
+    {
+      if( FS_FOpenFileRead( cl_consoleFont->string, &f, FS_READ ) >= 0 ) 
+      {
+        re.RegisterFont( cl_consoleFont->string, cl_consoleFontSize->integer, &cls.consoleFont);
+        cls.useLegacyConsoleFont = qfalse;
+      }
+      FS_FCloseFile( f );
+    }
+#endif
+
 	cls.whiteShader = re.RegisterShader( "white" );
 	cls.consoleShader = re.RegisterShader( "console" );
+
 	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
 }
@@ -2837,6 +3047,7 @@ video [filename]
 */
 void CL_Video_f( void )
 {
+#ifndef USE_CLIENT_TTY
   char  filename[ MAX_OSPATH ];
   int   i, last;
 
@@ -2883,6 +3094,7 @@ void CL_Video_f( void )
   }
 
   CL_OpenAVIForWriting( filename );
+#endif
 }
 
 /*
@@ -2929,7 +3141,7 @@ static void CL_GenerateQKey(void)
 				QKEY_SIZE );
 		}
 
-		Com_Printf( "QKEY building random string\n" );
+		Com_DPrintf( "QKEY building random string\n" );
 		Com_RandomBytes( buff, sizeof(buff) );
 
 		f = FS_SV_FOpenFileWrite( QKEY_FILE );
@@ -3009,7 +3221,7 @@ void CL_Init( void ) {
 
 	cl_clantag = Cvar_Get ("cl_clantag", "", CVAR_ARCHIVE);
 
-	cl_conXOffset = Cvar_Get ("cl_conXOffset", "0", 0);
+	cl_conXOffset = Cvar_Get ("cl_conXOffset", "3", 0);
 #ifdef MACOS_X
 	// In game video is REALLY slow in Mac OS X right now due to driver slowness
 	cl_inGameVideo = Cvar_Get ("r_inGameVideo", "0", CVAR_ARCHIVE);
@@ -3040,17 +3252,32 @@ void CL_Init( void ) {
 
 	cl_lanForcePackets = Cvar_Get ("cl_lanForcePackets", "1", CVAR_ARCHIVE);
 
-	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "0", CVAR_ARCHIVE);
+	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE);
 
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
 	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
+	cl_demoConfig = Cvar_Get ("cl_demoConfig", "", CVAR_ARCHIVE);
+	cl_humanConfig = Cvar_Get ("cl_humanConfig", "", CVAR_ARCHIVE);
+	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
+	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
+
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "base", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
+	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
 
 	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
+
+	cl_logs = Cvar_Get ("cl_logs", "0", CVAR_ARCHIVE);
+
+	// ~ and `, as keys and characters
+	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60", CVAR_ARCHIVE);
+
+	cl_consoleFont = Cvar_Get ("cl_consoleFont", "", CVAR_ARCHIVE | CVAR_LATCH);
+	cl_consoleFontSize = Cvar_Get ("cl_consoleFontSize", "16", CVAR_ARCHIVE | CVAR_LATCH);
+	cl_consoleFontKerning = Cvar_Get ("cl_consoleFontKerning", "0", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );
@@ -3061,7 +3288,14 @@ void CL_Init( void ) {
 	Cvar_Get ("color2", "5", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("handicap", "100", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("sex", "male", CVAR_USERINFO | CVAR_ARCHIVE );
-
+	
+	Cvar_Get( "p_team", "", CVAR_ROM );
+	Cvar_Get( "p_class", "", CVAR_ROM );
+	Cvar_Get( "p_credits", "", CVAR_ROM );
+	Cvar_Get( "p_attacker", "", CVAR_ROM );
+	Cvar_Get( "p_killed", "", CVAR_ROM );
+	Cvar_Get( "p_score", "", CVAR_ROM );
+	
 	Cvar_Get ("password", "", CVAR_USERINFO);
 
 #ifdef USE_MUMBLE
@@ -3077,7 +3311,9 @@ void CL_Init( void ) {
 	cl_voipUseVAD = Cvar_Get ("cl_voipUseVAD", "0", CVAR_ARCHIVE);
 	cl_voipVADThreshold = Cvar_Get ("cl_voipVADThreshold", "0.25", CVAR_ARCHIVE);
 	cl_voipShowMeter = Cvar_Get ("cl_voipShowMeter", "1", CVAR_ARCHIVE);
-
+	cl_voipShowSender = Cvar_Get ("cl_voipShowSender", "1", CVAR_ARCHIVE);
+	cl_voipDefaultGain = Cvar_Get ("cl_voipDefaultGain", "0", CVAR_ARCHIVE);
+	
 	// This is a protocol version number.
 	cl_voip = Cvar_Get ("cl_voip", "1", CVAR_USERINFO | CVAR_ARCHIVE | CVAR_LATCH);
 	Cvar_CheckRange( cl_voip, 0, 1, qtrue );
@@ -3106,12 +3342,15 @@ void CL_Init( void ) {
 	//
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f);
 	Cmd_AddCommand ("configstrings", CL_Configstrings_f);
+	Cmd_AddCommand ("mapinfo", CL_MapInfo_f);
+	Cmd_AddCommand ("lastvote", CL_LastVoteCalled_f);
 	Cmd_AddCommand ("clientinfo", CL_Clientinfo_f);
 	Cmd_AddCommand ("snd_restart", CL_Snd_Restart_f);
 	Cmd_AddCommand ("vid_restart", CL_Vid_Restart_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("demo", CL_PlayDemo_f);
+	Cmd_SetCommandCompletionFunc( "demo", CL_CompleteDemoName );
 	Cmd_AddCommand ("cinematic", CL_PlayCinematic_f);
 	Cmd_AddCommand ("stoprecord", CL_StopRecord_f);
 	Cmd_AddCommand ("connect", CL_Connect_f);
@@ -3119,6 +3358,7 @@ void CL_Init( void ) {
 	Cmd_AddCommand ("localservers", CL_LocalServers_f);
 	Cmd_AddCommand ("globalservers", CL_GlobalServers_f);
 	Cmd_AddCommand ("rcon", CL_Rcon_f);
+	Cmd_SetCommandCompletionFunc( "rcon", CL_CompleteRcon );
 	Cmd_AddCommand ("setenv", CL_Setenv_f );
 	Cmd_AddCommand ("ping", CL_Ping_f );
 	Cmd_AddCommand ("serverstatus", CL_ServerStatus_f );
@@ -3141,6 +3381,9 @@ void CL_Init( void ) {
 	Cvar_Get( "cl_guid", "", CVAR_USERINFO | CVAR_ROM );
 	CL_UpdateGUID( NULL, 0 );
 
+	CL_OpenClientLog();
+	CL_WriteClientLog( "`~-     Client Opened     -~`\n" );
+
 	Com_Printf( "----- Client Initialization Complete -----\n" );
 }
 
@@ -3161,7 +3404,7 @@ void CL_Shutdown( void ) {
 	Com_Printf( "----- CL_Shutdown -----\n" );
 
 	if ( recursive ) {
-		printf ("recursive shutdown\n");
+		Com_Printf( "WARNING: Recursive shutdown\n" );
 		return;
 	}
 	recursive = qtrue;
@@ -3175,6 +3418,8 @@ void CL_Shutdown( void ) {
 
 	Cmd_RemoveCommand ("cmd");
 	Cmd_RemoveCommand ("configstrings");
+	Cmd_RemoveCommand ("lastvote");
+	Cmd_RemoveCommand ("mapinfo");
 	Cmd_RemoveCommand ("userinfo");
 	Cmd_RemoveCommand ("snd_restart");
 	Cmd_RemoveCommand ("vid_restart");
@@ -3194,6 +3439,9 @@ void CL_Shutdown( void ) {
 	Cmd_RemoveCommand ("model");
 	Cmd_RemoveCommand ("video");
 	Cmd_RemoveCommand ("stopvideo");
+
+	CL_WriteClientLog( "`~-     Client Closed     -~`\n" );
+	CL_CloseClientLog();
 
 	Cvar_Set( "cl_running", "0" );
 
@@ -3573,9 +3821,9 @@ void CL_LocalServers_f( void ) {
 			to.port = BigShort( (short)(PORT_SERVER + j) );
 
 			to.type = NA_BROADCAST;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
 			to.type = NA_MULTICAST6;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
 		}
 	}
 }
@@ -3589,6 +3837,7 @@ void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
 	char		command[1024], *masteraddress;
+	char		*cmdname;
 	
 	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > 4)
 	{
@@ -3623,7 +3872,17 @@ void CL_GlobalServers_f( void ) {
 	cls.numglobalservers = -1;
 	cls.pingUpdateSource = AS_GLOBAL;
 
-	Com_sprintf( command, sizeof(command), "getservers %s", Cmd_Argv(2) );
+	// Use the extended query for IPv6 masters
+	if (to.type == NA_IP6 || to.type == NA_MULTICAST6)
+	{
+		cmdname = "getserversExt " GAMENAME_FOR_MASTER;
+
+		// TODO: test if we only have an IPv6 connection. If it's the case,
+		//       request IPv6 servers only by appending " ipv6" to the command
+	}
+	else
+		cmdname = "getservers";
+	Com_sprintf( command, sizeof(command), "%s %s", cmdname, Cmd_Argv(2) );
 
 	for (i=3; i < count; i++)
 	{

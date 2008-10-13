@@ -316,6 +316,8 @@ typedef struct {
 
 	int			realtime;			// ignores pause
 	int			realFrametime;		// ignoring pause, so console always works
+	int			voipTime;
+	int			voipSender;
 
 	int			numlocalservers;
 	serverInfo_t	localServers[MAX_OTHER_SERVERS];
@@ -343,6 +345,9 @@ typedef struct {
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
+
+    qboolean useLegacyConsoleFont;
+    fontInfo_t  consoleFont; 
 } clientStatic_t;
 
 extern	clientStatic_t		cls;
@@ -405,11 +410,24 @@ extern	cvar_t	*cl_altTab;
 
 extern  cvar_t  *cl_dlURLOverride;
 
+extern  cvar_t  *cl_demoConfig;
+extern  cvar_t  *cl_humanConfig;
+extern  cvar_t  *cl_alienConfig;
+extern  cvar_t  *cl_spectatorConfig;
+
 extern  cvar_t  *cl_defaultUI;
 
 extern  cvar_t  *cl_clantag;
 
 extern  cvar_t  *cl_persistantConsole;
+
+extern	cvar_t	*cl_logs;
+
+extern	cvar_t	*cl_consoleKeys;
+
+extern  cvar_t  *cl_consoleFont;
+extern  cvar_t  *cl_consoleFontSize;
+extern  cvar_t  *cl_consoleFontKerning;
 
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
@@ -427,7 +445,9 @@ extern	cvar_t	*cl_voipSendTarget;
 extern	cvar_t	*cl_voipGainDuringCapture;
 extern	cvar_t	*cl_voipCaptureMult;
 extern	cvar_t	*cl_voipShowMeter;
+extern	cvar_t	*cl_voipShowSender;
 extern	cvar_t	*cl_voip;
+extern	cvar_t	*cl_voipDefaultGain;
 #endif
 
 //=================================================
@@ -469,6 +489,8 @@ int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen )
 
 qboolean CL_CheckPaused(void);
 
+void CL_CheckTeamChange( void );
+
 //
 // cl_input
 //
@@ -499,9 +521,8 @@ void IN_CenterView (void);
 void CL_VerifyCode( void );
 
 float CL_KeyState (kbutton_t *key);
+int Key_StringToKeynum( char *str );
 char *Key_KeynumToString (int keynum);
-int Key_GetCatcher( void );
-void Key_SetCatcher( int catcher );
 
 //
 // cl_parse.c
@@ -569,6 +590,10 @@ void	SCR_DrawBigString( int x, int y, const char *s, float alpha, qboolean noCol
 void	SCR_DrawBigStringColor( int x, int y, const char *s, vec4_t color, qboolean noColorEscape );	// ignores embedded color control characters
 void	SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, qboolean forceColor, qboolean noColorEscape );
 void	SCR_DrawSmallChar( int x, int y, int ch );
+void    SCR_DrawConsoleFontChar( float x, float y, int ch );
+float   SCR_ConsoleFontCharWidth( int ch );
+float   SCR_ConsoleFontCharHeight ( void );
+float   SCR_ConsoleFontStringWidth( const char *s, int len );
 
 
 //
@@ -633,3 +658,10 @@ qboolean CL_VideoRecording( void );
 //
 void CL_WriteDemoMessage ( msg_t *msg, int headerBytes );
 
+//
+// cl_logs.c
+//
+void CL_OpenClientLog(void);
+void CL_CloseClientLog(void);
+void CL_WriteClientLog( char *text );
+void CL_WriteClientChatLog( char *text );

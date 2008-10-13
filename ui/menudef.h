@@ -81,7 +81,7 @@
 #define FEEDER_IGNORE_LIST                20    // ignored players
 #define FEEDER_HELP_LIST                  21    // help topics
 
-#define FEEDER_RESOLUTIONS                21    // display resolutions
+#define FEEDER_RESOLUTIONS                22    // display resolutions
 
 // display flags
 #define UI_SHOW_FAVORITESERVERS           0x00000001
@@ -150,6 +150,7 @@
 #define CG_DEMO_PLAYBACK                  53
 #define CG_DEMO_RECORDING                 54
 
+
 #define CG_CONSOLE                        55
 #define CG_TUTORIAL                       56
 #define CG_CLOCK                          57
@@ -176,5 +177,11 @@
 
 #define CG_PLAYER_CHARGE_BAR_BG           76
 #define CG_PLAYER_CHARGE_BAR              77
+#define CG_PLAYER_CROSSHAIR               78
+#define CG_PLAYER_LOCATION                79
+#define CG_SQUAD_MARKERS                  80
+#define CG_SPEED                          81
+
+#define CG_PLAYER_ATTACK_FEEDBACK         82
 
 #endif

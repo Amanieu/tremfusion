@@ -752,6 +752,21 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       CG_FireWeapon( cent, WPM_TERTIARY );
       break;
 
+    case EV_ALIEN_HIT:
+        DEBUGNAME( "EV_ALIEN_HIT" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_HIT );
+        break;
+  	 
+    case EV_ALIEN_MISS:
+        DEBUGNAME( "EV_ALIEN_MISS" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_MISS );
+        break;
+  	 
+    case EV_ALIEN_TEAMHIT:
+        DEBUGNAME( "EV_ALIEN_TEAMHIT" );
+        CG_HandleAlienFeedback( cent, AFEEDBACK_TEAMHIT );
+        break;
+
     //=================================================================
 
     //
@@ -863,6 +878,13 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
     case EV_SHOTGUN:
       DEBUGNAME( "EV_SHOTGUN" );
       CG_ShotgunFire( es );
+      break;
+
+    case EV_MASS_DRIVER:
+      DEBUGNAME( "EV_MASS_DRIVER" );
+      ByteToDir( es->eventParm, dir );
+      CG_MissileHitWall( es->weapon, es->generic1, 0, position, dir, IMPACTSOUND_DEFAULT, 0 );
+      CG_MassDriverFire( es );
       break;
 
     case EV_GENERAL_SOUND:

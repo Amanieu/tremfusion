@@ -35,6 +35,17 @@ and one exported function: Perform
 */
 
 #include "vm_local.h"
+#include <sys/types.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <limits.h>
+#include <unistd.h>
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+#endif
 
 
 vm_t	*currentVM = NULL;
@@ -71,9 +82,9 @@ VM_Init
 ==============
 */
 void VM_Init( void ) {
-	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE | CVAR_VM_PROTECT );	// !@# SHIP WITH SET TO 2
-	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE | CVAR_VM_PROTECT );	// !@# SHIP WITH SET TO 0
-	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE | CVAR_VM_PROTECT );		// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 0
+	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
 
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
 	Cmd_AddCommand ("vminfo", VM_VmInfo_f );
@@ -424,7 +435,15 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	if( alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
-		vm->dataBase = Hunk_Alloc( dataLength, h_high );
+#ifdef _WIN32
+		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
+		if(!vm->dataBase)
+			Com_Error(ERR_DROP, "VM_LoadQVM: VirtualAlloc failed");
+#else
+		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+		if(vm->dataBase == (void*)-1)
+			Com_Error(ERR_DROP, "VM_LoadQVM: can't mmap memory");
+#endif
 		vm->dataMask = dataLength - 1;
 	} else {
 		// clear the data
@@ -437,6 +456,18 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	// byte swap the longs
 	for ( i = 0 ; i < header->dataLength ; i += 4 ) {
 		*(int *)(vm->dataBase + i) = LittleLong( *(int *)(vm->dataBase + i ) );
+	}
+
+	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
+	// Fail silently
+	if ( vm->dataBase[0] == 1 ) {
+#ifdef _WIN32
+		DWORD _unused = 0;
+		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
+#else
+		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
+			mprotect( vm->dataBase, 4096, PROT_NONE );
+#endif
 	}
 
 	if( header->vmMagic == VM_MAGIC_VER2 ) {
@@ -632,12 +663,16 @@ void VM_Free( vm_t *vm ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
 	}
+	if ( vm->dataBase ) {
+#ifdef _WIN32
+		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
+#else
+		munmap( vm->dataBase, vm->dataMask + 1 );
+#endif
+	}
 #if 0	// now automatically freed by hunk
 	if ( vm->codeBase ) {
 		Z_Free( vm->codeBase );
-	}
-	if ( vm->dataBase ) {
-		Z_Free( vm->dataBase );
 	}
 	if ( vm->instructionPointers ) {
 		Z_Free( vm->instructionPointers );

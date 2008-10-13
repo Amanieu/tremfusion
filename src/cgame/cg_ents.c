@@ -1090,6 +1090,9 @@ static void CG_AddCEntity( centity_t *cent )
     case ET_LIGHTFLARE:
       CG_LightFlare( cent );
       break;
+    case ET_LOCATION:
+      CG_LinkLocation( cent );
+      break;
   }
 }
 
@@ -1212,3 +1215,17 @@ void CG_AddPacketEntities( void )
   }
 }
 
+void CG_LinkLocation( centity_t *cent )
+{
+  centity_t *tempent;
+  for( tempent = cg.locationHead; tempent; tempent = tempent->nextLocation )
+  {
+    if( tempent == cent )
+    {
+      return;
+    }
+  }
+  cent->nextLocation = cg.locationHead;
+  cg.locationHead = cent;
+
+}

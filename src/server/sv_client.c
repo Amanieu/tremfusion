@@ -68,6 +68,7 @@ void SV_GetChallenge( netadr_t from ) {
 	if (i == MAX_CHALLENGES) {
 		// this is the first time this client has asked for a challenge
 		challenge = &svs.challenges[oldest];
+		challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
 		challenge->adr = from;
 		challenge->time = svs.time;
 		challenge->connected = qfalse;
@@ -212,10 +213,10 @@ void SV_DirectConnect( netadr_t from ) {
 	// check for privateClient password
 	password = Info_ValueForKey( userinfo, "password" );
 	if ( !strcmp( password, sv_privatePassword->string ) ) {
-		startIndex = 0;
+		startIndex = sv_democlients->integer;
 	} else {
 		// skip past the reserved slots
-		startIndex = sv_privateClients->integer;
+		startIndex = sv_privateClients->integer + sv_democlients->integer;
 	}
 
 	newcl = NULL;

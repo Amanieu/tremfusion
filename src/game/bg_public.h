@@ -208,11 +208,9 @@ typedef enum
 {
   STAT_HEALTH,
   STAT_ITEMS,
-  STAT_SLOTS,           // tracks the amount of stuff human players are carrying
   STAT_ACTIVEITEMS,
-  STAT_WEAPONS,         // 16 bit fields
-  STAT_WEAPONS2,        // another 16 bits to push the max weapon count up
-  STAT_MAX_HEALTH, // health / armor limit, changable by handicap
+  STAT_WEAPON,    // current primary weapon
+  STAT_MAX_HEALTH,// health / armor limit, changable by handicap
   STAT_CLASS,     // player class (for aliens AND humans)
   STAT_TEAM,      // player team
   STAT_STAMINA,   // stamina (human only)
@@ -350,6 +348,15 @@ typedef enum
 
   WP_NUM_WEAPONS
 } weapon_t;
+
+typedef enum
+{
+   AFEEDBACK_HIT,
+   AFEEDBACK_MISS,
+   AFEEDBACK_TEAMHIT,
+
+   AFEEDBACK_NUM
+} alienFeedback_t;
 
 typedef enum
 {
@@ -524,6 +531,11 @@ typedef enum
   EV_MGTURRET_SPINUP, // turret spinup sound should play
 
   EV_RPTUSE_SOUND,    // trigger a sound
+  
+  EV_ALIEN_HIT,       // Alien attack feedback hit enemy
+  EV_ALIEN_MISS,      // Alien attack feedback miss enemy
+  EV_ALIEN_TEAMHIT,   // Alien attack feedback hit teammate
+
   EV_LEV2_ZAP
 } entity_event_t;
 
@@ -1066,9 +1078,8 @@ typedef struct
 } upgradeAttributes_t;
 
 qboolean  BG_WeaponIsFull( weapon_t weapon, int stats[ ], int ammo, int clips );
-void      BG_AddWeaponToInventory( int weapon, int stats[ ] );
-void      BG_RemoveWeaponFromInventory( int weapon, int stats[ ] );
 qboolean  BG_InventoryContainsWeapon( int weapon, int stats[ ] );
+int       BG_CalculateSlotsForInventory( int stats[ ] );
 void      BG_AddUpgradeToInventory( int item, int stats[ ] );
 void      BG_RemoveUpgradeFromInventory( int item, int stats[ ] );
 qboolean  BG_InventoryContainsUpgrade( int item, int stats[ ] );
@@ -1148,6 +1159,8 @@ typedef enum
   ET_ITEM,
 
   ET_BUILDABLE,       // buildable type
+
+  ET_LOCATION,
 
   ET_MISSILE,
   ET_MOVER,

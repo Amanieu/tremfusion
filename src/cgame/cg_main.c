@@ -77,8 +77,6 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
       return 0;
 
     case CG_MOUSE_EVENT:
-      cgDC.cursorx = cgs.cursorX;
-      cgDC.cursory = cgs.cursorY;
       CG_MouseEvent( arg0, arg1 );
       return 0;
 
@@ -114,13 +112,12 @@ vmCvar_t  cg_shadows;
 vmCvar_t  cg_drawTimer;
 vmCvar_t  cg_drawClock;
 vmCvar_t  cg_drawFPS;
+vmCvar_t  cg_drawSpeed;
 vmCvar_t  cg_drawDemoState;
 vmCvar_t  cg_drawSnapshot;
 vmCvar_t  cg_drawChargeBar;
 vmCvar_t  cg_drawCrosshair;
 vmCvar_t  cg_drawCrosshairNames;
-vmCvar_t  cg_crosshairX;
-vmCvar_t  cg_crosshairY;
 vmCvar_t  cg_crosshairSize;
 vmCvar_t  cg_draw2D;
 vmCvar_t  cg_drawStatus;
@@ -199,6 +196,7 @@ vmCvar_t  cg_debugVoices;
 
 vmCvar_t  cg_stickySpec;
 vmCvar_t  cg_alwaysSprint;
+vmCvar_t  cg_unlagged;
 
 vmCvar_t  ui_currentClass;
 vmCvar_t  ui_carriage;
@@ -217,6 +215,7 @@ vmCvar_t  cg_suppressWAnimWarnings;
 
 vmCvar_t  cg_voice;
 vmCvar_t  cg_emoticons;
+vmCvar_t  cg_drawAlienFeedback;
 
 
 typedef struct
@@ -238,19 +237,18 @@ static cvarTable_t cvarTable[ ] =
   { &cg_draw2D, "cg_draw2D", "1", CVAR_ARCHIVE  },
   { &cg_drawStatus, "cg_drawStatus", "1", CVAR_ARCHIVE  },
   { &cg_drawTimer, "cg_drawTimer", "1", CVAR_ARCHIVE  },
-  { &cg_drawClock, "cg_drawClock", "0", CVAR_ARCHIVE  },
+  { &cg_drawClock, "cg_drawClock", "1", CVAR_ARCHIVE  },
   { &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
+  { &cg_drawSpeed, "cg_drawSpeed", "0", CVAR_ARCHIVE  },
   { &cg_drawDemoState, "cg_drawDemoState", "1", CVAR_ARCHIVE  },
   { &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
   { &cg_drawChargeBar, "cg_drawChargeBar", "1", CVAR_ARCHIVE  },
   { &cg_drawCrosshair, "cg_drawCrosshair", "1", CVAR_ARCHIVE },
   { &cg_drawCrosshairNames, "cg_drawCrosshairNames", "1", CVAR_ARCHIVE },
-  { &cg_crosshairX, "cg_crosshairX", "0", CVAR_ARCHIVE },
-  { &cg_crosshairY, "cg_crosshairY", "0", CVAR_ARCHIVE },
   { &cg_crosshairSize, "cg_crosshairSize", "1", CVAR_ARCHIVE },
   { &cg_brassTime, "cg_brassTime", "2500", CVAR_ARCHIVE },
   { &cg_addMarks, "cg_marks", "1", CVAR_ARCHIVE },
-  { &cg_lagometer, "cg_lagometer", "0", CVAR_ARCHIVE },
+  { &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
   { &cg_teslaTrailTime, "cg_teslaTrailTime", "250", CVAR_ARCHIVE  },
   { &cg_gun_x, "cg_gunX", "0", CVAR_CHEAT },
   { &cg_gun_y, "cg_gunY", "0", CVAR_CHEAT },
@@ -288,6 +286,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_wwToggle, "cg_wwToggle", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_stickySpec, "cg_stickySpec", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_alwaysSprint, "cg_alwaysSprint", "0", CVAR_ARCHIVE|CVAR_USERINFO },
+  { &cg_unlagged, "cg_unlagged", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_depthSortParticles, "cg_depthSortParticles", "1", CVAR_ARCHIVE },
   { &cg_bounceParticles, "cg_bounceParticles", "0", CVAR_ARCHIVE },
   { &cg_consoleLatency, "cg_consoleLatency", "3000", CVAR_ARCHIVE },
@@ -345,7 +344,8 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_voice, "voice", "default", CVAR_USERINFO|CVAR_ARCHIVE},
 
-  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE}
+  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE},
+  { &cg_drawAlienFeedback, "cg_drawAlienFeedback", "1", 0}
 };
 
 static int   cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -388,32 +388,65 @@ Set some cvars used by the UI
 */
 static void CG_SetUIVars( void )
 {
-  int   i;
-  char  carriageCvar[ MAX_TOKEN_CHARS ];
+  int   i, upgrades = 0;
 
   if( !cg.snap )
     return;
 
-  *carriageCvar = 0;
-
   //determine what the player is carrying
-  for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
-  {
-    if( BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) &&
-        BG_Weapon( i )->purchasable )
-      strcat( carriageCvar, va( "W%d ", i ) );
-  }
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
     if( BG_InventoryContainsUpgrade( i, cg.snap->ps.stats ) &&
         BG_Upgrade( i )->purchasable )
-      strcat( carriageCvar, va( "U%d ", i ) );
+      upgrades |= ( 1 << i );
   }
-  strcat( carriageCvar, "$" );
 
-  trap_Cvar_Set( "ui_carriage", carriageCvar );
+  trap_Cvar_Set( "ui_carriage", va( "%d %d %d", cg.snap->ps.stats[ STAT_WEAPON ],
+                 upgrades, cg.snap->ps.persistant[ PERS_CREDIT ] ) );
 
   trap_Cvar_Set( "ui_stages", va( "%d %d", cgs.alienStage, cgs.humanStage ) );
+}
+
+/*
+===============
+CG_SetPVars
+
+Set the p_* cvars
+===============
+*/
+static void CG_SetPVars( void )
+{
+  playerState_t *ps;
+
+  if( !cg.snap )
+    return;
+
+  ps = &cg.snap->ps;
+
+  trap_Cvar_Set( "p_hp", va( "%d", ps->stats[ STAT_HEALTH ] ) );
+  trap_Cvar_Set( "p_maxhp", va( "%d", ps->stats[ STAT_MAX_HEALTH ] ) );
+  trap_Cvar_Set( "p_team", va( "%d", ps->stats[ STAT_TEAM ] ) );
+  switch( ps->stats[ STAT_TEAM ] )
+  {
+  case TEAM_NONE:
+    trap_Cvar_Set( "p_teamname", "^3Spectator" );
+  case TEAM_ALIENS:
+    trap_Cvar_Set( "p_teamname", "^1Alien" );
+  case TEAM_HUMANS:
+    trap_Cvar_Set( "p_teamname", "^4Human" );
+  }
+  trap_Cvar_Set( "p_class", va( "%d", ps->stats[ STAT_CLASS ] ) );
+  trap_Cvar_Set( "p_classname", BG_ClassConfig( ps->stats[ STAT_CLASS ] )->humanName );
+  trap_Cvar_Set( "p_weapon", va( "%d", ps->stats[ STAT_WEAPON ] ) );
+  trap_Cvar_Set( "p_weaponname", BG_Weapon( ps->stats[ STAT_WEAPON ] )->humanName );
+  trap_Cvar_Set( "p_ammo", va( "%d", ps->ammo ) );
+  trap_Cvar_Set( "p_clips", va( "%d", ps->clips ) );
+  trap_Cvar_Set( "p_credits", va( "%d", ps->persistant[ PERS_CREDIT ] ) );
+  trap_Cvar_Set( "p_score", va( "%d", ps->persistant[ PERS_SCORE ] ) );
+  trap_Cvar_Set( "p_attacker", va( "%d", CG_LastAttacker( ) ) );
+  trap_Cvar_Set( "p_attackername", cgs.clientinfo[ CG_LastAttacker( ) ].name );
+  trap_Cvar_Set( "p_crosshair", va( "%d", CG_CrosshairPlayer( ) ) );
+  trap_Cvar_Set( "p_crosshairrname", cgs.clientinfo[ CG_CrosshairPlayer( ) ].name );
 }
 
 /*
@@ -432,6 +465,7 @@ void CG_UpdateCvars( void )
   // check for modications here
 
   CG_SetUIVars( );
+  CG_SetPVars( );
 }
 
 
@@ -731,6 +765,20 @@ static void CG_RegisterGraphics( void )
     "ui/assets/neutral/10_5pie",
     "ui/assets/neutral/12_0pie",
   };
+   static char *alienAttackFeedbackShaders[ 11 ] =
+  {
+        "ui/assets/alien/feedback/scratch_00",
+        "ui/assets/alien/feedback/scratch_01",
+        "ui/assets/alien/feedback/scratch_02",
+        "ui/assets/alien/feedback/scratch_03",
+        "ui/assets/alien/feedback/scratch_04",
+        "ui/assets/alien/feedback/scratch_05",
+        "ui/assets/alien/feedback/scratch_06",
+        "ui/assets/alien/feedback/scratch_07",
+        "ui/assets/alien/feedback/scratch_08",
+        "ui/assets/alien/feedback/scratch_09",
+        "ui/assets/alien/feedback/scratch_10"
+  };
 
   // clear any references to old media
   memset( &cg.refdef, 0, sizeof( cg.refdef ) );
@@ -763,6 +811,8 @@ static void CG_RegisterGraphics( void )
 
   for( i = 0; i < 8; i++ )
     cgs.media.buildWeaponTimerPie[ i ] = trap_R_RegisterShader( buildWeaponTimerPieShaders[ i ] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienAttackFeedbackShaders[i] = trap_R_RegisterShader( alienAttackFeedbackShaders[i] );
 
   // player health cross shaders
   cgs.media.healthCross               = trap_R_RegisterShader( "ui/assets/neutral/cross.tga" );
@@ -771,6 +821,10 @@ static void CG_RegisterGraphics( void )
   cgs.media.healthCrossMedkit         = trap_R_RegisterShader( "ui/assets/neutral/cross_medkit.tga" );
   cgs.media.healthCrossPoisoned       = trap_R_RegisterShader( "ui/assets/neutral/cross_poison.tga" );
   
+  // squad markers
+  cgs.media.squadMarkerH              = trap_R_RegisterShader( "ui/assets/neutral/squad_h" );
+  cgs.media.squadMarkerV              = trap_R_RegisterShader( "ui/assets/neutral/squad_v" );
+
   cgs.media.upgradeClassIconShader    = trap_R_RegisterShader( "icons/icona_upgrade.tga" );
 
   cgs.media.balloonShader             = trap_R_RegisterShader( "gfx/sprites/chatballoon" );
@@ -796,6 +850,10 @@ static void CG_RegisterGraphics( void )
 
   cgs.media.humanBuildableDamagedPS   = CG_RegisterParticleSystem( "humanBuildableDamagedPS" );
   cgs.media.alienBuildableDamagedPS   = CG_RegisterParticleSystem( "alienBuildableDamagedPS" );
+  cgs.media.humanBuildableHitSmallPS   = CG_RegisterParticleSystem( "humanBuildableHitSmallPS" );
+  cgs.media.alienBuildableHitSmallPS   = CG_RegisterParticleSystem( "alienBuildableHitSmallPS" );
+  cgs.media.humanBuildableHitLargePS   = CG_RegisterParticleSystem( "humanBuildableHitLargePS" );
+  cgs.media.alienBuildableHitLargePS   = CG_RegisterParticleSystem( "alienBuildableHitLargePS" );
   cgs.media.humanBuildableDestroyedPS = CG_RegisterParticleSystem( "humanBuildableDestroyedPS" );
   cgs.media.alienBuildableDestroyedPS = CG_RegisterParticleSystem( "alienBuildableDestroyedPS" );
 
@@ -1432,6 +1490,22 @@ static clientInfo_t * CG_InfoFromScoreIndex( int index, int team, int *scoreInde
   return &cgs.clientinfo[ cg.scores[ index ].client ];
 }
 
+static qboolean CG_ClientIsReady( int clientNum )
+{
+  // each character of the hex string corresponds to 4 bits, which correspond
+  // to readiness for client (0, 1, 2, 3...) i.e. the highest order bit
+  // corresponds to the lowest clientnum
+  // because of this 1:4 ratio we only need one character for a given client
+  int val = clientNum / 4;
+  const char *s = CG_ConfigString( CS_CLIENTS_READY );
+  while( *s && val-- > 0 )
+    s++;
+  if( !*s )
+    return qfalse;
+  sscanf( s, "%1x", &val );
+  return ( ( val & 1 << ( 3 - clientNum % 4 ) ) != 0 );
+}
+
 static const char *CG_FeederItemText( float feederID, int index, int column, qhandle_t *handle )
 {
   int           scoreIndex = 0;
@@ -1450,8 +1524,7 @@ static const char *CG_FeederItemText( float feederID, int index, int column, qha
   info = CG_InfoFromScoreIndex( index, team, &scoreIndex );
   sp = &cg.scores[ scoreIndex ];
 
-  if( ( atoi( CG_ConfigString( CS_CLIENTS_READY ) ) & ( 1 << sp->client ) ) &&
-      cg.intermissionStarted )
+  if( cg.intermissionStarted && CG_ClientIsReady( sp->client ) )
     showIcons = qfalse;
   else if( cg.snap->ps.pm_type == PM_SPECTATOR || cg.snap->ps.pm_flags & PMF_FOLLOW ||
     team == cg.snap->ps.stats[ STAT_TEAM ] || cg.intermissionStarted )
@@ -1493,8 +1566,7 @@ static const char *CG_FeederItemText( float feederID, int index, int column, qha
         break;
 
       case 2:
-        if( ( atoi( CG_ConfigString( CS_CLIENTS_READY ) ) & ( 1 << sp->client ) ) &&
-            cg.intermissionStarted )
+        if( cg.intermissionStarted && CG_ClientIsReady( sp->client ) )
           return "Ready";
         break;
 
@@ -1753,6 +1825,8 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
 
   CG_AssetCache( );
   CG_LoadHudMenu( );
+  cg.feedbackAnimation = 0;
+  cg.feedbackAnimationType = 0;
 
   cg.weaponSelect = WP_NONE;
 

@@ -46,7 +46,7 @@ void CG_RegisterUpgrade( int upgradeNum )
   if( upgradeInfo->registered )
     return;
 
-  memset( upgradeInfo, 0, sizeof( *upgradeInfo ) );
+  Com_Memset( upgradeInfo, 0, sizeof( *upgradeInfo ) );
   upgradeInfo->registered = qtrue;
 
   if( strlen( BG_Upgrade( upgradeNum )->name ) <= 0 )
@@ -72,7 +72,7 @@ void CG_InitUpgrades( void )
 {
   int   i;
 
-  memset( cg_upgrades, 0, sizeof( cg_upgrades ) );
+  Com_Memset( cg_upgrades, 0, sizeof( cg_upgrades ) );
 
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
     CG_RegisterUpgrade( i );
@@ -629,6 +629,34 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
 
       continue;
     }
+    else if( !Q_stricmp( token, "weaponModel3rdPerson" ) )
+    {
+      char path[ MAX_QPATH ];
+
+      token = COM_Parse( &text_p );
+      if( !token )
+        break;
+
+      wi->weaponModel3rdPerson = trap_R_RegisterModel( token );
+
+      if( !wi->weaponModel3rdPerson )
+      {
+        CG_Printf( S_COLOR_RED "ERROR: 3rd person weapon "
+            "model not found %s\n", token );
+      }
+
+      strcpy( path, token );
+      COM_StripExtension( path, path, MAX_QPATH );
+      strcat( path, "_flash.md3" );
+      wi->flashModel3rdPerson = trap_R_RegisterModel( path );
+
+      strcpy( path, token );
+      COM_StripExtension( path, path, MAX_QPATH );
+      strcat( path, "_barrel.md3" );
+      wi->barrelModel3rdPerson = trap_R_RegisterModel( path );
+
+      continue;
+    }
     else if( !Q_stricmp( token, "idleSound" ) )
     {
       token = COM_Parse( &text_p );
@@ -711,7 +739,7 @@ void CG_RegisterWeapon( int weaponNum )
   if( weaponInfo->registered )
     return;
 
-  memset( weaponInfo, 0, sizeof( *weaponInfo ) );
+  Com_Memset( weaponInfo, 0, sizeof( *weaponInfo ) );
   weaponInfo->registered = qtrue;
 
   if( strlen( BG_Weapon( weaponNum )->name ) <= 0 )
@@ -751,12 +779,13 @@ void CG_InitWeapons( void )
 {
   int   i;
 
-  memset( cg_weapons, 0, sizeof( cg_weapons ) );
+  Com_Memset( cg_weapons, 0, sizeof( cg_weapons ) );
 
   for( i = WP_NONE + 1; i < WP_NUM_WEAPONS; i++ )
     CG_RegisterWeapon( i );
 
   cgs.media.level2ZapTS = CG_RegisterTrailSystem( "models/weapons/lev2zap/lightning" );
+  cgs.media.massDriverTS = CG_RegisterTrailSystem( "models/weapons/mdriver/fireTS" );
 }
 
 
@@ -976,7 +1005,10 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
   weapon = &cg_weapons[ weaponNum ];
 
   // add the weapon
-  memset( &gun, 0, sizeof( gun ) );
+  Com_Memset( &gun, 0, sizeof( gun ) );
+  Com_Memset( &barrel, 0, sizeof( barrel ) );
+  Com_Memset( &flash, 0, sizeof( flash ) );
+
   VectorCopy( parent->lightingOrigin, gun.lightingOrigin );
   gun.shadowPlane = parent->shadowPlane;
   gun.renderfx = parent->renderfx;
@@ -1008,7 +1040,15 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
     }
   }
 
-  gun.hModel = weapon->weaponModel;
+  if( !ps )
+  {
+    gun.hModel = weapon->weaponModel3rdPerson;
+
+    if( !gun.hModel )
+      gun.hModel = weapon->weaponModel;
+  }
+  else
+    gun.hModel = weapon->weaponModel;
 
   noGunModel = ( ( !ps || cg.renderingThirdPerson ) && weapon->disableIn3rdPerson ) || !gun.hModel;
 
@@ -1040,21 +1080,29 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 
     trap_R_AddRefEntityToScene( &gun );
 
-    // add the spinning barrel
-    if( weapon->barrelModel )
+    if( !ps )
     {
-      memset( &barrel, 0, sizeof( barrel ) );
+      barrel.hModel = weapon->barrelModel3rdPerson;
+
+      if( !barrel.hModel )
+        barrel.hModel = weapon->barrelModel;
+    }
+    else
+      barrel.hModel = weapon->barrelModel;
+
+    // add the spinning barrel
+    if( barrel.hModel )
+    {
       VectorCopy( parent->lightingOrigin, barrel.lightingOrigin );
       barrel.shadowPlane = parent->shadowPlane;
       barrel.renderfx = parent->renderfx;
 
-      barrel.hModel = weapon->barrelModel;
       angles[ YAW ] = 0;
       angles[ PITCH ] = 0;
       angles[ ROLL ] = CG_MachinegunSpinAngle( cent, firing );
       AnglesToAxis( angles, barrel.axis );
 
-      CG_PositionRotatedEntityOnTag( &barrel, &gun, weapon->weaponModel, "tag_barrel" );
+      CG_PositionRotatedEntityOnTag( &barrel, &gun, gun.hModel, "tag_barrel" );
 
       trap_R_AddRefEntityToScene( &barrel );
     }
@@ -1068,7 +1116,7 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
       if( noGunModel )
         CG_SetAttachmentTag( &cent->muzzlePS->attachment, *parent, parent->hModel, "tag_weapon" );
       else
-        CG_SetAttachmentTag( &cent->muzzlePS->attachment, gun, weapon->weaponModel, "tag_flash" );
+        CG_SetAttachmentTag( &cent->muzzlePS->attachment, gun, gun.hModel, "tag_flash" );
     }
 
     //if the PS is infinite disable it when not firing
@@ -1084,12 +1132,20 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
       return;
   }
 
-  memset( &flash, 0, sizeof( flash ) );
   VectorCopy( parent->lightingOrigin, flash.lightingOrigin );
   flash.shadowPlane = parent->shadowPlane;
   flash.renderfx = parent->renderfx;
 
-  flash.hModel = weapon->flashModel;
+  if( !ps )
+  {
+    flash.hModel = weapon->flashModel3rdPerson;
+
+    if( !flash.hModel )
+      flash.hModel = weapon->flashModel;
+  }
+  else
+    flash.hModel = weapon->flashModel;
+
   if( flash.hModel )
   {
     angles[ YAW ] = 0;
@@ -1100,7 +1156,7 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
     if( noGunModel )
       CG_PositionRotatedEntityOnTag( &flash, parent, parent->hModel, "tag_weapon" );
     else
-      CG_PositionRotatedEntityOnTag( &flash, &gun, weapon->weaponModel, "tag_flash" );
+      CG_PositionRotatedEntityOnTag( &flash, &gun, gun.hModel, "tag_flash" );
 
     trap_R_AddRefEntityToScene( &flash );
   }
@@ -1117,7 +1173,7 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
         if( noGunModel )
           CG_SetAttachmentTag( &cent->muzzlePS->attachment, *parent, parent->hModel, "tag_weapon" );
         else
-          CG_SetAttachmentTag( &cent->muzzlePS->attachment, gun, weapon->weaponModel, "tag_flash" );
+          CG_SetAttachmentTag( &cent->muzzlePS->attachment, gun, gun.hModel, "tag_flash" );
 
         CG_SetAttachmentCent( &cent->muzzlePS->attachment, cent );
         CG_AttachToTag( &cent->muzzlePS->attachment );
@@ -1225,7 +1281,7 @@ void CG_AddViewWeapon( playerState_t *ps )
   else
     fovOffset = 0;
 
-  memset( &hand, 0, sizeof( hand ) );
+  Com_Memset( &hand, 0, sizeof( hand ) );
 
   // set up gun position
   CG_CalculateWeaponPosition( hand.origin, angles );
@@ -1356,7 +1412,7 @@ void CG_DrawItemSelect( rectDef_t *rect, vec4_t color )
     if( !BG_InventoryContainsWeapon( i, cg.snap->ps.stats ) )
       continue;
 
-    if( !ps->ammo[0] && !ps->ammo[1] && !BG_Weapon( i )->infiniteAmmo )
+    if( !ps->ammo && !ps->clips && !BG_Weapon( i )->infiniteAmmo )
       colinfo[ numItems ] = 1;
     else
       colinfo[ numItems ] = 0;
@@ -1675,7 +1731,26 @@ void CG_FireWeapon( centity_t *cent, weaponMode_t weaponMode )
       trap_S_StartSound( NULL, es->number, CHAN_WEAPON, wi->wim[ weaponMode ].flashSound[ c ] );
   }
 }
+/*
+=================
+CG_HandleAlienFeedback
 
+Caused by an EV_ALIEN_HIT, EV_ALIEN_MISS, or EV_ALIEN_TEAMHIT event. Used to cause a ui feedback
+effect for visual information about a hit
+=================
+*/
+void CG_HandleAlienFeedback( centity_t *cent, alienFeedback_t feedbackType )
+{
+        entityState_t     *es;
+
+        es = &cent->currentState;
+
+        // show the alien feedback, if the entity matches this player
+        if(es->number == cg.predictedPlayerState.clientNum) {
+                cg.feedbackAnimation = 1;
+                cg.feedbackAnimationType = feedbackType;
+        }
+}
 
 /*
 =================
@@ -1776,6 +1851,43 @@ void CG_MissileHitPlayer( weapon_t weaponNum, weaponMode_t weaponMode,
 
   if( weapon->wim[ weaponMode ].alwaysImpact )
     CG_MissileHitWall( weaponNum, weaponMode, 0, origin, dir, IMPACTSOUND_FLESH, charge );
+}
+
+/*
+==============
+CG_MassDriverFire
+
+Draws the mass driver trail
+==============
+*/
+
+#define MDRIVER_MUZZLE_OFFSET 48.f
+
+void CG_MassDriverFire( entityState_t *es )
+{
+  vec3_t front, frontToBack;
+  trailSystem_t *ts;
+  float length;
+
+  ts = CG_SpawnNewTrailSystem( cgs.media.massDriverTS );
+  if( !CG_IsTrailSystemValid( &ts ) )
+    return;
+
+  // trail front attaches to the player, needs to be pushed forward a bit
+  // so that it doesn't look like it shot out of the wrong location
+  VectorCopy( es->origin2, front );
+  VectorSubtract( es->pos.trBase, front, frontToBack );
+  length = VectorLength( frontToBack );
+  if( length - MDRIVER_MUZZLE_OFFSET < 0.f )
+    return;
+  VectorScale( frontToBack, 1 / length, frontToBack );
+  VectorMA( front, MDRIVER_MUZZLE_OFFSET, frontToBack, front );
+  CG_SetAttachmentPoint( &ts->frontAttachment, front );
+  CG_AttachToPoint( &ts->frontAttachment );
+
+  // trail back attaches to the impact point
+  CG_SetAttachmentPoint( &ts->backAttachment, es->pos.trBase );
+  CG_AttachToPoint( &ts->backAttachment );
 }
 
 

@@ -345,6 +345,42 @@ static void CG_DrawPlayerCreditsValue( rectDef_t *rect, vec4_t color, qboolean p
 #define AH_MAX_ALPHA  0.8f
 #define AH_ALPHA_DIFF (AH_MAX_ALPHA-AH_MIN_ALPHA)
 
+static void CG_DrawAttackFeedback( rectDef_t *rect )
+{
+        int frame = cg.feedbackAnimation;
+        qhandle_t shader;
+        vec4_t hit_color = { 1, 0, 0, 0.5 };
+        vec4_t miss_color = { 0.3, 0.3, 0.3, 0.5 };
+        vec4_t teamhit_color = { 0.39, 0.80, 0.00, 0.5 };
+
+        //when a new feedback animation event is received, the fame number is set to 1 - so
+        //if it is zero, we don't need to draw anything
+        if ( frame == 0 || !cg_drawAlienFeedback.integer) { //drop out if we aren't currently needing to draw any feedback
+                //Com_Printf(".");
+                return;
+        }
+        else {
+                shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                cg.feedbackAnimation++;
+                if(cg.feedbackAnimation > 10)
+                        cg.feedbackAnimation = 0;
+
+                switch(cg.feedbackAnimationType) {
+                	case AFEEDBACK_HIT:
+                        	trap_R_SetColor( hit_color );
+                        	break;
+                	case AFEEDBACK_MISS:
+                        	trap_R_SetColor( miss_color );
+                        	break;
+                	case AFEEDBACK_TEAMHIT:
+                        	trap_R_SetColor( teamhit_color );
+                        	break;
+                }
+                CG_DrawPic( rect->x, rect->y, rect->w, rect->h, shader );
+                trap_R_SetColor( NULL );
+        }
+}
+
 /*
 ==============
 CG_DrawPlayerStamina1
@@ -598,7 +634,7 @@ static void CG_DrawPlayerPoisonBarbs( rectDef_t *rect, vec4_t color, qhandle_t s
   qboolean      vertical;
   int           iconsize, numBarbs, i;
 
-  numBarbs = ps->ammo[0];
+  numBarbs = ps->ammo;
 
   if( height > width )
   {
@@ -672,7 +708,7 @@ static void CG_DrawPlayerAmmoValue( rectDef_t *rect, vec4_t color )
         break;
 
       default:
-        value = ps->ammo[0];
+        value = ps->ammo;
         break;
     }
 
@@ -804,7 +840,7 @@ static void CG_DrawPlayerClipsValue( rectDef_t *rect, vec4_t color )
       break;
 
     default:
-      value = ps->ammo[1];
+      value = ps->clips;
 
       if( value > -1 )
       {
@@ -1252,11 +1288,11 @@ float CG_GetValue( int ownerDraw )
   {
     case CG_PLAYER_AMMO_VALUE:
       if( weapon )
-        return ps->ammo[0];
+        return ps->ammo;
       break;
     case CG_PLAYER_CLIPS_VALUE:
       if( weapon )
-        return ps->ammo[1];
+        return ps->clips;
       break;
     case CG_PLAYER_HEALTH:
       return ps->stats[ STAT_HEALTH ];
@@ -1559,6 +1595,91 @@ static void CG_DrawFPS( rectDef_t *rect, float text_x, float text_y,
   }
 }
 
+/*
+==================
+CG_DrawSpeed
+==================
+*/
+static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
+                        float scale, vec4_t color,
+                        int textalign, int textvalign, int textStyle )
+{
+  char          *s;
+  float         tx, ty;
+  float         w, h, totalWidth;
+  int           i, strLength;
+  playerState_t *ps;
+  float         speed;
+  static float  speedRecord = 0;
+  static float  previousSpeed = 0;
+  static vec4_t previousColor = { 0, 1, 0, 1 };
+
+  if( cg.snap->ps.pm_type == PM_INTERMISSION )
+    return;
+
+  if( !cg_drawSpeed.integer )
+    return;
+
+  if ( cg_drawSpeed.integer > 1  )
+  {
+    speedRecord = 0;
+    trap_Cvar_Set("cg_drawSpeed", "1");
+  }
+
+  ps = &cg.snap->ps;
+  speed = sqrt( pow( (float)ps->velocity[0], 2) + pow( (float)ps->velocity[1], 2 ) );
+
+  if ( speed > speedRecord )
+    speedRecord = speed;
+
+  if ( floor(speed) > floor(previousSpeed) )
+  {
+    color[0] = 0;
+    color[1] = 1;
+    color[2] = 0;
+    color[3] = 1;
+  }
+  else if( floor(speed) < floor(previousSpeed) )
+  {
+    color[0] = 1;
+    color[1] = 0;
+    color[2] = 0;
+    color[3] = 1;
+  }
+  else
+  {
+    color[0] = previousColor[0];
+    color[1] = previousColor[1];
+    color[2] = previousColor[2];
+    color[3] = previousColor[3];
+  }
+
+  previousColor[0] = color[0];
+  previousColor[1] = color[1];
+  previousColor[2] = color[2];
+  previousColor[3] = color[3];
+
+  previousSpeed = speed;
+
+  s = va( "Speed: %.0f/%.0f", speed, speedRecord );
+  w = UI_Text_Width( "0", scale, 0 );
+  h = UI_Text_Height( "0", scale, 0 );
+  strLength = CG_DrawStrlen( s );
+  totalWidth = UI_Text_Width( FPS_STRING, scale, 0 ) + w * strLength;
+
+  CG_AlignText( rect, s, 0.0f, totalWidth, h, textalign, textvalign, &tx, &ty );
+
+  for( i = 0; i < strLength; i++ )
+  {
+    char c[ 2 ];
+
+    c[ 0 ] = s[ i ];
+    c[ 1 ] = '\0';
+
+    UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, c, 0, 0, textStyle );
+  }
+}
+
 
 /*
 =================
@@ -1608,7 +1729,6 @@ static void CG_DrawTimerSecs( rectDef_t *rect, vec4_t color )
   CG_DrawFieldPadded( rect->x, rect->y, 2, rect->w / 2, rect->h, seconds );
   trap_R_SetColor( NULL );
 }
-
 
 /*
 =================
@@ -2068,9 +2188,9 @@ void CG_DrawWeaponIcon( rectDef_t *rect, vec4_t color )
 
   CG_RegisterWeapon( weapon );
 
-  if( ps->ammo[1] == 0 && !BG_Weapon( weapon )->infiniteAmmo )
+  if( ps->clips == 0 && !BG_Weapon( weapon )->infiniteAmmo )
   {
-    float ammoPercent = (float)ps->ammo[0] / (float)BG_Weapon( weapon )->maxAmmo;
+    float ammoPercent = (float)ps->ammo / (float)BG_Weapon( weapon )->maxAmmo;
 
     if( ammoPercent < 0.33f )
     {
@@ -2112,7 +2232,7 @@ CROSSHAIR
 CG_DrawCrosshair
 =================
 */
-static void CG_DrawCrosshair( void )
+static void CG_DrawCrosshair( rectDef_t *rect, vec4_t color )
 {
   float         w, h;
   qhandle_t     hShader;
@@ -2141,18 +2261,27 @@ static void CG_DrawCrosshair( void )
 
   w = h = wi->crossHairSize * cg_crosshairSize.value;
   w *= cgDC.aspectScale;
-
-  x = cg_crosshairX.integer;
-  y = cg_crosshairY.integer;
-  CG_AdjustFrom640( &x, &y, &w, &h );
+  
+  //FIXME: this still ignores the width/height of the rect, but at least it's
+  //neater than cg_crosshairX/cg_crosshairY
+  x = rect->x + ( rect->w / 2 ) - ( w / 2 );
+  y = rect->y + ( rect->h / 2 ) - ( h / 2 );
 
   hShader = wi->crossHair;
+  
+  //aiming at a friendly player/buildable, dim the crosshair
+  if( cg.time == cg.crosshairClientTime || cg.crosshairBuildable >= 0 )
+  {
+    int i;
+    for( i = 0; i < 3; i++ )
+      color[i] *= .5f;
+  }
 
   if( hShader != 0 )
   {
-    trap_R_DrawStretchPic( x + cg.refdef.x + 0.5 * ( cg.refdef.width - w ),
-      y + cg.refdef.y + 0.5 * ( cg.refdef.height - h ),
-      w, h, 0, 0, 1, 1, hShader );
+    trap_R_SetColor( color );
+    CG_DrawPic( x, y, w, h, hShader );
+    trap_R_SetColor( NULL );
   }
 }
 
@@ -2176,13 +2305,21 @@ static void CG_ScanForCrosshairEntity( void )
   CG_Trace( &trace, start, vec3_origin, vec3_origin, end,
     cg.snap->ps.clientNum, CONTENTS_SOLID|CONTENTS_BODY );
 
-  if( trace.entityNum >= MAX_CLIENTS )
-    return;
-
   // if the player is in fog, don't show it
   content = trap_CM_PointContents( trace.endpos, 0 );
   if( content & CONTENTS_FOG )
     return;
+
+  if( trace.entityNum >= MAX_CLIENTS )
+  {
+    entityState_t *s = &cg_entities[ trace.entityNum ].currentState;
+    if( s->eType == ET_BUILDABLE && BG_Buildable( s->modelindex )->team ==
+        cg.snap->ps.stats[ STAT_TEAM ] )
+      cg.crosshairBuildable = trace.entityNum;
+    else
+      cg.crosshairBuildable = -1;
+    return;
+  }
 
   team = cgs.clientinfo[ trace.entityNum ].team;
 
@@ -2198,6 +2335,31 @@ static void CG_ScanForCrosshairEntity( void )
   cg.crosshairClientTime = cg.time;
 }
 
+
+/*
+=====================
+CG_DrawLocation
+=====================
+*/
+static void CG_DrawLocation( rectDef_t *rect, float scale, int textalign, vec4_t color )
+{
+  const char    *location;
+  centity_t     *locent;
+  float         maxX;
+  float         tx = rect->x, ty = rect->y;
+  maxX = rect->x + rect->w;
+
+  locent = CG_GetLocation( &cg_entities[ cg.clientNum ] );
+  if( locent )
+    location = CG_ConfigString( CS_LOCATIONS + locent->currentState.generic1 );
+  else
+    location = CG_ConfigString( CS_LOCATIONS );
+  if( UI_Text_Width( location, scale, 0 ) < rect->w ) 
+    CG_AlignText( rect, location, scale, 0.0f, 0.0f, textalign, VALIGN_CENTER, &tx, &ty );
+
+  UI_Text_Paint_Limit( &maxX, tx, ty, scale, color, location, 0, 0);
+  trap_R_SetColor( NULL );
+}
 
 /*
 =====================
@@ -2234,6 +2396,109 @@ static void CG_DrawCrosshairNames( rectDef_t *rect, float scale, int textStyle )
   trap_R_SetColor( NULL );
 }
 
+
+/*
+===============
+CG_DrawSquadMarkers
+===============
+*/
+#define SQUAD_MARKER_W        16.f
+#define SQUAD_MARKER_H        8.f
+#define SQUAD_MARKER_BORDER   8.f
+static void CG_DrawSquadMarkers( vec4_t color )
+{
+  centity_t *cent;
+  vec3_t origin;
+  qhandle_t shader;
+  float x, y, w, h, distance, scale, u1 = 0.f, v1 = 0.f, u2 = 1.f, v2 = 1.f;
+  int i;
+  qboolean vertical, flip;
+  
+  if( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
+    return;
+  trap_R_SetColor( color );
+  for( i = 0; i < cg.snap->numEntities; i++ )
+  {
+    cent = cg_entities + cg.snap->entities[ i ].number;
+    if( cent->currentState.eType != ET_PLAYER ||
+        cgs.clientinfo[ cg.snap->entities[ i ].number ].team !=
+        cg.snap->ps.stats[ STAT_TEAM ] ||
+        !cent->pe.squadMarked )
+      continue;
+    
+    // Find where on screen the player is
+    VectorCopy( cent->lerpOrigin, origin );
+    origin[ 2 ] += ( ( cent->currentState.solid >> 16 ) & 255 ) - 30;
+    if( !CG_WorldToScreenWrap( origin, &x, &y ) )
+      continue;
+            
+    // Scale the size of the marker with distance
+    distance = Distance( cent->lerpOrigin, cg.refdef.vieworg );
+    if( !distance )
+      continue;
+    scale = 200.f / distance;
+    if( scale > 1.f )
+      scale = 1.f;
+    if( scale < 0.25f )
+      scale = 0.25f;
+    
+    // Don't let the marker go off-screen
+    vertical = qfalse;
+    flip = qfalse;
+    if( x < SQUAD_MARKER_BORDER )
+    {
+      x = SQUAD_MARKER_BORDER;
+      vertical = qtrue;
+      flip = qfalse;
+    }
+    if( x > 640.f - SQUAD_MARKER_BORDER )
+    {
+      x = 640.f - SQUAD_MARKER_BORDER;
+      vertical = qtrue;
+      flip = qtrue;
+    }
+    if( y < SQUAD_MARKER_BORDER )
+    {
+      y = SQUAD_MARKER_BORDER;
+      vertical = qfalse;
+      flip = qtrue;
+    }
+    if( y > 480.f - SQUAD_MARKER_BORDER )
+    {
+      y = 480.f - SQUAD_MARKER_BORDER;
+      vertical = qfalse;
+      flip = qfalse;
+    }
+    
+	  // Draw the marker
+    if( vertical )
+    {
+      shader = cgs.media.squadMarkerV;
+      if( flip )
+      {
+        u1 = 1.f;
+        u2 = 0.f;
+      }
+      w = SQUAD_MARKER_H * scale;
+      h = SQUAD_MARKER_W * scale;
+    }
+    else
+    {
+      shader = cgs.media.squadMarkerH;
+      if( flip )
+      {
+        v1 = 1.f;
+        v2 = 0.f;
+      }
+      w = SQUAD_MARKER_W * scale;
+      h = SQUAD_MARKER_H * scale;
+    } 
+    CG_AdjustFrom640( &x, &y, &w, &h );
+    trap_R_DrawStretchPic( x - w / 2, y - h / 2, w, h, u1, v1, u2, v2,
+                           shader );
+  }
+  trap_R_SetColor( NULL );
+}
 
 /*
 ===============
@@ -2338,14 +2603,23 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
     case CG_PLAYER_WEAPONICON:
       CG_DrawWeaponIcon( &rect, color );
       break;
+    case CG_PLAYER_ATTACK_FEEDBACK:
+      CG_DrawAttackFeedback( &rect );
+      break;
     case CG_PLAYER_SELECTTEXT:
       CG_DrawItemSelectText( &rect, scale, textStyle );
       break;
     case CG_SPECTATORS:
       CG_DrawTeamSpectators( &rect, scale, textvalign, color, shader );
       break;
+    case CG_PLAYER_LOCATION:
+      CG_DrawLocation( &rect, scale, textalign, color );
+      break;
     case CG_PLAYER_CROSSHAIRNAMES:
       CG_DrawCrosshairNames( &rect, scale, textStyle );
+      break;
+    case CG_PLAYER_CROSSHAIR:
+      CG_DrawCrosshair( &rect, color );
       break;
     case CG_STAGE_REPORT_TEXT:
       CG_DrawStageReport( &rect, text_x, text_y, color, scale, textalign, textvalign, textStyle );
@@ -2355,6 +2629,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
       break;
     case CG_HUMANS_SCORE_LABEL:
       CG_DrawTeamLabel( &rect, TEAM_HUMANS, text_x, text_y, color, scale, textalign, textvalign, textStyle );
+      break;
+    case CG_SQUAD_MARKERS:
+      CG_DrawSquadMarkers( color );
       break;
 
     //loading screen
@@ -2404,6 +2681,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
     case CG_CLOCK:
       CG_DrawClock( &rect, text_x, text_y, scale, color, textalign, textvalign, textStyle );
       break;
+    case CG_SPEED:
+      CG_DrawSpeed( &rect, text_x, text_y, scale, color, textalign, textvalign, textStyle );
+      break;
     case CG_TIMER_MINS:
       CG_DrawTimerMins( &rect, color );
       break;
@@ -2449,17 +2729,17 @@ void CG_MouseEvent( int x, int y )
     return;
   }
 
-  cgs.cursorX += x;
+  cgs.cursorX += ( x * cgDC.aspectScale );
   if( cgs.cursorX < 0 )
     cgs.cursorX = 0;
-  else if( cgs.cursorX > 640 )
-    cgs.cursorX = 640;
+  else if( cgs.cursorX > SCREEN_WIDTH )
+    cgs.cursorX = SCREEN_WIDTH;
 
   cgs.cursorY += y;
   if( cgs.cursorY < 0 )
     cgs.cursorY = 0;
-  else if( cgs.cursorY > 480 )
-    cgs.cursorY = 480;
+  else if( cgs.cursorY > SCREEN_HEIGHT )
+    cgs.cursorY = SCREEN_HEIGHT;
 
   n = Display_CursorType( cgs.cursorX, cgs.cursorY );
   cgs.activeCursor = 0;
@@ -2467,6 +2747,11 @@ void CG_MouseEvent( int x, int y )
     cgs.activeCursor = cgs.media.selectCursor;
   else if( n == CURSOR_SIZER )
     cgs.activeCursor = cgs.media.sizeCursor;
+
+  cgDC.cursordx = x;
+  cgDC.cursordy = y;
+  cgDC.cursorx = cgs.cursorX;
+  cgDC.cursory = cgs.cursorY;
 
   if( cgs.capturedItem )
     Display_MouseMove( cgs.capturedItem, x, y );
@@ -2961,7 +3246,6 @@ static void CG_Draw2D( void )
     if( cg_drawStatus.integer )
       Menu_Paint( menu, qtrue );
 
-    CG_DrawCrosshair( );
   }
   else if( cg_drawStatus.integer )
     Menu_Paint( defaultMenu, qtrue );

@@ -204,6 +204,7 @@ struct gentity_s
   qboolean          spawned;            // whether or not this buildable has finished spawning
   int               shrunkTime;         // time when a barricade shrunk or zero
   int               buildTime;          // when this buildable was built
+  int               animTime;           // last animation change
   int               time1000;           // timer evaluated every second
   qboolean          deconstruct;        // deconstruct if no BP left
   int               deconstructTime;    // time at which structure marked
@@ -279,8 +280,6 @@ typedef struct
   clientList_t      ignoreList;
 } clientSession_t;
 
-#define MAX_NETNAME       36
-
 // data to store details of clients that have abnormally disconnected
 typedef struct connectionRecord_s
 {
@@ -302,7 +301,7 @@ typedef struct
   qboolean            initialSpawn;       // the first spawn should be at a cool location
   qboolean            stickySpec;         // don't stop spectating a player after they get killed
   qboolean            pmoveFixed;         //
-  char                netname[ MAX_NETNAME ];
+  char                netname[ MAX_NAME_LENGTH ];
   int                 maxHealth;          // for handicapping
   int                 enterTime;          // level.time the client entered the game
   int                 location;           // player locations
@@ -321,15 +320,23 @@ typedef struct
   int                 nameChangeTime;
   int                 nameChanges;
 
+  // used to save persistant[] values while in SPECTATOR_FOLLOW mode
+  int                 savedCredit;
+
   // votes
   qboolean            vote;
   qboolean            teamVote;
 
+  // flood protection
+  int                 floodDemerits;
+  int                 floodTime;
+
   vec3_t              lastDeathLocation;
   char                guid[ 33 ];
-  char                ip[ 16 ];
+  char                ip[ 40 ];
   qboolean            muted;
   qboolean            denyBuild;
+  qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 } clientPersistant_t;
@@ -428,6 +435,7 @@ struct gclient_s
   unlagged_t          unlaggedBackup;
   unlagged_t          unlaggedCalc;
   int                 unlaggedTime;
+  qboolean            useUnlagged;  
  
   float               voiceEnthusiasm;
   char                lastVoiceCmd[ MAX_VOICE_CMD_LEN ];
@@ -469,6 +477,15 @@ typedef struct damageRegion_s
   int       minAngle, maxAngle;
   qboolean  crouch;
 } damageRegion_t;
+
+// demo commands
+typedef enum
+{
+    DC_SERVER_COMMAND = -1,
+    DC_CLIENT_SET = 0,
+    DC_CLIENT_REMOVE,
+    DC_SET_STAGE
+} demoCommand_t;
 
 //status of the warning of certain events
 typedef enum
@@ -622,6 +639,8 @@ typedef struct
 
   char              emoticons[ MAX_EMOTICONS ][ MAX_EMOTICON_NAME_LEN ];
   int               emoticonCount;
+
+  demoState_t       demoState;
 } level_locals_t;
 
 #define CMD_CHEAT         0x01
@@ -669,6 +688,8 @@ void      G_LeaveTeam( gentity_t *self );
 void      G_ChangeTeam( gentity_t *ent, team_t newTeam );
 void      G_SanitiseString( char *in, char *out, int len );
 void      G_PrivateMessage( gentity_t *ent );
+void      G_AdminMessage( gentity_t *ent );
+qboolean  G_FloodLimited( gentity_t *ent );
 
 //
 // g_physics.c
@@ -794,6 +815,7 @@ qboolean  G_SelectiveRadiusDamage( vec3_t origin, gentity_t *attacker, float dam
 float     G_RewardAttackers( gentity_t *self );
 void      body_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath );
 void      AddScore( gentity_t *ent, int score );
+void      G_LogDestruction( gentity_t *self, gentity_t *actor, int mod );
 
 void      G_InitDamageLocations( void );
 
@@ -902,10 +924,6 @@ void FireWeapon2( gentity_t *ent );
 void FireWeapon3( gentity_t *ent );
 
 //
-// g_cmds.c
-//
-
-//
 // g_main.c
 //
 void ScoreboardMessage( gentity_t *client );
@@ -914,6 +932,7 @@ void G_MapConfigs( const char *mapname );
 void CalculateRanks( void );
 void FindIntermissionPoint( void );
 void G_RunThink( gentity_t *ent );
+void QDECL G_AdminsPrintf( const char *prefix, const char *fmt, ... );
 void QDECL G_LogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 void QDECL G_Printf( const char *fmt, ... );
@@ -923,6 +942,7 @@ void G_TeamVote( gentity_t *ent, qboolean voting );
 void CheckVote( void );
 void CheckTeamVote( team_t teamnum );
 void LogExit( const char *string );
+void G_DemoCommand( demoCommand_t cmd, const char *string );
 int  G_TimeTilSuddenDeath( void );
 
 //
@@ -940,7 +960,7 @@ void ClientCommand( int clientNum );
 void G_UnlaggedStore( void );
 void G_UnlaggedClear( gentity_t *ent );
 void G_UnlaggedCalc( int time, gentity_t *skipEnt );
-void G_UnlaggedOn( vec3_t muzzle, float range );
+void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range );
 void G_UnlaggedOff( void );
 void ClientThink( int clientNum );
 void ClientEndFrame( gentity_t *ent );
@@ -1129,6 +1149,9 @@ extern  vmCvar_t  g_chatTeamPrefix;
 extern  vmCvar_t  g_debugVoices;
 extern  vmCvar_t  g_voiceChats;
 
+extern  vmCvar_t  g_floodMaxDemerits;
+extern  vmCvar_t  g_floodMinTime;
+
 extern  vmCvar_t  g_shove;
 
 extern  vmCvar_t  g_mapConfigs;
@@ -1147,6 +1170,7 @@ extern  vmCvar_t  g_adminTempBan;
 extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
+extern  vmCvar_t  g_publicAdminMessages;
 
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );
@@ -1196,3 +1220,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
 
 void      trap_SnapVector( float *v );
 void      trap_SendGameStat( const char *data );
+void      trap_DemoCommand( demoCommand_t cmd, const char *string );

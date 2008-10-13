@@ -132,10 +132,15 @@ cvar_t	*r_lodCurveError;
 cvar_t	*r_fullscreen;
 cvar_t	*r_minimize;
 
-cvar_t	*r_mode;
 cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_pixelAspect;
+
+// compatibility
+cvar_t  *r_mode;
+cvar_t  *r_customwidth;
+cvar_t  *r_customheight;
+cvar_t  *r_custompixelAspect;
 
 cvar_t	*r_overBrightBits;
 cvar_t	*r_mapOverBrightBits;
@@ -296,7 +301,8 @@ static void InitOpenGL( void )
 	R_InitCommandBuffers();
 
 	// print info
-	GfxInfo_f();
+	if( com_developer->integer )
+		GfxInfo_f();
 
 	// set default state
 	GL_SetDefaultState();
@@ -813,29 +819,29 @@ void GfxInfo_f( void )
 		"fullscreen"
 	};
 
-	ri.Printf( PRINT_DEVELOPER, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_RENDERER: %s\n", glConfig.renderer_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_VERSION: %s\n", glConfig.version_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	ri.Printf( PRINT_DEVELOPER, "GL_MAX_TEXTURE_UNITS_ARB: %d\n", glConfig.numTextureUnits );
-	ri.Printf( PRINT_DEVELOPER, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
-	ri.Printf( PRINT_DEVELOPER, "MODE: %d x %d %s hz:", glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
+	ri.Printf( PRINT_ALL, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
+	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", glConfig.renderer_string );
+	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", glConfig.version_string );
+	ri.Printf( PRINT_ALL, "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
+	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
+	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_UNITS_ARB: %d\n", glConfig.numTextureUnits );
+	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
+	ri.Printf( PRINT_ALL, "MODE: %d x %d %s hz:", glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
 	if ( glConfig.displayFrequency )
 	{
-		ri.Printf( PRINT_DEVELOPER, "%d\n", glConfig.displayFrequency );
+		ri.Printf( PRINT_ALL, "%d\n", glConfig.displayFrequency );
 	}
 	else
 	{
-		ri.Printf( PRINT_DEVELOPER, "N/A\n" );
+		ri.Printf( PRINT_ALL, "N/A\n" );
 	}
 	if ( glConfig.deviceSupportsGamma )
 	{
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_ALL, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
 	}
 	else
 	{
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_ALL, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
 	}
 
 	// rendering primitives
@@ -843,7 +849,7 @@ void GfxInfo_f( void )
 		int		primitives;
 
 		// default is to use triangles if compiled vertex arrays are present
-		ri.Printf( PRINT_DEVELOPER, "rendering primitives: " );
+		ri.Printf( PRINT_ALL, "rendering primitives: " );
 		primitives = r_primitives->integer;
 		if ( primitives == 0 ) {
 			if ( qglLockArraysEXT ) {
@@ -853,40 +859,40 @@ void GfxInfo_f( void )
 			}
 		}
 		if ( primitives == -1 ) {
-			ri.Printf( PRINT_DEVELOPER, "none\n" );
+			ri.Printf( PRINT_ALL, "none\n" );
 		} else if ( primitives == 2 ) {
-			ri.Printf( PRINT_DEVELOPER, "single glDrawElements\n" );
+			ri.Printf( PRINT_ALL, "single glDrawElements\n" );
 		} else if ( primitives == 1 ) {
-			ri.Printf( PRINT_DEVELOPER, "multiple glArrayElement\n" );
+			ri.Printf( PRINT_ALL, "multiple glArrayElement\n" );
 		} else if ( primitives == 3 ) {
-			ri.Printf( PRINT_DEVELOPER, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
+			ri.Printf( PRINT_ALL, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
 		}
 	}
 
-	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
-	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_DEVELOPER, "texture bits: %d\n", r_texturebits->integer );
-	ri.Printf( PRINT_DEVELOPER, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
-	ri.Printf( PRINT_DEVELOPER, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
-	ri.Printf( PRINT_DEVELOPER, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
-	ri.Printf( PRINT_DEVELOPER, "compressed textures: %s\n", enablestrings[glConfig.textureCompression!=TC_NONE] );
+	ri.Printf( PRINT_ALL, "texturemode: %s\n", r_textureMode->string );
+	ri.Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
+	ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
+	ri.Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
+	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
+	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
+	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression!=TC_NONE] );
 	if ( r_vertexLight->integer || glConfig.hardwareType == GLHW_PERMEDIA2 )
 	{
-		ri.Printf( PRINT_DEVELOPER, "HACK: using vertex lightmap approximation\n" );
+		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RAGEPRO )
 	{
-		ri.Printf( PRINT_DEVELOPER, "HACK: ragePro approximations\n" );
+		ri.Printf( PRINT_ALL, "HACK: ragePro approximations\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RIVA128 )
 	{
-		ri.Printf( PRINT_DEVELOPER, "HACK: riva128 approximations\n" );
+		ri.Printf( PRINT_ALL, "HACK: riva128 approximations\n" );
 	}
 	if ( glConfig.smpActive ) {
-		ri.Printf( PRINT_DEVELOPER, "Using dual processor acceleration\n" );
+		ri.Printf( PRINT_ALL, "Using dual processor acceleration\n" );
 	}
 	if ( r_finish->integer ) {
-		ri.Printf( PRINT_DEVELOPER, "Forcing glFinish\n" );
+		ri.Printf( PRINT_ALL, "Forcing glFinish\n" );
 	}
 }
 
@@ -924,10 +930,14 @@ void R_Register( void )
 	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
 	r_minimize = ri.Cvar_Get( "r_minimize", "0", 0 );
-	r_mode = ri.Cvar_Get( "r_mode", "4", CVAR_ARCHIVE | CVAR_LATCH );
 	r_width = ri.Cvar_Get( "r_width", "800", CVAR_ARCHIVE | CVAR_LATCH );
 	r_height = ri.Cvar_Get( "r_height", "600", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_mode = ri.Cvar_Get( "r_mode", "4", CVAR_ARCHIVE | CVAR_LATCH );
+	Cvar_CheckRange( r_mode, -1, 11, qtrue );
+	r_customwidth = ri.Cvar_Get( "r_customwidth", "800", CVAR_ARCHIVE | CVAR_LATCH );
+	r_customheight = ri.Cvar_Get( "r_customheight", "600", CVAR_ARCHIVE | CVAR_LATCH );
+	r_custompixelAspect = ri.Cvar_Get( "r_custompixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
