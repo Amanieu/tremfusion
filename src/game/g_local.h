@@ -483,7 +483,8 @@ typedef enum
 {
     DC_SERVER_COMMAND = -1,
     DC_CLIENT_SET = 0,
-    DC_CLIENT_REMOVE
+    DC_CLIENT_REMOVE,
+    DC_SET_STAGE
 } demoCommand_t;
 
 //status of the warning of certain events

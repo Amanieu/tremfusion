@@ -263,6 +263,7 @@ void G_ShutdownGame( int restart );
 void CheckExitRules( void );
 void G_DemoSetClient( void );
 void G_DemoRemoveClient( void );
+void G_DemoSetStage( void );
 
 void G_CountSpawns( void );
 void G_CalculateBuildPoints( void );
@@ -327,6 +328,9 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
         break;
       case DC_CLIENT_REMOVE:
         G_DemoRemoveClient( );
+        break;
+      case DC_SET_STAGE:
+        G_DemoSetStage( );
         break;
       }
       return 0;
@@ -1199,6 +1203,8 @@ void G_CalculateStages( void )
   float         humanPlayerCountMod     = level.averageNumHumanClients / PLAYER_COUNT_MOD;
   static int    lastAlienStageModCount  = 1;
   static int    lastHumanStageModCount  = 1;
+  static int    lastAlienStage  = -1;
+  static int    lastHumanStage  = -1;
 
   if( alienPlayerCountMod < 0.1f )
     alienPlayerCountMod = 0.1f;
@@ -1264,6 +1270,15 @@ void G_CalculateStages( void )
       level.humanStage3Time = level.time;
 
     lastHumanStageModCount = g_humanStage.modificationCount;
+  }
+
+  if ( level.demoState == DS_RECORDING &&
+       ( trap_Cvar_VariableIntegerValue( "g_alienStage" ) != lastAlienStage ||
+         trap_Cvar_VariableIntegerValue( "g_humanStage" ) != lastHumanStage ) )
+  {
+    lastAlienStage = trap_Cvar_VariableIntegerValue( "g_alienStage" );
+    lastHumanStage = trap_Cvar_VariableIntegerValue( "g_humanStage" );
+    G_DemoCommand( DC_SET_STAGE, va( "%d %d", lastHumanStage, lastAlienStage ) );
   }
 }
 
@@ -1448,6 +1463,23 @@ void G_DemoRemoveClient( void )
   trap_Argv( 0, buffer, sizeof( buffer ) );
   client = level.clients + atoi( buffer );
   client->pers.demoClient = qfalse;
+}
+
+/*
+============
+G_DemoSetStage
+
+Set the stages in a demo
+============
+*/
+void G_DemoSetStage( void )
+{
+  char buffer[ 2 ];
+
+  trap_Argv( 0, buffer, sizeof( buffer ) );
+  trap_Cvar_Set( "g_humanStage", buffer );
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  trap_Cvar_Set( "g_alienStage", buffer );
 }
 
 
@@ -2394,7 +2426,7 @@ void G_RunFrame( int levelTime )
   start = trap_Milliseconds( );
   ent = &g_entities[ 0 ];
 
-  for( i = 0; i < level.num_entities; i++, ent++ )
+  for( i = 0; i < ( level.demoState == DS_PLAYBACK ? g_maxclients.integer : level.num_entities ); i++, ent++ )
   {
     if( !ent->inuse )
       continue;
