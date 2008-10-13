@@ -921,6 +921,14 @@ static void Cmd_Say_f( gentity_t *ent )
     return;
   }
 
+  // support parsing /a out of say text for the same reason
+  if( !Q_stricmpn( args, "say /a ", 7 ) ||
+      !Q_stricmpn( args, "say_team /a ", 12 ) ) 
+  {
+    G_AdminMessage( ent );
+    return;
+  }
+
   if( trap_Argc( ) < 2 )
     return;
 
@@ -3086,6 +3094,7 @@ commands_t cmds[ ] = {
   { "vsay_local", CMD_MESSAGE|CMD_INTERMISSION },
   { "m", CMD_MESSAGE|CMD_INTERMISSION, G_PrivateMessage },
   { "mt", CMD_MESSAGE|CMD_INTERMISSION, G_PrivateMessage },
+  { "a", CMD_MESSAGE|CMD_INTERMISSION, G_AdminMessage },
 
   { "score", CMD_INTERMISSION, ScoreboardMessage },
 
@@ -3251,8 +3260,11 @@ qboolean G_SayArgv( int n, char *buffer, int bufferLength )
   if( n > 0 )
     return qfalse;
   //memccpy( buffer, s, ' ', bufferLength );
-  while( bufferLength > 1 && *s && *s != ' ' )
+  while( *s && *s != ' ' && bufferLength > 1 )
+  {
     *buffer++ = *s++;
+    bufferLength--;
+  }
   *buffer = 0;
   return qtrue;
 }
@@ -3420,5 +3432,62 @@ void G_PrivateMessage( gentity_t *ent )
     }
     ADMP( va( "%s\n", str ) );
   }
+}
+
+/*
+=================
+G_AdminMessage
+
+Send a message to all active admins
+=================
+*/
+void G_AdminMessage( gentity_t *ent )
+{
+  char cmd[ 12 ];
+  char prefix[ 50 ];
+  char *msg;
+  int skiparg = 0;
+
+  // Check permissions and add the appropriate user [prefix]
+  if( !ent )
+  {
+    Com_sprintf( prefix, sizeof( prefix ), "[CONSOLE]:" );
+  }
+  else if( !G_admin_permission( ent, ADMF_ADMINCHAT ) )
+  {
+    if( !g_publicAdminMessages.integer )
+    {
+      ADMP( "Sorry, but use of /a by non-admins has been disabled.\n" );
+      return;
+    }
+    else
+    {
+      Com_sprintf( prefix, sizeof( prefix ), "[PLAYER]%s" S_COLOR_WHITE ":", ent->client->pers.netname );
+      ADMP( "Your message has been sent to any available admins and to the server logs.\n" );
+    }
+  }
+  else
+  {
+    Com_sprintf( prefix, sizeof( prefix ), "[ADMIN]%s" S_COLOR_WHITE ":", ent->client->pers.netname );
+  }
+
+  // Parse out say/say_team if this was used from one of those 
+  G_SayArgv( 0, cmd, sizeof( cmd ) );
+  if( !Q_stricmp( cmd, "say" ) || !Q_stricmp( cmd, "say_team" ) )
+  {
+    skiparg = 1;
+    G_SayArgv( 1, cmd, sizeof( cmd ) );
+  }
+  if( G_SayArgc( ) < 2 + skiparg )
+  {
+    ADMP( va( "usage: %s [message]\n", cmd ) );
+    return;
+  }
+
+  msg = G_SayConcatArgs( 1 + skiparg );
+
+  // Send it
+  G_AdminsPrintf( prefix, "%s\n", msg );
+
 }
 

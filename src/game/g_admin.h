@@ -56,6 +56,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * ! - admin commands cannot be used on them
  * @ - does not show up as an admin in !listplayers
  * $ - sees all information in !listplayers 
+ * ? - receieves and can send /a admin messages
  */
 #define ADMF_IMMUNITY '1'
 #define ADMF_NOCENSORFLOOD '2' /* TODO */
@@ -71,6 +72,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ADMF_IMMUTABLE '!'
 #define ADMF_INCOGNITO '@'
 #define ADMF_SEESFULLLISTPLAYERS '$'
+#define ADMF_ADMINCHAT '?'
 
 #define MAX_ADMIN_LISTITEMS 20
 #define MAX_ADMIN_SHOWBANS 10
@@ -142,6 +144,7 @@ qboolean G_admin_permission( gentity_t *ent, char flag );
 qboolean G_admin_name_check( gentity_t *ent, char *name, char *err, int len );
 void G_admin_namelog_update( gclient_t *ent, qboolean disconnect );
 int G_admin_level( gentity_t *ent );
+int G_admin_parse_time( const char *time );
 
 // ! command functions
 qboolean G_admin_time( gentity_t *ent, int skiparg );
