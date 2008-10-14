@@ -959,8 +959,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       if( mod == MOD_LEVEL4_TRAMPLE || mod == MOD_LEVEL3_POUNCE ||
           mod == MOD_LEVEL4_CRUSH )
         return;
+      // if dretchpunt is enabled and this is a dretch, do dretchpunt instead of damage
       if( g_dretchPunt.integer &&
-        targ->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_LEVEL0 )
+          targ->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_LEVEL0 )
       {
         vec3_t dir, push;
 
@@ -971,6 +972,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         VectorAdd( targ->client->ps.velocity, push, targ->client->ps.velocity );
         return;
       }
+      // check if friendly fire has been disabled
       else if( !g_friendlyFire.integer )
       {
         if( !g_friendlyFireHumans.integer &&
