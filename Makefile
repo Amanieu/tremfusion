@@ -1493,9 +1493,12 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/client/sys_win32.o \
     $(B)/client/con_win32.o
 else
-  Q3OBJ += \
-    $(B)/client/sys_unix.o \
-    $(B)/client/con_tty.o
+  Q3OBJ += $(B)/client/sys_unix.o
+  ifeq ($(USE_CURSES),1)
+    Q3DOBJ += $(B)/ded/con_curses.o
+  else
+    Q3DOBJ += $(B)/ded/con_tty.o
+  endif
 endif
 
 ifeq ($(USE_MUMBLE),1)
