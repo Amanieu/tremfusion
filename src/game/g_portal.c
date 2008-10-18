@@ -72,7 +72,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	VectorScale(portal->portaldir, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
 	G_UnlaggedClear(other);
-	if (dir[0] || dir[1]) {
+	if (!dir[2]) {
 		vectoangles(dir, angles);
 		G_SetClientViewAngle(other, angles);
 	}
