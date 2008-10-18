@@ -2226,7 +2226,7 @@ int Com_EventLoop( void ) {
 			char *cmd = (char *)ev.evPtr;
 #ifndef DEDICATED
 			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
-				cmd++;
+				Cbuf_AddText( cmd + 1 );
 			else
 				Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
 #else
