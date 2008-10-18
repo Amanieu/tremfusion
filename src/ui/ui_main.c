@@ -2301,9 +2301,9 @@ static void UI_LoadHumanArmouryBuys( void )
         BG_WeaponIsAllowed( i ) &&
         i != uiInfo.weapon )
     {
-      char buffer[ MAX_STRING_CHARS ];
+      char buffer[ MAX_STRING_CHARS ] = "";
       int price = BG_Weapon( i )->price;
-      if( uiInfo.weapon != WP_NONE )
+      if( uiInfo.weapon != WP_NONE && uiInfo.weapon != WP_BLASTER )
       {
         Com_sprintf( buffer, sizeof( buffer ), "cmd sell %s;", BG_Weapon( uiInfo.weapon )->name );
         price -= BG_Weapon( uiInfo.weapon )->price;
