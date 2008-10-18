@@ -100,7 +100,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_REPEATER;
 	VectorCopy(range, portal->r.maxs);
-	VectorSubtract(vec3_origin, range, portal->r.mins);
+	VectorScale(range, -1, portal->r.mins);
 	G_SetOrigin(portal, origin);
 	VectorCopy(normal, portal->portaldir);
 	trap_LinkEntity(portal);
