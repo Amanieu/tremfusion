@@ -252,6 +252,8 @@ struct gentity_s
   qboolean          ownerClear;                     // used for missle tracking
 
   qboolean          pointAgainstWorld;              // don't use the bbox for map collisions
+
+  vec3_t            portaldir;
 };
 
 typedef enum
@@ -339,6 +341,9 @@ typedef struct
   qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
+
+  gentity_t           *portals[2];
+  qboolean            lastportal;
 } clientPersistant_t;
 
 #define MAX_UNLAGGED_MARKERS 10
@@ -1069,6 +1074,14 @@ connectionRecord_t  *G_GenerateNewConnection( gclient_t *client );
 void                G_ResetPTRConnections( void );
 connectionRecord_t  *G_FindConnectionForCode( int code );
 
+//
+// g_portal.c
+//
+void G_Portal_Think( gentity_t *ent );
+void G_Portal_Create( gentity_t *ent, vec3_t origin, vec3_t normal );
+void G_Portal_Clear( gentity_t *ent, int portal );
+void G_Portal_Create_One( gentity_t *ent, vec3_t origin, vec3_t normal );
+void G_Portal_Create_Two( gentity_t *ent, vec3_t origin, vec3_t normal );
 
 //some maxs
 #define MAX_FILEPATH      144
