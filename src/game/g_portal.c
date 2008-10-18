@@ -50,7 +50,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	VectorCopy(portal->r.currentOrigin, origin);
 	VectorCopy(portal->portaldir, dir);
 	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
-	trap_Trace(&tr, origin, NULL, NULL, end, self->s.number, MASK_SHOT);
+	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
 	if (tr.entityNum >= ENTITYNUM_NONE &&
 	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
 	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
@@ -66,7 +66,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	// Teleport!
 	trap_UnlinkEntity(other);
 	speed = VectorLength(other->client->ps.velocity);
-	VectorScale(self->portaldir, speed, other->client->ps.velocity);
+	VectorScale(portal->portaldir, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
 	G_UnlaggedClear(other);
 	if (dir[0] || dir[1]) {
