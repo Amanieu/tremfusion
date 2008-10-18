@@ -51,13 +51,13 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	VectorCopy(portal->portaldir, dir);
 	VectorMA(origin, 100, dir, end);
 	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
-	if (tr.entityNum >= ENTITYNUM_NONE &&
+	if (tr.entityNum != ENTITYNUM_NONE &&
 	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
 	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
 	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
 		return;
 	trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
-	if (tr.entityNum >= ENTITYNUM_NONE &&
+	if (tr.entityNum != ENTITYNUM_NONE &&
 	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
 	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
 	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
@@ -89,7 +89,7 @@ This is used to spawn a portal.
 void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 {
 	gentity_t *portal;
-	vec3_t range = {35.0f, 35.0f, 35.0f};
+	vec3_t range = {15.0f, 15.0f, 15.0f};
 
 	// Create the portal
 	portal = G_Spawn();
