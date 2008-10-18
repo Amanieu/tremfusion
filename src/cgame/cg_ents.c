@@ -366,7 +366,7 @@ static void CG_Teleport( centity_t *cent )
   VectorCopy( cent->lerpOrigin, ent.origin);
   VectorCopy( cent->lerpOrigin, ent.oldorigin);
 
-  ent.hModel = cg_buildables[ s1->modelindex ];
+  ent.hModel = cg_buildables[ s1->modelindex ].models[ 0 ];
 
   // convert angles to axis
   AnglesToAxis( cent->lerpAngles, ent.axis );
