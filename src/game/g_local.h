@@ -448,6 +448,9 @@ struct gclient_s
   int                 lcannonStartTime;
 
   int                 lastCrushTime;        // Tyrant crush
+
+  int                 portaltime;
+  gentity_t           *lastportal;
 };
 
 

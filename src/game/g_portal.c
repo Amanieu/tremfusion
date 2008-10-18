@@ -22,6 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
+#define PORTAL_SHORT_DELAY 200
+#define PORTAL_LONG_DELAY 500
+
 /*
 ===============
 G_Portal_Touch
@@ -42,14 +45,19 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 		portal = self->parent->client->pers.portals[1];
 	else
 		portal = self->parent->client->pers.portals[0];
-
 	if (!portal)
 		return;
+
+	if (self->parent->portaltime < level.time + PORTAL_SHORT_DELAY)
+		return;
+	if (self->parent->portaltime < level.time + PORTAL_LONG_DELAY && self == self->parent->lastportal)
+		return;
+	self->parent->lastportal = self;
 
 	// Check if there is room to spawn
 	VectorCopy(portal->r.currentOrigin, origin);
 	VectorCopy(portal->portaldir, dir);
-	VectorMA(origin, 100, dir, end);
+	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
 	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
 	if (tr.entityNum != ENTITYNUM_NONE &&
 	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
