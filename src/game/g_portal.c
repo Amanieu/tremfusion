@@ -48,11 +48,11 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	if (!portal)
 		return;
 
-	if (self->parent->portaltime < level.time + PORTAL_SHORT_DELAY)
+	if (self->parent->client->portaltime < level.time + PORTAL_SHORT_DELAY)
 		return;
-	if (self->parent->portaltime < level.time + PORTAL_LONG_DELAY && self == self->parent->lastportal)
+	if (self->parent->client->portaltime < level.time + PORTAL_LONG_DELAY && self == self->parent->client->lastportal)
 		return;
-	self->parent->lastportal = self;
+	self->parent->client->lastportal = self;
 
 	// Check if there is room to spawn
 	VectorCopy(portal->r.currentOrigin, origin);
