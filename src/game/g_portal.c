@@ -65,7 +65,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 
 	// Teleport!
 	trap_UnlinkEntity(other);
-	VectorCopy(origin, other->client->ps.origin);
+	VectorCopy(end, other->client->ps.origin);
 	speed = VectorLength(other->client->ps.velocity);
 	VectorScale(portal->portaldir, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
