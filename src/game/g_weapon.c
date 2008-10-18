@@ -473,6 +473,22 @@ void massDriverFire( gentity_t *ent )
   for( i = 0; i < MDRIVER_MAX_HITS && skipent != ENTITYNUM_NONE; i++ )
   {
     trap_Trace( &tr, tr.endpos, NULL, NULL, end, skipent, MASK_SHOT );
+    if( tr.entityNum == ENTITYNUM_WORLD )
+    {
+      if( !ent->portal_1 )
+      {
+        G_Portal_Create_One( ent, tr.endpos, tr.plane.normal );
+      }
+      else if( !ent->portal_2 )
+      {
+        G_Portal_Create_Two( ent, tr.endpos, tr.plane.normal );
+      }
+      else if( ent->portal_1 && ent->portal_2 )
+      {
+        G_Portal_Clear( ent, 0 );
+        G_Portal_Create_One( ent, tr.endpos, tr.plane.normal );
+      }
+    }
     if( tr.surfaceFlags & SURF_NOIMPACT )
       break;
     traceEnt = &g_entities[ tr.entityNum ];
