@@ -636,7 +636,7 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("devmap", SV_Map_f);
 	Cmd_SetCommandCompletionFunc( "devmap", SV_CompleteMapName );
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
-	Cmd_AddCommand ("startRedirect", SV_RedirectClient_f);
+	Cmd_AddCommand ("startRedirect", SV_StartRedirect_f);
 	Cmd_AddCommand ("endRedirect", Com_EndRedirect);
 	Cmd_AddCommand ("demo_record", SV_Demo_Record_f);
 	Cmd_AddCommand ("demo_play", SV_Demo_Play_f);
