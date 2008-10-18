@@ -573,7 +573,7 @@ static void CG_UpdateBeam( trailBeam_t *tb )
         if( !CG_AttachmentPoint( &ts->frontAttachment, i->refPosition ) )
           CG_DestroyTrailSystem( &ts );
       }
-      else
+      else if( i->prev )
         VectorCopy( i->prev->refPosition, i->refPosition );
     }
   }
