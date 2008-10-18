@@ -59,16 +59,10 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	VectorCopy(portal->portaldir, dir);
 	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
 	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
-	if (tr.entityNum != ENTITYNUM_NONE &&
-	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
-	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
-	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
+	if (tr.entityNum != ENTITYNUM_NONE)
 		return;
 	trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
-	if (tr.entityNum != ENTITYNUM_NONE &&
-	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
-	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
-	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
+	if (tr.entityNum != ENTITYNUM_NONE)
 		return;
 
 	// Teleport!
@@ -82,7 +76,6 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 		vectoangles(dir, angles);
 		G_SetClientViewAngle(other, angles);
 	}
-	G_KillBox(other);
 	BG_PlayerStateToEntityState(&other->client->ps, &other->s, qtrue);
 	VectorCopy(other->client->ps.origin, other->r.currentOrigin);
 	trap_LinkEntity(other);
