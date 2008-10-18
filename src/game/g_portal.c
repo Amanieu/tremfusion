@@ -48,9 +48,9 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	if (!portal)
 		return;
 
-	if (self->parent->client->portaltime < level.time + PORTAL_SHORT_DELAY)
+	if (self->parent->client->portaltime + PORTAL_SHORT_DELAY > level.time)
 		return;
-	if (self->parent->client->portaltime < level.time + PORTAL_LONG_DELAY && self == self->parent->client->lastportal)
+	if (self->parent->client->portaltime + PORTAL_LONG_DELAY > level.time && self == self->parent->client->lastportal)
 		return;
 	self->parent->client->lastportal = self;
 
@@ -66,6 +66,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 		return;
 
 	// Teleport!
+	self->parent->client->portaltime = level.time;
 	trap_UnlinkEntity(other);
 	VectorCopy(end, other->client->ps.origin);
 	speed = VectorLength(other->client->ps.velocity);
