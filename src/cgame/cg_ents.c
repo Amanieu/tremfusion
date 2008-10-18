@@ -344,7 +344,7 @@ static void CG_General( centity_t *cent )
 CG_Portal
 ==================
 */
-static void CG_Portal( centity_t *cent )
+static void CG_Teleport( centity_t *cent )
 {
   refEntity_t     ent;
   entityState_t   *s1;
@@ -1076,7 +1076,7 @@ static void CG_AddCEntity( centity_t *cent )
       break;
 
     case ET_TELEPORT_TRIGGER:
-      CG_Portal( cent );
+      CG_Teleport( cent );
       break;
 
     case ET_GENERAL:
