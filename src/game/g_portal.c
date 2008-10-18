@@ -65,6 +65,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 
 	// Teleport!
 	trap_UnlinkEntity(other);
+	VectorCopy(origin, other->client->ps.origin);
 	speed = VectorLength(other->client->ps.velocity);
 	VectorScale(portal->portaldir, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
@@ -88,12 +89,15 @@ This is used to spawn a portal.
 void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 {
 	gentity_t *portal;
+	vec3_t range = {35.0f, 35.0f, 35.0f};
 
 	// Create the portal
 	portal = G_Spawn();
 	portal->r.contents = CONTENTS_TRIGGER;
 	portal->s.eType = ET_TELEPORT_TRIGGER;
 	portal->touch = G_Portal_Touch;
+	VectorCopy(range, portal->r.maxs);
+	VectorSubtract(vec3_origin, range, portal->r.mins);
 	G_SetOrigin(portal, origin);
 	VectorCopy(normal, portal->portaldir);
 	trap_LinkEntity(portal);
