@@ -49,7 +49,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	// Check if there is room to spawn
 	VectorCopy(portal->r.currentOrigin, origin);
 	VectorCopy(portal->portaldir, dir);
-	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
+	VectorMA(origin, 100, dir, end);
 	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
 	if (tr.entityNum >= ENTITYNUM_NONE &&
 	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
@@ -96,6 +96,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 	portal->r.contents = CONTENTS_TRIGGER;
 	portal->s.eType = ET_TELEPORT_TRIGGER;
 	portal->touch = G_Portal_Touch;
+	portal->s.modelindex = BA_H_REPEATER;
 	VectorCopy(range, portal->r.maxs);
 	VectorSubtract(vec3_origin, range, portal->r.mins);
 	G_SetOrigin(portal, origin);
