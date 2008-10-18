@@ -253,12 +253,7 @@ struct gentity_s
 
   qboolean          pointAgainstWorld;              // don't use the bbox for map collisions
 
-  gentity_t	    *portal_1;
-  gentity_t	    *portal_2;
-  vec3_t	    pdir;
-  qboolean	    portalent_1;
-  qboolean	    portalent_2;
-  int livetime;
+  vec3_t            portaldir;
 };
 
 typedef enum
@@ -346,6 +341,9 @@ typedef struct
   qboolean            demoClient;
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
+
+  gentity_t           *portals[2];
+  qboolean            lastportal;
 } clientPersistant_t;
 
 #define MAX_UNLAGGED_MARKERS 10

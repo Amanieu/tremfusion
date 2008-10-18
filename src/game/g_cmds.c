@@ -566,7 +566,8 @@ void G_LeaveTeam( gentity_t *self )
           ent->client->lastPoisonClient == self )
         ent->client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
     }
-    else if( ent->s.eType == ET_MISSILE && ent->r.ownerNum == self->s.number )
+    else if( ( ent->s.eType == ET_MISSILE || ent->s.eType == ET_TELEPORT_TRIGGER ) &&
+             ent->r.ownerNum == self->s.number )
       G_FreeEntity( ent );
   }
 }

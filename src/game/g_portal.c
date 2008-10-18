@@ -24,313 +24,92 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 ===============
-G_Portal_Clear
-This will clear portals defined by the integer "portal".
+G_Portal_Touch
+Send someone over to the other portal.
 ===============
 */
-void G_Portal_Clear( gentity_t *ent, int portal )
+void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 {
-	if( portal == 0 )
-	{
-		// If there is a first portal, clear it
-		if( ent->portal_1 )
-		{
-			G_FreeEntity( ent->portal_1 );
-			ent->portal_1 = NULL;
-		}
-	
-		// If there is a second portal, clear it
-		if( ent->portal_2 )
-		{
-			G_FreeEntity( ent->portal_2 );
-			ent->portal_2 = NULL;
-		}
-		return;
-	}
-	else if( portal == 1 )
-	{
-		// If there is a first portal, clear it
-		if( ent->portal_1 )
-		{
-			G_FreeEntity( ent->portal_1 );
-			ent->portal_1 = NULL;
-		}
-		return;
-	}
-	else if( portal == 2 )
-	{
-		// If there is a second portal, clear it
-		if( ent->portal_2 )
-		{
-			G_FreeEntity( ent->portal_2 );
-			ent->portal_2 = NULL;
-		}
-		return;
-	}
-  // If there is nothing, do nothing?
-  return;
-}
+	gentity_t *portal;
+	vec3_t origin, dir, end, angles;
+	trace_t tr;
+	int speed;
 
-#define  SCAN_RANGE  100
+	if (!other->client)
+		return;
 
-// The portal one think...
-void G_Portal_Think_One( gentity_t *ent )
-{
-	int		entityList[ MAX_GENTITIES ];
- 	int		i, num;
- 	trace_t		tr;
- 	vec3_t		origin, end, dir, angles, mins, maxs, kvel;
-	vec3_t		range = { 35.0f, 35.0f, 35.0f }; // Scanning range!
-	gentity_t	*tent, *traceEnt;
-	float 		len;
-	
-	// Set up a scanning area, so we can tell if anyone is around to teleport
-	VectorAdd( ent->r.currentOrigin, range, maxs );
-	VectorSubtract( ent->r.currentOrigin, range, mins );
-  
-	// If the portal owner has left the game, or if they are not holding the portal gun, kill self
-	if( !ent->parent || !ent->parent->client || ent->parent->client->pers.connected != CON_CONNECTED || ent->parent->client->ps.weapon != WP_MASS_DRIVER )
-	{
-		G_Portal_Clear( ent->parent, 0 );
-		return;
-  	}
-	
-  	if( ent->livetime < level.time )
-	{
-		G_Portal_Clear( ent->parent, 1 );
-		return;
-	}
-	
-	// If we don't have a mate, just wait till we do
-	if( !ent->parent->portal_2 )
-	{
-		ent->nextthink = level.time;
-		return;
-	}
-		
-  	num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
-	for( i = 0; i < num; i++ )
-	{
-  		tent = &g_entities[ entityList[ i ] ];
-		
-		if( !tent->client )
-			continue;
-		
-		// Lets grab this info so we can use it later...
-		VectorCopy( ent->parent->portal_2->r.currentOrigin, origin );
-		VectorCopy( ent->parent->portal_2->pdir, dir );
-	
-		// Lets trace to see where we are going to spawn the entity
-		VectorMA( origin, SCAN_RANGE, dir, end );
-		trap_Trace( &tr, origin, tent->r.mins, tent->r.maxs, end, tent->s.number, MASK_SHOT );
-	
-		// Set the trace entity so we can work with it
-		traceEnt = &g_entities[ tr.entityNum ];
-	
-		// Lets make sure we can go there first!
-		if( tr.fraction < 1.0f )
-		{
-			ent->nextthink = level.time;
-			G_Portal_Clear( ent->parent, 2 );
-			return;
-		}
-		
-		// Copy the end trace to the players origin
-		VectorCopy( tr.endpos, tent->client->ps.origin );
-		
-		// Grab how big the velocity is right now...
-		len = VectorLength( tent->client->ps.velocity );
-		
-		// Lets make sure we aren't on the ground when we change it.
-		if( !( dir[ 2 ] >= 1.0f || ( dir[ 2 ] <= -1.0f ) ) )
-		{
-			// Lets convert the direction to a viewangle and copy to the players viewangle
-			vectoangles( dir, angles );
-			G_SetClientViewAngle( tent, angles );
-		}
-		else
-		{
-			// Cut it a bit for anti-glitch reasons...
-			len /= 1.5;
-		}
-		
-		// Lets scale the velocity and copy to the players
-		VectorScale( dir, len, kvel );
-		VectorCopy( kvel, tent->client->ps.velocity );
-			
-		// Make it look right when the players are teleported to the other portal.
-		tent->client->ps.eFlags ^= EF_TELEPORT_BIT;
-			
-		ent->nextthink = level.time;
-		return;
-	}
-	ent->nextthink = level.time;
-	return;
-}
+	if (self->parent->client->pers.portals[0] == self)
+		portal = self->parent->client->pers.portals[1];
+	else
+		portal = self->parent->client->pers.portals[0];
 
-// The portal two think...
-void G_Portal_Think_Two( gentity_t *ent )
-{
-	int		entityList[ MAX_GENTITIES ];
- 	int		i, num;
- 	trace_t		tr;
- 	vec3_t		origin, end, dir, angles, mins, maxs, kvel;
-	vec3_t		range = { 35.0f, 35.0f, 35.0f }; // Scanning range!
-	gentity_t	*tent, *traceEnt;
-	float 		len;
-	
-	// Set up a scanning area, so we can tell if anyone is around to teleport
-	VectorAdd( ent->r.currentOrigin, range, maxs );
-	VectorSubtract( ent->r.currentOrigin, range, mins );
-  
-	// If the portal owner has left the game, or if they are not holding the portal gun, kill self
-	if( !ent->parent || !ent->parent->client || ent->parent->client->pers.connected != CON_CONNECTED || ent->parent->client->ps.weapon != WP_MASS_DRIVER )
-	{
-		G_Portal_Clear( ent->parent, 0 );
+	if (!portal)
 		return;
-  	}
-	if( ent->livetime < level.time )
-	{
-		G_Portal_Clear( ent->parent, 2 );
+
+	// Check if there is room to spawn
+	VectorCopy(portal->r.currentOrigin, origin);
+	VectorCopy(portal->portaldir, dir);
+	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
+	trap_Trace(&tr, origin, NULL, NULL, end, self->s.number, MASK_SHOT);
+	if (tr.entityNum >= ENTITYNUM_NONE &&
+	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
+	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
+	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
 		return;
+	trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
+	if (tr.entityNum >= ENTITYNUM_NONE &&
+	    (g_entities[tr.entityNum].s.number == ENTITYNUM_WORLD ||
+	     g_entities[tr.entityNum].s.eType == ET_BUILDABLE ||
+	     g_entities[tr.entityNum].s.eType == ET_MOVER ))
+		return;
+
+	// Teleport!
+	trap_UnlinkEntity(other);
+	speed = VectorLength(other->client->ps.velocity);
+	VectorScale(self->portaldir, speed, other->client->ps.velocity);
+	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
+	G_UnlaggedClear(other);
+	if (dir[0] || dir[1]) {
+		vectoangles(dir, angles);
+		G_SetClientViewAngle(other, angles);
 	}
-	
-	// If we don't have a mate, just wait till we do
-	if( !ent->parent->portal_1 )
-	{
-		ent->nextthink = level.time;
-		return;
-	}
-	
-  	num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
-	for( i = 0; i < num; i++ )
-	{
-  		tent = &g_entities[ entityList[ i ] ];
-		
-		if( !tent->client )
-			continue;
-			
-		// Lets grab this info so we can use it later...
-		VectorCopy( ent->parent->portal_1->r.currentOrigin, origin );
-		VectorCopy( ent->parent->portal_1->pdir, dir );
-	
-		// Lets trace to see where we are going to spawn the entity
-		VectorMA( origin, SCAN_RANGE, dir, end );
-		trap_Trace( &tr, origin, tent->r.mins, tent->r.maxs, end, tent->s.number, MASK_SHOT );
-	
-		// Set the trace entity so we can work with it
-		traceEnt = &g_entities[ tr.entityNum ];
-	
-		// Lets make sure we can go there first!
-		if( tr.fraction < 1.0f )
-		{
-			ent->nextthink = level.time;
-			G_Portal_Clear( ent->parent, 1 );
-			return;
-		}
-		
-		// Copy the end trace to the players origin
-		VectorCopy( tr.endpos, tent->client->ps.origin );
-	
-		// Grab how big the velocity is right now...
-		len = VectorLength( tent->client->ps.velocity );
-	
-		
-		// Lets make sure we aren't on the ground when we change it.
-		if( !( dir[ 2 ] >= 1.0f || ( dir[ 2 ] <= -1.0f ) ) )
-		{
-			// Lets convert the direction to a viewangle and copy to the players viewangle
-			vectoangles( dir, angles );
-			G_SetClientViewAngle( tent, angles );
-		}
-		else
-		{
-			// Cut it a bit for anti-glitch reasons...
-			len /= 1.5;
-		}
-		
-		// Lets scale the velocity and copy to the players
-		VectorScale( dir, len, kvel );
-		VectorCopy( kvel, tent->client->ps.velocity );
-			
-		// Make it look right when the players are teleported to the other portal.
-		tent->client->ps.eFlags ^= EF_TELEPORT_BIT;
-			
-		ent->nextthink = level.time;
-		return;
-	}
-	ent->nextthink = level.time;
-	return;
+	G_KillBox(other);
+	BG_PlayerStateToEntityState(&other->client->ps, &other->s, qtrue);
+	VectorCopy(other->client->ps.origin, other->r.currentOrigin);
+	trap_LinkEntity(other);
 }
 
 /*
 ===============
-G_Portal_Create_One
+G_Portal_Create
 This is used to spawn a portal.
 ===============
 */
-void G_Portal_Create_One( gentity_t *ent, vec3_t origin, vec3_t normal )
+void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 {
-  // Make a temp entity and set it's think...
-  ent->portal_1 = G_Spawn( );
-  ent->portal_1->s.modelindex = 1;
-  ent->portal_1->think = G_Portal_Think_One;
-  ent->portal_1->nextthink = level.time + 5;
-	
-  // Move it to the wall it will be placed on
-  VectorCopy( origin, ent->portal_1->s.pos.trBase );
-  VectorCopy( origin, ent->portal_1->r.currentOrigin );
-   	
-  // Set the way it will be tracing
-  VectorCopy( normal, ent->portal_1->pdir );
-  	
-  // Make sure we know its a portal no matter what
-  ent->portal_1->portalent_1 = qtrue;
-  
-  // lets give it a max time to live.
-  ent->portal_1->livetime = level.time + 30000; // 30 seconds?
-  	
-  // Link it to the world!
-  trap_LinkEntity( ent->portal_1 );
-  	
-  // Set its parent for tracking its mate
-  ent->portal_1->parent = ent;
-  
-  return;
-}
+	gentity_t *portal;
 
-/*
-===============
-G_Portal_Create_Two
-This is used to spawn a portal.
-===============
-*/
-void G_Portal_Create_Two( gentity_t *ent, vec3_t origin, vec3_t normal )
-{
-  // Make a temp entity and set it's think...
-  ent->portal_2 = G_Spawn( );
-  ent->portal_2->s.modelindex = 1;
-  ent->portal_2->think = G_Portal_Think_Two;
-  ent->portal_2->nextthink = level.time + 5;
-	
-  // Move it to the wall it will be placed on
-  VectorCopy( origin, ent->portal_2->s.pos.trBase );
-  VectorCopy( origin, ent->portal_2->r.currentOrigin );
-   	
-  // Set the way it will be tracing
-  VectorCopy( normal, ent->portal_2->pdir );
-  	
-  // Make sure we know its a portal no matter what
-  ent->portal_2->portalent_2 = qtrue;
-  
-  // lets give it a max time to live.
-  ent->portal_2->livetime = level.time + 30000; // 30 seconds?
-  	
-  // Link it to the world!
-  trap_LinkEntity( ent->portal_2 );
-  	
-  // Set its parent for tracking it's mate
-  ent->portal_2->parent = ent;
-  
-  return;
+	// Create the portal
+	portal = G_Spawn();
+	portal->r.contents = CONTENTS_TRIGGER;
+	portal->s.eType = ET_TELEPORT_TRIGGER;
+	portal->touch = G_Portal_Touch;
+	G_SetOrigin(portal, origin);
+	VectorCopy(normal, portal->portaldir);
+	trap_LinkEntity(portal);
+
+	// Attach it to the client
+	portal->parent = ent;
+	portal->r.ownerNum = ent->s.clientNum;
+	if (!ent->client->pers.portals[0]) {
+		ent->client->pers.portals[0] = portal;
+		ent->client->pers.lastportal = 0;
+	} else if (!ent->client->pers.portals[1]) {
+		ent->client->pers.portals[1] = portal;
+		ent->client->pers.lastportal = 1;
+	} else {
+		ent->client->pers.lastportal = !ent->client->pers.lastportal;
+		G_FreeEntity(ent->client->pers.portals[ent->client->pers.lastportal]);
+		ent->client->pers.portals[ent->client->pers.lastportal] = portal;
+	}
 }
