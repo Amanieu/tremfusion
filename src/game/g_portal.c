@@ -22,9 +22,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-#define PORTAL_SHORT_DELAY 500
-#define PORTAL_LONG_DELAY 1000
-
 /*
 ===============
 G_Portal_Touch
@@ -58,14 +55,6 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
 	if (tr.entityNum != ENTITYNUM_NONE)
 		return;
-
-	// Check timeout
-	if (self->parent->client->portaltime + PORTAL_SHORT_DELAY > level.time)
-		return;
-	if (self->parent->client->portaltime + PORTAL_LONG_DELAY > level.time && self == self->parent->client->lastportal)
-		return;
-	self->parent->client->lastportal = self;
-	self->parent->client->portaltime = level.time;
 
 	// Teleport!
 	trap_UnlinkEntity(other);
