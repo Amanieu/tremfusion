@@ -310,12 +310,12 @@ void SV_DemoStartRecord(void)
 
 	MSG_Init(&msg, buf, sizeof(buf));
 
-	// Write number of clients (sv_maxclients < MAX_CLIENTS or else we can't playback)
-	MSG_WriteBits(&msg, sv_maxclients->integer, CLIENTNUM_BITS);
 	// Write current time
 	MSG_WriteLong(&msg, sv.time);
 	// Write map name
 	MSG_WriteString(&msg, sv_mapname->string);
+	// Write number of clients (sv_maxclients < MAX_CLIENTS or else we can't playback)
+	MSG_WriteBits(&msg, sv_maxclients->integer, CLIENTNUM_BITS);
 	SV_DemoWriteMessage(&msg);
 
 	// Write client configstrings
