@@ -81,7 +81,8 @@ void multi_trigger( gentity_t *ent, gentity_t *activator )
 
 void Use_Multi( gentity_t *ent, gentity_t *other, gentity_t *activator )
 {
-  multi_trigger( ent, activator );
+  if( activator )
+    multi_trigger( ent, activator );
 }
 
 void Touch_Multi( gentity_t *self, gentity_t *other, trace_t *trace )
