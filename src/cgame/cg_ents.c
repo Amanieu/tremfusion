@@ -341,7 +341,7 @@ static void CG_General( centity_t *cent )
 
 /*
 ==================
-CG_Portal
+CG_Teleport
 ==================
 */
 static void CG_Teleport( centity_t *cent )
