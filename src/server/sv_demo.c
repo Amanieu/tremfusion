@@ -415,7 +415,7 @@ void SV_DemoStartPlayback(void)
 	clients = MSG_ReadBits(&msg, CLIENTNUM_BITS);
 	if (sv_democlients->integer < clients)
 	{
-		int count;
+		int count = 0;
 		// get the number of clients in use
 		for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
 			if ( svs.clients[i].state >= CS_CONNECTED ) {
