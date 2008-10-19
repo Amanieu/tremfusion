@@ -473,6 +473,8 @@ void massDriverFire( gentity_t *ent )
   for( i = 0; i < MDRIVER_MAX_HITS && skipent != ENTITYNUM_NONE; i++ )
   {
     trap_Trace( &tr, tr.endpos, NULL, NULL, end, skipent, MASK_SHOT );
+    if( tr.entityNum == ENTITYNUM_WORLD )
+      G_Portal_Create( ent, tr.endpos, tr.plane.normal );
     if( tr.surfaceFlags & SURF_NOIMPACT )
       break;
     traceEnt = &g_entities[ tr.entityNum ];
