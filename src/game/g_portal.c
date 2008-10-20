@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
+#define PORTAL_RANGE 25.0f
+
 /*
 ===============
 G_Portal_Touch
@@ -47,8 +49,8 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 
 	// Check if there is room to spawn
 	VectorCopy(portal->r.currentOrigin, origin);
-	VectorCopy(portal->portaldir, dir);
-	VectorMA(origin, (other->r.maxs[2] + 10) * M_ROOT3, dir, end);
+	VectorCopy(portal->s.origin2, dir);
+	VectorMA(origin, (other->r.maxs[2] + PORTAL_RANGE + 5) * M_ROOT3, dir, end);
 	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
 	if (tr.entityNum != ENTITYNUM_NONE)
 		return;
@@ -60,7 +62,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	trap_UnlinkEntity(other);
 	VectorCopy(end, other->client->ps.origin);
 	speed = VectorLength(other->client->ps.velocity);
-	VectorScale(portal->portaldir, speed, other->client->ps.velocity);
+	VectorScale(portal->s.origin2, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
 	G_UnlaggedClear(other);
 	if (!dir[2]) {
@@ -81,18 +83,19 @@ This is used to spawn a portal.
 void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 {
 	gentity_t *portal;
-	vec3_t range = {15.0f, 15.0f, 15.0f};
+	vec3_t range = {PORTAL_RANGE, PORTAL_RANGE, PORTAL_RANGE};
 
 	// Create the portal
 	portal = G_Spawn();
 	portal->r.contents = CONTENTS_TRIGGER;
 	portal->s.eType = ET_TELEPORT_TRIGGER;
 	portal->touch = G_Portal_Touch;
-	portal->s.modelindex = BA_H_REPEATER;
+	portal->s.modelindex = BA_H_SPAWN;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
 	G_SetOrigin(portal, origin);
-	VectorCopy(normal, portal->portaldir);
+	VectorCopy(normal, portal->s.origin2);
+	vectoangles(normal, portal->s.angles);
 	trap_LinkEntity(portal);
 
 	// Attach it to the client

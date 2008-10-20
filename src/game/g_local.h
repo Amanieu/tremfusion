@@ -252,8 +252,6 @@ struct gentity_s
   qboolean          ownerClear;                     // used for missle tracking
 
   qboolean          pointAgainstWorld;              // don't use the bbox for map collisions
-
-  vec3_t            portaldir;
 };
 
 typedef enum
