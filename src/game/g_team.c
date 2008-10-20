@@ -63,26 +63,6 @@ team_t G_TeamFromString( char *str )
 }
 
 /*
-================
-G_TeamName
-================
-*/
-char *G_TeamName( team_t team )
-{
-  switch( team )
-  {
-    case TEAM_NONE:
-      return "spectator";
-    case TEAM_ALIENS:
-      return "alien";
-    case TEAM_HUMANS:
-      return "human";
-    default:
-      return "unknown";
-  }
-}
-
-/*
 ==============
 OnSameTeam
 ==============
@@ -211,15 +191,15 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
     G_LogPrintf(
       "team: %i %i %i: %s" S_COLOR_WHITE " left the %ss and joined the %ss\n",
        ent->s.number, newTeam, oldTeam, ent->client->pers.netname,
-       G_TeamName( oldTeam ), G_TeamName( newTeam ) );
+       BG_TeamName( oldTeam ), BG_TeamName( newTeam ) );
   else if( newTeam == TEAM_NONE )
     G_LogPrintf( "team: %i %i %i: %s" S_COLOR_WHITE " left the %ss\n",
       ent->s.number, newTeam, oldTeam, ent->client->pers.netname,
-      G_TeamName( oldTeam ) );
+      BG_TeamName( oldTeam ) );
   else
     G_LogPrintf( "team: %i %i %i: %s" S_COLOR_WHITE " joined the %ss\n",
       ent->s.number, newTeam, oldTeam, ent->client->pers.netname,
-      G_TeamName( newTeam ) );
+      BG_TeamName( newTeam ) );
 
   // log team changes to demo
   Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );

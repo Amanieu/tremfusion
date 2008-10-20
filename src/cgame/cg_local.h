@@ -1719,6 +1719,7 @@ void        CG_EntityEvent( centity_t *cent, vec3_t position );
 void        CG_PainEvent( centity_t *cent, int health );
 void        CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
                 vec3_t origin, vec3_t dir, int entityNum, int charge );
+void        CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci );
 
 
 //
