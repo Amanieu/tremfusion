@@ -1292,3 +1292,5 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
                                  int enthusiasm, int *trackNum );
 
 int BG_LoadEmoticons( char names[ ][ MAX_EMOTICON_NAME_LEN ], int widths[ ] );
+
+char *BG_TeamName( team_t team );

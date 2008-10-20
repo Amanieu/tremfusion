@@ -3895,3 +3895,19 @@ int BG_LoadEmoticons( char names[ ][ MAX_EMOTICON_NAME_LEN ], int widths[ ] )
   return loaded;
 }
 
+/*
+============
+BG_TeamName
+============
+*/
+char *BG_TeamName( team_t team )
+{
+  if( team == TEAM_NONE )
+    return "spectator";
+  if( team == TEAM_ALIENS )
+    return "alien";
+  if( team == TEAM_HUMANS )
+    return "human";
+  return "<team>";
+}
+

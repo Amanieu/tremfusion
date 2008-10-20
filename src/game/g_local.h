@@ -628,6 +628,10 @@ typedef struct
   int               humanStage2Time;
   int               humanStage3Time;
 
+  int               alienStagedownCredits;    //credits at the time the opposing team 
+  int               humanStagedownCredits;   //became vulnerable to a stage-down
+
+
   qboolean          uncondAlienWin;
   qboolean          uncondHumanWin;
   qboolean          alienTeamLocked;
@@ -689,8 +693,6 @@ int       G_SayArgc( void );
 qboolean  G_SayArgv( int n, char *buffer, int bufferLength );
 char      *G_SayConcatArgs( int start );
 void      G_DecolorString( char *in, char *out, int len );
-void      G_LeaveTeam( gentity_t *self );
-void      G_ChangeTeam( gentity_t *ent, team_t newTeam );
 void      G_SanitiseString( char *in, char *out, int len );
 void      G_PrivateMessage( gentity_t *ent );
 void      G_AdminMessage( gentity_t *ent );
@@ -974,7 +976,10 @@ void G_RunClient( gentity_t *ent );
 //
 // g_team.c
 //
+team_t    G_TeamFromString( char *str );
 qboolean  OnSameTeam( gentity_t *ent1, gentity_t *ent2 );
+void      G_LeaveTeam( gentity_t *self );
+void      G_ChangeTeam( gentity_t *ent, team_t newTeam );
 gentity_t *Team_GetLocation( gentity_t *ent );
 qboolean  Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen );
 void      TeamplayInfoMessage( gentity_t *ent );
@@ -1137,13 +1142,13 @@ extern  vmCvar_t  g_alienBuildPoints;
 extern  vmCvar_t  g_humanStage;
 extern  vmCvar_t  g_humanCredits;
 extern  vmCvar_t  g_humanMaxStage;
-extern  vmCvar_t  g_humanStage2Threshold;
-extern  vmCvar_t  g_humanStage3Threshold;
+extern  vmCvar_t  g_humanMaxReachedStage;
+extern  vmCvar_t  g_humanStageThreshold;
 extern  vmCvar_t  g_alienStage;
 extern  vmCvar_t  g_alienCredits;
 extern  vmCvar_t  g_alienMaxStage;
-extern  vmCvar_t  g_alienStage2Threshold;
-extern  vmCvar_t  g_alienStage3Threshold;
+extern  vmCvar_t  g_alienMaxReachedStage;
+extern  vmCvar_t  g_alienStageThreshold;
 
 extern  vmCvar_t  g_unlagged;
 
@@ -1184,6 +1189,8 @@ extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
 extern  vmCvar_t  g_publicAdminMessages;
+
+
 
 void      trap_Print( const char *fmt );
 void      trap_Error( const char *fmt );

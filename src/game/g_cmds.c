@@ -525,115 +525,18 @@ void Cmd_Kill_f( gentity_t *ent )
 }
 
 /*
-==================
-G_LeaveTeam
-==================
-*/
-void G_LeaveTeam( gentity_t *self )
-{
-  team_t    team = self->client->pers.teamSelection;
-  gentity_t *ent;
-  int       i;
-
-  if( team == TEAM_ALIENS )
-    G_RemoveFromSpawnQueue( &level.alienSpawnQueue, self->client->ps.clientNum );
-  else if( team == TEAM_HUMANS )
-    G_RemoveFromSpawnQueue( &level.humanSpawnQueue, self->client->ps.clientNum );
-  else
-  {
-    // might have been following somone so reset
-    if( self->client->sess.spectatorState == SPECTATOR_FOLLOW )
-      G_StopFollowing( self );
-    return;
-  }
-
-  // stop any following clients
-  G_StopFromFollowing( self );
-
-  G_TeamVote( self, qfalse );
-  self->suicideTime = 0;
-
-  for( i = 0; i < level.num_entities; i++ )
-  {
-    ent = &g_entities[ i ];
-    if( !ent->inuse )
-      continue;
-
-    if( ent->client && ent->client->pers.connected == CON_CONNECTED )
-    {
-      // cure poison
-      if( ent->client->ps.stats[ STAT_STATE ] & SS_POISONED &&
-          ent->client->lastPoisonClient == self )
-        ent->client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
-    }
-    else if( ( ent->s.eType == ET_MISSILE || ent->s.eType == ET_TELEPORT_TRIGGER ) &&
-             ent->r.ownerNum == self->s.number )
-      G_FreeEntity( ent );
-  }
-}
-
-/*
-=================
-G_ChangeTeam
-=================
-*/
-void G_ChangeTeam( gentity_t *ent, team_t newTeam )
-{
-  team_t  oldTeam = ent->client->pers.teamSelection;
-  char    buf[ MAX_INFO_STRING ];
-
-  if( oldTeam == newTeam )
-    return;
-
-  G_LeaveTeam( ent );
-  ent->client->pers.teamSelection = newTeam;
-
-
-  ent->client->pers.classSelection = PCL_NONE;
-  ClientSpawn( ent, NULL, NULL, NULL );
-  ent->client->pers.joinedATeam = qtrue;
-  ent->client->pers.teamChangeTime = level.time;
-
-  if( oldTeam == TEAM_NONE )
-  {
-    // ps.persistant[] from a spectator cannot be trusted
-    ent->client->ps.persistant[ PERS_CREDIT ] = ent->client->pers.savedCredit;
-  }
-  // Convert between Alien and Human credits, specs use Alien credits
-  if( oldTeam == TEAM_HUMANS )
-    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
-                                      ALIEN_MAX_CREDITS / HUMAN_MAX_CREDITS + 0.5f );
-  if( newTeam == TEAM_HUMANS )
-    ent->client->ps.persistant[ PERS_CREDIT ] = (int)( ent->client->ps.persistant[ PERS_CREDIT ] *
-                                      HUMAN_MAX_CREDITS / ALIEN_MAX_CREDITS + 0.5f );
-
-  if( newTeam == TEAM_NONE )
-  {
-    // save values before the client enters the spectator team and their
-    // ps.persistant[] values become trashed
-    ent->client->pers.savedCredit = ent->client->ps.persistant[ PERS_CREDIT ];
-  }
-    
-  ClientUserinfoChanged( ent->client->ps.clientNum );
-
-  // log team changes to demo
-  Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
-  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
-}
-
-/*
 =================
 Cmd_Team_f
 =================
 */
 void Cmd_Team_f( gentity_t *ent )
 {
-  team_t  team;
-  team_t  oldteam = ent->client->pers.teamSelection;
-  char    s[ MAX_TOKEN_CHARS ];
-  qboolean force = G_admin_permission(ent, ADMF_FORCETEAMCHANGE);
-  int     aliens = level.numAlienClients;
-  int     humans = level.numHumanClients;
+  team_t    team;
+  team_t    oldteam = ent->client->pers.teamSelection;
+  char      s[ MAX_TOKEN_CHARS ];
+  qboolean  force = G_admin_permission(ent, ADMF_FORCETEAMCHANGE);
+  int       aliens = level.numAlienClients;
+  int       humans = level.numHumanClients;
 
   // stop team join spam
   if( level.time - ent->client->pers.teamChangeTime < 1000 )
@@ -653,95 +556,72 @@ void Cmd_Team_f( gentity_t *ent )
     return;
   }
 
-  if( !Q_stricmp( s, "spectate" ) )
-    team = TEAM_NONE;
-  else if( level.demoState == DS_PLAYBACK )
-  {
-    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
-      "while a demo is being played\n\"" );
-    return;
-  }
-  else if( !force && oldteam == TEAM_NONE && g_maxGameClients.integer &&
-           level.numPlayingClients >= g_maxGameClients.integer )
-  {
-    trap_SendServerCommand( ent-g_entities, va( "print \"The maximum number of "
-      "playing clients has been reached (g_maxGameClients = %d)\n\"",
-      g_maxGameClients.integer ) );
-    return;
-  }
-  else if( !Q_stricmp( s, "aliens" ) )
-  {
-    if( level.alienTeamLocked )
-    {
-      trap_SendServerCommand( ent-g_entities,
-        "print \"Alien team has been ^1LOCKED\n\"" );
-      return;
-    }
-    if( level.humanTeamLocked )
-    {
-      // if only one team has been locked, let people join the other
-      // regardless of balance
-      force = qtrue;
-    }
-
-    if( !force && g_teamForceBalance.integer && aliens > humans )
-    {
-      G_TriggerMenu( ent - g_entities, MN_A_TEAMFULL );
-      return;
-    }
-
-    team = TEAM_ALIENS;
-  }
-  else if( !Q_stricmp( s, "humans" ) )
-  {
-    if( level.humanTeamLocked )
-    {
-      trap_SendServerCommand( ent-g_entities,
-        "print \"Human team has been ^1LOCKED\n\"" );
-      return;
-    }
-    if( level.alienTeamLocked )
-    {
-      // if only one team has been locked, let people join the other
-      // regardless of balance
-      force = qtrue;
-    }
-
-    if( !force && g_teamForceBalance.integer && humans > aliens )
-    {
-      G_TriggerMenu( ent - g_entities, MN_H_TEAMFULL );
-      return;
-    }
-
-    team = TEAM_HUMANS;
-  }
-  else if( !Q_stricmp( s, "auto" ) )
+  if( !Q_stricmp( s, "auto" ) )
   {
     if( level.humanTeamLocked && level.alienTeamLocked )
       team = TEAM_NONE;
-    else if( humans > aliens )
+    else if( level.humanTeamLocked || humans > aliens )
       team = TEAM_ALIENS;
-    else if( humans < aliens )
+    else if( level.alienTeamLocked || aliens > humans )
       team = TEAM_HUMANS;
     else
       team = TEAM_ALIENS + ( rand( ) % 2 );
-
-    if( team == TEAM_ALIENS && level.alienTeamLocked )
-      team = TEAM_HUMANS;
-    else if( team == TEAM_HUMANS && level.humanTeamLocked )
-      team = TEAM_ALIENS;
   }
-  else
+  else switch( G_TeamFromString( s ) )
   {
-    trap_SendServerCommand( ent-g_entities, va( "print \"Unknown team: %s\n\"", s ) );
-    return;
+    case TEAM_NONE:
+      team = TEAM_NONE;
+      break;
+
+    case TEAM_ALIENS:
+      if( level.alienTeamLocked )
+      {
+        trap_SendServerCommand( ent-g_entities,
+          "print \"Alien team has been ^1LOCKED\n\"" );
+        return; 
+      }
+      if( level.humanTeamLocked )
+        force = qtrue;
+
+      if( !force && g_teamForceBalance.integer && aliens > humans )
+      {
+        G_TriggerMenu( ent - g_entities, MN_A_TEAMFULL );
+        return;
+      }
+
+      team = TEAM_ALIENS;
+      break;
+
+    case TEAM_HUMANS:
+      if( level.humanTeamLocked )
+      {
+        trap_SendServerCommand( ent-g_entities,
+          "print \"Human team has been ^1LOCKED\n\"" );
+        return; 
+      }
+      if( level.alienTeamLocked )
+        force = qtrue;
+
+      if( !force && g_teamForceBalance.integer && humans > aliens )
+      {
+        G_TriggerMenu( ent - g_entities, MN_H_TEAMFULL );
+        return;
+      }
+
+      team = TEAM_HUMANS;
+      break;
+
+    default:
+      trap_SendServerCommand( ent-g_entities,
+      va( "print \"Unknown team: %s\n\"", s ) );
+      return;
   }
 
   // stop team join spam
   if( oldteam == team )
     return;
 
-  //guard against build timer exploit
+  // guard against build timer exploit
   if( oldteam != TEAM_NONE && ent->client->sess.spectatorState == SPECTATOR_NOT &&
      ( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0 ||
        ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0_UPG ||
@@ -755,13 +635,8 @@ void Cmd_Team_f( gentity_t *ent )
     return;
   }
 
-
+  // Apply the change
   G_ChangeTeam( ent, team );
-
-  if( team == TEAM_ALIENS )
-    trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE " joined the aliens\n\"", ent->client->pers.netname ) );
-  else if( team == TEAM_HUMANS )
-    trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE " joined the humans\n\"", ent->client->pers.netname ) );
 }
 
 
@@ -821,20 +696,8 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
 
   if( g_chatTeamPrefix.integer )
   {
-    switch( ent->client->pers.teamSelection )
-    {
-      default:
-      case TEAM_NONE:
-        prefix = "[S] ";
-        break;
-
-      case TEAM_ALIENS:
-        prefix = "[A] ";
-        break;
-
-      case TEAM_HUMANS:
-        prefix = "[H] ";
-    }
+    prefix = BG_TeamName( ent->client->pers.teamSelection );
+    prefix = va( "[%c] ", toupper( *prefix ) );
   }
   else
     prefix = "";
