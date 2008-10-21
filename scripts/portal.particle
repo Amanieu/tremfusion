@@ -1,0 +1,196 @@
+models/weapons/portal/blueMissilePS
+{
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/blue
+
+      displacement 0 0 0 ~3.0
+
+      parentVelocityFraction  1.0
+      velocityType      static
+      velocityDir       linear
+      velocityMagnitude 120
+      velocity          0 0 1 ~360
+
+      radius 0 1.0 5.0
+      alpha  0 1.0 0.0
+      bounce 0.1
+
+      lifeTime 1000
+    }
+
+    count infinite
+    delay 0
+    period 50 - ~0%
+  }
+}
+
+models/weapons/portal/redMissilePS
+{
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/red
+
+      displacement 0 0 0 ~3.0
+
+      parentVelocityFraction  1.0
+      velocityType      static
+      velocityDir       linear
+      velocityMagnitude 120
+      velocity          0 0 1 ~360
+
+      radius 0 1.0 5.0
+      alpha  0 1.0 0.0
+      bounce 0.1
+
+      lifeTime 1000
+    }
+
+    count infinite
+    delay 0
+    period 50 - ~0%
+  }
+}
+
+models/weapons/portal/blueImpactPS
+{
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/blue
+
+      displacement 0 0 0 ~2.0
+
+      normalDisplacement 10.0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 200
+      velocity          0 0 0 ~160
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 300
+      acceleration          0 0 -1 0
+
+      radius 0 1.0 5.0
+      alpha  0 1.0 0.0
+      rotation 0 ~360 -
+      bounce 0.8
+
+      lifeTime 2000~1000
+    }
+
+    count 15
+    delay 0
+    period 0 - ~0%
+  }
+
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/blue
+
+      displacement 0 0 0 ~10.0
+
+      normalDisplacement 15.0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 100
+      velocity          0 0 0 ~160
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 150
+      acceleration          0 0 -1 0
+
+      radius 0 25.0 0.0
+      alpha  0 1.0 0.0
+      rotation 0 ~360 -
+      bounce 1.0
+
+      lifeTime 1000~1000
+    }
+
+    count 4
+    delay 0
+    period 0 - ~0%
+  }
+}
+
+
+models/weapons/portal/redImpactPS
+{
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/red
+
+      displacement 0 0 0 ~2.0
+
+      normalDisplacement 10.0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 200
+      velocity          0 0 0 ~160
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 300
+      acceleration          0 0 -1 0
+
+      radius 0 1.0 5.0
+      alpha  0 1.0 0.0
+      rotation 0 ~360 -
+      bounce 0.8
+
+      lifeTime 2000~1000
+    }
+
+    count 15
+    delay 0
+    period 0 - ~0%
+  }
+
+  ejector
+  {
+    particle
+    {
+      shader sync gfx/portal/red
+
+      displacement 0 0 0 ~10.0
+
+      normalDisplacement 15.0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 100
+      velocity          0 0 0 ~160
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 150
+      acceleration          0 0 -1 0
+
+      radius 0 25.0 0.0
+      alpha  0 1.0 0.0
+      rotation 0 ~360 -
+      bounce 1.0
+
+      lifeTime 1000~1000
+    }
+
+    count 4
+    delay 0
+    period 0 - ~0%
+  }
+}

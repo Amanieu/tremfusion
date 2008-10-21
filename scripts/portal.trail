@@ -1,0 +1,46 @@
+models/weapons/portal/trail
+{
+  beam
+  {
+    shader        models/weapons/portal/trail_s
+
+    segments      5
+    width         16.0 0.0
+    alpha         1.0 0.0
+    color         { 0.5 1.0 0.5 } -
+
+    textureType   repeat front 100.0
+
+    jitter        12.0 200
+    jitter        2.0 20
+  }
+
+  beam
+  {
+    shader        models/weapons/portal/trail_s
+
+    segments      5
+    width         16.0 0.0
+    alpha         1.0 0.0
+    color         { 0.5 1.0 0.5 } -
+
+    textureType   repeat front 100.0
+
+    jitter        12.0 150
+    jitter        2.0 30
+  }
+  beam
+  {
+    shader        models/weapons/portal/trail_s
+
+    segments      5
+    width         16.0 0.0
+    alpha         1.0 0.0
+    color         { 0.5 1.0 0.5 } -
+
+    textureType   repeat front 100.0
+
+    jitter        12.0 100
+    jitter        2.0 10
+  }
+}
