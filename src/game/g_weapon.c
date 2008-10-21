@@ -1519,7 +1519,7 @@ void FireWeapon3( gentity_t *ent )
       break;
 
     case WP_PORTAL_GUN:
-      
+      PGChargeClear( ent );
       break;
     default:
       break;
@@ -1554,6 +1554,10 @@ void FireWeapon2( gentity_t *ent )
 
     case WP_LUCIFER_CANNON:
       LCChargeFire( ent, qtrue );
+      break;
+
+    case WP_PORTAL_GUN:
+      PGChargeFire( ent, qtrue );
       break;
 
     case WP_ABUILD:
@@ -1637,6 +1641,9 @@ void FireWeapon( gentity_t *ent )
       break;
     case WP_LUCIFER_CANNON:
       LCChargeFire( ent, qfalse );
+      break;
+    case WP_PORTAL_GUN:
+      PGChargeFire( ent, qfalse );
       break;
     case WP_LAS_GUN:
       lasGunFire( ent );
