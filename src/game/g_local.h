@@ -340,8 +340,7 @@ typedef struct
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 
-  gentity_t           *portals[2];
-  qboolean            lastportal;
+  gentity_t           *portals[PORTAL_NUM];
 } clientPersistant_t;
 
 #define MAX_UNLAGGED_MARKERS 10
@@ -840,6 +839,7 @@ gentity_t *fire_flamer( gentity_t *self, vec3_t start, vec3_t aimdir );
 gentity_t *fire_blaster( gentity_t *self, vec3_t start, vec3_t dir );
 gentity_t *fire_pulseRifle( gentity_t *self, vec3_t start, vec3_t dir );
 gentity_t *fire_luciferCannon( gentity_t *self, vec3_t start, vec3_t dir, int damage, int radius, int speed );
+gentity_t *fire_portalGun( gentity_t *self, vec3_t start, vec3_t dir, portal_t portal );
 gentity_t *fire_lockblob( gentity_t *self, vec3_t start, vec3_t dir );
 gentity_t *fire_paraLockBlob( gentity_t *self, vec3_t start, vec3_t dir );
 gentity_t *fire_slowBlob( gentity_t *self, vec3_t start, vec3_t dir );
@@ -1080,11 +1080,7 @@ connectionRecord_t  *G_FindConnectionForCode( int code );
 //
 // g_portal.c
 //
-void G_Portal_Think( gentity_t *ent );
-void G_Portal_Create( gentity_t *ent, vec3_t origin, vec3_t normal );
-void G_Portal_Clear( gentity_t *ent, int portal );
-void G_Portal_Create_One( gentity_t *ent, vec3_t origin, vec3_t normal );
-void G_Portal_Create_Two( gentity_t *ent, vec3_t origin, vec3_t normal );
+void G_Portal_Create( gentity_t *ent, vec3_t origin, vec3_t normal, portal_t portal );
 
 //some maxs
 #define MAX_FILEPATH      144

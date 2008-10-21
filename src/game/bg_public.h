@@ -352,6 +352,13 @@ typedef enum
 
 typedef enum
 {
+    PORTAL_BLUE,
+    PORTAL_RED,
+    PORTAL_NUM
+} portal_t;
+
+typedef enum
+{
    AFEEDBACK_HIT,
    AFEEDBACK_MISS,
    AFEEDBACK_TEAMHIT,

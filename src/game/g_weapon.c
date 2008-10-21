@@ -473,8 +473,6 @@ void massDriverFire( gentity_t *ent )
   for( i = 0; i < MDRIVER_MAX_HITS && skipent != ENTITYNUM_NONE; i++ )
   {
     trap_Trace( &tr, tr.endpos, NULL, NULL, end, skipent, MASK_SHOT );
-    if( tr.entityNum == ENTITYNUM_WORLD )
-      G_Portal_Create( ent, tr.endpos, tr.plane.normal );
     if( tr.surfaceFlags & SURF_NOIMPACT )
       break;
     traceEnt = &g_entities[ tr.entityNum ];
@@ -790,6 +788,49 @@ void LCChargeFire( gentity_t *ent, qboolean secondary )
                             LCANNON_RADIUS, LCANNON_SPEED );
 
   ent->client->ps.stats[ STAT_MISC ] = 0;
+}
+
+/*
+======================================================================
+
+PORTAL GUN
+
+======================================================================
+*/
+
+/*
+===============
+PGChargeClear
+===============
+*/
+void PGChargeClear( gentity_t *ent )
+{
+  if( ent->client->pers.portals[0] )
+  {
+    G_FreeEntity( ent->client->pers.portals[0] );
+    ent->client->pers.portals[0] = NULL;
+  }
+  if( ent->client->pers.portals[1] )
+  {
+    G_FreeEntity( ent->client->pers.portals[1] );
+    ent->client->pers.portals[1] = NULL;
+  }
+  ent->client->ps.weaponTime = PORTALGUN_REPEAT;
+}
+
+/*
+===============
+PGChargeFire
+===============
+*/
+void PGChargeFire( gentity_t *ent, qboolean secondary )
+{
+  if( secondary )
+    fire_portalGun( ent, muzzle, forward, PORTAL_BLUE );
+  else
+    fire_portalGun( ent, muzzle, forward, PORTAL_RED );
+
+  ent->client->ps.weaponTime = PORTALGUN_REPEAT;
 }
 
 /*
@@ -1477,6 +1518,9 @@ void FireWeapon3( gentity_t *ent )
       slowBlobFire( ent );
       break;
 
+    case WP_PORTAL_GUN:
+      
+      break;
     default:
       break;
   }

@@ -80,7 +80,7 @@ G_Portal_Create
 This is used to spawn a portal.
 ===============
 */
-void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
+void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t portalindex)
 {
 	gentity_t *portal;
 	vec3_t range = {PORTAL_RANGE, PORTAL_RANGE, PORTAL_RANGE};
@@ -91,6 +91,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 	portal->s.eType = ET_TELEPORT_TRIGGER;
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_SPAWN;
+	portal->s.modelindex2 = portalindex;
 	portal->s.frame = 5;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
@@ -101,15 +102,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 	// Attach it to the client
 	portal->parent = ent;
 	portal->r.ownerNum = ent->s.clientNum;
-	if (!ent->client->pers.portals[0]) {
-		ent->client->pers.portals[0] = portal;
-		ent->client->pers.lastportal = 0;
-	} else if (!ent->client->pers.portals[1]) {
-		ent->client->pers.portals[1] = portal;
-		ent->client->pers.lastportal = 1;
-	} else {
-		ent->client->pers.lastportal = !ent->client->pers.lastportal;
-		G_FreeEntity(ent->client->pers.portals[ent->client->pers.lastportal]);
-		ent->client->pers.portals[ent->client->pers.lastportal] = portal;
-	}
+	if (ent->client->pers.portals[portalindex])
+		G_FreeEntity(ent->client->pers.portals[portalindex]);
+	
 }
