@@ -368,8 +368,11 @@ static void CG_Teleport( centity_t *cent )
 
   ent.hModel = cg_buildables[ s1->modelindex ].models[ 0 ];
 
-  // convert angles to axis
-  AnglesToAxis( cent->lerpAngles, ent.axis );
+  // get axis
+  VectorCopy( s1->origin2, ent.axis[ 2 ] );
+  PerpendicularVector( ent.axis[ 1 ], ent.axis[ 2 ] );
+  VectorSubtract( vec3_origin, ent.axis[ 1 ], ent.axis[ 1 ] );
+  CrossProduct( ent.axis[ 2 ], ent.axis[ 1 ], ent.axis[ 0 ] );
 
   // add to refresh list
   trap_R_AddRefEntityToScene( &ent );

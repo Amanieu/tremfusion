@@ -91,11 +91,11 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal)
 	portal->s.eType = ET_TELEPORT_TRIGGER;
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_SPAWN;
+	portal->s.frame = 5;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
 	G_SetOrigin(portal, origin);
 	VectorCopy(normal, portal->s.origin2);
-	vectoangles(normal, portal->s.angles);
 	trap_LinkEntity(portal);
 
 	// Attach it to the client
