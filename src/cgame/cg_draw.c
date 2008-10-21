@@ -1638,7 +1638,7 @@ static void CG_DrawSpeed( rectDef_t *rect, float text_x, float text_y,
   }
 
   ps = &cg.snap->ps;
-  speed = sqrt( pow( (float)ps->velocity[0], 2) + pow( (float)ps->velocity[1], 2 ) );
+  speed = VectorLength( ps->velocity );
 
   if ( speed > speedRecord )
     speedRecord = speed;
