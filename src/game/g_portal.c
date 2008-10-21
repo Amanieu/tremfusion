@@ -104,5 +104,5 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	portal->r.ownerNum = ent->s.clientNum;
 	if (ent->client->pers.portals[portalindex])
 		G_FreeEntity(ent->client->pers.portals[portalindex]);
-	
+	ent->client->pers.portals[portalindex] = portal;
 }
