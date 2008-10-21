@@ -1,10 +1,10 @@
-models/weapons/portal/blueMissilePS
+models/weapons/portalgun/blueMissilePS
 {
   ejector
   {
     particle
     {
-      shader sync gfx/portal/blue
+      shader sync gfx/portalgun/blue
 
       displacement 0 0 0 ~3.0
 
@@ -27,13 +27,13 @@ models/weapons/portal/blueMissilePS
   }
 }
 
-models/weapons/portal/redMissilePS
+models/weapons/portalgun/redMissilePS
 {
   ejector
   {
     particle
     {
-      shader sync gfx/portal/red
+      shader sync gfx/portalgun/red
 
       displacement 0 0 0 ~3.0
 
@@ -56,13 +56,13 @@ models/weapons/portal/redMissilePS
   }
 }
 
-models/weapons/portal/blueImpactPS
+models/weapons/portalgun/blueImpactPS
 {
   ejector
   {
     particle
     {
-      shader sync gfx/portal/blue
+      shader sync gfx/portalgun/blue
 
       displacement 0 0 0 ~2.0
 
@@ -95,7 +95,7 @@ models/weapons/portal/blueImpactPS
   {
     particle
     {
-      shader sync gfx/portal/blue
+      shader sync gfx/portalgun/blue
 
       displacement 0 0 0 ~10.0
 
@@ -126,13 +126,13 @@ models/weapons/portal/blueImpactPS
 }
 
 
-models/weapons/portal/redImpactPS
+models/weapons/portalgun/redImpactPS
 {
   ejector
   {
     particle
     {
-      shader sync gfx/portal/red
+      shader sync gfx/portalgun/red
 
       displacement 0 0 0 ~2.0
 
@@ -165,7 +165,7 @@ models/weapons/portal/redImpactPS
   {
     particle
     {
-      shader sync gfx/portal/red
+      shader sync gfx/portalgun/red
 
       displacement 0 0 0 ~10.0
 
