@@ -40,10 +40,7 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	if (!other->client)
 		return;
 
-	if (self->parent->client->pers.portals[0] == self)
-		portal = self->parent->client->pers.portals[1];
-	else
-		portal = self->parent->client->pers.portals[0];
+	portal = self->parent->client->pers.portals[ !self->s.modelindex2 ];
 	if (!portal)
 		return;
 
@@ -101,7 +98,6 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 
 	// Attach it to the client
 	portal->parent = ent;
-	portal->r.ownerNum = ent->s.clientNum;
 	if (ent->client->pers.portals[portalindex])
 		G_FreeEntity(ent->client->pers.portals[portalindex]);
 	ent->client->pers.portals[portalindex] = portal;

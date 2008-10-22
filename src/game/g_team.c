@@ -122,6 +122,13 @@ void G_LeaveTeam( gentity_t *self )
     else if( ent->s.eType == ET_MISSILE && ent->r.ownerNum == self->s.number )
       G_FreeEntity( ent );
   }
+
+  // clear all portals
+  for( i = 0; i < PORTAL_NUM; i++ )
+  {
+    if( self->client->pers.portals[i] )
+      G_FreeEntity( self->client->pers.portals[i] );
+  }
 }
 
 /*

@@ -552,7 +552,7 @@ gentity_t *fire_portalGun( gentity_t *self, vec3_t start, vec3_t dir, portal_t p
   bolt->s.modelindex2 = portal;
   bolt->r.ownerNum = self->s.number;
   bolt->parent = self;
-  bolt->clipmask = MASK_SHOT;
+  bolt->clipmask = MASK_PLAYERSOLID;
 
   // Give the missile a small bounding box
   bolt->r.mins[ 0 ] = bolt->r.mins[ 1 ] = bolt->r.mins[ 2 ] =
