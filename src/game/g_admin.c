@@ -747,7 +747,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
       {
         Com_sprintf( lname, sizeof( lname ), va( "%%%is",
           Q_PrintStrlen( g_admin_levels[ j ]->name ) - admin_level_maxname -
-          strlen( g_admin_levels[ j ]->name ) ), g_admin_levels[ j ]->name );
+          (int)strlen( g_admin_levels[ j ]->name ) ), g_admin_levels[ j ]->name );
         break;
       }
     }
@@ -799,7 +799,7 @@ static int admin_listadmins( gentity_t *ent, int start, char *search )
       {
         Com_sprintf( lname, sizeof( lname ), va( "%%%is",
           Q_PrintStrlen( g_admin_levels[ j ]->name ) - admin_level_maxname -
-          strlen( g_admin_levels[ j ]->name ) ), g_admin_levels[ j ]->name );
+          (int)strlen( g_admin_levels[ j ]->name ) ), g_admin_levels[ j ]->name );
         break;
       }
     }
@@ -2470,10 +2470,10 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
 
     Com_sprintf( n1, sizeof( n1 ), va( "%%%is",
       Q_PrintStrlen( g_admin_bans[ i ]->name ) - max_name -
-      strlen( g_admin_bans[ i ]->name ) ), g_admin_bans[ i ]->name );
+      (int)strlen( g_admin_bans[ i ]->name ) ), g_admin_bans[ i ]->name );
     Com_sprintf( n2, sizeof( n2 ), va( "%%%is",
       Q_PrintStrlen( g_admin_bans[ i ]->banner ) - max_banner -
-      strlen( g_admin_bans[ i ]->banner ) ), g_admin_bans[ i ]->banner );
+      (int)strlen( g_admin_bans[ i ]->banner ) ), g_admin_bans[ i ]->banner );
 
     ADMBP( va( "%4i %s^7 %-15s %-8s %s^7 %-10s\n     \\__ %s\n",
              ( i + 1 ),
