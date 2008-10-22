@@ -127,7 +127,10 @@ void G_LeaveTeam( gentity_t *self )
   for( i = 0; i < PORTAL_NUM; i++ )
   {
     if( self->client->pers.portals[i] )
+    {
       G_FreeEntity( self->client->pers.portals[i] );
+      self->client->pers.portals[i] = NULL;
+    }
   }
 }
 

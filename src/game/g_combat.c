@@ -256,7 +256,10 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
   for( i = 0; i < PORTAL_NUM; i++ )
   {
     if( self->client->pers.portals[i] )
+    {
       G_FreeEntity( self->client->pers.portals[i] );
+      self->client->pers.portals[i] = NULL;
+    }
   }
 
   // broadcast the death event to everyone
