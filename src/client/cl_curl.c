@@ -227,6 +227,9 @@ static int CL_cURL_CallbackWrite(void *buffer, size_t size, size_t nmemb,
 
 void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 {
+	static char referer[1024];
+	static char useragent[1024];
+
 	clc.cURLUsed = qtrue;
 	Com_Printf("URL: %s\n", remoteURL);
 	Com_DPrintf("***** CL_cURL_BeginDownload *****\n"
@@ -265,10 +268,10 @@ void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 		qcurl_easy_setopt(clc.downloadCURL, CURLOPT_VERBOSE, 1);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_URL, clc.downloadURL);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_TRANSFERTEXT, 0);
-	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_REFERER, va("ioQ3://%s",
-		NET_AdrToString(clc.serverAddress)));
-	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_USERAGENT, va("%s %s",
-		Q3_VERSION, qcurl_version()));
+	Com_sprintf(referer, sizeof(referer), "ioQ3://%s", NET_AdrToString(clc.serverAddress));
+	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_REFERER, referer);
+	Com_sprintf(useragent, sizeof(useragent), "%s %s", Q3_VERSION, qcurl_version());
+	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_USERAGENT, useragent);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_WRITEFUNCTION,
 		CL_cURL_CallbackWrite);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_WRITEDATA, &clc.download);
