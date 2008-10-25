@@ -38,6 +38,9 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	trace_t tr;
 	int speed;
 
+	if (!other->client)
+		return;
+
 	portal = self->parent->client->pers.portals[ !self->s.modelindex2 ];
 	if (!portal)
 		return;
@@ -55,28 +58,17 @@ void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 
 	// Teleport!
 	trap_UnlinkEntity(other);
-	if (other->client)
-	{
-		VectorCopy(end, other->client->ps.origin);
-		speed = VectorLength(other->client->ps.velocity);
-		VectorScale(portal->s.origin2, speed, other->client->ps.velocity);
-		other->client->ps.eFlags ^= EF_TELEPORT_BIT;
-		G_UnlaggedClear(other);
-		if (!dir[2]) {
-			vectoangles(dir, angles);
-			G_SetClientViewAngle(other, angles);
-		}
-		BG_PlayerStateToEntityState(&other->client->ps, &other->s, qtrue);
-		VectorCopy(other->client->ps.origin, other->r.currentOrigin);
+	VectorCopy(end, other->client->ps.origin);
+	speed = VectorLength(other->client->ps.velocity);
+	VectorScale(portal->s.origin2, speed, other->client->ps.velocity);
+	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
+	G_UnlaggedClear(other);
+	if (!dir[2]) {
+		vectoangles(dir, angles);
+		G_SetClientViewAngle(other, angles);
 	}
-	else
-	{
-		VectorCopy(end, other->s.origin);
-		speed = VectorLength(other->s.pos.trDelta);
-		VectorScale(portal->s.origin2, speed, other->s.pos.trDelta);
-		other->s.eFlags ^= EF_TELEPORT_BIT;
-		VectorCopy(other->s.origin, other->r.currentOrigin);
-	}
+	BG_PlayerStateToEntityState(&other->client->ps, &other->s, qtrue);
+	VectorCopy(other->client->ps.origin, other->r.currentOrigin);
 	trap_LinkEntity(other);
 }
 
