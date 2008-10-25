@@ -1949,7 +1949,7 @@ wait 10 seconds before going on.
 */
 void CheckIntermissionExit( void )
 {
-  int       ready, notReady, numPlayers;
+  int       ready, notReady;
   int       i;
   gclient_t *cl;
   byte      readyMasks[ ( MAX_CLIENTS + 7 ) / 8 ];
@@ -1965,7 +1965,6 @@ void CheckIntermissionExit( void )
   // see which players are ready
   ready = 0;
   notReady = 0;
-  numPlayers = 0;
   Com_Memset( readyMasks, 0, sizeof( readyMasks ) );
   for( i = 0; i < g_maxclients.integer; i++ )
   {
@@ -1984,8 +1983,6 @@ void CheckIntermissionExit( void )
     }
     else
       notReady++;
-
-    numPlayers++;
   }
 
   // this is hex because we can convert bits to a hex string in pieces, 
@@ -2009,7 +2006,7 @@ void CheckIntermissionExit( void )
   }
 
   // if nobody wants to go, clear timer
-  if( !ready && numPlayers )
+  if( !ready && notReady )
   {
     level.readyToExit = qfalse;
     return;
