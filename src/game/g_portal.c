@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "g_local.h"
 
 #define PORTAL_RANGE 25.0f
+#define PORTAL_OFFSET 15.0f
 
 /*
 ===============
@@ -91,6 +92,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	portal->s.modelindex2 = portalindex;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
+	VectorMA(origin, PORTAL_OFFSET, normal, origin);
 	G_SetOrigin(portal, origin);
 	VectorCopy(normal, portal->s.origin2);
 	trap_LinkEntity(portal);
