@@ -1492,16 +1492,19 @@ static clientInfo_t * CG_InfoFromScoreIndex( int index, int team, int *scoreInde
 
 static qboolean CG_ClientIsReady( int clientNum )
 {
-  // each character of the hex string corresponds to 4 bits, which correspond
-  // to readiness for client (0, 1, 2, 3...) i.e. the highest order bit
-  // corresponds to the lowest clientnum
-  // so we only need one character for a given client
-  int val = clientNum / 4;
+  // CS_CLIENTS_READY is a hex string, each character of which is 4 bits
+  // the highest bit of the first char is a toggle for client 0, the second
+  // highest for client 1, etc.
+  // there are exactly four bits of information in each character
+  int val;
   const char *s = CG_ConfigString( CS_CLIENTS_READY );
-  while( *s && val > 0 )
-    s++, val--;
-  if( !*s )
-    return qfalse;
+
+  // select the appropriate character without passing the end of the string
+  for( val = clientNum / 4; *s && val > 0; s++, val-- );
+
+  // convert hex -> int
+  // FIXME: replace with sscanf when it supports width conversions (or some
+  // other appropriate library function)
   if( isdigit( *s ) )
     val = *s - '0';
   else if( *s >= 'a' && *s <= 'f' )
@@ -1510,6 +1513,8 @@ static qboolean CG_ClientIsReady( int clientNum )
     val = 10 + *s - 'A';
   else
     return qfalse;
+
+  // select appropriate bit
   return ( ( val & 1 << ( 3 - clientNum % 4 ) ) != 0 );
 }
 

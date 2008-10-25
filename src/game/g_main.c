@@ -1745,9 +1745,9 @@ void QDECL G_AdminsPrintf( const char *prefix, const char *fmt, ... )
   // Send to all appropriate clients
   for( i = 0; i < level.maxclients; i++ )
   {
-    if( G_admin_permission( &g_entities[ i ], ADMF_ADMINCHAT) ) 
+    if( G_admin_permission( &g_entities[ i ], ADMF_ADMINCHAT ) ) 
     {
-       trap_SendServerCommand( i, va( "print \"%s\"", outstring ) ); 
+       trap_SendServerCommand( i, va( "chat \"%s\"", outstring ) ); 
     }
   }
   
@@ -1952,11 +1952,12 @@ void CheckIntermissionExit( void )
   int       ready, notReady;
   int       i;
   gclient_t *cl;
-  byte      readyMasks[ ( MAX_CLIENTS + 7 ) / 8 ];
-  char      readyString[ 2 * sizeof( readyMasks ) + 1 ]; // a byte is 00 - ff
+  byte      readyMasks[ ( MAX_CLIENTS + 7 ) / 8 ];\
+  // each byte in readyMasks will become two characters 00 - ff in the string
+  char      readyString[ 2 * sizeof( readyMasks ) + 1 ];
 
   //if no clients are connected, just exit
-  if( !level.numConnectedClients )
+  if( level.numConnectedClients == 0 )
   {
     ExitLevel( );
     return;
@@ -2006,14 +2007,14 @@ void CheckIntermissionExit( void )
   }
 
   // if nobody wants to go, clear timer
-  if( !ready && notReady )
+  if( ready == 0 && notReady > 0 )
   {
     level.readyToExit = qfalse;
     return;
   }
 
   // if everyone wants to go, go now
-  if( !notReady )
+  if( notReady == 0 )
   {
     ExitLevel( );
     return;
