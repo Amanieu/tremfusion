@@ -88,9 +88,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	portal->r.svFlags = SVF_PORTAL;
 	portal->s.eType = ET_TELEPORTAL;
 	portal->touch = G_Portal_Touch;
-	portal->s.modelindex = BA_H_SPAWN;
 	portal->s.modelindex2 = portalindex;
-	portal->s.frame = 3;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
 	G_SetOrigin(portal, origin);
