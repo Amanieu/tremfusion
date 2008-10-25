@@ -1167,9 +1167,9 @@ void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range )
   if( !g_unlagged.integer )
     return;
 
-  if( !attacker->client->useUnlagged )
+  if( !attacker->client->pers.useUnlagged )
     return;
-
+  
   for( i = 0; i < level.maxclients; i++ )
   {
     ent = &g_entities[ i ];
@@ -1182,7 +1182,7 @@ void G_UnlaggedOn( gentity_t *attacker, vec3_t muzzle, float range )
     if( !ent->r.linked || !( ent->r.contents & CONTENTS_BODY ) )
       continue;
     if( VectorCompare( ent->r.currentOrigin, calc->origin ) )
-      continue;
+      continue;  
     if( muzzle )
     {
       float r1 = Distance( calc->origin, calc->maxs );
@@ -1237,9 +1237,9 @@ static void G_UnlaggedDetectCollisions( gentity_t *ent )
 
   if( !g_unlagged.integer )
     return;
-  if( !ent->client->useUnlagged )
+  if( !ent->client->pers.useUnlagged )
     return;
-
+  
   calc = &ent->client->unlaggedCalc;
 
   // if the client isn't moving, this is not necessary
