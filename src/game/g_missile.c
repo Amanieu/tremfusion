@@ -246,6 +246,53 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace )
 
 
 /*
+============
+G_MissileTouchTriggers
+
+Find all trigger entities that a missile touches.
+============
+*/
+void G_MissileTouchTriggers( gentity_t *ent )
+{
+  int       i, num;
+  int       touch[ MAX_GENTITIES ];
+  gentity_t *hit;
+  trace_t   trace;
+  vec3_t    mins, maxs;
+  static    vec3_t range = { 10, 10, 10 };
+
+  VectorAdd( ent->s.origin, ent->r.mins, mins );
+  VectorAdd( ent->s.origin, ent->r.maxs, maxs );
+
+  VectorSubtract( mins, range, mins );
+  VectorAdd( maxs, range, maxs );
+
+  num = trap_EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+  VectorAdd( ent->s.origin, ent->r.mins, mins );
+  VectorAdd( ent->s.origin, ent->r.maxs, maxs );
+
+  for( i = 0; i < num; i++ )
+  {
+    hit = &g_entities[ touch[ i ] ];
+
+    if( !hit->touch )
+      continue;
+
+    if( !( hit->r.contents & CONTENTS_TRIGGER ) )
+      continue;
+
+    if( !trap_EntityContact( mins, maxs, hit ) )
+      continue;
+
+    memset( &trace, 0, sizeof( trace ) );
+
+    hit->touch( hit, ent, &trace );
+  }
+}
+
+
+/*
 ================
 G_RunMissile
 
@@ -318,6 +365,9 @@ void G_RunMissile( gentity_t *ent )
   ent->r.contents = CONTENTS_SOLID; //trick trap_LinkEntity into...
   trap_LinkEntity( ent );
   ent->r.contents = 0; //...encoding bbox information
+
+  // check triggers
+  G_MissileTouchTriggers( ent );
 
   // check think function after bouncing
   G_RunThink( ent );
