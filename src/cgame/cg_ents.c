@@ -348,24 +348,31 @@ static void CG_Teleportal( centity_t *cent )
 {
   refEntity_t     ent;
   entityState_t   *s1;
-  entityState_t   *s2;
 
   s1 = &cent->currentState;
-  s2 = &cg_entities[ s1->otherEntityNum ].currentState;
 
-  // create the render entity
+  // if set to invisible, skip
+  if( !s1->modelindex )
+    return;
+
   memset( &ent, 0, sizeof( ent ) );
-  VectorCopy( cent->lerpOrigin, ent.origin );
-  VectorCopy( s2->origin, ent.oldorigin );
-  VectorCopy( s2->origin2, ent.axis[ 0 ] );
-  PerpendicularVector( ent.axis[ 1 ], ent.axis[ 0 ] );
 
-  // negating this tends to get the directions like they want
-  // we really should have a camera roll value
+  // set frame
+
+  ent.frame = s1->frame;
+  ent.oldframe = ent.frame;
+  ent.backlerp = 0;
+
+  VectorCopy( cent->lerpOrigin, ent.origin);
+  VectorCopy( cent->lerpOrigin, ent.oldorigin);
+
+  ent.hModel = cg_buildables[ s1->modelindex ].models[ 0 ];
+
+  // get axis
+  VectorCopy( s1->origin2, ent.axis[ 2 ] );
+  PerpendicularVector( ent.axis[ 1 ], ent.axis[ 2 ] );
   VectorSubtract( vec3_origin, ent.axis[ 1 ], ent.axis[ 1 ] );
-
-  CrossProduct( ent.axis[ 0 ], ent.axis[ 1 ], ent.axis[ 2 ] );
-  ent.reType = RT_PORTALSURFACE;
+  CrossProduct( ent.axis[ 2 ], ent.axis[ 1 ], ent.axis[ 0 ] );
 
   // add to refresh list
   trap_R_AddRefEntityToScene( &ent );
