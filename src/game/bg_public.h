@@ -1170,6 +1170,8 @@ typedef enum
 
   ET_LOCATION,
 
+  ET_TELEPORTAL,
+
   ET_MISSILE,
   ET_MOVER,
   ET_BEAM,

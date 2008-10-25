@@ -341,10 +341,10 @@ static void CG_General( centity_t *cent )
 
 /*
 ==================
-CG_Teleport
+CG_Teleportal
 ==================
 */
-static void CG_Teleport( centity_t *cent )
+static void CG_Teleportal( centity_t *cent )
 {
   refEntity_t     ent;
   entityState_t   *s1;
@@ -1076,10 +1076,11 @@ static void CG_AddCEntity( centity_t *cent )
 
     case ET_INVISIBLE:
     case ET_PUSH_TRIGGER:
+    case ET_TELEPORT_TRIGGER:
       break;
 
-    case ET_TELEPORT_TRIGGER:
-      CG_Teleport( cent );
+    case ET_TELEPORTAL:
+      CG_Teleportal( cent );
       break;
 
     case ET_GENERAL:

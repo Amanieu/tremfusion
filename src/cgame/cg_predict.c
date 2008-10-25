@@ -65,7 +65,8 @@ void CG_BuildSolidList( void )
     cent = &cg_entities[ snap->entities[ i ].number ];
     ent = &cent->currentState;
 
-    if( ent->eType == ET_ITEM || ent->eType == ET_PUSH_TRIGGER || ent->eType == ET_TELEPORT_TRIGGER )
+    if( ent->eType == ET_ITEM || ent->eType == ET_PUSH_TRIGGER ||
+        ent->eType == ET_TELEPORT_TRIGGER || ent->eType == ET_TELEPORTAL )
     {
       cg_triggerEntities[ cg_numTriggerEntities ] = cent;
       cg_numTriggerEntities++;
@@ -387,7 +388,7 @@ static void CG_TouchTriggerPrediction( void )
     if( !trace.startsolid )
       continue;
 
-    if( ent->eType == ET_TELEPORT_TRIGGER )
+    if( ent->eType == ET_TELEPORT_TRIGGER || ent->eType == ET_TELEPORTAL )
       cg.hyperspace = qtrue;
   }
 }

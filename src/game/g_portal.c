@@ -85,11 +85,12 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	// Create the portal
 	portal = G_Spawn();
 	portal->r.contents = CONTENTS_TRIGGER;
-	portal->s.eType = ET_TELEPORT_TRIGGER;
+	portal->r.svFlags = SVF_PORTAL;
+	portal->s.eType = ET_TELEPORTAL;
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_SPAWN;
 	portal->s.modelindex2 = portalindex;
-	portal->s.frame = 5;
+	portal->s.frame = 3;
 	VectorCopy(range, portal->r.maxs);
 	VectorScale(range, -1, portal->r.mins);
 	G_SetOrigin(portal, origin);
@@ -101,4 +102,13 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	if (ent->client->pers.portals[portalindex])
 		G_FreeEntity(ent->client->pers.portals[portalindex]);
 	ent->client->pers.portals[portalindex] = portal;
+
+	// Identify with the other portal
+	if (ent->client->pers.portals[!portalindex])
+	{
+		portal->s.otherEntityNum = ent->client->pers.portals[!portalindex]->s.number;
+		ent->client->pers.portals[!portalindex]->s.otherEntityNum = portal->s.number;
+	}
+	else
+		portal->s.otherEntityNum = -1;
 }
