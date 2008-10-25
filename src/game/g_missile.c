@@ -282,8 +282,8 @@ void G_MissileTouchTriggers( gentity_t *ent )
     if( !( hit->r.contents & CONTENTS_TRIGGER ) )
       continue;
 
-    if( !trap_EntityContact( mins, maxs, hit ) )
-      continue;
+//    if( !trap_EntityContact( mins, maxs, hit ) )
+//      continue;
 
     memset( &trace, 0, sizeof( trace ) );
 
