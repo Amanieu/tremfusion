@@ -2358,7 +2358,8 @@ static void PM_GroundTrace( void )
     // communicate the fall velocity to the server
     pm->pmext->fallVelocity = pml.previous_velocity[ 2 ];
 
-    if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_TAKESFALLDAMAGE ) )
+    if( BG_ClassHasAbility( pm->ps->stats[ STAT_CLASS ], SCA_TAKESFALLDAMAGE ) &&
+        !( trace->contents & CONTENTS_TELEPORTER ) )
       PM_CrashLand( );
   }
 
