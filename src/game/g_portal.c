@@ -22,7 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-#define PORTAL_RANGE 20.0f
+#define PORTAL_MINRANGE 20.0f
+#define PORTAL_MAXRANGE 100.0f
 #define PORTAL_OFFSET 4.0f
 
 /*
@@ -54,7 +55,7 @@ static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	gentity_t *portal;
 	vec3_t origin, dir, end, angles;
 	trace_t tr;
-	int speed;
+	int speed, i;
 
 	if (!other->client)
 		return;
@@ -66,12 +67,16 @@ static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	// Check if there is room to spawn
 	VectorCopy(portal->r.currentOrigin, origin);
 	VectorCopy(portal->s.origin2, dir);
-	VectorMA(origin, (other->r.maxs[2] + PORTAL_RANGE + 5) * M_ROOT3, dir, end);
-	trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
-	if (tr.entityNum != ENTITYNUM_NONE)
-		return;
-	trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
-	if (tr.entityNum != ENTITYNUM_NONE)
+	for (i = PORTAL_MINRANGE; i < PORTAL_MAXRANGE; i++) {
+		VectorMA(origin, i, dir, end);
+		trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
+		if (tr.fraction != 1.0f)
+			return;
+		trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
+		if (tr.fraction == 1.0f)
+			break;
+	}
+	if (i == PORTAL_MAXRANGE)
 		return;
 
 	// Teleport!
@@ -99,7 +104,7 @@ This is used to spawn a portal.
 void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t portalindex)
 {
 	gentity_t *portal;
-	vec3_t range = {PORTAL_RANGE, PORTAL_RANGE, PORTAL_RANGE};
+	vec3_t range = {PORTAL_MINRANGE, PORTAL_MINRANGE, PORTAL_MINRANGE};
 
 	// Create the portal
 	portal = G_Spawn();
@@ -122,11 +127,9 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	ent->client->pers.portals[portalindex] = portal;
 
 	// Identify with the other portal
-	if (ent->client->pers.portals[!portalindex])
-	{
+	if (ent->client->pers.portals[!portalindex]) {
 		portal->s.otherEntityNum = ent->client->pers.portals[!portalindex]->s.number;
 		ent->client->pers.portals[!portalindex]->s.otherEntityNum = portal->s.number;
-	}
-	else
+	} else
 		portal->s.otherEntityNum = -1;
 }
