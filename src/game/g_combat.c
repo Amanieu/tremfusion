@@ -253,14 +253,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
     BG_DeactivateUpgrade( i, self->client->ps.stats );
 
   // clear all portals
-  for( i = 0; i < PORTAL_NUM; i++ )
-  {
-    if( self->client->pers.portals[i] )
-    {
-      G_FreeEntity( self->client->pers.portals[i] );
-      self->client->pers.portals[i] = NULL;
-    }
-  }
+  G_Portal_Clear( self, PORTAL_BLUE );
+  G_Portal_Clear( self, PORTAL_RED );
 
   // broadcast the death event to everyone
   ent = G_TempEntity( self->r.currentOrigin, EV_OBITUARY );

@@ -1082,6 +1082,7 @@ connectionRecord_t  *G_FindConnectionForCode( int code );
 // g_portal.c
 //
 void G_Portal_Create( gentity_t *ent, vec3_t origin, vec3_t normal, portal_t portal );
+void G_Portal_Clear( gentity_t *parent, portal_t portalindex );
 
 //some maxs
 #define MAX_FILEPATH      144

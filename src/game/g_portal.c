@@ -27,11 +27,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 ===============
+G_Portal_Clear
+Delete a portal
+===============
+*/
+void G_Portal_Clear(gentity_t *parent, portal_t portalindex)
+{
+	gentity_t *self = parent->client->pers.portals[portalindex];
+	gentity_t *other = parent->client->pers.portals[!portalindex];
+	if (!self)
+		return;
+	if (other)
+		other->s.otherEntityNum = -1;
+	G_FreeEntity(self);
+	parent->client->pers.portals[portalindex] = NULL;
+}
+
+/*
+===============
 G_Portal_Touch
 Send someone over to the other portal.
 ===============
 */
-void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
+static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 {
 	gentity_t *portal;
 	vec3_t origin, dir, end, angles;
@@ -99,9 +117,8 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	trap_LinkEntity(portal);
 
 	// Attach it to the client
+	G_Portal_Clear(ent, portalindex);
 	portal->parent = ent;
-	if (ent->client->pers.portals[portalindex])
-		G_FreeEntity(ent->client->pers.portals[portalindex]);
 	ent->client->pers.portals[portalindex] = portal;
 
 	// Identify with the other portal
