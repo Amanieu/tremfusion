@@ -805,16 +805,9 @@ PGChargeClear
 */
 void PGChargeClear( gentity_t *ent )
 {
-  if( ent->client->pers.portals[0] )
-  {
-    G_FreeEntity( ent->client->pers.portals[0] );
-    ent->client->pers.portals[0] = NULL;
-  }
-  if( ent->client->pers.portals[1] )
-  {
-    G_FreeEntity( ent->client->pers.portals[1] );
-    ent->client->pers.portals[1] = NULL;
-  }
+  // clear all portals
+  G_Portal_Clear( ent, PORTAL_BLUE );
+  G_Portal_Clear( ent, PORTAL_RED );
   ent->client->ps.weaponTime = PORTALGUN_REPEAT;
 }
 
