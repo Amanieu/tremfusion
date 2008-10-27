@@ -22,8 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "g_local.h"
 
-#define PORTAL_RANGE 25.0f
-#define PORTAL_OFFSET 15.0f
+#define PORTAL_RANGE 20.0f
+#define PORTAL_OFFSET 4.0f
 
 /*
 ===============
@@ -103,7 +103,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 
 	// Create the portal
 	portal = G_Spawn();
-	portal->r.contents = CONTENTS_TRIGGER | CONTENTS_BODY | CONTENTS_TELEPORTER;
+	portal->r.contents = CONTENTS_TRIGGER | CONTENTS_PLAYERCLIP | CONTENTS_TELEPORTER;
 	portal->s.eType = ET_TELEPORTAL;
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_SPAWN;
