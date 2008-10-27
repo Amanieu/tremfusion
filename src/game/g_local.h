@@ -340,8 +340,6 @@ typedef struct
   int                 adminLevel;
   char                voice[ MAX_VOICE_NAME_LEN ];
 
-  gentity_t           *portals[PORTAL_NUM];
-
   qboolean            useUnlagged;  
 } clientPersistant_t;
 
@@ -446,6 +444,8 @@ struct gclient_s
   int                 lcannonStartTime;
 
   int                 lastCrushTime;        // Tyrant crush
+
+  gentity_t           *portals[PORTAL_NUM];
 };
 
 

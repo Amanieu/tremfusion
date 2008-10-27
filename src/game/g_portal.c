@@ -34,14 +34,14 @@ Delete a portal
 */
 void G_Portal_Clear(gentity_t *parent, portal_t portalindex)
 {
-	gentity_t *self = parent->client->pers.portals[portalindex];
-	gentity_t *other = parent->client->pers.portals[!portalindex];
+	gentity_t *self = parent->client->portals[portalindex];
+	gentity_t *other = parent->client->portals[!portalindex];
 	if (!self)
 		return;
 	if (other)
 		other->s.otherEntityNum = -1;
 	G_FreeEntity(self);
-	parent->client->pers.portals[portalindex] = NULL;
+	parent->client->portals[portalindex] = NULL;
 }
 
 /*
@@ -60,7 +60,7 @@ static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	if (!other->client)
 		return;
 
-	portal = self->parent->client->pers.portals[ !self->s.modelindex2 ];
+	portal = self->parent->client->portals[ !self->s.modelindex2 ];
 	if (!portal)
 		return;
 
@@ -124,12 +124,12 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	// Attach it to the client
 	G_Portal_Clear(ent, portalindex);
 	portal->parent = ent;
-	ent->client->pers.portals[portalindex] = portal;
+	ent->client->portals[portalindex] = portal;
 
 	// Identify with the other portal
-	if (ent->client->pers.portals[!portalindex]) {
-		portal->s.otherEntityNum = ent->client->pers.portals[!portalindex]->s.number;
-		ent->client->pers.portals[!portalindex]->s.otherEntityNum = portal->s.number;
+	if (ent->client->portals[!portalindex]) {
+		portal->s.otherEntityNum = ent->client->portals[!portalindex]->s.number;
+		ent->client->portals[!portalindex]->s.otherEntityNum = portal->s.number;
 	} else
 		portal->s.otherEntityNum = -1;
 }
