@@ -108,7 +108,7 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 
 	// Create the portal
 	portal = G_Spawn();
-	portal->r.contents = CONTENTS_TRIGGER | CONTENTS_SOLID | CONTENTS_TELEPORTER;
+	portal->r.contents = CONTENTS_TRIGGER | CONTENTS_TELEPORTER;
 	portal->s.eType = ET_TELEPORTAL;
 	portal->touch = G_Portal_Touch;
 	portal->s.modelindex = BA_H_SPAWN;
