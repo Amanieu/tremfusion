@@ -184,6 +184,7 @@ vmCvar_t  cg_disableUpgradeDialogs;
 vmCvar_t  cg_disableBuildDialogs;
 vmCvar_t  cg_disableCommandDialogs;
 vmCvar_t  cg_disableScannerPlane;
+vmCvar_t  cg_scannerPredict;
 vmCvar_t  cg_tutorial;
 
 vmCvar_t  cg_painBlendUpRate;
@@ -299,6 +300,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_disableBuildDialogs, "cg_disableBuildDialogs", "0", CVAR_ARCHIVE },
   { &cg_disableCommandDialogs, "cg_disableCommandDialogs", "0", CVAR_ARCHIVE },
   { &cg_disableScannerPlane, "cg_disableScannerPlane", "0", CVAR_ARCHIVE },
+  { &cg_scannerPredict, "cg_scannerPredict", "1", CVAR_ARCHIVE },
   { &cg_tutorial, "cg_tutorial", "1", CVAR_ARCHIVE },
   { &cg_hudFiles, "cg_hudFiles", "ui/hud.txt", CVAR_ARCHIVE},
   { &cg_hudFilesEnable, "cg_hudFilesEnable", "0", CVAR_ARCHIVE},

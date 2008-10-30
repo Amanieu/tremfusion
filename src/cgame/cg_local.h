@@ -1530,6 +1530,7 @@ extern  vmCvar_t    cg_disableUpgradeDialogs;
 extern  vmCvar_t    cg_disableBuildDialogs;
 extern  vmCvar_t    cg_disableCommandDialogs;
 extern  vmCvar_t    cg_disableScannerPlane;
+extern  vmCvar_t    cg_scannerPredict;
 extern  vmCvar_t    cg_tutorial;
 
 extern  vmCvar_t    cg_painBlendUpRate;
@@ -1771,6 +1772,7 @@ void        CG_DrawItemSelectText( rectDef_t *rect, float scale, int textStyle )
 //
 void        CG_UpdateEntityPositions( void );
 void        CG_Scanner( rectDef_t *rect, qhandle_t shader, vec4_t color );
+void        CG_ScannerPredict( void );
 void        CG_AlienSense( rectDef_t *rect );
 
 //

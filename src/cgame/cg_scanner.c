@@ -298,7 +298,7 @@ void CG_Scanner( rectDef_t *rect, qhandle_t shader, vec4_t color )
       CG_DrawBlips( rect, relOrigin, hIbelow );
   }
 
-  //draw alien buildables below scanner plane
+  //draw alien clients below scanner plane
   for( i = 0; i < entityPositions.numAlienClients; i++ )
   {
     VectorClear( relOrigin );
@@ -353,5 +353,97 @@ void CG_Scanner( rectDef_t *rect, qhandle_t shader, vec4_t color )
 
     if( VectorLength( relOrigin ) < HELMET_RANGE && ( relOrigin[ 2 ] > 0 ) )
       CG_DrawBlips( rect, relOrigin, aIabove );
+  }
+}
+
+/*
+=============
+CG_ScannerPredict
+
+When using a non-hitscan ranged weapon, the helmet helps you aiming moving aliens
+=============
+*/
+void CG_ScannerPredict( )
+{
+  int i;
+  centity_t *cent;
+  entityState_t *es;
+
+  int speed;
+  float final_time, time1, time2;
+  vec3_t pos, predicted_pos;
+  float a, b, c, delta, delta_root; //Used to resolve the equation
+  refEntity_t pmodel;
+
+  //FIXME: Nicer way to do this?
+  switch( cg.snap->ps.weapon )
+  {
+    case WP_BLASTER:
+      speed = BLASTER_SPEED;
+    case WP_PULSE_RIFLE:
+      speed = PRIFLE_SPEED;
+    case WP_FLAMER:
+      speed = FLAMER_SPEED;
+    case WP_LUCIFER_CANNON:
+      speed = LCANNON_SPEED;
+
+    default:
+      speed = 0;
+  }
+  if( speed == 0 )
+    return;
+
+  for( i = 0; i < cgs.maxclients; i++ )
+  {
+
+    //Check if we can predict this client pos.
+    if( ! (cgs.clientinfo[ i ].infoValid && cgs.clientinfo[ i ].team == TEAM_ALIENS) )
+      continue;
+   
+    cent = &cg_entities[ i ];
+
+    if( !cent->valid )
+      continue;
+
+    es = &cent->currentState;
+	  
+    if( (es->eFlags & EF_DEAD) || (es->eFlags & EF_NODRAW) )
+      continue;
+
+    //Solving a polynomial equation of degree 2, to find at which time the missile will hit the alien
+    //If t the is the time,
+    // t * speed = ( origin[0]+ speed[0]*t )^2 + ( origin[1]+ speed[1]*t )^2 + ( origin[1]+ speed[1]*t )^2
+    VectorSubtract( cent->lerpOrigin, cg.snap->ps.origin , pos);
+
+    a = ( es->pos.trBase[0]*es->pos.trBase[0] + es->pos.trBase[1]*es->pos.trBase[1] + es->pos.trBase[2]*es->pos.trBase[2] ) - ( speed * speed );
+    b = 2*( pos[0]*es->pos.trBase[0] + pos[1]*es->pos.trBase[1] + pos[2]*es->pos.trBase[2] );
+    c = pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2];
+    delta = b*b - 4*a*c;
+
+    if( delta >= 0 )
+    {
+      //Resolving the equation
+      delta_root = Q_rsqrt( delta );
+      time1 = ( -b + delta_root ) / ( 2 * a );
+      time2 = ( -b - delta_root ) / ( 2 * a );
+          
+      //Selecting the most appropriate solution
+      if( time1*time2 < 0)
+        final_time = MAX(time1, time2);
+      else
+        final_time = MIN(time1, time2);
+
+      if( final_time > 0 )
+      {
+        //finally we can draw the predicted state
+        VectorMA( cent->lerpOrigin, final_time, es->pos.trBase, predicted_pos );
+
+        memset( &pmodel, 0, sizeof( pmodel ) );
+        VectorCopy( predicted_pos, pmodel.origin );
+        pmodel.hModel = cg_buildables[ BA_H_REPEATER ].models[ 0 ];
+
+        trap_R_AddRefEntityToScene( &pmodel );
+      }
+    }        
   }
 }

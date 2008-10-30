@@ -3274,6 +3274,17 @@ static void CG_Draw2D( void )
 }
 
 /*
+=================
+CG_Draw3D
+=================
+*/
+static void CG_Draw3D( void )
+{
+  if( BG_InventoryContainsUpgrade( UP_HELMET, cg.snap->ps.stats ) && cg_scannerPredict.integer )
+    CG_ScannerPredict( );
+}
+
+/*
 ===============
 CG_ScalePainBlendTCs
 ===============
@@ -3451,6 +3462,9 @@ void CG_DrawActive( stereoFrame_t stereoView )
   if( separation != 0 )
     VectorMA( cg.refdef.vieworg, -separation, cg.refdef.viewaxis[ 1 ],
               cg.refdef.vieworg );
+
+  //Add any 3d effects
+  CG_Draw3D( );
 
   // draw 3D view
   trap_R_RenderScene( &cg.refdef );
