@@ -3267,6 +3267,7 @@ void CL_Init( void ) {
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
+	Com_StartupVariable( NULL );
 
 	cl_persistantConsole = Cvar_Get ("cl_persistantConsole", "1", CVAR_ARCHIVE);
 
