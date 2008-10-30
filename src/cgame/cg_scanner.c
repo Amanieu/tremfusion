@@ -416,6 +416,9 @@ void CG_ScannerPredict( )
     VectorSubtract( cent->lerpOrigin, cg.snap->ps.origin , pos);
 
     a = ( es->pos.trBase[0]*es->pos.trBase[0] + es->pos.trBase[1]*es->pos.trBase[1] + es->pos.trBase[2]*es->pos.trBase[2] ) - ( speed * speed );
+    if( a == 0 )
+      continue;
+    
     b = 2*( pos[0]*es->pos.trBase[0] + pos[1]*es->pos.trBase[1] + pos[2]*es->pos.trBase[2] );
     c = pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2];
     delta = b*b - 4*a*c;

@@ -1729,7 +1729,7 @@ static const weaponAttributes_t bg_weapons[ ] =
     qfalse,               //qboolean  canZoom;
     90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
-    qfalse,               //qboolean  longRanged;z
+    qfalse,               //qboolean  longRanged;
     TEAM_ALIENS           //team_t  team;
   },
   {
