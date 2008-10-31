@@ -1042,6 +1042,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.turretSpinupSound );
       break;
 
+    case EV_LRMGTURRET_SPINUP:
+      DEBUGNAME( "EV_LRMGTURRET_SPINUP" );
+      trap_S_StartSound( NULL, es->number, CHAN_AUTO, cgs.media.turretSpinupSound );
+      break;
+
+
     case EV_OVERMIND_SPAWNS:
       DEBUGNAME( "EV_OVERMIND_SPAWNS" );
       if( cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_ALIENS )

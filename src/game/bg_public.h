@@ -341,6 +341,7 @@ typedef enum
   WP_HIVE,
   WP_TESLAGEN,
   WP_MGTURRET,
+  WP_LRMGTURRET,
 
   WP_ABUILD,
   WP_ABUILD2,
@@ -403,6 +404,7 @@ typedef enum
   BA_H_SPAWN,
 
   BA_H_MGTURRET,
+  BA_H_LRMGTURRET,
   BA_H_TESLAGEN,
 
   BA_H_ARMOURY,
@@ -529,6 +531,7 @@ typedef enum
   EV_DCC_ATTACK,      // dcc under attack
 
   EV_MGTURRET_SPINUP, // turret spinup sound should play
+  EV_LRMGTURRET_SPINUP,
 
   EV_RPTUSE_SOUND,    // trigger a sound
   
@@ -881,6 +884,7 @@ typedef enum
   MOD_HSPAWN,
   MOD_TESLAGEN,
   MOD_MGTURRET,
+  MOD_LRMGTURRET,
   MOD_REACTOR,
 
   MOD_ASPAWN,

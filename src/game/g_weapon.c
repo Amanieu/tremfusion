@@ -1069,7 +1069,7 @@ void CheckGrabAttack( gentity_t *ent )
       traceEnt->client->grabExpiryTime = level.time + LEVEL1_GRAB_U_TIME;
   }
   else if( traceEnt->s.eType == ET_BUILDABLE &&
-      traceEnt->s.modelindex == BA_H_MGTURRET )
+      (traceEnt->s.modelindex == BA_H_MGTURRET || traceEnt->s.modelindex == BA_H_LRMGTURRET) )
   {
     if( !traceEnt->lev1Grabbed )
       G_AddPredictableEvent( ent, EV_LEV1_GRAB, 0 );
@@ -1613,6 +1613,9 @@ void FireWeapon( gentity_t *ent )
       break;
     case WP_MGTURRET:
       bulletFire( ent, MGTURRET_SPREAD, MGTURRET_DMG, MOD_MGTURRET );
+      break;
+    case WP_LRMGTURRET:
+      bulletFire( ent, LRMGTURRET_SPREAD, LRMGTURRET_DMG, MOD_LRMGTURRET );
       break;
 
     case WP_ABUILD:

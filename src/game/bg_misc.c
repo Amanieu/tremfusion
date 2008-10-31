@@ -386,6 +386,41 @@ static const buildableAttributes_t bg_buildableList[ ] =
     MGTURRET_VALUE,        //int       value;
   },
   {
+    BA_H_LRMGTURRET,         //int       buildNum;
+    "lrmgturret",            //char      *buildName;
+    "Advanced Machinegun Turret",   //char      *humanName;
+    "Automated base defense that is effective against targets that are far away "
+      "but slow to begin firing. Should always be "
+      "backed up by physical support.",
+    "team_human_lrmgturret", //char      *entityName;
+    TR_GRAVITY,            //trType_t  traj;
+    0.0,                   //float     bounce;
+    LRMGTURRET_BP,           //int       buildPoints;
+    ( 1 << S2 )|( 1 << S3 ), //int  stages
+    LRMGTURRET_HEALTH,       //int       health;
+    0,                     //int       regenRate;
+    LRMGTURRET_SPLASHDAMAGE, //int       splashDamage;
+    LRMGTURRET_SPLASHRADIUS, //int       splashRadius;
+    MOD_HSPAWN,            //int       meansOfDeath;
+    TEAM_HUMANS,           //int       team;
+    ( 1 << WP_HBUILD ),   //weapon_t  buildWeapon;
+    BANIM_IDLE1,           //int       idleAnim;
+    50,                    //int       nextthink;
+    LRMGTURRET_BT,           //int       buildTime;
+    qfalse,                //qboolean  usable;
+    LRMGTURRET_RANGE,        //int       turretRange;
+    LRMGTURRET_REPEAT,       //int       turretFireSpeed;
+    WP_LRMGTURRET,           //weapon_t  turretProjType;
+    0.95f,                 //float     minNormal;
+    qfalse,                //qboolean  invertNormal;
+    qfalse,                //qboolean  creepTest;
+    0,                     //int       creepSize;
+    qfalse,                //qboolean  dccTest;
+    qtrue,                 //qboolean  transparentTest;
+    qfalse,                //qboolean  uniqueTest;
+    LRMGTURRET_VALUE,        //int       value;
+  },
+  {
     BA_H_TESLAGEN,         //int       buildNum;
     "tesla",               //char      *buildName;
     "Tesla Generator",     //char      *humanName;
@@ -2288,6 +2323,31 @@ static const weaponAttributes_t bg_weapons[ ] =
     0,                    //int       repeatRate3;
     0,                    //int       reloadTime;
     MGTURRET_K_SCALE,     //float     knockbackScale;
+    qfalse,               //qboolean  hasAltMode;
+    qfalse,               //qboolean  hasThirdMode;
+    qfalse,               //qboolean  canZoom;
+    90.0f,                //float     zoomFov;
+    qfalse,               //qboolean  purchasable;
+    qfalse,               //qboolean  longRanged;
+    TEAM_HUMANS           //team_t  team;
+  },
+  {
+    WP_LRMGTURRET,          //int       weaponNum;
+    0,                    //int       price;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    SLOT_WEAPON,          //int       slots;
+    "mgturret",           //char      *weaponName;
+    "Machinegun Turret",  //char      *humanName;
+    "",
+    0,                    //int       maxAmmo;
+    0,                    //int       maxClips;
+    qtrue,                //int       infiniteAmmo;
+    qfalse,               //int       usesEnergy;
+    0,                    //int       repeatRate1;
+    0,                    //int       repeatRate2;
+    0,                    //int       repeatRate3;
+    0,                    //int       reloadTime;
+    LRMGTURRET_K_SCALE,     //float     knockbackScale;
     qfalse,               //qboolean  hasAltMode;
     qfalse,               //qboolean  hasThirdMode;
     qfalse,               //qboolean  canZoom;

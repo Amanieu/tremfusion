@@ -2121,6 +2121,206 @@ void HMGTurret_Think( gentity_t *self )
 }
 
 
+//==================================================================================
+
+
+/*
+================
+HLRMGTurret_CheckTarget
+
+Used by HLRMGTurret_Think to check enemies for validity
+================
+*/
+qboolean HLRMGTurret_CheckTarget( gentity_t *self, gentity_t *target,
+                                qboolean los_check )
+{
+  trace_t   tr;
+  vec3_t    dir, end;
+
+  if( !target || target->health <= 0 || !target->client ||
+      target->client->pers.teamSelection != TEAM_ALIENS ||
+      ( target->client->ps.stats[ STAT_STATE ] & SS_HOVELING ) )
+    return qfalse;
+    
+  if( !los_check )
+    return qtrue;
+
+  // Accept target if we can line-trace to it
+  VectorSubtract( target->s.pos.trBase, self->s.pos.trBase, dir );
+  VectorNormalize( dir );
+  VectorMA( self->s.pos.trBase, LRMGTURRET_RANGE, dir, end );
+  trap_Trace( &tr, self->s.pos.trBase, NULL, NULL, end,
+              self->s.number, MASK_SHOT );
+  return tr.entityNum == target - g_entities;
+}
+
+
+/*
+================
+HLRMGTurret_TrackEnemy
+
+Used by HLRMGTurret_Think to track enemy location
+================
+*/
+qboolean HLRMGTurret_TrackEnemy( gentity_t *self )
+{
+  vec3_t  dirToTarget, dttAdjusted, angleToTarget, angularDiff, xNormal;
+  vec3_t  refNormal = { 0.0f, 0.0f, 1.0f };
+  float   temp, rotAngle, angularSpeed;
+
+  angularSpeed = self->lev1Grabbed ? LRMGTURRET_ANGULARSPEED_GRAB :
+                                     LRMGTURRET_ANGULARSPEED;
+
+  VectorSubtract( self->enemy->s.pos.trBase, self->s.pos.trBase, dirToTarget );
+  VectorNormalize( dirToTarget );
+
+  CrossProduct( self->s.origin2, refNormal, xNormal );
+  VectorNormalize( xNormal );
+  rotAngle = RAD2DEG( acos( DotProduct( self->s.origin2, refNormal ) ) );
+  RotatePointAroundVector( dttAdjusted, xNormal, dirToTarget, rotAngle );
+
+  vectoangles( dttAdjusted, angleToTarget );
+
+  angularDiff[ PITCH ] = AngleSubtract( self->s.angles2[ PITCH ], angleToTarget[ PITCH ] );
+  angularDiff[ YAW ] = AngleSubtract( self->s.angles2[ YAW ], angleToTarget[ YAW ] );
+
+  //if not pointing at our target then move accordingly
+  if( angularDiff[ PITCH ] < 0 && angularDiff[ PITCH ] < (-angularSpeed) )
+    self->s.angles2[ PITCH ] += angularSpeed;
+  else if( angularDiff[ PITCH ] > 0 && angularDiff[ PITCH ] > angularSpeed )
+    self->s.angles2[ PITCH ] -= angularSpeed;
+  else
+    self->s.angles2[ PITCH ] = angleToTarget[ PITCH ];
+
+  //disallow vertical movement past a certain limit
+  temp = fabs( self->s.angles2[ PITCH ] );
+  if( temp > 180 )
+    temp -= 360;
+
+  if( temp < -LRMGTURRET_VERTICALCAP )
+    self->s.angles2[ PITCH ] = (-360) + LRMGTURRET_VERTICALCAP;
+
+  //if not pointing at our target then move accordingly
+  if( angularDiff[ YAW ] < 0 && angularDiff[ YAW ] < ( -angularSpeed ) )
+    self->s.angles2[ YAW ] += angularSpeed;
+  else if( angularDiff[ YAW ] > 0 && angularDiff[ YAW ] > angularSpeed )
+    self->s.angles2[ YAW ] -= angularSpeed;
+  else
+    self->s.angles2[ YAW ] = angleToTarget[ YAW ];
+
+  AngleVectors( self->s.angles2, dttAdjusted, NULL, NULL );
+  RotatePointAroundVector( dirToTarget, xNormal, dttAdjusted, -rotAngle );
+  vectoangles( dirToTarget, self->turretAim );
+
+  //fire if target is within accuracy
+  return ( abs( angularDiff[ YAW ] ) - angularSpeed <=
+           LRMGTURRET_ACCURACY_TO_FIRE ) &&
+         ( abs( angularDiff[ PITCH ] ) - angularSpeed <=
+           LRMGTURRET_ACCURACY_TO_FIRE );
+}
+
+
+/*
+================
+HLRMGTurret_FindEnemy
+
+Used by HLRMGTurret_Think to locate enemy gentities
+================
+*/
+void HLRMGTurret_FindEnemy( gentity_t *self )
+{
+  int       entityList[ MAX_GENTITIES ];
+  vec3_t    range;
+  vec3_t    mins, maxs;
+  int       i, num;
+  gentity_t *target;
+
+  if( self->enemy )
+    self->enemy->targeted = NULL;
+  self->enemy = NULL;
+    
+  // Look for targets in a box around the turret
+  VectorSet( range, LRMGTURRET_RANGE, LRMGTURRET_RANGE, LRMGTURRET_RANGE );
+  VectorAdd( self->s.origin, range, maxs );
+  VectorSubtract( self->s.origin, range, mins );
+  num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
+  for( i = 0; i < num; i++ )
+  {
+    target = &g_entities[ entityList[ i ] ];
+    if( !HLRMGTurret_CheckTarget( self, target, qtrue ) )
+      continue;
+    self->enemy = target;
+    self->enemy->targeted = self;
+    return;
+  }
+}
+
+
+/*
+================
+HLRMGTurret_Think
+
+Think function for LRMG turret
+================
+*/
+void HLRMGTurret_Think( gentity_t *self )
+{
+  self->nextthink = level.time + 
+                    BG_Buildable( self->s.modelindex )->nextthink;
+
+  // Turn off client side muzzle flashes
+  self->s.eFlags &= ~EF_FIRING;
+
+  // If not powered or spawned don't do anything
+  if( !( self->powered = G_FindPower( self ) ) )
+  {
+    self->nextthink = level.time + POWER_REFRESH_TIME;
+    return;
+  }
+  if( !self->spawned )
+    return;
+
+  // If the current target is not valid find a new enemy
+  if( !HLRMGTurret_CheckTarget( self, self->enemy, qtrue ) )
+  {
+    self->active = qfalse;
+    self->turretSpinupTime = -1;
+    HLRMGTurret_FindEnemy( self );
+  }
+  if( !self->enemy )
+    return;
+
+  // Track until we can hit the target
+  if( !HLRMGTurret_TrackEnemy( self ) )
+  {
+    self->active = qfalse;
+    self->turretSpinupTime = -1;
+    return;
+  }
+
+  // Update spin state
+  if( !self->active && self->count < level.time )
+  {
+    self->active = qtrue;
+    self->turretSpinupTime = level.time + LRMGTURRET_SPINUP_TIME;
+    G_AddEvent( self, EV_LRMGTURRET_SPINUP, 0 );
+  }
+
+  // Not firing or haven't spun up yet
+  if( !self->active || self->turretSpinupTime > level.time )
+    return;
+
+  // Fire repeat delay
+  if( self->count > level.time )
+    return;
+
+  FireWeapon( self );
+  self->s.eFlags |= EF_FIRING;
+  self->count = level.time + BG_Buildable( self->s.modelindex )->turretFireSpeed;
+  G_AddEvent( self, EV_FIRE_WEAPON, 0 );
+  G_SetBuildableAnim( self, BANIM_ATTACK1, qfalse );
+}
+
 
 
 //==================================================================================
@@ -3202,6 +3402,11 @@ static gentity_t *G_Build( gentity_t *builder, buildable_t buildable, vec3_t ori
     case BA_H_MGTURRET:
       built->die = HSpawn_Die;
       built->think = HMGTurret_Think;
+      break;
+
+    case BA_H_LRMGTURRET:
+      built->die = HSpawn_Die;
+      built->think = HLRMGTurret_Think;
       break;
 
     case BA_H_TESLAGEN:
