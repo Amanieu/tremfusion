@@ -200,7 +200,7 @@ vmCvar_t  cg_unlagged;
 
 vmCvar_t  ui_currentClass;
 vmCvar_t  ui_carriage;
-vmCvar_t  ui_stages;
+vmCvar_t  ui_stage;
 vmCvar_t  ui_dialog;
 vmCvar_t  ui_voteActive;
 vmCvar_t  ui_alienTeamVoteActive;
@@ -313,7 +313,7 @@ static cvarTable_t cvarTable[ ] =
   
   { &ui_currentClass, "ui_currentClass", "0", 0 },
   { &ui_carriage, "ui_carriage", "", 0 },
-  { &ui_stages, "ui_stages", "0 0", 0 },
+  { &ui_stage, "ui_stage", "0", 0 },
   { &ui_dialog, "ui_dialog", "Text not set", 0 },
   { &ui_voteActive, "ui_voteActive", "0", 0 },
   { &ui_humanTeamVoteActive, "ui_humanTeamVoteActive", "0", 0 },
@@ -404,7 +404,18 @@ static void CG_SetUIVars( void )
   trap_Cvar_Set( "ui_carriage", va( "%d %d %d", cg.snap->ps.stats[ STAT_WEAPON ],
                  upgrades, cg.snap->ps.persistant[ PERS_CREDIT ] ) );
 
-  trap_Cvar_Set( "ui_stages", va( "%d %d", cgs.alienStage, cgs.humanStage ) );
+  switch( cg.snap->ps.stats[ STAT_TEAM ] )
+  {
+  case TEAM_NONE:
+    trap_Cvar_Set( "ui_stage", "0" );
+    break;
+  case TEAM_ALIENS:
+    trap_Cvar_Set( "ui_stage", va( "%d", cgs.alienStage ) );
+    break;
+  case TEAM_HUMANS:
+    trap_Cvar_Set( "ui_stage", va( "%d", cgs.humanStage ) );
+    break;
+  }
 }
 
 /*
@@ -430,10 +441,16 @@ static void CG_SetPVars( void )
   {
   case TEAM_NONE:
     trap_Cvar_Set( "p_teamname", "^3Spectator" );
+    trap_Cvar_Set( "p_stage", "0" );
+    break;
   case TEAM_ALIENS:
     trap_Cvar_Set( "p_teamname", "^1Alien" );
+    trap_Cvar_Set( "p_stage", va( "%d", cgs.alienStage ) );
+    break;
   case TEAM_HUMANS:
     trap_Cvar_Set( "p_teamname", "^4Human" );
+    trap_Cvar_Set( "p_stage", va( "%d", cgs.humanStage ) );
+    break;
   }
   trap_Cvar_Set( "p_class", va( "%d", ps->stats[ STAT_CLASS ] ) );
   trap_Cvar_Set( "p_classname", BG_ClassConfig( ps->stats[ STAT_CLASS ] )->humanName );
