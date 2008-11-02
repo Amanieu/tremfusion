@@ -220,10 +220,10 @@ static PyObject *convert_from_object( scObject_t *sc_object )
 {
   PyScBaseObject *py_object;
   py_object = (PyScBaseObject*)PyScObject_new( (ScPyTypeObject*)sc_object->class->python_type, NULL, NULL);
-  
+
   py_object->sc_object = sc_object;
   SC_ObjectGCInc(py_object->sc_object);
-  
+
   return (PyObject*)py_object;
 }
 
@@ -242,7 +242,7 @@ PyObject *convert_from_value( scDataTypeValue_t *value )
     case TYPE_BOOLEAN:
       if (value->data.boolean)
         Py_RETURN_TRUE;
-      else  // Py_RETURN_TRUE and Py_RETURN_FALSE are 
+      else  // Py_RETURN_TRUE and Py_RETURN_FALSE are
         Py_RETURN_FALSE;//  Macros for returning Py_True or Py_False, respectively
     case TYPE_INTEGER:
       return Py_BuildValue("i", value->data.integer ); // Python int or long type
@@ -284,23 +284,23 @@ static void loadconstants(void)
     switch(cst->type)
     {
 //      case TYPE_BOOLEAN:
-//        
+//
 //        lua_pushboolean(L, (int)cst->data);
 //        PyModule_AddObject( mainModule, cst->name, (cst->data) ? );
 //        lua_setglobal(L, );
 //        break;
       case TYPE_INTEGER:
-        PyModule_AddIntConstant(module, cst->name, (long)cst->data);
+        PyModule_AddIntConstant(module, cst->name, cst->data.n);
         break;
 //      case TYPE_FLOAT: TODO: Floats are broken
 //        memcpy(&val, &cst->data, sizeof(val));
 //        PyModule_AddObject(module, cst->name, PyFloat_FromDouble(val));
 //        break;
       case TYPE_STRING:
-        PyModule_AddStringConstant(module, cst->name, (char*)cst->data);
+        PyModule_AddStringConstant(module, cst->name, cst->data.s);
         break;
       case TYPE_USERDATA:
-        PyModule_AddObject(module, cst->name, PyCObject_FromVoidPtr(cst->data, NULL));
+        PyModule_AddObject(module, cst->name, PyCObject_FromVoidPtr(cst->data.v, NULL));
         break;
       default:
         // Error: type invalid
@@ -315,20 +315,20 @@ void SC_Python_Init( void )
 {
 //  scDataTypeValue_t *value;
   PyObject *python_module;
-  
+
   Com_Printf("Python initializing... ");
   Py_Initialize();
   // Make python threads work at all
 //  PyEval_InitThreads( );
-  
+
   trap_Cvar_Set( "py_initialized", "1" );
-  trap_Cvar_Update( &py_initialized ); 
-  
+  trap_Cvar_Update( &py_initialized );
+
   mainModule = PyImport_AddModule("__main__"); // get __main__ ...
   mainDict = PyModule_GetDict( mainModule ); // ... so we can get its dict ..
-  
+
   python_module = PyImport_AddModule("python");
-  
+
   if (PyType_Ready(&PyFunctionType) < 0)
     return;
   Py_INCREF(&PyFunctionType);
@@ -342,7 +342,7 @@ void SC_Python_Init( void )
     return;
   Py_INCREF(&PyScHash_Type);
   PyModule_AddObject(python_module, "ScHash", (PyObject*)&PyScHash_Type);
-  
+
   loadconstants();
 //  if (PyType_Ready(&PyScObject_Type) < 0)
 //    return;
@@ -371,7 +371,7 @@ static void update_module( scDataTypeString_t *module, scDataTypeValue_t *value 
   PyObject *pyModule;
   scDataTypeHash_t* hash =(scDataTypeHash_t*) value->data.namespace;
   char *keystring;
-  
+
   pyModule = PyImport_AddModule( SC_StringToChar( module ) );
   if (!pyModule)
     return; //ERROR!
@@ -401,7 +401,7 @@ static void update_context( void )
     {
       update_module( &hash->data[i].key,  &hash->data[i].value );
     }
-    else 
+    else
     {
       keystring = (char*)SC_StringToChar(&hash->data[i].key);
       PyModule_AddObject( mainModule, keystring, convert_from_value( &hash->data[i].value ));
@@ -441,7 +441,7 @@ qboolean SC_Python_RunScript( const char *filename )
     Com_Printf(S_COLOR_RED "Cannot load %s: python disabled\n", filename);
     return qfalse;
   }
-  
+
   if (!py_initialized.integer){
     Com_Printf(S_COLOR_RED "Cannot load %s: python not initilized\n", filename);
     return qfalse;
@@ -474,27 +474,27 @@ qboolean SC_Python_RunScript( const char *filename )
 int SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *args, scDataTypeValue_t *ret )
 {
   PyObject *ArgsTuple, *ReturnValue;
-  
+
 #ifndef UNITTEST
   if (!sc_python.integer){
     Com_Printf(S_COLOR_RED "Cannot run function: python disabled\n");
     return -1;
   }
-  
+
   if (!py_initialized.integer){
     Com_Printf(S_COLOR_RED "Cannot run function: python not initilized\n");
     return -1;
   }
 #endif
-  
+
   if (args)
   {
     scDataTypeValue_t *value;
     int index, narg;
     value = args;
-    
+
     narg = 0;
-    
+
     while ( value->type != TYPE_UNDEF && value->type <= TYPE_NAMESPACE )
     {
       narg++;
@@ -504,7 +504,7 @@ int SC_Python_RunFunction( const scDataTypeFunction_t *func, scDataTypeValue_t *
     printf("%d args\n", narg);
 #endif
     ArgsTuple = PyTuple_New( narg );
-    
+
     value = args;
     index = 0;
     while ( value->type != TYPE_UNDEF && value->type <= TYPE_NAMESPACE)
