@@ -101,6 +101,14 @@ ifndef USE_OPENAL_DLOPEN
   endif
 endif
 
+ifndef USE_GMP_DLOPEN
+USE_GMP_DLOPEN=0
+endif
+
+ifndef USE_NETTLE_DLOPEN
+USE_NETTLE_DLOPEN=0
+endif
+
 ifndef USE_CURL
 USE_CURL=1
 endif
@@ -303,6 +311,15 @@ ifeq ($(PLATFORM),linux)
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
+  
+  ifeq ($(USE_NETTLE_DLOPEN),1)
+    BASE_CFLAGS += -DUSE_NETTLE_DLOPEN
+  else
+    USE_GMP_DLOPEN = 0
+  endif
+  ifeq ($(USE_GMP_DLOPEN),1)
+    BASE_CFLAGS += -DUSE_GMP_DLOPEN
+  endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
@@ -355,6 +372,13 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LDFLAGS += $(OGG_LIBS)
+  endif
+
+  ifneq ($(USE_NETTLE_DLOPEN),1)
+    LDFLAGS += -lnettle
+  endif
+  ifneq ($(USE_GMP_DLOPEN),1)
+    LDFLAGS += -lgmp
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -549,6 +573,15 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
+  ifeq ($(USE_NETTLE_DLOPEN),1)
+    BASE_CFLAGS += -DUSE_NETTLE_DLOPEN
+  else
+    USE_GMP_DLOPEN = 0
+  endif
+  ifeq ($(USE_GMP_DLOPEN),1)
+    BASE_CFLAGS += -DUSE_GMP_DLOPEN
+  endif
+
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
@@ -594,6 +627,13 @@ ifeq ($(PLATFORM),mingw32)
     else
       CLIENT_LDFLAGS += $(OGG_LIBS)
     endif
+  endif
+
+  ifneq ($(USE_NETTLE_DLOPEN),1)
+    LDFLAGS += -lnettle
+  endif
+  ifneq ($(USE_GMP_DLOPEN),1)
+    LDFLAGS += -lgmp
   endif
 
   ifeq ($(ARCH),x86)
@@ -1274,6 +1314,7 @@ Q3OBJ = \
   \
   $(B)/client/cmd.o \
   $(B)/client/common.o \
+  $(B)/client/crypto.o \
   $(B)/client/cvar.o \
   $(B)/client/files.o \
   $(B)/client/md4.o \
@@ -1571,6 +1612,7 @@ Q3DOBJ = \
   $(B)/ded/cm_trace.o \
   $(B)/ded/cmd.o \
   $(B)/ded/common.o \
+  $(B)/ded/crypto.o \
   $(B)/ded/cvar.o \
   $(B)/ded/files.o \
   $(B)/ded/md4.o \

@@ -51,6 +51,7 @@ equ trap_Parse_SourceFileAndLine    -47
 
 equ trap_SendGameStat               -48
 equ trap_DemoCommand                -49
+equ trap_RSA_GenerateMessage		-50
 
 
 equ memset                          -101
