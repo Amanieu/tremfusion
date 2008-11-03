@@ -1516,32 +1516,16 @@ void UI_Load( void )
 
 /*
 ===============
-UI_GetCurrentAlienStage
+UI_GetCurrentStage
 ===============
 */
-static stage_t UI_GetCurrentAlienStage( void )
+static stage_t UI_GetCurrentStage( void )
 {
   char    buffer[ MAX_TOKEN_CHARS ];
-  stage_t stage, dummy;
+  stage_t stage;
 
-  trap_Cvar_VariableStringBuffer( "ui_stages", buffer, sizeof( buffer ) );
-  sscanf( buffer, "%d %d", ( int * ) & stage , ( int * ) & dummy );
-
-  return stage;
-}
-
-/*
-===============
-UI_GetCurrentHumanStage
-===============
-*/
-static stage_t UI_GetCurrentHumanStage( void )
-{
-  char    buffer[ MAX_TOKEN_CHARS ];
-  stage_t stage, dummy;
-
-  trap_Cvar_VariableStringBuffer( "ui_stages", buffer, sizeof( buffer ) );
-  sscanf( buffer, "%d %d", ( int * ) & dummy, ( int * ) & stage );
+  trap_Cvar_VariableStringBuffer( "ui_stage", buffer, sizeof( buffer ) );
+  sscanf( buffer, "%d", ( int * ) & stage );
 
   return stage;
 }
@@ -1573,7 +1557,7 @@ static void UI_DrawInfoPane( menuItem_t *item, rectDef_t *rect, float text_x, fl
 
     case INFOTYPE_CLASS:
       value = ( BG_ClassCanEvolveFromTo( class, item->v.pclass, credits,
-                                         UI_GetCurrentAlienStage(), 0 ) +
+                                         UI_GetCurrentStage(), 0 ) +
                 ALIEN_CREDITS_PER_FRAG - 1 ) / ALIEN_CREDITS_PER_FRAG;
 
       if( value < 1 )
@@ -2220,7 +2204,7 @@ static void UI_LoadAlienClasses( void )
     UI_AddClass( PCL_ALIEN_LEVEL0 );
 
   if( BG_ClassIsAllowed( PCL_ALIEN_BUILDER0_UPG ) &&
-      BG_ClassAllowedInStage( PCL_ALIEN_BUILDER0_UPG, UI_GetCurrentAlienStage( ) ) )
+      BG_ClassAllowedInStage( PCL_ALIEN_BUILDER0_UPG, UI_GetCurrentStage( ) ) )
     UI_AddClass( PCL_ALIEN_BUILDER0_UPG );
   else if( BG_ClassIsAllowed( PCL_ALIEN_BUILDER0 ) )
     UI_AddClass( PCL_ALIEN_BUILDER0 );
@@ -2280,7 +2264,7 @@ UI_LoadHumanArmouryBuys
 static void UI_LoadHumanArmouryBuys( void )
 {
   int i, i2, j = 0;
-  stage_t stage = UI_GetCurrentHumanStage( );
+  stage_t stage = UI_GetCurrentStage( );
   int slots = 0;
 
   UI_ParseCarriageList( );
@@ -2427,7 +2411,7 @@ static void UI_LoadAlienUpgrades( void )
 
   int     class, credits;
   char    ui_currentClass[ MAX_STRING_CHARS ];
-  stage_t stage = UI_GetCurrentAlienStage( );
+  stage_t stage = UI_GetCurrentStage( );
 
   trap_Cvar_VariableStringBuffer( "ui_currentClass", ui_currentClass, MAX_STRING_CHARS );
 
@@ -2463,7 +2447,7 @@ static void UI_LoadAlienBuilds( void )
   stage_t stage;
 
   UI_ParseCarriageList( );
-  stage = UI_GetCurrentAlienStage( );
+  stage = UI_GetCurrentStage( );
 
   uiInfo.alienBuildCount = 0;
 
@@ -2499,7 +2483,7 @@ static void UI_LoadHumanBuilds( void )
   stage_t stage;
 
   UI_ParseCarriageList( );
-  stage = UI_GetCurrentHumanStage( );
+  stage = UI_GetCurrentStage( );
 
   uiInfo.humanBuildCount = 0;
 

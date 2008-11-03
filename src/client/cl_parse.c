@@ -420,6 +420,9 @@ void CL_SystemInfoChanged( void ) {
 			baseGameSet = qtrue;
 		}
 
+		if (!Q_stricmp(key, "sv_pure") || !Q_stricmp(key, "sv_restrict"))
+			cl_connectedToPureServer = atoi(value);
+
 		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
 			Cvar_Get(key, value, CVAR_SERVER_CREATED | CVAR_ROM);
 		else
@@ -446,8 +449,7 @@ void CL_SystemInfoChanged( void ) {
 		Cvar_Set( "sv_restricted", "0" );
 		Cvar_Set( "sv_cheats", "1" );
 		cl_connectedToPureServer = qfalse;
-	} else
-		cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" ) || Cvar_VariableValue( "sv_restricted" );
+	}
 }
 
 /*

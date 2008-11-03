@@ -1518,6 +1518,7 @@ extern  vmCvar_t    cg_drawBBOX;
 extern  vmCvar_t    cg_wwSmoothTime;
 extern  vmCvar_t    cg_wwFollow;
 extern  vmCvar_t    cg_wwToggle;
+extern  vmCvar_t    cg_flySpeed;
 extern  vmCvar_t    cg_depthSortParticles;
 extern  vmCvar_t    cg_bounceParticles;
 extern  vmCvar_t    cg_consoleLatency;
@@ -1546,7 +1547,7 @@ extern  vmCvar_t    cg_debugVoices;
 
 extern  vmCvar_t    ui_currentClass;
 extern  vmCvar_t    ui_carriage;
-extern  vmCvar_t    ui_stages;
+extern  vmCvar_t    ui_stage;
 extern  vmCvar_t    ui_dialog;
 extern  vmCvar_t    ui_voteActive;
 extern  vmCvar_t    ui_alienTeamVoteActive;
