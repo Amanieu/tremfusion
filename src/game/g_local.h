@@ -447,6 +447,7 @@ struct gclient_s
   int                 lastCrushTime;        // Tyrant crush
 
   gentity_t           *portals[PORTAL_NUM];
+  int                 portaltime;
 };
 
 

@@ -83,9 +83,12 @@ static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 	VectorScale(portal->s.origin2, speed, other->client->ps.velocity);
 	other->client->ps.eFlags ^= EF_TELEPORT_BIT;
 	G_UnlaggedClear(other);
-	if (!dir[2]) {
-		vectoangles(dir, angles);
-		G_SetClientViewAngle(other, angles);
+	if (dir[0] || dir[1]) {
+		if (other->client->portaltime < level.time) {
+			vectoangles(dir, angles);
+			G_SetClientViewAngle(other, angles);
+		}
+		other->client->portaltime = level.time + 250;
 	}
 	BG_PlayerStateToEntityState(&other->client->ps, &other->s, qtrue);
 	VectorCopy(other->client->ps.origin, other->r.currentOrigin);
