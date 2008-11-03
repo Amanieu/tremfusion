@@ -35,11 +35,8 @@ Delete a portal
 void G_Portal_Clear(gentity_t *parent, portal_t portalindex)
 {
 	gentity_t *self = parent->client->portals[portalindex];
-	gentity_t *other = parent->client->portals[!portalindex];
 	if (!self)
 		return;
-	if (other)
-		other->s.otherEntityNum = -1;
 	G_FreeEntity(self);
 	parent->client->portals[portalindex] = NULL;
 }
@@ -72,7 +69,7 @@ static void G_Portal_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 		trap_Trace(&tr, origin, NULL, NULL, end, portal->s.number, MASK_SHOT);
 		if (tr.fraction != 1.0f)
 			return;
-		trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID);
+		trap_Trace(&tr, end, other->r.mins, other->r.maxs, end, -1, MASK_PLAYERSOLID | CONTENTS_TELEPORTER);
 		if (tr.fraction == 1.0f)
 			break;
 	}
@@ -125,11 +122,4 @@ void G_Portal_Create(gentity_t *ent, vec3_t origin, vec3_t normal, portal_t port
 	G_Portal_Clear(ent, portalindex);
 	portal->parent = ent;
 	ent->client->portals[portalindex] = portal;
-
-	// Identify with the other portal
-	if (ent->client->portals[!portalindex]) {
-		portal->s.otherEntityNum = ent->client->portals[!portalindex]->s.number;
-		ent->client->portals[!portalindex]->s.otherEntityNum = portal->s.number;
-	} else
-		portal->s.otherEntityNum = -1;
 }
