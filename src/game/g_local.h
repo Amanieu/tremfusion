@@ -692,7 +692,7 @@ void      G_DecolorString( char *in, char *out, int len );
 void      G_SanitiseString( char *in, char *out, int len );
 void      Cmd_PrivateMessage_f( gentity_t *ent );
 void      Cmd_AdminMessage_f( gentity_t *ent );
-qboolean  G_FloodLimited( gentity_t *ent );
+int       G_FloodLimited( gentity_t *ent );
 
 //
 // g_physics.c

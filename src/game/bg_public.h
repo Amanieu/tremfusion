@@ -433,6 +433,8 @@ typedef enum
 
 #define EVENT_VALID_MSEC  300
 
+const char *BG_EventName( int num );
+
 typedef enum
 {
   EV_NONE,

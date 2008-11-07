@@ -32,19 +32,17 @@ Triggers an animation client side
 */
 void G_SetBuildableAnim( gentity_t *ent, buildableAnimNumber_t anim, qboolean force )
 {
-  int localAnim = anim;
+  int localAnim = anim | ( ent->s.legsAnim & ANIM_TOGGLEBIT );
 
   if( force )
     localAnim |= ANIM_FORCEBIT;
 
-  // don't toggle the togglebit more than once per frame
+  // don't flip the togglebit more than once per frame
   if( ent->animTime != level.time )
   {
-    localAnim |= ( ( ent->s.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT );
     ent->animTime = level.time;
+    localAnim ^= ANIM_TOGGLEBIT;
   }
-  else
-    localAnim |= ent->s.legsAnim & ANIM_TOGGLEBIT;
 
   ent->s.legsAnim = localAnim;
 }

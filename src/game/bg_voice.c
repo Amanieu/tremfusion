@@ -52,7 +52,7 @@ static void BG_VoiceParseError( fileHandle_t handle, char *err )
 
   trap_Parse_SourceFileAndLine( handle, filename, &line );
   trap_Parse_FreeSource( handle );
-  Com_Error( ERR_FATAL, va( "%s on line %d of %s\n", err, line, filename ) );
+  Com_Error( ERR_FATAL, "%s on line %d of %s\n", err, line, filename );
 }
 
 /*

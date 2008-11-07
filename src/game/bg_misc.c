@@ -2808,6 +2808,18 @@ char *eventnames[ ] =
 
 /*
 ===============
+BG_EventName
+===============
+*/
+const char *BG_EventName( int num )
+{
+  if( num < 0 || num >= sizeof( eventnames ) / sizeof( char * ) )
+    return "UNKNOWN";
+  return eventnames[ num ];
+}
+
+/*
+===============
 BG_AddPredictableEventToPlayerstate
 
 Handles the sequence numbers
@@ -2827,10 +2839,12 @@ void BG_AddPredictableEventToPlayerstate( int newEvent, int eventParm, playerSta
     {
 #ifdef GAME
       Com_Printf( " game event svt %5d -> %5d: num = %20s parm %d\n",
-                  ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence, eventnames[ newEvent ], eventParm);
+                  ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence,
+                  BG_EventName( newEvent ), eventParm );
 #else
       Com_Printf( "Cgame event svt %5d -> %5d: num = %20s parm %d\n",
-                  ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence, eventnames[ newEvent ], eventParm);
+                  ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence,
+                  BG_EventName( newEvent ), eventParm );
 #endif
     }
   }
