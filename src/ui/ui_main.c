@@ -3973,6 +3973,8 @@ void UI_Init( qboolean inGameLoad )
   uiInfo.uiDC.modelBounds = &trap_R_ModelBounds;
   uiInfo.uiDC.fillRect = &UI_FillRect;
   uiInfo.uiDC.drawRect = &UI_DrawRect;
+  uiInfo.uiDC.fillRoundedRect = &UI_FillRoundedRect;
+  uiInfo.uiDC.drawRoundedRect = &UI_DrawRoundedRect;
   uiInfo.uiDC.drawSides = &UI_DrawSides;
   uiInfo.uiDC.drawTopBottom = &UI_DrawTopBottom;
   uiInfo.uiDC.clearScene = &trap_R_ClearScene;
