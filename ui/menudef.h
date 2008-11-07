@@ -35,10 +35,11 @@
 #define ITEM_TEXTSTYLE_NEON               7     // drop shadow ( need a color for this )
 
 #define WINDOW_BORDER_NONE                0     // no border
-#define WINDOW_BORDER_FULL                1     // full border based on border color ( single pixel )
+#define WINDOW_BORDER_ROUNDED                1     // full border based on border color ( single pixel )
 #define WINDOW_BORDER_HORZ                2     // horizontal borders only
 #define WINDOW_BORDER_VERT                3     // vertical borders only
 #define WINDOW_BORDER_KCGRADIENT          4     // horizontal border using the gradient bars
+#define WINDOW_BORDER_ROUNDED             5     // full round borders
 
 #define WINDOW_STYLE_EMPTY                0     // no background
 #define WINDOW_STYLE_FILLED               1     // filled with background color

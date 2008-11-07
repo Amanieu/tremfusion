@@ -1081,6 +1081,8 @@ static void Window_Paint( Window *w, float fadeAmount, float fadeClamp, float fa
       DC->drawHandlePic( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->background );
       DC->setColor( NULL );
     }
+    else if( w->border == WINDOW_BORDER_ROUNDED )
+      DC->fillRoundedRect( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->borderSize, w->backColor );
     else
       DC->fillRect( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->backColor );
   }
@@ -1147,6 +1149,11 @@ static void Border_Paint( Window *w )
     GradientBar_Paint( &r, w->borderColor );
     r.y = w->rect.y + w->rect.h - 1;
     GradientBar_Paint( &r, w->borderColor );
+  }
+  else if( w->border == WINDOW_BORDER_ROUNDED )
+  {
+    // full rounded
+    DC->drawRoundedRect( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->borderSize, w->borderColor );
   }
 }
 

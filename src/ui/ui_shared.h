@@ -87,13 +87,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ART_FX_BASE      "menu/art/fx_base"
 #define ART_FX_BLUE      "menu/art/fx_blue"
 #define ART_FX_CYAN      "menu/art/fx_cyan"
-#define ART_FX_GREEN    "menu/art/fx_grn"
-#define ART_FX_RED      "menu/art/fx_red"
+#define ART_FX_GREEN     "menu/art/fx_grn"
+#define ART_FX_RED       "menu/art/fx_red"
 #define ART_FX_TEAL      "menu/art/fx_teal"
-#define ART_FX_WHITE    "menu/art/fx_white"
+#define ART_FX_WHITE     "menu/art/fx_white"
 #define ART_FX_YELLOW    "menu/art/fx_yel"
 
-#define ASSET_GRADIENTBAR "ui/assets/gradientbar2.tga"
+#define ASSET_GRADIENTBAR           "ui/assets/gradientbar2.tga"
 #define ASSET_SCROLLBAR             "ui/assets/scrollbar.tga"
 #define ASSET_SCROLLBAR_ARROWDOWN   "ui/assets/scrollbar_arrow_dwn_a.tga"
 #define ASSET_SCROLLBAR_ARROWUP     "ui/assets/scrollbar_arrow_up_a.tga"
@@ -102,6 +102,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ASSET_SCROLL_THUMB          "ui/assets/scrollbar_thumb.tga"
 #define ASSET_SLIDER_BAR            "ui/assets/slider2.tga"
 #define ASSET_SLIDER_THUMB          "ui/assets/sliderbutt_1.tga"
+#define ASSET_CORNERIN              "ui/assets/cornerIn"
+#define ASSET_CORNEROUT             "ui/assets/cornerOut"
 #define SCROLLBAR_SIZE 16.0f
 #define SCROLLBAR_WIDTH (SCROLLBAR_SIZE*DC->aspectScale)
 #define SCROLLBAR_HEIGHT SCROLLBAR_SIZE
@@ -332,6 +334,8 @@ typedef struct
   qhandle_t solidBox;
   qhandle_t sliderBar;
   qhandle_t sliderThumb;
+  qhandle_t cornerOut;
+  qhandle_t cornerIn;
   sfxHandle_t menuEnterSound;
   sfxHandle_t menuExitSound;
   sfxHandle_t menuBuzzSound;
@@ -368,6 +372,8 @@ typedef struct
   void ( *modelBounds ) ( qhandle_t model, vec3_t min, vec3_t max );
   void ( *fillRect ) ( float x, float y, float w, float h, const vec4_t color );
   void ( *drawRect ) ( float x, float y, float w, float h, float size, const vec4_t color );
+  void ( *drawRoundedRect ) ( float x, float y, float w, float h, float size, const vec4_t color );
+  void ( *fillRoundedRect ) ( float x, float y, float w, float h, float size, const vec4_t color );
   void ( *drawSides ) ( float x, float y, float w, float h, float size );
   void ( *drawTopBottom ) ( float x, float y, float w, float h, float size );
   void ( *clearScene ) ( void );

@@ -50,7 +50,7 @@
       visible MENU_TRUE
       decoration
 
-      border WINDOW_BORDER_FULL
+      border WINDOW_BORDER_ROUNDED
       borderSize 1.0
       borderColor 0.5 0.5 0.5 1
     }
@@ -66,7 +66,7 @@
       textscale .33
       elementtype LISTBOX_TEXT
       feeder FEEDER_TREMHUMANARMOURYBUY
-      border WINDOW_BORDER_FULL
+      border WINDOW_BORDER_ROUNDED
       bordercolor   0.5 0.5 0.5 0.5
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -92,7 +92,7 @@
       textscale .33
       elementtype LISTBOX_TEXT
       feeder FEEDER_TREMHUMANARMOURYSELL
-      border WINDOW_BORDER_FULL
+      border WINDOW_BORDER_ROUNDED
       bordercolor   0.5 0.5 0.5 0.5
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -119,7 +119,7 @@
       textvalign VALIGN_TOP
       textalignx INFO_TOFF
       textaligny INFO_TOFF
-      border WINDOW_BORDER_FULL
+      border WINDOW_BORDER_ROUNDED
       bordercolor   0.5 0.5 0.5 0.5
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1

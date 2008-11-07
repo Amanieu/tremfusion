@@ -213,6 +213,8 @@ void AssetCache( void )
   uiInfo.uiDC.Assets.scrollBarThumb = trap_R_RegisterShaderNoMip( ASSET_SCROLL_THUMB );
   uiInfo.uiDC.Assets.sliderBar = trap_R_RegisterShaderNoMip( ASSET_SLIDER_BAR );
   uiInfo.uiDC.Assets.sliderThumb = trap_R_RegisterShaderNoMip( ASSET_SLIDER_THUMB );
+  uiInfo.uiDC.Assets.cornerIn = trap_R_RegisterShaderNoMip( ASSET_CORNERIN );
+  uiInfo.uiDC.Assets.cornerOut = trap_R_RegisterShaderNoMip( ASSET_CORNEROUT );
 
   if( ui_emoticons.integer ) 
   {
@@ -247,6 +249,19 @@ void UI_DrawTopBottom( float x, float y, float w, float h, float size )
   trap_R_DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
 }
 
+static void UI_DrawCorners( float x, float y, float w, float h, float size, qhandle_t pic )
+{
+  float hs, vs;
+  UI_AdjustFrom640( &x, &y, &w, &h );
+  hs = size * uiInfo.uiDC.xscale;
+  vs = size * uiInfo.uiDC.yscale;
+
+  trap_R_DrawStretchPic( x, y, hs, vs, 0, 0, 0.5, 0.5, pic );
+  trap_R_DrawStretchPic( x, y + h - vs, hs, vs, 0, 0.5, 0.5, 1, pic );
+  trap_R_DrawStretchPic( x + w - hs, y, hs, vs, 0.5, 0, 1, 0.5, pic );
+  trap_R_DrawStretchPic( x + w - hs, y + h - vs, hs, vs, 0.5, 0.5, 1, 1, pic );
+}
+
 /*
 ================
 UI_DrawRect
@@ -260,6 +275,60 @@ void UI_DrawRect( float x, float y, float width, float height, float size, const
 
   UI_DrawTopBottom( x, y, width, height, size );
   UI_DrawSides( x, y, width, height, size );
+
+  trap_R_SetColor( NULL );
+}
+
+/*
+================
+UI_DrawRoundedRect
+ 
+Coordinates are 640*480 virtual values
+=================
+*/
+void UI_DrawRoundedRect( float x, float y, float width, float height, float size, const float *color )
+{
+  trap_R_SetColor( color );
+
+  UI_DrawTopBottom( x + size * 4, y, width - size * 8, height, size );
+  UI_DrawSides( x, y + size * 4, width, height - size * 8, size );
+  UI_DrawCorners( x, y, width, height, size * 4, uiInfo.uiDC.Assets.cornerOut );
+
+  trap_R_SetColor( NULL );
+}
+
+/*
+================
+UI_FillRect
+ 
+Coordinates are 640*480 virtual values
+=================
+*/
+void UI_FillRect( float x, float y, float width, float height, const float *color )
+{
+  trap_R_SetColor( color );
+
+  UI_AdjustFrom640( &x, &y, &width, &height );
+  trap_R_DrawStretchPic( x, y, width, height, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
+
+  trap_R_SetColor( NULL );
+}
+
+/*
+================
+UI_FillRoundedRect
+ 
+Coordinates are 640*480 virtual values
+=================
+*/
+void UI_FillRoundedRect( float x, float y, float width, float height, float size, const float *color )
+{
+  UI_FillRect( x + size, y + size * 4, width - size * 2, height - size * 8, color );
+
+  trap_R_SetColor( color );
+
+  UI_DrawTopBottom( x + size * 4, y + size, width - size * 8, height - size * 2, size * 3 );
+  UI_DrawCorners( x, y, width, height, size * 4, uiInfo.uiDC.Assets.cornerIn );
 
   trap_R_SetColor( NULL );
 }

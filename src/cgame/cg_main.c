@@ -1790,6 +1790,8 @@ void CG_AssetCache( void )
   cgDC.Assets.scrollBarThumb      = trap_R_RegisterShaderNoMip( ASSET_SCROLL_THUMB );
   cgDC.Assets.sliderBar           = trap_R_RegisterShaderNoMip( ASSET_SLIDER_BAR );
   cgDC.Assets.sliderThumb         = trap_R_RegisterShaderNoMip( ASSET_SLIDER_THUMB );
+  cgDC.Assets.cornerIn            = trap_R_RegisterShaderNoMip( ASSET_CORNERIN );
+  cgDC.Assets.cornerOut           = trap_R_RegisterShaderNoMip( ASSET_CORNEROUT );
 
   if( cg_emoticons.integer )
   {
