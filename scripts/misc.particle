@@ -156,12 +156,41 @@ alienBleedPS
     delay   0
     period  0 - 0
   }
+  ejector
+  {
+    particle
+    {
+      model models/fx/alien_gibs/a_gib1.md3 models/fx/alien_gibs/a_gib2.md3 models/fx/alien_gibs/a_gib3.md3 models/fx/alien_gibs/a_gib4.md3
+
+      displacement 0 0 0 ~0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 300~500
+      velocity          0 0 0 ~360
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 800
+      acceleration          0 0 -1 0
+
+      radius          0 0.4 -
+      bounce          0.2
+
+      lifeTime 500~1500
+    }
+
+    count 1~3
+    delay 0
+    period 10 - ~0%
+  }
 
   thirdPersonOnly
 }
 
 humanBleedPS
 {
+
   ejector
   {
     particle
@@ -204,7 +233,7 @@ humanBleedPS
 
       accelerationType      static
       accelerationDir       linear
-      acceleration          0 0 -1 ~5
+      acceleration          0 0 -1~0 ~5
       accelerationMagnitude 25
 
       radius                0 5 8
@@ -219,6 +248,34 @@ humanBleedPS
     count   2
     delay   0
     period  0 - 0
+  }
+  ejector
+  {
+    particle
+    {
+      model models/fx/human_gibs/h_gib1.md3 models/fx/human_gibs/h_gib2.md3 models/fx/human_gibs/h_gib3.md3 models/fx/human_gibs/h_gib4.md3
+
+      displacement 0 0 0 ~0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 300~500
+      velocity          0 0 0 ~360
+
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 800
+      acceleration          0 0 -1 0
+
+      radius          0 0.4 -
+      bounce          0.2
+
+      lifeTime 500~1500
+    }
+
+    count 1~3
+    delay 0
+    period 10 - ~0%
   }
 
   thirdPersonOnly
