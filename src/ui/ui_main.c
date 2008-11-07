@@ -4095,7 +4095,7 @@ void UI_MouseEvent( int dx, int dy )
   else if( uiInfo.uiDC.cursory > SCREEN_HEIGHT )
     uiInfo.uiDC.cursory = SCREEN_HEIGHT;
 
-  uiInfo.uiDC.cursordx = dx;
+  uiInfo.uiDC.cursordx = dx * uiInfo.uiDC.aspectScale;
   uiInfo.uiDC.cursordy = dy;
 
   if( Menu_Count( ) > 0 )
