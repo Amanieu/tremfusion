@@ -201,7 +201,7 @@
       style WINDOW_STYLE_EMPTY
       ownerdraw UI_NETMAPPREVIEW
       rect (W-(PREVIEW_W+BORDER)) BORDER PREVIEW_W PREVIEW_H
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor .5 .5 .5 1
       visible MENU_TRUE
     }
@@ -221,7 +221,7 @@
       textalign ALIGN_LEFT
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor   0.5 0.5 0.5 1
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -243,7 +243,7 @@
       group grpColumn
       rect LIST_X (LIST_Y+HEADFOOT_H) (SERVER_C*LIST_W) (LIST_H-(2*HEADFOOT_H))
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       backcolor 0 0 0 0
       bordersize 1
       bordercolor .5 .5 .5 1
@@ -263,7 +263,7 @@
       textalign ALIGN_LEFT
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor   0.5 0.5 0.5 1
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -285,7 +285,7 @@
       group grpColumn
       rect (LIST_X+(SERVER_C*LIST_W)) (LIST_Y+HEADFOOT_H) (MAP_C*LIST_W) (LIST_H-(2*HEADFOOT_H))
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       backcolor 0 0 0 0
       bordersize 1
       bordercolor .5 .5 .5 1
@@ -305,7 +305,7 @@
       textalign ALIGN_LEFT
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor   0.5 0.5 0.5 1
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -327,7 +327,7 @@
       group grpColumn
       rect (LIST_X+((SERVER_C+MAP_C)*LIST_W)) (LIST_Y+HEADFOOT_H) (PLAYERS_C*LIST_W) (LIST_H-(2*HEADFOOT_H))
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       backcolor 0 0 0 0
       bordersize 1
       bordercolor .5 .5 .5 1
@@ -347,7 +347,7 @@
       textalign ALIGN_LEFT
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor   0.5 0.5 0.5 1
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -369,7 +369,7 @@
       group grpColumn
       rect (LIST_X+((SERVER_C+MAP_C+PLAYERS_C)*LIST_W)) (LIST_Y+HEADFOOT_H) (PING_C*LIST_W) (LIST_H-(2*HEADFOOT_H))
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       backcolor 0 0 0 0
       bordersize 1
       bordercolor .5 .5 .5 1
@@ -390,7 +390,7 @@
       textscale .33
       elementtype LISTBOX_TEXT
       feeder FEEDER_SERVERS
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor   0.5 0.5 0.5 1
       forecolor     1   1   1   1
       backcolor     0.2 0.2 0.2 1
@@ -418,7 +418,7 @@
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
       forecolor 1 1 1 1
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor .5 .5 .5 1
       visible MENU_TRUE
       decoration
@@ -434,7 +434,7 @@
       textvalign VALIGN_CENTER
       textalignx LIST_TOFF
       forecolor 1 1 1 1
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordercolor .5 .5 .5 1
       visible MENU_TRUE
       decoration

@@ -201,12 +201,12 @@ Coordinates are 640*480 virtual values
 */
 void CG_FillRoundedRect( float x, float y, float width, float height, float size, const float *color )
 {
-  CG_FillRect( x + size, y + size * 4, width - size * 2, height - size * 8, color );
+  CG_FillRect( x, y + size * 3, width, height - size * 6, color );
 
   trap_R_SetColor( color );
 
-  CG_DrawTopBottom( x + size * 4, y + size, width - size * 8, height - size * 2, size * 3 );
-  CG_DrawCorners( x, y, width, height, size * 4, cgDC.Assets.cornerIn );
+  CG_DrawTopBottom( x + size * 3, y, width - size * 6, height, size * 3 );
+  CG_DrawCorners( x - size, y - size, width + size * 2, height + size * 2, size * 4, cgDC.Assets.cornerIn );
 
   trap_R_SetColor( NULL );
 }

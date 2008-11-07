@@ -101,7 +101,7 @@
       elementheight 16
       textscale .25
       outlinecolor .2 .2 .2 .5
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordersize 1
       bordercolor .5 .5 .5 1
       elementtype LISTBOX_TEXT
@@ -118,7 +118,7 @@
       elementwidth 120
       elementheight 16
       textscale .25
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       bordersize 1
       bordercolor .5 .5 .5 1
       elementtype LISTBOX_TEXT

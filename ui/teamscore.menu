@@ -32,7 +32,7 @@
       name teamNameWindow
       rect 0 0 W BAR_H
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       forecolor 1 1 1 1
@@ -89,7 +89,7 @@
       name leftteambar
       rect 0 (BAR_H+BORDER) (W/2) BAR_H
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       forecolor 1 1 1 1
@@ -103,7 +103,7 @@
       name rightteambar
       rect (W/2) (BAR_H+BORDER) (W/2) BAR_H
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       forecolor 1 1 1 1
@@ -261,7 +261,7 @@
       rect 0 ((2*BAR_H)+BORDER) (W/2) (H-((3*BAR_H)+(2*BORDER)))
       style WINDOW_STYLE_FILLED
       backcolor 0 0 0 .6
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       forecolor .75 .75 .75 1
@@ -290,7 +290,7 @@
       rect (W/2) ((2*BAR_H)+BORDER) (W/2) (H-((3*BAR_H)+(2*BORDER)))
       style WINDOW_STYLE_FILLED
       backcolor 0 0 0 .6
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       forecolor .75 .75 .75 1
@@ -320,7 +320,7 @@
       name window
       rect 0 (H-BAR_H) W BAR_H
       style WINDOW_STYLE_FILLED
-      border WINDOW_BORDER_ROUNDED
+      border WINDOW_BORDER_FULL
       borderSize 1.0
       bordercolor .5 .5 .5 1
       backcolor 0 0 0 .8
