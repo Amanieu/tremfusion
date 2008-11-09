@@ -709,7 +709,7 @@ void CG_PrecacheClientInfo( class_t class, char *model, char *skin )
   Q_strncpyz( newInfo.modelName, model, sizeof( newInfo.modelName ) );
 
   // modelName did not include a skin name
-  if( !skin )
+  if( !skin || !*skin )
     Q_strncpyz( newInfo.skinName, "default", sizeof( newInfo.skinName ) );
   else
     Q_strncpyz( newInfo.skinName, skin, sizeof( newInfo.skinName ) );

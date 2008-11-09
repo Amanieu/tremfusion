@@ -211,6 +211,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL4_REGEN                9
 #define LEVEL4_COST                 2
 
+#define FLIER_CLAW_REPEAT           1000
+#define FLIER_CLAW_K_SCALE          1.0f
+
 
 
 /*
@@ -336,6 +339,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HOVEL_SPLASHRADIUS          200
 #define HOVEL_CREEPSIZE             120
 #define HOVEL_VALUE                 ABVM(8)
+
+#define FLIER_SPEED                 1.2f
+#define FLIER_VALUE                 AVM(250)
+#define FLIER_HEALTH                AHM(125)
+#define FLIER_REGEN                 3
+#define FLIER_COST                  0
 
 
 

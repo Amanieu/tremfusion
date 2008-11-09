@@ -1475,6 +1475,24 @@ void FireWeapon3( gentity_t *ent )
       slowBlobFire( ent );
       break;
 
+    case WP_AFLIER:
+      if( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_FLIER )
+      {
+        ent->client->pers.classSelection = PCL_ALIEN_FLIER_FLY;
+        ent->client->ps.stats[ STAT_CLASS ] = PCL_ALIEN_FLIER_FLY;
+        //G_Printf( "going to flying mode for client %d\n", ent - g_entities );
+      }
+      else if( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_FLIER_FLY )
+      {
+        ent->client->pers.classSelection = PCL_ALIEN_FLIER;
+        ent->client->ps.stats[ STAT_CLASS ] = PCL_ALIEN_FLIER;
+        //G_Printf( "going to walking mode for client %d\n", ent - g_entities );
+      }
+      else
+        G_Error( "Class %s tried to enter flying mode!\n", 
+            BG_Class( ent->client->ps.stats[ STAT_CLASS ] )->name );
+      break;
+
     default:
       break;
   }
@@ -1508,6 +1526,11 @@ void FireWeapon2( gentity_t *ent )
 
     case WP_LUCIFER_CANNON:
       LCChargeFire( ent, qtrue );
+      break;
+
+    case WP_AFLIER:
+      VectorMA( ent->client->ps.velocity, 10.f, forward, 
+          ent->client->ps.velocity );
       break;
 
     case WP_ABUILD:

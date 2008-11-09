@@ -989,7 +989,7 @@ static const classAttributes_t bg_classList[ ] =
     400.0f,                                         //float   stopSpeed;
     250.0f,                                         //float   jumpMagnitude;
     2.0f,                                           //float   knockbackScale;
-    { PCL_ALIEN_LEVEL1, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
+    { PCL_ALIEN_LEVEL1, PCL_ALIEN_FLIER, PCL_NONE },//int     children[ 3 ];
     LEVEL0_COST,                                    //int     cost;
     LEVEL0_VALUE                                    //int     value;
   },
@@ -1189,6 +1189,58 @@ static const classAttributes_t bg_classList[ ] =
     { PCL_NONE, PCL_NONE, PCL_NONE },               //int     children[ 3 ];
     LEVEL4_COST,                                    //int     cost;
     LEVEL4_VALUE                                    //int     value;
+  },
+  {
+    PCL_ALIEN_FLIER,                                //int     classnum;
+    "vandal",                                       //char    *classname;
+    "Flies.",
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
+    FLIER_HEALTH,                                   //int     health;
+    0.0f,                                           //float   fallDamage;
+    FLIER_REGEN,                                    //int     regenRate;
+    SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
+    WP_AFLIER,                                      //weapon_t  startWeapon
+    0.0f,                                           //float   buildDist;
+    90,                                             //int     fov;
+    0.001f,                                         //float   bob;
+    1.5f,                                           //float   bobCycle;
+    40,                                             //int     steptime;
+    FLIER_SPEED,                                    //float   speed;
+    4.0f,                                           //float   acceleration;
+    3.0f,                                           //float   airAcceleration;
+    5.0f,                                           //float   friction;
+    100.0f,                                         //float   stopSpeed;
+    250.0f,                                         //float   jumpMagnitude;
+    1.6f,                                           //float   knockbackScale;
+    { PCL_ALIEN_LEVEL1, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
+    FLIER_COST,                                     //int     cost;
+    FLIER_VALUE                                     //int     value;
+  },
+  {
+    PCL_ALIEN_FLIER_FLY,                            //int     classnum;
+    "vandal_fly",                                   //char    *classname;
+    "Flies.",
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
+    FLIER_HEALTH,                                   //int     health;
+    0.0f,                                           //float   fallDamage;
+    FLIER_REGEN,                                    //int     regenRate;
+    SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
+    WP_AFLIER,                                      //weapon_t  startWeapon
+    0.0f,                                           //float   buildDist;
+    90,                                             //int     fov;
+    0.001f,                                         //float   bob;
+    1.5f,                                           //float   bobCycle;
+    40,                                             //int     steptime;
+    FLIER_SPEED,                                    //float   speed;
+    2.0f,                                           //float   acceleration;
+    6.0f,                                           //float   airAcceleration;
+    6.0f,                                           //float   friction;
+    50.0f,                                          //float   stopSpeed;
+    350.0f,                                         //float   jumpMagnitude;
+    2.0f,                                           //float   knockbackScale;
+    { PCL_ALIEN_LEVEL1, PCL_NONE, PCL_NONE },       //int     children[ 3 ];
+    FLIER_COST,                                     //int     cost;
+    FLIER_VALUE                                     //int     value;
   },
   {
     PCL_HUMAN,                                      //int     classnum;
@@ -1905,6 +1957,32 @@ static const weaponAttributes_t bg_weapons[ ] =
     90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
     qfalse,               //qboolean  longRanged;
+    TEAM_ALIENS           //team_t  team;
+  },
+  {
+    WP_AFLIER,            //int       weaponNum;
+    0,                    //int       price;
+    ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ), //int  stages
+    SLOT_WEAPON,          //int       slots;
+    "flier",              //char      *weaponName;
+    "Flier",              //char      *humanName;
+    "",
+    0,                    //int       maxAmmo;
+    0,                    //int       maxClips;
+    qtrue,                //int       infiniteAmmo;
+    qfalse,               //int       usesEnergy;
+    FLIER_CLAW_REPEAT,    //int       repeatRate1;
+    0,                    //int       repeatRate2;
+    1000,                 //int       repeatRate3;
+    0,                    //int       reloadTime;
+    FLIER_CLAW_K_SCALE,   //float     knockbackScale;
+    qtrue,                //qboolean  hasAltMode;
+    qtrue,                //qboolean  hasThirdMode;
+    qfalse,               //qboolean  canZoom;
+    90.0f,                //float     zoomFov;
+    qfalse,               //qboolean  purchasable;
+    qfalse,               //qboolean  longRanged;
+    0,                    //int       buildDelay;
     TEAM_ALIENS           //team_t  team;
   },
   {
