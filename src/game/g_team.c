@@ -132,7 +132,6 @@ G_ChangeTeam
 void G_ChangeTeam( gentity_t *ent, team_t newTeam )
 {
   team_t  oldTeam = ent->client->pers.teamSelection;
-  char    buf[ MAX_INFO_STRING ];
 
   if( oldTeam == newTeam )
     return;
@@ -202,8 +201,8 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
       BG_TeamName( newTeam ) );
 
   // log team changes to demo
-  Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
-  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d \\team\\%d", (int)(ent - g_entities),
+                 ent->client->pers.teamSelection ) );
 }
 
 /*

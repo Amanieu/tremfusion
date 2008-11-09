@@ -1,37 +1,163 @@
-Index: src/game/g_syscalls.asm
-===================================================================
---- src/game/g_syscalls.asm	(revision 114)
-+++ src/game/g_syscalls.asm	(working copy)
-@@ -50,6 +50,7 @@
- equ trap_Parse_SourceFileAndLine    -47
+diff --git a/src/game/g_active.c b/src/game/g_active.c
+index 839299a..87deb53 100644
+--- a/src/game/g_active.c
++++ b/src/game/g_active.c
+@@ -404,7 +404,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
+     if ( client->sess.spectatorClient >= 0 )
+     {
+       cl = &level.clients[ client->sess.spectatorClient ];
+-      if ( cl->sess.sessionTeam != TEAM_SPECTATOR )
++      if ( cl->sess.sessionTeam != TEAM_SPECTATOR || cl->pers.demoClient )
+         doPmove = qfalse;
+     }
+   }
+@@ -1847,7 +1847,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
+     {
+       cl = &level.clients[ clientNum ];
  
- equ trap_SendGameStat               -48
-+equ trap_DemoCommand                -49
+-      if( cl->pers.connected == CON_CONNECTED )
++      if( cl->pers.connected == CON_CONNECTED || cl->pers.demoClient )
+       {
+  
+     if( cl -> sess.spectatorState != SPECTATOR_FOLLOW ) 
+diff --git a/src/game/g_admin.c b/src/game/g_admin.c
+index 986adee..ae8aa9f 100644
+--- a/src/game/g_admin.c
++++ b/src/game/g_admin.c
+@@ -2474,6 +2474,11 @@ qboolean G_admin_putteam( gentity_t *ent, int skiparg )
+   }
+   if( vic->client->pers.teamSelection == teamnum )
+     return qfalse;
++  if( level.demoState == DS_PLAYBACK )
++  {
++    ADMP( "^3!putteam: ^7cannot join a team while a demo is playing\n" );
++    return qfalse;
++  }
+   G_ChangeTeam( vic, teamnum );
  
- 
- equ memset                          -101
-Index: src/game/g_syscalls.c
-===================================================================
---- src/game/g_syscalls.c	(revision 114)
-+++ src/game/g_syscalls.c	(working copy)
-@@ -257,6 +257,12 @@
-   return;
+   AP( va( "print \"^3!putteam: ^7%s^7 put %s^7 on to the %s team\n\"",
+@@ -3943,6 +3948,8 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
+         oldname,
+         level.clients[ pids[ 0 ] ].pers.netname,
+         ( ent ) ? G_admin_adminPrintName( ent ) : "console" ) );
++  // log renames to demo
++  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", (int)(victim - g_entities), newname ) );
+   return qtrue;
  }
  
-+void trap_DemoCommand( demoCommand_t cmd, const char *string )
-+{
-+  syscall( G_DEMO_COMMAND, cmd, string );
-+  return;
-+}
+diff --git a/src/game/g_client.c b/src/game/g_client.c
+index 0799375..a116f20 100644
+--- a/src/game/g_client.c
++++ b/src/game/g_client.c
+@@ -1106,6 +1106,8 @@ void ClientUserinfoChanged( int clientNum )
+       {
+         client->pers.nameChangeTime = level.time;
+         client->pers.nameChanges++;
++        // log renames to demo
++        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", clientNum, client->pers.netname ) );
+       }
+     }
+   }
+@@ -1460,6 +1462,10 @@ void ClientBegin( int clientNum )
+ 
+   G_LogPrintf( "ClientBegin: %i\n", clientNum );
+ 
++  // log to demo
++  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", clientNum,
++                 client->pers.netname, client->pers.teamSelection ) );
 +
- int trap_Parse_AddGlobalDefine( char *define )
- {
-   return syscall( G_PARSE_ADD_GLOBAL_DEFINE, define );
-Index: src/game/g_local.h
-===================================================================
---- src/game/g_local.h	(revision 114)
-+++ src/game/g_local.h	(working copy)
-@@ -408,6 +408,7 @@
+   if( g_clientUpgradeNotice.integer )
+   {
+     if( !Q_stricmp( ent->client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ) )
+@@ -1866,5 +1872,7 @@ void ClientDisconnect( int clientNum )
+ 
+   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
+ 
++  G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
++
+   CalculateRanks( );
+ }
+diff --git a/src/game/g_cmds.c b/src/game/g_cmds.c
+index 64906cf..669e09e 100644
+--- a/src/game/g_cmds.c
++++ b/src/game/g_cmds.c
+@@ -742,6 +742,10 @@ void G_ChangeTeam( gentity_t *ent, pTeam_t newTeam )
+   //update ClientInfo
+   ClientUserinfoChanged( ent->client->ps.clientNum );
+   G_CheckDBProtection( );
++
++  // log team changes to demo
++  G_DemoCommand( DC_CLIENT_SET, va( "%d \\team\\%d", (int)(ent - g_entities),
++                 ent->client->pers.teamSelection ) );
+ }
+ 
+ /*
+@@ -796,6 +800,12 @@ void Cmd_Team_f( gentity_t *ent )
+   
+   if( !Q_stricmp( s, "spectate" ) )
+     team = PTE_NONE;
++  else if( level.demoState == DS_PLAYBACK )
++  {
++    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
++      "while a demo is being played\n\"" );
++    return;
++  }
+   else if( !force && ent->client->pers.teamSelection == PTE_NONE &&
+            g_maxGameClients.integer && level.numPlayingClients >=
+            g_maxGameClients.integer )
+@@ -1045,6 +1055,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
+       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
+                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+       color = COLOR_GREEN;
++      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
+       break;
+ 
+     case SAY_TEAM:
+@@ -1060,6 +1071,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
+         color = COLOR_YELLOW;
+       else
+         color = COLOR_CYAN;
++      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^%c%s\"", name, color, chatText ) );
+       break;
+ 
+     case SAY_TELL:
+@@ -1078,6 +1090,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
+       Com_sprintf( name, sizeof( name ), "^2%s^7%s%s%c%c"EC" ", g_actionPrefix.string, prefix,
+                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+       color = COLOR_WHITE;
++      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s%s\"", name, chatText ) );
+       break;
+ 
+     case SAY_ACTION_T:
+@@ -1089,6 +1102,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
+         Com_sprintf( name, sizeof( name ), EC"^5%s^7%s%c%c"EC""EC" ", g_actionPrefix.string, 
+           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+       color = COLOR_WHITE;
++      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s%s\"", name, chatText ) );
+       break;
+       
+       case SAY_ADMINS:
+@@ -3697,11 +3711,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
+       continue;
+ 
+     // can only follow connected clients
+-    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
++    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
++        !level.clients[ clientnum ].pers.demoClient )
+       continue;
+ 
+     // can't follow another spectator
+-     if( level.clients[ clientnum ].pers.teamSelection == PTE_NONE )
++     if( level.clients[ clientnum ].pers.teamSelection == PTE_NONE &&
++        !level.clients[ clientnum ].pers.demoClient )
+        continue;
+      
+       // can only follow teammates when dead and on a team
+diff --git a/src/game/g_local.h b/src/game/g_local.h
+index aa8dd22..019b28a 100644
+--- a/src/game/g_local.h
++++ b/src/game/g_local.h
+@@ -408,6 +408,7 @@ typedef struct
    char                guid[ 33 ];
    char                ip[ 16 ];
    qboolean            muted;
@@ -39,7 +165,7 @@ Index: src/game/g_local.h
    qboolean            denyBuild;
    int                 adminLevel;
    char                adminName[ MAX_NETNAME ];
-@@ -561,6 +562,15 @@
+@@ -561,6 +562,15 @@ typedef struct damageRegion_s
    qboolean  crouch;
  } damageRegion_t;
  
@@ -55,7 +181,7 @@ Index: src/game/g_local.h
  #define MAX_ARMOUR_TEXT    8192
  #define MAX_ARMOUR_REGIONS 16
  
-@@ -758,7 +768,9 @@
+@@ -758,7 +768,9 @@ typedef struct
    int               lastTeamUnbalancedTime;
    int               numTeamWarnings;  
    int               lastMsgTime;
@@ -66,7 +192,7 @@ Index: src/game/g_local.h
    statsCounters_level alienStatsCounters;
    statsCounters_level humanStatsCounters;
  } level_locals_t;
-@@ -1080,6 +1092,7 @@
+@@ -1080,6 +1092,7 @@ void QDECL G_Error( const char *fmt, ... );
  void CheckVote( void );
  void CheckTeamVote( int teamnum );
  void LogExit( const char *string );
@@ -74,80 +200,16 @@ Index: src/game/g_local.h
  int  G_TimeTilSuddenDeath( void );
  void CheckMsgTimer( void );
  qboolean G_Flood_Limited( gentity_t *ent );
-@@ -1411,3 +1424,4 @@
+@@ -1411,3 +1424,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
  
  void      trap_SnapVector( float *v );
  void      trap_SendGameStat( const char *data );
 +void      trap_DemoCommand( demoCommand_t cmd, const char *string );
-Index: src/game/g_active.c
-===================================================================
---- src/game/g_active.c	(revision 114)
-+++ src/game/g_active.c	(working copy)
-@@ -404,7 +404,7 @@
-     if ( client->sess.spectatorClient >= 0 )
-     {
-       cl = &level.clients[ client->sess.spectatorClient ];
--      if ( cl->sess.sessionTeam != TEAM_SPECTATOR )
-+      if ( cl->sess.sessionTeam != TEAM_SPECTATOR || cl->pers.demoClient )
-         doPmove = qfalse;
-     }
-   }
-@@ -1847,7 +1847,7 @@
-     {
-       cl = &level.clients[ clientNum ];
- 
--      if( cl->pers.connected == CON_CONNECTED )
-+      if( cl->pers.connected == CON_CONNECTED || cl->pers.demoClient )
-       {
-  
-     if( cl -> sess.spectatorState != SPECTATOR_FOLLOW ) 
-Index: src/game/g_session.c
-===================================================================
---- src/game/g_session.c	(revision 114)
-+++ src/game/g_session.c	(working copy)
-@@ -164,4 +164,9 @@
-     if( level.clients[ i ].pers.connected == CON_CONNECTED )
-       G_WriteClientSessionData( &level.clients[ i ] );
-   }
-+
-+  // write values for sv_maxclients and sv_democlients because they invalidate session data
-+  trap_Cvar_Set( "session", va( "%i %i", 
-+                 trap_Cvar_VariableIntegerValue( "sv_maxclients" ),
-+                 trap_Cvar_VariableIntegerValue( "sv_democlients" ) ) );
- }
-Index: src/game/g_public.h
-===================================================================
---- src/game/g_public.h	(revision 114)
-+++ src/game/g_public.h	(working copy)
-@@ -222,7 +222,8 @@
-   G_PARSE_READ_TOKEN,
-   G_PARSE_SOURCE_FILE_AND_LINE,
- 
--  G_SEND_GAMESTAT
-+  G_SEND_GAMESTAT,
-+  G_DEMO_COMMAND
- } gameImport_t;
- 
- 
-@@ -253,10 +254,12 @@
- 
-   GAME_RUN_FRAME,         // ( int levelTime );
- 
--  GAME_CONSOLE_COMMAND      // ( void );
-+  GAME_CONSOLE_COMMAND,      // ( void );
-   // ConsoleCommand will be called when a command has been issued
-   // that is not recognized as a builtin function.
-   // The game can issue trap_argc() / trap_argv() commands to get the command
-   // and parameters.  Return qfalse if the game doesn't recognize it as a command.
-+
-+  GAME_DEMO_COMMAND         // ( int cmd, const char *string );
- } gameExport_t;
- 
-Index: src/game/g_main.c
-===================================================================
---- src/game/g_main.c	(revision 114)
-+++ src/game/g_main.c	(working copy)
-@@ -62,6 +62,7 @@
+diff --git a/src/game/g_main.c b/src/game/g_main.c
+index 4b4b447..5fd7a56 100644
+--- a/src/game/g_main.c
++++ b/src/game/g_main.c
+@@ -62,6 +62,7 @@ vmCvar_t  g_dedicated;
  vmCvar_t  g_speed;
  vmCvar_t  g_gravity;
  vmCvar_t  g_cheats;
@@ -155,7 +217,7 @@ Index: src/game/g_main.c
  vmCvar_t  g_knockback;
  vmCvar_t  g_quadfactor;
  vmCvar_t  g_inactivity;
-@@ -188,6 +189,9 @@
+@@ -188,6 +189,9 @@ static cvarTable_t   gameCvarTable[ ] =
    // don't override the cheat state set by the system
    { &g_cheats, "sv_cheats", "", 0, 0, qfalse },
  
@@ -165,7 +227,7 @@ Index: src/game/g_main.c
    // noset vars
    { NULL, "gamename", GAME_VERSION , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
    { NULL, "gamedate", __DATE__ , CVAR_ROM, 0, qfalse  },
-@@ -357,6 +361,9 @@
+@@ -357,6 +361,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
  void G_RunFrame( int levelTime );
  void G_ShutdownGame( int restart );
  void CheckExitRules( void );
@@ -175,7 +237,7 @@ Index: src/game/g_main.c
  
  void G_CountSpawns( void );
  void G_CalculateBuildPoints( void );
-@@ -412,6 +419,22 @@
+@@ -412,6 +419,22 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
  
      case GAME_CONSOLE_COMMAND:
        return ConsoleCommand( );
@@ -198,7 +260,7 @@ Index: src/game/g_main.c
    }
  
    return -1;
-@@ -612,6 +635,8 @@
+@@ -612,6 +635,8 @@ G_InitGame
  void G_InitGame( int levelTime, int randomSeed, int restart )
  {
    int i;
@@ -207,7 +269,7 @@ Index: src/game/g_main.c
  
    srand( randomSeed );
  
-@@ -631,6 +656,11 @@
+@@ -631,6 +656,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
    level.startTime = levelTime;
    level.alienStage2Time = level.alienStage3Time =
      level.humanStage2Time = level.humanStage3Time = level.startTime;
@@ -219,7 +281,7 @@ Index: src/game/g_main.c
  
    level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
  
-@@ -1366,6 +1396,8 @@
+@@ -1366,6 +1396,8 @@ void G_CalculateStages( void )
    float         humanPlayerCountMod     = level.averageNumHumanClients / PLAYER_COUNT_MOD;
    static int    lastAlienStageModCount  = 1;
    static int    lastHumanStageModCount  = 1;
@@ -228,7 +290,7 @@ Index: src/game/g_main.c
  
    if( alienPlayerCountMod < 0.1f )
      alienPlayerCountMod = 0.1f;
-@@ -1435,6 +1467,15 @@
+@@ -1435,6 +1467,15 @@ void G_CalculateStages( void )
  
      lastHumanStageModCount = g_humanStage.modificationCount;
    }
@@ -244,7 +306,7 @@ Index: src/game/g_main.c
  }
  
  /*
-@@ -1502,13 +1543,15 @@
+@@ -1502,13 +1543,15 @@ void CalculateRanks( void )
    for( i = 0; i < level.maxclients; i++ )
    {
      P[ i ] = '-';
@@ -262,14 +324,14 @@ Index: src/game/g_main.c
          continue;
  
        level.numVotingClients++;
-@@ -1559,8 +1602,85 @@
+@@ -1559,6 +1602,80 @@ void CalculateRanks( void )
      SendScoreboardMessageToAllClients( );
  }
  
 +/*
 +============
 +G_DemoCommand
- 
++
 +Store a demo command to a demo if we are recording
 +============
 +*/
@@ -279,7 +341,7 @@ Index: src/game/g_main.c
 +    trap_DemoCommand( cmd, string );
 +}
 +
- /*
++/*
 +============
 +G_DemoSetClient
 +
@@ -300,9 +362,6 @@ Index: src/game/g_main.c
 +  s = Info_ValueForKey( buffer, "name" );
 +  if( *s )
 +    Q_strncpyz( client->pers.netname, s, sizeof( client->pers.netname ) );
-+  s = Info_ValueForKey( buffer, "ip" );
-+  if( *s )
-+    Q_strncpyz( client->pers.ip, s, sizeof( client->pers.ip ) );
 +  s = Info_ValueForKey( buffer, "team" );
 +  if( *s )
 +    client->pers.teamSelection = atoi( s );
@@ -343,12 +402,10 @@ Index: src/game/g_main.c
 +  trap_Cvar_Set( "g_alienStage", buffer );
 +}
 +
-+
-+/*
- ========================================================================
  
- MAP CHANGING
-@@ -2172,6 +2292,10 @@
+ /*
+ ========================================================================
+@@ -2172,6 +2289,10 @@ can see the last frag.
  */
  void CheckExitRules( void )
  {
@@ -359,7 +416,7 @@ Index: src/game/g_main.c
    // if at the intermission, wait for all non-bots to
    // signal ready, then go to next level
    if( level.intermissiontime )
-@@ -2514,6 +2638,54 @@
+@@ -2514,6 +2635,50 @@ void CheckCvars( void )
  }
  
  /*
@@ -374,20 +431,17 @@ Index: src/game/g_main.c
 +  // Don't do anything if no change
 +  if ( g_demoState.integer == level.demoState )
 +    return;
++  level.demoState = g_demoState.integer;
 +
 +  // log all connected clients
 +  if ( g_demoState.integer == DS_RECORDING )
 +  {
-+    char buffer[ MAX_INFO_STRING ] = "";
 +    for ( i = 0; i < level.maxclients; i++ )
 +    {
 +      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
-+      {
-+        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
-+        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
-+        Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
-+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
-+      }
++        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", i,
++                       level.clients[ i ].pers.netname,
++                       level.clients[ i ].pers.teamSelection ) );
 +    }
 +  }
 +
@@ -407,14 +461,13 @@ Index: src/game/g_main.c
 +        G_ChangeTeam( g_entities + i, PTE_NONE );
 +    }
 +  }
-+  level.demoState = g_demoState.integer;
 +}
 +
 +/*
  =============
  G_RunThink
  
-@@ -2606,13 +2778,16 @@
+@@ -2606,13 +2771,16 @@ void G_RunFrame( int levelTime )
    // get any cvar changes
    G_UpdateCvars( );
  
@@ -432,45 +485,82 @@ Index: src/game/g_main.c
    {
      if( !ent->inuse )
        continue;
-Index: src/game/g_admin.c
-===================================================================
---- src/game/g_admin.c	(revision 114)
-+++ src/game/g_admin.c	(working copy)
-@@ -2481,6 +2481,11 @@
+diff --git a/src/game/g_public.h b/src/game/g_public.h
+index fc6b7df..7aa83cc 100644
+--- a/src/game/g_public.h
++++ b/src/game/g_public.h
+@@ -222,7 +222,8 @@ typedef enum {
+   G_PARSE_READ_TOKEN,
+   G_PARSE_SOURCE_FILE_AND_LINE,
+ 
+-  G_SEND_GAMESTAT
++  G_SEND_GAMESTAT,
++  G_DEMO_COMMAND
+ } gameImport_t;
+ 
+ 
+@@ -253,10 +254,12 @@ typedef enum {
+ 
+   GAME_RUN_FRAME,         // ( int levelTime );
+ 
+-  GAME_CONSOLE_COMMAND      // ( void );
++  GAME_CONSOLE_COMMAND,      // ( void );
+   // ConsoleCommand will be called when a command has been issued
+   // that is not recognized as a builtin function.
+   // The game can issue trap_argc() / trap_argv() commands to get the command
+   // and parameters.  Return qfalse if the game doesn't recognize it as a command.
++
++  GAME_DEMO_COMMAND         // ( int cmd, const char *string );
+ } gameExport_t;
+ 
+diff --git a/src/game/g_session.c b/src/game/g_session.c
+index ae6c9a3..fc8dffe 100644
+--- a/src/game/g_session.c
++++ b/src/game/g_session.c
+@@ -164,4 +164,9 @@ void G_WriteSessionData( void )
+     if( level.clients[ i ].pers.connected == CON_CONNECTED )
+       G_WriteClientSessionData( &level.clients[ i ] );
    }
-   if( vic->client->pers.teamSelection == teamnum )
-     return qfalse;
-+  if( level.demoState == DS_PLAYBACK )
-+  {
-+    ADMP( "^3!putteam: ^7cannot join a team while a demo is playing\n" );
-+    return qfalse;
-+  }
-   G_ChangeTeam( vic, teamnum );
++
++  // write values for sv_maxclients and sv_democlients because they invalidate session data
++  trap_Cvar_Set( "session", va( "%i %i", 
++                 trap_Cvar_VariableIntegerValue( "sv_maxclients" ),
++                 trap_Cvar_VariableIntegerValue( "sv_democlients" ) ) );
+ }
+diff --git a/src/game/g_syscalls.asm b/src/game/g_syscalls.asm
+index e77017b..8489777 100644
+--- a/src/game/g_syscalls.asm
++++ b/src/game/g_syscalls.asm
+@@ -50,6 +50,7 @@ equ trap_Parse_ReadToken            -46
+ equ trap_Parse_SourceFileAndLine    -47
  
-   AP( va( "print \"^3!putteam: ^7%s^7 put %s^7 on to the %s team\n\"",
-@@ -3908,6 +3913,7 @@
-   char oldname[ MAX_NAME_LENGTH ];
-   char err[ MAX_STRING_CHARS ];
-   char userinfo[ MAX_INFO_STRING ];
-+  char buf[ MAX_INFO_STRING ];
-   char *s;
-   gentity_t *victim = NULL;
+ equ trap_SendGameStat               -48
++equ trap_DemoCommand                -49
  
-@@ -3950,6 +3956,9 @@
-         oldname,
-         level.clients[ pids[ 0 ] ].pers.netname,
-         ( ent ) ? G_admin_adminPrintName( ent ) : "console" ) );
-+  // log renames to demo
-+  Info_SetValueForKey( buf, "name", newname );
-+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(victim - g_entities), buf ) );
-   return qtrue;
+ 
+ equ memset                          -101
+diff --git a/src/game/g_syscalls.c b/src/game/g_syscalls.c
+index cb4ceb6..71af3f7 100644
+--- a/src/game/g_syscalls.c
++++ b/src/game/g_syscalls.c
+@@ -257,6 +257,12 @@ void trap_SendGameStat( const char *data )
+   return;
  }
  
-Index: src/game/g_utils.c
-===================================================================
---- src/game/g_utils.c	(revision 114)
-+++ src/game/g_utils.c	(working copy)
-@@ -168,6 +168,8 @@
++void trap_DemoCommand( demoCommand_t cmd, const char *string )
++{
++  syscall( G_DEMO_COMMAND, cmd, string );
++  return;
++}
++
+ int trap_Parse_AddGlobalDefine( char *define )
+ {
+   return syscall( G_PARSE_ADD_GLOBAL_DEFINE, define );
+diff --git a/src/game/g_utils.c b/src/game/g_utils.c
+index a74df3f..ca4f296 100644
+--- a/src/game/g_utils.c
++++ b/src/game/g_utils.c
+@@ -168,6 +168,8 @@ void G_TeamCommand( pTeam_t team, char *cmd )
          trap_SendServerCommand( i, cmd );
      }
    }
@@ -479,138 +569,3 @@ Index: src/game/g_utils.c
  }
  
  
-Index: src/game/g_client.c
-===================================================================
---- src/game/g_client.c	(revision 114)
-+++ src/game/g_client.c	(working copy)
-@@ -998,6 +998,7 @@
-   char      c1[ MAX_INFO_STRING ];
-   char      c2[ MAX_INFO_STRING ];
-   char      userinfo[ MAX_INFO_STRING ];
-+  char      buf[ MAX_INFO_STRING ];
-   team_t    team;
- 
-   ent = g_entities + clientNum;
-@@ -1091,6 +1092,9 @@
-       {
-         client->pers.nameChangeTime = level.time;
-         client->pers.nameChanges++;
-+        // log renames to demo
-+        Info_SetValueForKey( buf, "name", client->pers.netname );
-+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
-       }
-     }
-   }
-@@ -1403,6 +1407,7 @@
-   gentity_t *ent;
-   gclient_t *client;
-   int       flags;
-+  char      buffer[ MAX_INFO_STRING ] = "";
- 
-   ent = g_entities + clientNum;
- 
-@@ -1445,6 +1450,12 @@
- 
-   G_LogPrintf( "ClientBegin: %i\n", clientNum );
- 
-+  // log to demo
-+  Info_SetValueForKey( buffer, "name", client->pers.netname );
-+  Info_SetValueForKey( buffer, "ip", client->pers.ip );
-+  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
-+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
-+
-   if( g_clientUpgradeNotice.integer )
-   {
-     if( !Q_stricmp( ent->client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ) )
-@@ -1851,5 +1862,7 @@
- 
-   trap_SetConfigstring( CS_PLAYERS + clientNum, "");
- 
-+  G_DemoCommand( DC_CLIENT_REMOVE, va( "%d", clientNum ) );
-+
-   CalculateRanks( );
- }
-Index: src/game/g_cmds.c
-===================================================================
---- src/game/g_cmds.c	(revision 114)
-+++ src/game/g_cmds.c	(working copy)
-@@ -657,6 +657,7 @@
- {
-   pTeam_t oldTeam = ent->client->pers.teamSelection;
-   qboolean isFixingImbalance=qfalse;
-+  char    buf[ MAX_INFO_STRING ];
-  
-   if( oldTeam == newTeam )
-     return;
-@@ -742,6 +743,10 @@
-   //update ClientInfo
-   ClientUserinfoChanged( ent->client->ps.clientNum );
-   G_CheckDBProtection( );
-+
-+  // log team changes to demo
-+  Info_SetValueForKey( buf, "team", va( "%d", ent->client->pers.teamSelection ) );
-+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(ent - g_entities), buf ) );
- }
- 
- /*
-@@ -796,6 +801,12 @@
-   
-   if( !Q_stricmp( s, "spectate" ) )
-     team = PTE_NONE;
-+  else if( level.demoState == DS_PLAYBACK )
-+  {
-+    trap_SendServerCommand( ent-g_entities, "print \"You cannot join a team "
-+      "while a demo is being played\n\"" );
-+    return;
-+  }
-   else if( !force && ent->client->pers.teamSelection == PTE_NONE &&
-            g_maxGameClients.integer && level.numPlayingClients >=
-            g_maxGameClients.integer )
-@@ -1045,6 +1056,7 @@
-       Com_sprintf( name, sizeof( name ), "%s%s%c%c"EC": ", prefix,
-                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
-       color = COLOR_GREEN;
-+      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
-       break;
- 
-     case SAY_TEAM:
-@@ -1060,6 +1072,7 @@
-         color = COLOR_YELLOW;
-       else
-         color = COLOR_CYAN;
-+      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^%c%s\"", name, color, chatText ) );
-       break;
- 
-     case SAY_TELL:
-@@ -1078,6 +1091,7 @@
-       Com_sprintf( name, sizeof( name ), "^2%s^7%s%s%c%c"EC" ", g_actionPrefix.string, prefix,
-                    ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
-       color = COLOR_WHITE;
-+      G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s%s\"", name, chatText ) );
-       break;
- 
-     case SAY_ACTION_T:
-@@ -1089,6 +1103,7 @@
-         Com_sprintf( name, sizeof( name ), EC"^5%s^7%s%c%c"EC""EC" ", g_actionPrefix.string, 
-           ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
-       color = COLOR_WHITE;
-+      G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s%s\"", name, chatText ) );
-       break;
-       
-       case SAY_ADMINS:
-@@ -3697,11 +3712,13 @@
-       continue;
- 
-     // can only follow connected clients
--    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED )
-+    if( level.clients[ clientnum ].pers.connected != CON_CONNECTED &&
-+        !level.clients[ clientnum ].pers.demoClient )
-       continue;
- 
-     // can't follow another spectator
--     if( level.clients[ clientnum ].pers.teamSelection == PTE_NONE )
-+     if( level.clients[ clientnum ].pers.teamSelection == PTE_NONE &&
-+        !level.clients[ clientnum ].pers.demoClient )
-        continue;
-      
-       // can only follow teammates when dead and on a team
