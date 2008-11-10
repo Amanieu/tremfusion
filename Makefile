@@ -49,7 +49,7 @@ endif
 -include Makefile.local
 
 ifndef PLATFORM
-PLATFORM=$(COMPILE_PLATFORM)
+  PLATFORM=$(COMPILE_PLATFORM)
 endif
 export PLATFORM
 
@@ -61,7 +61,7 @@ ifeq ($(COMPILE_ARCH),powerpc64)
 endif
 
 ifndef ARCH
-ARCH=$(COMPILE_ARCH)
+  ARCH=$(COMPILE_ARCH)
 endif
 export ARCH
 
@@ -77,23 +77,31 @@ endif
 export CROSS_COMPILING
 
 ifndef COPYDIR
-COPYDIR="/usr/local/games/tremulous"
+  COPYDIR="/usr/local/games/tremulous"
 endif
 
 ifndef MOUNT_DIR
-MOUNT_DIR=src
+  MOUNT_DIR=src
 endif
 
 ifndef BUILD_DIR
-BUILD_DIR=build
+  BUILD_DIR=build
 endif
 
 ifndef GENERATE_DEPENDENCIES
-GENERATE_DEPENDENCIES=1
+  GENERATE_DEPENDENCIES=1
+endif
+
+ifndef USE_TTY_CLIENT
+  USE_TTY_CLIENT=0
 endif
 
 ifndef USE_OPENAL
-USE_OPENAL=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_OPENAL=0
+  else
+    USE_OPENAL=1
+  endif
 endif
 
 ifndef USE_OPENAL_DLOPEN
@@ -105,7 +113,7 @@ ifndef USE_OPENAL_DLOPEN
 endif
 
 ifndef USE_CURL
-USE_CURL=1
+  USE_CURL=1
 endif
 
 ifndef USE_CURL_DLOPEN
@@ -117,48 +125,60 @@ ifndef USE_CURL_DLOPEN
 endif
 
 ifndef USE_CODEC_VORBIS
-USE_CODEC_VORBIS=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_CODEC_VORBIS=0
+  else
+    USE_CODEC_VORBIS=1
+  endif
 endif
 
 ifndef USE_MUMBLE
-USE_MUMBLE=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_MUMBLE=0
+  else
+    USE_MUMBLE=1
+  endif
 endif
 
 ifndef USE_VOIP
-USE_VOIP=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_VOIP=0
+  else
+    USE_VOIP=1
+  endif
 endif
 
 ifndef USE_INTERNAL_SPEEX
-USE_INTERNAL_SPEEX=1
+  USE_INTERNAL_SPEEX=1
 endif
 
 ifndef USE_INTERNAL_ZLIB
-USE_INTERNAL_ZLIB=1
-endif
-
-ifndef USE_TTY_CLIENT
-USE_TTY_CLIENT=0
+  USE_INTERNAL_ZLIB=1
 endif
 
 ifndef USE_LOCAL_HEADERS
-USE_LOCAL_HEADERS=1
+  USE_LOCAL_HEADERS=1
 endif
 
 ifndef BUILD_MASTER_SERVER
-BUILD_MASTER_SERVER=0
+  BUILD_MASTER_SERVER=0
 endif
 
 # Disable this on release builds
 ifndef USE_SCM_VERSION
-USE_SCM_VERSION=1
+  USE_SCM_VERSION=1
 endif
 
 ifndef USE_FREETYPE
-USE_FREETYPE=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_FREETYPE=0
+  else
+    USE_FREETYPE=1
+  endif
 endif
 
 ifndef USE_OLD_HOMEPATH
-USE_OLD_HOMEPATH=1
+  USE_OLD_HOMEPATH=1
 endif
 
 #############################################################################
@@ -964,11 +984,11 @@ BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
 BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
 ifeq ($(V),1)
-echo_cmd=@:
-Q=
+  echo_cmd=@:
+  Q=
 else
-echo_cmd=@echo
-Q=@
+  echo_cmd=@echo
+  Q=@
 endif
 
 define DO_CC
