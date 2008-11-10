@@ -1,5 +1,5 @@
 #
-# Tremulous Makefile
+# Tremfusion Makefile
 #
 # GNU Make required
 #
