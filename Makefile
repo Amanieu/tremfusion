@@ -56,6 +56,9 @@ export PLATFORM
 ifeq ($(COMPILE_ARCH),powerpc)
   COMPILE_ARCH=ppc
 endif
+ifeq ($(COMPILE_ARCH),powerpc64)
+  COMPILE_ARCH=ppc64
+endif
 
 ifndef ARCH
 ARCH=$(COMPILE_ARCH)
@@ -321,7 +324,11 @@ ifeq ($(PLATFORM),linux)
   else
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -maltivec
-    HAVE_VM_COMPILED=false
+    HAVE_VM_COMPILED=true
+  endif
+  ifeq ($(ARCH),ppc64)
+    BASE_CFLAGS += -maltivec
+    HAVE_VM_COMPILED=true
   endif
   endif
   endif
@@ -390,13 +397,15 @@ else # ifeq Linux
 ifeq ($(PLATFORM),darwin)
   HAVE_VM_COMPILED=true
   CLIENT_LIBS=
-  OPTIMIZE=
+  OPTIMIZE=-O3
   
   BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
 
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -faltivec
-    OPTIMIZE += -O3
+  endif
+  ifeq ($(ARCH),ppc64)
+    BASE_CFLAGS += -faltivec
   endif
   ifeq ($(ARCH),x86)
     OPTIMIZE += -march=prescott -mfpmath=sse
@@ -1050,25 +1059,25 @@ targets: makedirs
 	@echo "  CC: $(CC)"
 	@echo ""
 	@echo "  CFLAGS:"
-	@for i in $(CFLAGS); \
+	-@for i in $(CFLAGS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  LDFLAGS:"
-	@for i in $(LDFLAGS); \
+	-@for i in $(LDFLAGS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  LIBS:"
-	@for i in $(LIBS); \
+	-@for i in $(LIBS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  Output:"
-	@for i in $(TARGETS); \
+	-@for i in $(TARGETS); \
 	do \
 		echo "    $$i"; \
 	done
@@ -1471,7 +1480,10 @@ ifeq ($(HAVE_VM_COMPILED),true)
     Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
   endif
   ifeq ($(ARCH),ppc)
-    Q3OBJ += $(B)/client/vm_ppc.o
+    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
   endif
 endif
 
@@ -1621,7 +1633,10 @@ ifeq ($(HAVE_VM_COMPILED),true)
     Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
   endif
   ifeq ($(ARCH),ppc)
-    Q3DOBJ += $(B)/ded/vm_ppc.o
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
   endif
 endif
 
