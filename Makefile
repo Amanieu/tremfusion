@@ -286,8 +286,7 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
-    -pipe
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe
 
   ifneq ($(USE_TTY_CLIENT),1)
     BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
@@ -419,7 +418,7 @@ ifeq ($(PLATFORM),darwin)
   CLIENT_LIBS=
   OPTIMIZE=-O3
   
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -faltivec
@@ -540,8 +539,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
-    -DUSE_ICON
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON
 
   # In the absence of wspiapi.h, require Windows XP or later
   ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
@@ -659,7 +657,7 @@ ifeq ($(PLATFORM),freebsd)
   endif #alpha test
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
@@ -728,7 +726,7 @@ ifeq ($(PLATFORM),openbsd)
   ARCH=i386
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
@@ -793,7 +791,7 @@ ifeq ($(PLATFORM),netbsd)
   SHLIBLDFLAGS=-shared $(LDFLAGS)
   THREAD_LIBS=-lpthread
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
   ifneq ($(ARCH),x86)
     BASE_CFLAGS += -DNO_VM_COMPILED
@@ -857,7 +855,7 @@ ifeq ($(PLATFORM),sunos)
   endif
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
 
   OPTIMIZE = -O3 -funroll-loops
@@ -1129,7 +1127,7 @@ makedirs:
 # QVM BUILD TOOLS
 #############################################################################
 
-TOOLS_OPTIMIZE = -g -O2 -Wall
+TOOLS_OPTIMIZE = -g -O2 -Wall -fno-strict-aliasing
 TOOLS_CFLAGS = $(TOOLS_OPTIMIZE) \
                -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
                -I$(Q3LCCSRCDIR) \
