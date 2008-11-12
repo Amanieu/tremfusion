@@ -325,7 +325,10 @@ static void Cmd_ExecFile( char *f )
 	Cbuf_InsertText (f);
 }
 void Cmd_Exec_f( void ) {
-	char	*f;
+	union {
+		char	*c;
+		void	*v;
+	} f;
 	int		len;
 	char	filename[MAX_QPATH];
 	fileHandle_t h;
@@ -336,28 +339,28 @@ void Cmd_Exec_f( void ) {
 		return;
 	}
 
-	Com_Printf ("execing %s\n",Cmd_Argv(1));
+	Com_Printf ("execing %s\n", Cmd_Argv(1));
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" ); 
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 
 	len = FS_SV_FOpenFileRead(filename, &h);
 	if (h)
 	{
 		success = qtrue;
-		f = Hunk_AllocateTempMemory(len + 1);
-		FS_Read(f, len, h);
-		f[len] = 0;
+		f.v = Hunk_AllocateTempMemory(len + 1);
+		FS_Read(f.v, len, h);
+		f.c[len] = 0;
 		FS_FCloseFile(h);
-		Cmd_ExecFile(f);
-		Hunk_FreeTempMemory(f);
+		Cmd_ExecFile(f.c);
+		Hunk_FreeTempMemory(f.v);
 	}
 
-	FS_ReadFile( filename, (void **)&f);
-	if (f) {
+	FS_ReadFile( filename, &f.v);
+	if (f.c) {
 		success = qtrue;
-		Cmd_ExecFile(f);
-		FS_FreeFile (f);
+		Cmd_ExecFile(f.c);
+		FS_FreeFile (f.v);
 	}
 
 	if (!success)

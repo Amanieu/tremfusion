@@ -503,7 +503,7 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 		message = va("Rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2));
 	}
 	
-	Com_Printf (message);
+	Com_Printf ("%s", message);
 	if (rconLog) {
 		qtime_t qt;
 		Com_RealTime(&qt);
