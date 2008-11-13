@@ -52,15 +52,15 @@ models/weapons/rifle/impactPS
       accelerationMagnitude 600
       acceleration          0 0 -1 0
 
-      radius 0 1.0 1.0
-      alpha  0 1.0 0.0
+      radius 0.3 1.5 1.0
+      alpha  0.0 1.0 0.0
       rotation 0 ~360 -
       bounce 0.0
 
       lifeTime 350
     }
 
-    count 0~2
+    count 0~1
     delay ~100
     period 0 - ~0%
   }
@@ -92,7 +92,7 @@ models/weapons/rifle/impactPS
       lifeTime 250
     }
 
-    count 1
+    count 0~1
     delay 0
     period 0 - ~0%
   }
@@ -107,8 +107,8 @@ models/weapons/rifle/impactPS
 
       velocityType      normal
       velocityDir       linear
-      velocityMagnitude 200
-      velocity          0 0 0 ~160
+      velocityMagnitude 400
+      velocity          0 0 0 ~360
 
       accelerationType      static
       accelerationDir       linear
@@ -123,7 +123,7 @@ models/weapons/rifle/impactPS
       lifeTime 200
     }
 
-    count 0~1
+    count 0~2
     delay 0
     period 0 - ~0%
   }
@@ -143,7 +143,7 @@ models/weapons/rifle/muzzlePS
 
       velocityType      static
       velocityDir       linear
-      velocityMagnitude 20
+      velocityMagnitude 50
       velocity          0 0 0 0
 
       accelerationType      static
@@ -185,8 +185,7 @@ models/weapons/rifle/muzzlePS
       acceleration          0 0 -1 0
 
       radius 0 1.0 -
-      bounce 0.5
-
+      bounce .2
       lifeTime 5000
     }
 
@@ -291,7 +290,7 @@ models/weapons/chaingun/muzzlePS
       lifeTime 5000
     }
 
-    count 1
+    count 0
     delay 0
     period 0 - ~0%
   }
@@ -313,6 +312,10 @@ models/weapons/flamer/muzzlePS
       velocityMagnitude 300
       velocity          0 0 0 ~0
 
+      accelerationType      static
+      accelerationDir       linear
+      accelerationMagnitude 50
+      acceleration          0 0 1 ~0
       physicsRadius 15
 
       radius 0 4.0 40.0
@@ -436,15 +439,30 @@ models/weapons/mdriver/impactPS
     particle
     {
       shader sync gfx/mdriver/green_particle
-      
-      radius 0 4.0 6.0
-      alpha  70 1.0 0.0
-      rotation 0 ~360 -
 
-      lifeTime 140
+      displacement 0 0 0 ~2.0
+
+      normalDisplacement 10.0
+
+      velocityType      normal
+      velocityDir       linear
+      velocityMagnitude 500~1000
+      velocity          0 0 0 ~80
+
+      accelerationType      normal
+      accelerationDir       linear
+      accelerationMagnitude 500
+      acceleration          0 0 5 ~100
+
+      radius 0 2.5 1.0
+      alpha  0 1.0 0.0
+      rotation 0 ~360 -
+      bounce 5
+
+      lifeTime 100~300
     }
 
-    count 1
+    count 2
     delay 0
     period 0 - ~0%
   }
@@ -460,23 +478,23 @@ models/weapons/mdriver/impactPS
 
       velocityType      normal
       velocityDir       linear
-      velocityMagnitude 200
+      velocityMagnitude 500~1000
       velocity          0 0 0 ~90
 
       accelerationType      static
       accelerationDir       linear
-      accelerationMagnitude 300
+      accelerationMagnitude 500
       acceleration          0 0 -1 ~10
 
-      radius 0 2.0~1.0 0.0
+      radius 0 2.5~1.0 0.0
       alpha  0 1.0 1.0
       rotation 0 ~360 -
       bounce 0.5
 
-      lifeTime 500
+      lifeTime 200~500
     }
 
-    count 3
+    count 5
     delay 0
     period 0 - ~0%
   }
@@ -495,14 +513,14 @@ models/weapons/lcannon/missilePS
       parentVelocityFraction  1.0
       velocityType      static
       velocityDir       linear
-      velocityMagnitude 120
+      velocityMagnitude 500
       velocity          0 0 1 ~360
 
       radius 0 1.0 5.0
       alpha  0 1.0 0.0
       bounce 0.1
 
-      lifeTime 1000
+      lifeTime 500
     }
 
     count infinite
@@ -570,23 +588,23 @@ models/weapons/lcannon/impactPS
 
       velocityType      normal
       velocityDir       linear
-      velocityMagnitude 200
-      velocity          0 0 0 ~160
+      velocityMagnitude 600
+      velocity          0 0 0 ~360
 
       accelerationType      static
       accelerationDir       linear
       accelerationMagnitude 300
       acceleration          0 0 -1 0
 
-      radius 0 1.0 5.0
+      radius 0 1.0~2.0 5.0~8.0
       alpha  0 1.0 0.0
       rotation 0 ~360 -
       bounce 0.8
 
-      lifeTime 2000~1000
+      lifeTime 100~200
     }
 
-    count 30
+    count 100
     delay 0
     period 0 - ~0%
   }
@@ -603,25 +621,25 @@ models/weapons/lcannon/impactPS
 
       velocityType      normal
       velocityDir       linear
-      velocityMagnitude 100
-      velocity          0 0 0 ~160
+      velocityMagnitude 300
+      velocity          0 0 0 ~240
 
       accelerationType      static
       accelerationDir       linear
-      accelerationMagnitude 150
+      accelerationMagnitude 300
       acceleration          0 0 -1 0
 
-      radius 0 1.0 0.0
+      radius 0 30.0 3.0
       alpha  0 1.0 0.0
       rotation 0 ~360 -
       bounce 1.0
       
       scaleWithCharge 0.10
 
-      lifeTime 1000~1000
+      lifeTime 200~500
     }
 
-    count 6
+    count 30
     delay 0
     period 0 - ~0%
   }
@@ -701,7 +719,7 @@ models/weapons/psaw/impactPS
       accelerationMagnitude 800
       acceleration          0 0 -1 ~10
 
-      radius 0 1.0~2.0 3.0~2.0
+      radius 0 0.5~1.0 1.5~1.0
       alpha  0 1.0 1.0
       rotation 0 ~360 -
       bounce 0.5
@@ -709,7 +727,7 @@ models/weapons/psaw/impactPS
       lifeTime 1000
     }
 
-    count 3
+    count 10
     delay 0
     period 0 - ~0%
   }
@@ -765,7 +783,7 @@ models/weapons/grenade/impactTrailPS
       velocityMagnitude 30
       velocity          0 0 -1 ~0
 
-      radius 0 30.0 10.0
+      radius 0 80.0 30.0
       alpha  0 1.0 0.0
       rotation 0 ~360 -
       bounce 0
@@ -900,7 +918,7 @@ models/weapons/level3upg/impactPS
       lifeTime 175
     }
 
-    count 12
+    count 6
     delay 0
     period 0 - ~0%
   }
