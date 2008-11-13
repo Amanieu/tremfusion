@@ -218,6 +218,7 @@ static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
 static	cvar_t		*fs_extrapaks;
+static	cvar_t		*fs_restrict;
         cvar_t		*fs_autogen;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
@@ -293,7 +294,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 #ifndef DEDICATED
 	int i;
 	extern int cl_connectedToPureServer;
-	if ( fs_numServerPaks && cl_connectedToPureServer ) {
+	if ( fs_numServerPaks && ( cl_connectedToPureServer || fs_restrict->integer ) ) {
 		for ( i = 0 ; i < fs_numServerPaks ; i++ ) {
 			// FIXME: also use hashed file names
 			// NOTE TTimo: a pk3 with same checksum but different name would be validated too
@@ -2821,6 +2822,7 @@ static void FS_Startup( const char *gameName )
 	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". @ tremfusion-base", CVAR_ARCHIVE );
+	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
@@ -3225,8 +3227,11 @@ void FS_InitFilesystem( void ) {
 	Com_StartupVariable( "fs_basepath" );
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_homepath2" );
+	Com_StartupVariable( "fs_basegame" );
 	Com_StartupVariable( "fs_game" );
 	Com_StartupVariable( "fs_autogen" );
+	Com_StartupVariable( "fs_extrapaks" );
+	Com_StartupVariable( "fs_restrict" );
 
 	// try to start up normally
 	FS_Startup( BASEGAME );
