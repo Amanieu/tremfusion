@@ -1982,7 +1982,6 @@ static const weaponAttributes_t bg_weapons[ ] =
     90.0f,                //float     zoomFov;
     qfalse,               //qboolean  purchasable;
     qfalse,               //qboolean  longRanged;
-    0,                    //int       buildDelay;
     TEAM_ALIENS           //team_t  team;
   },
   {
