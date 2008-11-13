@@ -32,15 +32,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <errno.h>
 
 #if !DEDICATED && !USE_TTY_CLIENT
-#ifdef USE_LOCAL_HEADERS
-#	include "SDL.h"
-#	include "SDL_cpuinfo.h"
-#else
 #	include <SDL.h>
 #	include <SDL_cpuinfo.h>
-#endif
 #else
-#	include "../SDL12/include/SDL_cpuinfo.h"
+#	include <SDL_cpuinfo.h>
 #endif
 
 #include "sys_local.h"
