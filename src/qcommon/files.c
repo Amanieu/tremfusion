@@ -2810,7 +2810,7 @@ static void FS_Startup( const char *gameName )
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
-	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	homePath = Sys_DefaultHomePath(&homePath2);
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
@@ -2820,7 +2820,7 @@ static void FS_Startup( const char *gameName )
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_PROTECTED );
-	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". @ tremfusion-base", CVAR_ARCHIVE );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
