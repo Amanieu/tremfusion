@@ -786,7 +786,6 @@ typedef struct {
 
 void		Com_QueueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 int			Com_EventLoop( void );
-sysEvent_t	Com_GetSystemEvent( void );
 
 char		*CopyString( const char *in );
 void		Info_Print( const char *s );
@@ -829,6 +828,7 @@ extern	cvar_t	*com_maxfpsUnfocused;
 extern	cvar_t	*com_minimized;
 extern	cvar_t	*com_maxfpsMinimized;
 extern	cvar_t	*com_altivec;
+extern	cvar_t	*com_sse;
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;

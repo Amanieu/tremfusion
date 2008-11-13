@@ -301,6 +301,15 @@ MATHLIB
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
+typedef vec_t vec3a_t[4] ALIGN(16);
+typedef vec_t quat_t[4] ALIGN(16);
+typedef vec_t matrix_t[16] ALIGN(16);
+#if id386_sse >= 1
+#define vec3aLoad(vec3a)       v4fLoadA(vec3a)
+#define vec3Load(vec3)         vec3_to_v4f(vec3)
+#define vec3aStore(vec3a, v4f) v4fStoreA(vec3a, v4f)
+#define vec3Store(vec3, v4f)   v4f_to_vec3(vec3, v4f)
+#endif
 typedef vec_t vec4_t[4];
 typedef vec_t vec5_t[5];
 

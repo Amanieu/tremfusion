@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifdef Q3_VM
 
 #define id386 0
+#define id386_sse 0
 #define idppc 0
 #define idppc_altivec 0
 
@@ -35,8 +36,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #if (defined _M_IX86 || defined __i386__) && !defined(C_ONLY)
 #define id386 1
+#ifdef __SSE2__
+#define id386_sse 2
+#else
+#ifdef __SSE__
+#define id386_sse 1
+#else
+#define id386_sse 0
+#endif
+#endif
 #else
 #define id386 0
+#define id386_sse 0
 #endif
 
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || \

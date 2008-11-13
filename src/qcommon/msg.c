@@ -47,19 +47,28 @@ void MSG_Init( msg_t *buf, byte *data, int length ) {
 	if (!msgInit) {
 		MSG_initHuffman();
 	}
-	Com_Memset (buf, 0, sizeof(*buf));
+	buf->allowoverflow = qfalse;
+	buf->overflowed = qfalse;
+	buf->oob = qfalse;
 	buf->data = data;
 	buf->maxsize = length;
+	buf->cursize = 0;
+	buf->readcount = 0;
+	buf->bit = 0;
 }
 
 void MSG_InitOOB( msg_t *buf, byte *data, int length ) {
 	if (!msgInit) {
 		MSG_initHuffman();
 	}
-	Com_Memset (buf, 0, sizeof(*buf));
+	buf->allowoverflow = qfalse;
+	buf->overflowed = qfalse;
+	buf->oob = qtrue;
 	buf->data = data;
 	buf->maxsize = length;
-	buf->oob = qtrue;
+	buf->cursize = 0;
+	buf->readcount = 0;
+	buf->bit = 0;
 }
 
 void MSG_Clear( msg_t *buf ) {

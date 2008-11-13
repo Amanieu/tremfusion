@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #if idppc_altivec && !defined(MACOS_X)
 #include <altivec.h>
 #endif
+#include "../qcommon/qsse.h"
 
 static portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 static int snd_vol;
@@ -35,7 +36,58 @@ int*     snd_p;
 int      snd_linear_count;
 short*   snd_out;
 
-#if	!id386                                        // if configured not to use asm
+#if id386_sse >= 2
+
+void S_WriteLinearBlastStereo16_sse2 (void)
+{
+	int		i = 0;
+	int		val;
+	int            *in = snd_p;
+	short          *out = snd_out;
+	
+	if (com_sse->integer >= 2) {
+		/* do first packet with unaligned load/store */
+		unsigned long misalignment = (((unsigned long)out) & 0xf) / 2;
+		if (misalignment > 0 && snd_linear_count >= 8) {
+			v4i firstHalf = v4iShiftRight(v4iLoadU(in), 8);
+			v4i secondHalf = v4iShiftRight(v4iLoadU(in + 4), 8);
+			in += 8 - misalignment;
+			
+			v8sStoreU(out, v4i_to_v8s(firstHalf, secondHalf));
+			out += 8 - misalignment;
+			i += 8 - misalignment;
+		}
+		for (; i+6<snd_linear_count; i+=8) {
+			v4i firstHalf = v4iShiftRight(v4iLoadU(in), 8);
+			v4i secondHalf = v4iShiftRight(v4iLoadU(in + 4), 8);
+			in += 8;
+			
+			v8sStoreA(out, v4i_to_v8s(firstHalf, secondHalf));
+			out += 8;
+		}
+	}
+	for (; i<snd_linear_count ; i+=2)
+	{
+		val = *(in++)>>8;
+		if (val > 0x7fff)
+			*(out++) = 0x7fff;
+		else if (val < -32768)
+			*(out++) = -32768;
+		else
+			*(out++) = val;
+		
+		val = *(in++)>>8;
+		if (val > 0x7fff)
+			*(out++) = 0x7fff;
+		else if (val < -32768)
+			*(out++) = -32768;
+		else
+			*(out++) = val;
+	}
+}
+#define S_WriteLinearBlastStereo16 S_WriteLinearBlastStereo16_sse2
+
+#elif	!id386                                        // if configured not to use asm
 
 void S_WriteLinearBlastStereo16 (void)
 {
@@ -397,6 +449,225 @@ static void S_PaintChannelFrom16_altivec( channel_t *ch, const sfx_t *sc, int co
 }
 #endif
 
+#if id386_sse >= 1
+static void S_PaintChannelFrom16_sse( channel_t *ch, const sfx_t *sc, int count, int sampleOffset, int bufferOffset ) {
+	int			aoff, boff;
+	int			leftvol, rightvol;
+	int			i, j;
+	portable_samplepair_t	*samp;
+	sndBuffer		*chunk;
+	short			*samples;
+	float			ooff, fdata, fdiv, fleftvol, frightvol;
+	
+	samp = &paintbuffer[ bufferOffset ];
+	
+	if (ch->doppler) {
+		sampleOffset = sampleOffset*ch->oldDopplerScale;
+	}
+	
+	/* skip to the right chunk */
+	chunk = sc->soundData;
+	while (sampleOffset>=SND_CHUNK_SIZE) {
+		chunk = chunk->next;
+		sampleOffset -= SND_CHUNK_SIZE;
+		if (!chunk) {
+			chunk = sc->soundData;
+		}
+	}
+	
+	fleftvol = ch->leftvol*snd_vol;
+	frightvol = ch->rightvol*snd_vol;
+	leftvol = (int)fleftvol >> 8;
+	rightvol = (int)frightvol >> 8;
+	samples = chunk->sndChunk;
+	
+	if (!ch->doppler || ch->dopplerScale==1.0f) {
+		int data;
+		v4s leftvolVec = s4sInit(leftvol);
+		v4s rightvolVec = s4sInit(rightvol);
+		
+		while (count > 0) {
+			if ((((unsigned long)samp) & 0x7) == 0 &&
+			    count > 3 &&
+			    sampleOffset + 4 < SND_CHUNK_SIZE) {
+				/* process 4 samples with mmx instructions */
+				v4s dataVec = v4sLoadU(&(samples[sampleOffset]));
+				
+				/* duplicate each sample for left and right channel */
+				v2i leftVec0, leftVec1;
+				v2i rightVec0, rightVec1;
+				v4sMul(dataVec, leftvolVec, leftVec0, leftVec1);
+				v4sMul(dataVec, rightvolVec, rightVec0, rightVec1);
+				
+				v2i outVec0 = _mm_unpacklo_pi32(leftVec0, rightVec0);
+				v2iStoreA((int *)samp, v2iAdd(outVec0, v2iLoadA((int *)samp)));
+				
+				v2i outVec1 = _mm_unpackhi_pi32(leftVec0, rightVec0);
+				v2iStoreA((int *)(samp + 1), v2iAdd(outVec1, v2iLoadA((int *)(samp + 1))));
+				
+				v2i outVec2 = _mm_unpacklo_pi32(leftVec1, rightVec1);
+				v2iStoreA((int *)(samp + 2), v2iAdd(outVec2, v2iLoadA((int *)(samp + 2))));
+				
+				v2i outVec3 = _mm_unpackhi_pi32(leftVec1, rightVec1);
+				v2iStoreA((int *)(samp + 3), v2iAdd(outVec3, v2iLoadA((int *)(samp + 3))));
+				
+				samp += 4;
+				count -= 4;
+				sampleOffset += 4;
+			} else {
+				/* process remaining samples */
+				data  = samples[sampleOffset++];
+				samp->left  += (data * leftvol);
+				samp->right += (data * rightvol);
+				samp++;
+				
+				if (sampleOffset == SND_CHUNK_SIZE) {
+					chunk = chunk->next;
+					samples = chunk->sndChunk;
+					sampleOffset = 0;
+				}
+				count--;
+			}
+		}
+		_mm_empty();
+	} else {
+		ooff = sampleOffset;
+		samples = chunk->sndChunk;
+		
+		for ( i=0 ; i<count ; i++ ) {
+
+			aoff = ooff;
+			ooff = ooff + ch->dopplerScale;
+			boff = ooff;
+			fdata = 0;
+			for (j=aoff; j<boff; j++) {
+				if (j == SND_CHUNK_SIZE) {
+					chunk = chunk->next;
+					if (!chunk) {
+						chunk = sc->soundData;
+					}
+					samples = chunk->sndChunk;
+					ooff -= SND_CHUNK_SIZE;
+				}
+				fdata  += samples[j&(SND_CHUNK_SIZE-1)];
+			}
+			fdiv = 256 * (boff-aoff);
+			samp[i].left += (fdata * fleftvol)/fdiv;
+			samp[i].right += (fdata * frightvol)/fdiv;
+		}
+	}
+}
+#endif
+
+#if id386_sse >= 2
+static void S_PaintChannelFrom16_sse2( channel_t *ch, const sfx_t *sc, int count, int sampleOffset, int bufferOffset ) {
+	int			aoff, boff;
+	int			leftvol, rightvol;
+	int			i, j;
+	portable_samplepair_t	*samp;
+	sndBuffer		*chunk;
+	short			*samples;
+	float			ooff, fdata, fdiv, fleftvol, frightvol;
+	
+	samp = &paintbuffer[ bufferOffset ];
+	
+	if (ch->doppler) {
+		sampleOffset = sampleOffset*ch->oldDopplerScale;
+	}
+	
+	/* skip to the right chunk */
+	chunk = sc->soundData;
+	while (sampleOffset>=SND_CHUNK_SIZE) {
+		chunk = chunk->next;
+		sampleOffset -= SND_CHUNK_SIZE;
+		if (!chunk) {
+			chunk = sc->soundData;
+		}
+	}
+	
+	fleftvol = ch->leftvol*snd_vol;
+	frightvol = ch->rightvol*snd_vol;
+	leftvol = (int)fleftvol >> 8;
+	rightvol = (int)frightvol >> 8;
+	samples = chunk->sndChunk;
+	
+	if (!ch->doppler || ch->dopplerScale==1.0f) {
+		int data;
+		v8s leftvolVec = s8sInit(leftvol);
+		v8s rightvolVec = s8sInit(rightvol);
+		
+		while (count > 0) {
+			if ((((unsigned long)samp) & 0xf) == 0 &&
+			    count > 7 &&
+			    sampleOffset + 8 < SND_CHUNK_SIZE) {
+				/* process 8 samples with fast sse2 instructions */
+				v8s dataVec = v8sLoadU(&(samples[sampleOffset]));
+				
+				/* duplicate each sample for left and right channel */
+				v4i leftVec0, leftVec1;
+				v4i rightVec0, rightVec1;
+				v8sMul(dataVec, leftvolVec, leftVec0, leftVec1);
+				v8sMul(dataVec, rightvolVec, rightVec0, rightVec1);
+				
+				v4i outVec0 = _mm_unpacklo_epi32(leftVec0, rightVec0);
+				v4iStoreA((int *)samp, v4iAdd(outVec0, v4iLoadA((int *)samp)));
+				
+				v4i outVec1 = _mm_unpackhi_epi32(leftVec0, rightVec0);
+				v4iStoreA((int *)(samp + 2), v4iAdd(outVec1, v4iLoadA((int *)(samp + 2))));
+				
+				v4i outVec2 = _mm_unpacklo_epi32(leftVec1, rightVec1);
+				v4iStoreA((int *)(samp + 4), v4iAdd(outVec2, v4iLoadA((int *)(samp + 4))));
+				
+				v4i outVec3 = _mm_unpackhi_epi32(leftVec1, rightVec1);
+				v4iStoreA((int *)(samp + 6), v4iAdd(outVec3, v4iLoadA((int *)(samp + 6))));
+				
+				samp += 8;
+				count -= 8;
+				sampleOffset += 8;
+			} else {
+				/* process remaining samples */
+				data  = samples[sampleOffset++];
+				samp->left  += (data * leftvol);
+				samp->right += (data * rightvol);
+				samp++;
+				
+				if (sampleOffset == SND_CHUNK_SIZE) {
+					chunk = chunk->next;
+					samples = chunk->sndChunk;
+					sampleOffset = 0;
+				}
+				count--;
+			}
+		}
+	} else {
+		ooff = sampleOffset;
+		samples = chunk->sndChunk;
+		
+		for ( i=0 ; i<count ; i++ ) {
+
+			aoff = ooff;
+			ooff = ooff + ch->dopplerScale;
+			boff = ooff;
+			fdata = 0;
+			for (j=aoff; j<boff; j++) {
+				if (j == SND_CHUNK_SIZE) {
+					chunk = chunk->next;
+					if (!chunk) {
+						chunk = sc->soundData;
+					}
+					samples = chunk->sndChunk;
+					ooff -= SND_CHUNK_SIZE;
+				}
+				fdata  += samples[j&(SND_CHUNK_SIZE-1)];
+			}
+			fdiv = 256 * (boff-aoff);
+			samp[i].left += (fdata * fleftvol)/fdiv;
+			samp[i].right += (fdata * frightvol)/fdiv;
+		}
+	}
+}
+#endif
+
 static void S_PaintChannelFrom16_scalar( channel_t *ch, const sfx_t *sc, int count, int sampleOffset, int bufferOffset ) {
 	int						data, aoff, boff;
 	int						leftvol, rightvol;
@@ -475,6 +746,18 @@ static void S_PaintChannelFrom16( channel_t *ch, const sfx_t *sc, int count, int
 	if (com_altivec->integer) {
 		// must be in a seperate function or G3 systems will crash.
 		S_PaintChannelFrom16_altivec( ch, sc, count, sampleOffset, bufferOffset );
+		return;
+	}
+#endif
+#if id386_sse >= 2
+	if ( com_sse->integer >= 2 ) {
+		S_PaintChannelFrom16_sse2 ( ch, sc, count, sampleOffset, bufferOffset );
+		return;
+	} else
+#endif
+#if id386_sse >= 1
+	if ( com_sse->integer >= 1 ) {
+		S_PaintChannelFrom16_sse ( ch, sc, count, sampleOffset, bufferOffset );
 		return;
 	}
 #endif

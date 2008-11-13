@@ -181,6 +181,10 @@ ifndef USE_OLD_HOMEPATH
   USE_OLD_HOMEPATH=1
 endif
 
+ifndef USE_SSE
+USE_SSE=2
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -326,6 +330,14 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
+  ifeq ($(USE_SSE),2)
+    BASE_CFLAGS += -msse2 -fno-tree-vectorize
+  else
+    ifeq ($(USE_SSE),1)
+      BASE_CFLAGS += -msse -fno-tree-vectorize
+    endif
+  endif
+
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -341,6 +353,7 @@ ifeq ($(PLATFORM),linux)
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
   else
+  USE_SSE=0
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -maltivec
     HAVE_VM_COMPILED=true
@@ -405,7 +418,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
-  RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
+  RELEASE_CFLAGS=$(BASE_CFLAGS) -g -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
 
@@ -1339,6 +1352,7 @@ Q3OBJ = \
   \
   $(B)/client/q_math.o \
   $(B)/client/q_shared.o \
+  $(B)/client/qsse.o \
   \
   $(B)/client/unzip.o \
   $(B)/client/ioapi.o \
@@ -1614,6 +1628,7 @@ Q3DOBJ = \
   \
   $(B)/ded/q_math.o \
   $(B)/ded/q_shared.o \
+  $(B)/ded/qsse.o \
   \
   $(B)/ded/unzip.o \
   $(B)/ded/ioapi.o \
@@ -1625,7 +1640,8 @@ Q3DOBJ = \
   $(B)/ded/null_snddma.o \
   \
   $(B)/ded/con_log.o \
-  $(B)/ded/sys_main.o
+  $(B)/ded/sys_main.o \
+  $(B)/ded/SDL_cpuinfo.o
 
 ifeq ($(ARCH),x86)
   Q3DOBJ += \

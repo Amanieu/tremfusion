@@ -32,6 +32,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <winsock.h>
 #endif
 
+#if id386_sse
+#include "../qcommon/qsse.h"
+#endif
+
 int demo_protocols[] =
 { PROTOCOL_VERSION, 0 };
 
@@ -66,6 +70,7 @@ cvar_t	*com_dropsim;		// 0.0 to 1.0, simulated packet drops
 cvar_t	*com_journal;
 cvar_t	*com_maxfps;
 cvar_t	*com_altivec;
+cvar_t	*com_sse;
 cvar_t	*com_timedemo;
 cvar_t	*com_sv_running;
 cvar_t	*com_cl_running;
@@ -1981,9 +1986,8 @@ Com_GetSystemEvent
 
 ================
 */
-sysEvent_t Com_GetSystemEvent( void )
+void Com_GetSystemEvent( sysEvent_t *ev )
 {
-	sysEvent_t  ev;
 	char        *s;
 	msg_t       netmsg;
 	netadr_t    adr;
@@ -1992,7 +1996,8 @@ sysEvent_t Com_GetSystemEvent( void )
 	if ( eventHead > eventTail )
 	{
 		eventTail++;
-		return eventQueue[ ( eventTail - 1 ) & MASK_QUEUED_EVENTS ];
+		*ev = eventQueue[ ( eventTail - 1 ) & MASK_QUEUED_EVENTS ];
+		return;
 	}
 
 	// check for console commands
@@ -2027,14 +2032,13 @@ sysEvent_t Com_GetSystemEvent( void )
 	if ( eventHead > eventTail )
 	{
 		eventTail++;
-		return eventQueue[ ( eventTail - 1 ) & MASK_QUEUED_EVENTS ];
+		*ev = eventQueue[ ( eventTail - 1 ) & MASK_QUEUED_EVENTS ];
+		return;
 	}
 
 	// create an empty event to return
-	memset( &ev, 0, sizeof( ev ) );
-	ev.evTime = Sys_Milliseconds();
-
-	return ev;
+	memset( ev, 0, sizeof( *ev ) );
+	ev->evTime = Sys_Milliseconds();
 }
 
 /*
@@ -2042,42 +2046,39 @@ sysEvent_t Com_GetSystemEvent( void )
 Com_GetRealEvent
 =================
 */
-sysEvent_t	Com_GetRealEvent( void ) {
+void	Com_GetRealEvent( sysEvent_t *ev ) {
 	int			r;
-	sysEvent_t	ev;
 
 	// either get an event from the system or the journal file
 	if ( com_journal->integer == 2 ) {
-		r = FS_Read( &ev, sizeof(ev), com_journalFile );
-		if ( r != sizeof(ev) ) {
+		r = FS_Read( ev, sizeof(*ev), com_journalFile );
+		if ( r != sizeof(*ev) ) {
 			Com_Error( ERR_FATAL, "Error reading from journal file" );
 		}
-		if ( ev.evPtrLength ) {
-			ev.evPtr = Z_Malloc( ev.evPtrLength );
-			r = FS_Read( ev.evPtr, ev.evPtrLength, com_journalFile );
-			if ( r != ev.evPtrLength ) {
+		if ( ev->evPtrLength ) {
+			ev->evPtr = Z_Malloc( ev->evPtrLength );
+			r = FS_Read( ev->evPtr, ev->evPtrLength, com_journalFile );
+			if ( r != ev->evPtrLength ) {
 				Com_Error( ERR_FATAL, "Error reading from journal file" );
 			}
 		}
 	} else {
-		ev = Com_GetSystemEvent();
+		Com_GetSystemEvent( ev );
 
 		// write the journal value out if needed
 		if ( com_journal->integer == 1 ) {
-			r = FS_Write( &ev, sizeof(ev), com_journalFile );
-			if ( r != sizeof(ev) ) {
+			r = FS_Write( ev, sizeof(*ev), com_journalFile );
+			if ( r != sizeof(*ev) ) {
 				Com_Error( ERR_FATAL, "Error writing to journal file" );
 			}
-			if ( ev.evPtrLength ) {
-				r = FS_Write( ev.evPtr, ev.evPtrLength, com_journalFile );
-				if ( r != ev.evPtrLength ) {
+			if ( ev->evPtrLength ) {
+				r = FS_Write( ev->evPtr, ev->evPtrLength, com_journalFile );
+				if ( r != ev->evPtrLength ) {
 					Com_Error( ERR_FATAL, "Error writing to journal file" );
 				}
 			}
 		}
 	}
-
-	return ev;
 }
 
 
@@ -2133,12 +2134,13 @@ void Com_PushEvent( sysEvent_t *event ) {
 Com_GetEvent
 =================
 */
-sysEvent_t	Com_GetEvent( void ) {
+void	Com_GetEvent( sysEvent_t *ev ) {
 	if ( com_pushedEventsHead > com_pushedEventsTail ) {
 		com_pushedEventsTail++;
-		return com_pushedEvents[ (com_pushedEventsTail-1) & (MAX_PUSHED_EVENTS-1) ];
+		*ev = com_pushedEvents[ (com_pushedEventsTail-1) & (MAX_PUSHED_EVENTS-1) ];
+		return;
 	}
-	return Com_GetRealEvent();
+	Com_GetRealEvent( ev );
 }
 
 /*
@@ -2183,7 +2185,7 @@ int Com_EventLoop( void ) {
 
 	while ( 1 ) {
 		NET_FlushPacketQueue();
-		ev = Com_GetEvent();
+		Com_GetEvent( &ev );
 
 		// if no more events are available
 		if ( ev.evType == SE_NONE ) {
@@ -2289,7 +2291,7 @@ int Com_Milliseconds (void) {
 	// get events and push them until we get a null event with the current time
 	do {
 
-		ev = Com_GetRealEvent();
+		Com_GetRealEvent( &ev );
 		if ( ev.evType != SE_NONE ) {
 			Com_PushEvent( &ev );
 		}
@@ -2373,6 +2375,34 @@ static void Com_DetectAltivec(void)
 	}
 }
 
+static void Com_DetectSSE(void)
+{
+	// Only detect if user hasn't forcibly disabled it.
+#if id386_sse >= 1
+	if (com_sse->integer > 0) {
+		static int      sse = 0;
+		static qboolean detected = qfalse;
+		if (!detected) {
+			sse = ( Sys_GetProcessorFeatures( ) & (CF_SSE | CF_SSE2 ) );
+			detected = qtrue;
+		}
+		
+		if ( com_sse->integer >= 2 && ( sse & CF_SSE2 ) ) {
+			Cvar_Set( "com_sse", "2" ); // SSE2 supported
+			InitSSEMode();
+		}
+		else if ( com_sse->integer >= 1 && ( sse & CF_SSE ) ) {
+			Cvar_Set(" com_sse", "1" ); // SSE1 supported
+			InitSSEMode();
+		} else {
+			Cvar_Set( "com_sse", "0" );  // we don't have it! Disable support!
+		}
+	}
+#else
+	Cvar_Set( "com_sse", "0" );  // not compiled in
+#endif
+}
+
 
 /*
 =================
@@ -2454,6 +2484,7 @@ void Com_Init( char *commandLine ) {
 	// init commands and vars
 	//
 	com_altivec = Cvar_Get ("com_altivec", "1", CVAR_ARCHIVE);
+	com_sse = Cvar_Get ("com_sse", "2", CVAR_ARCHIVE);
 	com_maxfps = Cvar_Get ("com_maxfps", "77", CVAR_ARCHIVE);
 
 	com_developer = Cvar_Get ("developer", "0", CVAR_TEMP );
@@ -2532,7 +2563,11 @@ void Com_Init( char *commandLine ) {
 #if idppc
 	Com_Printf ("Altivec support is %s\n", com_altivec->integer ? "enabled" : "disabled");
 #endif
-
+	Com_DetectSSE();
+#if id386
+	Com_Printf ("SSE support is %d\n", com_sse->integer);
+#endif
+	
 	Com_Printf ("--- Common Initialization Complete ---\n");
 }
 
@@ -2743,6 +2778,11 @@ void Com_Frame( void ) {
 	{
 		Com_DetectAltivec();
 		com_altivec->modified = qfalse;
+	}
+	if (com_sse->modified)
+	{
+		Com_DetectSSE();
+		com_sse->modified = qfalse;
 	}
 
 	lastTime = com_frameTime;
