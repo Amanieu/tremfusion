@@ -251,7 +251,7 @@ humanBuildableDestroyedPS
 
       velocityType      static
       velocityDir       linear
-      velocityMagnitude 400~75%
+      velocityMagnitude 300~75%
       velocity          0 0 1 ~60
 
       accelerationType      static
@@ -293,14 +293,14 @@ humanBuildableDestroyedPS
       acceleration          0 0 -1 0
 
       radius          0 1.0 -
-      bounce          0.3
+      bounce          0.2
       bounceMark      1~1 16 gfx/marks/burn_mrk
       bounceSound     ~1 sound/buildables/human/fragmentbounce.wav
 
-      lifeTime        10000~2000
+      lifeTime        7000~1000
     }
 
-    count 12
+    count 8
     delay 0
     period 10 - ~0%
   }
@@ -460,7 +460,7 @@ alienBuildableDestroyedPS
 
       velocityType      static
       velocityDir       linear
-      velocityMagnitude 400~75%
+      velocityMagnitude 300~75%
       velocity          0 0 1 ~60
 
       accelerationType      static
@@ -500,14 +500,14 @@ alienBuildableDestroyedPS
       acceleration          0 0 -1 0
 
       radius          0 1.0 -
-      bounce          0.5
+      bounce          0.2
       bounceMark      1~1 16 creep
       bounceSound     ~1 sound/misc/organic_bounce.wav
 
-      lifeTime 10000~2000
+      lifeTime 5000~1000
     }
 
-    count 20
+    count 8
     delay 0
     period 10 - ~0%
   }
@@ -526,25 +526,24 @@ alienAcidTubePS
 
       velocityType      normal
       velocityDir       linear
-      velocityMagnitude 350~75%
+      velocityMagnitude 300~75%
       velocity          0 0 1 ~10
 
       accelerationType      static
       accelerationDir       linear
       accelerationMagnitude 800
-      acceleration          0 0 -1 ~90
+      acceleration          0 0 -1 ~30
 
       radius 0 8.0 20.0
       alpha  0 1.0 0.0
       rotation 0 ~360 -
       bounce 0.2
 
-      lifeTime 1000~60%
+      lifeTime 1000~100%
     }
 
-    count 100
+    count 50
     delay 0
     period 10 - ~0%
   }
 }
-

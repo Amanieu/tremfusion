@@ -94,12 +94,13 @@ gfx/2d/crosshair-flamer_s
 	}
 }
 
-gfx/2d/crosshair-psaw
+gfx/2d/crosshair-psaw_s
 {
-	nopicmip
+	noPicMip
 	{
 		map gfx/2d/crosshair-psaw.tga
 		blendfunc blend
-		rgbGen vertex
+		rgbgen const ( 0.0 0.8 1.0 )
+		alphagen const 0.35
 	}
 }
