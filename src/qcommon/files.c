@@ -290,9 +290,10 @@ FS_PakIsPure
 =================
 */
 qboolean FS_PakIsPure( pack_t *pack ) {
+#ifndef DEDICATED
 	int i;
-
-	if ( fs_numServerPaks ) {
+	extern int cl_connectedToPureServer;
+	if ( fs_numServerPaks && cl_connectedToPureServer ) {
 		for ( i = 0 ; i < fs_numServerPaks ; i++ ) {
 			// FIXME: also use hashed file names
 			// NOTE TTimo: a pk3 with same checksum but different name would be validated too
@@ -308,6 +309,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 		}
 		return qfalse;	// not on the pure server pak list or extra pak list
 	}
+#endif
 	return qtrue;
 }
 
