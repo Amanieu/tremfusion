@@ -22,6 +22,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "cm_local.h"
 
+#if id386_sse >= 1
+static qboolean CM_BoundsIntersectPoint_sse( v4f mins, v4f maxs, v4f point );
+#endif
+static qboolean CM_BoundsIntersectPoint( const vec3_t mins, const vec3_t maxs, const vec3_t point );
 
 /*
 ==================
@@ -29,7 +33,45 @@ CM_PointLeafnum_r
 
 ==================
 */
-int CM_PointLeafnum_r( const vec3_t p, int num ) {
+#if id386_sse >= 1
+static int CM_PointLeafnum_r_sse( v4f p, int num ) {
+	float		d;
+	cNode_t		*node;
+	cplane_t	*plane;
+	v4f              normal;
+
+	while (num >= 0)
+	{
+		node = cm.nodes + num;
+		plane = node->plane;
+		
+		switch( plane->type ) {
+		case 0:
+			d = s4fToFloat( v4fX( p ) ) - plane->dist;
+			break;
+		case 1:
+			d = s4fToFloat( v4fY( p ) ) - plane->dist;
+			break;
+		case 2:
+			d = s4fToFloat( v4fZ( p ) ) - plane->dist;
+			break;
+		default:
+			normal = vec3_to_v4f( plane->normal );
+			d = s4fToFloat( v4fDotProduct( normal, p ) ) - plane->dist;
+			break;
+		}
+		if (d < 0)
+			num = node->children[1];
+		else
+			num = node->children[0];
+	}
+
+	c_pointcontents++;		// optimize counter
+
+	return -1 - num;
+}
+#endif
+static int CM_PointLeafnum_r( const vec3_t p, int num ) {
 	float		d;
 	cNode_t		*node;
 	cplane_t	*plane;
@@ -224,6 +266,59 @@ CM_PointContents
 
 ==================
 */
+#if id386_sse >= 1
+int CM_PointContents_sse( v4f p, clipHandle_t model ) {
+	int			leafnum;
+	int			i, k;
+	int			brushnum;
+	cLeaf_t		*leaf;
+	cbrush_t	*b;
+	int			contents;
+	float		d;
+	cmodel_t	*clipm;
+
+	if (!cm.numNodes) {	// map not loaded
+		return 0;
+	}
+
+	if ( model ) {
+		clipm = CM_ClipHandleToModel( model );
+		leaf = &clipm->leaf;
+	} else {
+		leafnum = CM_PointLeafnum_r_sse (p, 0);
+		leaf = &cm.leafs[leafnum];
+	}
+
+	contents = 0;
+	for (k=0 ; k<leaf->numLeafBrushes ; k++) {
+		brushnum = cm.leafbrushes[leaf->firstLeafBrush+k];
+		b = &cm.brushes[brushnum];
+
+		if ( !CM_BoundsIntersectPoint_sse( vec3aLoad( b->bounds[0] ),
+						   vec3aLoad( b->bounds[1] ),
+						   p ) ) {
+			continue;
+		}
+
+		// see if the point is in the brush
+		for ( i = 0 ; i < b->numsides ; i++ ) {
+			v4f normal = vec3_to_v4f( b->sides[i].plane->normal );
+			d = s4fToFloat( v4fDotProduct( p, normal ) );
+// FIXME test for Cash
+//			if ( d >= b->sides[i].plane->dist ) {
+			if ( d > b->sides[i].plane->dist ) {
+				break;
+			}
+		}
+
+		if ( i == b->numsides ) {
+			contents |= b->contents;
+		}
+	}
+
+	return contents;
+}
+#endif
 int CM_PointContents( const vec3_t p, clipHandle_t model ) {
 	int			leafnum;
 	int			i, k;
@@ -281,6 +376,24 @@ Handles offseting and rotation of the end points for moving and
 rotating entities
 ==================
 */
+#if id386_sse >= 1
+int	CM_TransformedPointContents_sse( v4f p, clipHandle_t model, v4f origin, v4f angles) {
+	v4f		p_l;
+	v4f		forward, left, up;
+
+	// subtract origin offset
+	p_l = v4fSub( p, origin );
+
+	// rotate start and end into the models frame of reference
+	if ( model != BOX_MODEL_HANDLE && 
+	     v4fAny( v4fNe( angles, v4fZero ) ) ) {
+		v4fCreateRotationMatrix( angles, forward, left, up );
+		p_l = v4fRotatePoint( p_l, forward, left, up );
+	}
+
+	return CM_PointContents_sse( p_l, model );
+}
+#endif
 int	CM_TransformedPointContents( const vec3_t p, clipHandle_t model, const vec3_t origin, const vec3_t angles) {
 	vec3_t		p_l;
 	vec3_t		temp;
@@ -332,7 +445,7 @@ AREAPORTALS
 ===============================================================================
 */
 
-void CM_FloodArea_r( int areaNum, int floodnum) {
+static void CM_FloodArea_r( int areaNum, int floodnum) {
 	int		i;
 	cArea_t *area;
 	int		*con;
@@ -486,6 +599,22 @@ int CM_WriteAreaBits (byte *buffer, int area)
 CM_BoundsIntersect
 ====================
 */
+#if id386_sse >= 1
+qboolean CM_BoundsIntersect_sse( v4f mins, v4f maxs, v4f mins2, v4f maxs2 )
+{
+	s4f epsilon = s4fInit( SURFACE_CLIP_EPSILON );
+	
+	mins2 = v4fSub( mins2, epsilon );
+	maxs2 = v4fAdd( maxs2, epsilon );
+	
+	if ( v4fAny( v4fLt( maxs, mins2 ) ) ||
+	     v4fAny( v4fGt( mins, maxs2 ) ) ) {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+#endif
 qboolean CM_BoundsIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t mins2, const vec3_t maxs2 )
 {
 	if (maxs[0] < mins2[0] - SURFACE_CLIP_EPSILON ||
@@ -506,7 +635,20 @@ qboolean CM_BoundsIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t 
 CM_BoundsIntersectPoint
 ====================
 */
-qboolean CM_BoundsIntersectPoint( const vec3_t mins, const vec3_t maxs, const vec3_t point )
+#if id386_sse >= 1
+static qboolean CM_BoundsIntersectPoint_sse( v4f mins, v4f maxs, v4f point )
+{
+	s4f epsilon = s4fInit( SURFACE_CLIP_EPSILON );
+	
+	if ( v4fAny( v4fLt( maxs, v4fSub( point, epsilon ) ) ) ||
+	     v4fAny( v4fGt( mins, v4fAdd( point, epsilon ) ) ) ) {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+#endif
+static qboolean CM_BoundsIntersectPoint( const vec3_t mins, const vec3_t maxs, const vec3_t point )
 {
 	if (maxs[0] < point[0] - SURFACE_CLIP_EPSILON ||
 		maxs[1] < point[1] - SURFACE_CLIP_EPSILON ||

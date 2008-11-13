@@ -67,3 +67,22 @@ void	ChopWindingInPlace (winding_t **w, vec3_t normal, vec_t dist, vec_t epsilon
 // frees the original if clipped
 
 void pw(winding_t *w);
+
+#if id386_sse >= 1
+vec_t	WindingArea_sse (winding_t *w);
+void	WindingCenter_sse (winding_t *w, vec3a_t center);
+void	ClipWindingEpsilon_sse (winding_t *in, v4f plane, vec_t epsilon,
+				winding_t **front, winding_t **back);
+winding_t	*ChopWinding_sse (winding_t *in, v4f plane);
+winding_t	*ReverseWinding_sse (winding_t *w);
+winding_t	*BaseWindingForPlane_sse (v4f plane);
+void	CheckWinding_sse (winding_t *w);
+void	WindingPlane_sse (winding_t *w, vec3a_t normal, vec_t *dist);
+void	RemoveColinearPoints_sse (winding_t *w);
+int	WindingOnPlaneSide_sse (winding_t *w, v4f plane);
+void	WindingBounds_sse (winding_t *w, vec3a_t mins, vec3a_t maxs);
+
+void	AddWindingToConvexHull_sse( winding_t *w, winding_t **hull, v4f normal );
+
+void	ChopWindingInPlace_sse (winding_t **w, v4f plane, vec_t epsilon);
+#endif
