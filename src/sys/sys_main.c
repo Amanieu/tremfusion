@@ -390,7 +390,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	char  fname[MAX_OSPATH];
 	char  *basepath;
 	char  *homepath;
-	char  *homepath2;
+	char  *extrapath;
 	char  *pwdpath;
 	char  *gamedir;
 
@@ -402,18 +402,18 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	pwdpath = Sys_Cwd();
 	basepath = Cvar_VariableString( "fs_basepath" );
 	homepath = Cvar_VariableString( "fs_homepath" );
-	homepath2 = Cvar_VariableString( "fs_homepath2" );
+	extrapath = Cvar_VariableString( "fs_extrapath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
 	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
 
-	if(!libHandle && homepath)
+	if(!libHandle && *homepath)
 		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
 
-	if(!libHandle && homepath)
-		libHandle = Sys_TryLibraryLoad(homepath2, gamedir, fname, fqpath);
+	if(!libHandle && *extrapath)
+		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname, fqpath);
 
-	if(!libHandle && basepath)
+	if(!libHandle && *basepath)
 		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
 
 	if(!libHandle) {

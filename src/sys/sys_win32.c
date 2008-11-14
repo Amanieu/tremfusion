@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
-static char homePath2[ MAX_OSPATH ] = { 0 };
+static char homePathOld[ MAX_OSPATH ] = { 0 };
 
 /*
 ================
@@ -82,6 +82,7 @@ char *Sys_DefaultHomePath( const char **path2 )
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
 #endif
 
+#ifdef USE_OLD_HOMEPATH
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
@@ -89,22 +90,20 @@ char *Sys_DefaultHomePath( const char **path2 )
 			FreeLibrary(shfolder);
 			return NULL;
 		}
-		Q_strncpyz( homePath2, szPath, sizeof( homePath ) );
-#ifdef USE_OLD_HOMEPATH
-		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremulous" );
-#else
-		Q_strcat( homePath2, sizeof( homePath2 ), "\\Tremfusion" );
-#endif
-		*path2 = homePath2;
-		FreeLibrary(shfolder);
-		if( !CreateDirectory( homePath2, NULL ) )
+		Q_strncpyz( homePathOld, szPath, sizeof( homePath ) );
+		Q_strcat( homePathOld, sizeof( homePathOld ), "\\Tremulous" );
+		if( !CreateDirectory( homePathOld, NULL ) )
 		{
 			if( GetLastError() != ERROR_ALREADY_EXISTS )
 			{
-				Com_Printf("Unable to create directory \"%s\"\n", homePath2 );
+				Com_Printf("Unable to create directory \"%s\"\n", homePathOld );
 				*path2 = NULL;
 			}
 		}
+		*path2 = homePathOld;
+#else
+		*path2 = NULL;
+#endif
 		if( !CreateDirectory( homePath, NULL ) )
 		{
 			if( GetLastError() != ERROR_ALREADY_EXISTS )
@@ -113,6 +112,7 @@ char *Sys_DefaultHomePath( const char **path2 )
 				return NULL;
 			}
 		}
+		FreeLibrary(shfolder);
 	}
 
 	return homePath;
