@@ -1523,7 +1523,7 @@ static void CM_AddFacetBevels_sse( facet_t *facet ) {
 	facet->numBorders++;
 #endif //BSPC
 
-	Com_Printf("AddFacetBevels: %d borders\n", facet->numBorders);
+	Com_DPrintf("AddFacetBevels: %d borders\n", facet->numBorders);
 }
 #endif
 static void CM_AddFacetBevels( facet_t *facet ) {
@@ -1685,7 +1685,7 @@ static void CM_AddFacetBevels( facet_t *facet ) {
 	facet->numBorders++;
 #endif //BSPC
 
-	Com_Printf("AddFacetBevels: %d borders\n", facet->numBorders);
+	Com_DPrintf("AddFacetBevels: %d borders\n", facet->numBorders);
 }
 
 typedef enum {
