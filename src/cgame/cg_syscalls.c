@@ -138,6 +138,11 @@ void  trap_AddCommand( const char *cmdName )
   syscall( CG_ADDCOMMAND, cmdName );
 }
 
+void  trap_CompleteCallback( const char *complete )
+{
+  syscall( CG_COMPLETE_CALLBACK, complete );
+}
+
 void  trap_RemoveCommand( const char *cmdName )
 {
     syscall( CG_REMOVECOMMAND, cmdName );

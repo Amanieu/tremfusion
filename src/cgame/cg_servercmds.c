@@ -1169,7 +1169,11 @@ static void CG_PTRConfirm_f( void )
   trap_SendConsoleCommand( "menu ptrc_popmenu\n" );
 }
 
-static consoleCommand_t svcommands[ ] =
+static struct
+{
+  char *cmd;
+  void ( *function )( void );
+} svcommands[ ] =
 {
   { "cp", CG_CenterPrint_f },
   { "cs", CG_ConfigStringModified },

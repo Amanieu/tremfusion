@@ -1430,12 +1430,6 @@ typedef struct
   clientList_t  ignoreList;
 } cgs_t;
 
-typedef struct
-{
-  char *cmd;
-  void ( *function )( void );
-} consoleCommand_t;
-
 //==============================================================================
 
 extern  cgs_t     cgs;
@@ -1799,6 +1793,7 @@ void          CG_ProcessSnapshots( void );
 qboolean      CG_ConsoleCommand( void );
 void          CG_InitConsoleCommands( void );
 qboolean      CG_RequestScores( void );
+void          CG_CompleteCommand( int argNum );
 
 //
 // cg_servercmds.c
@@ -2098,6 +2093,8 @@ qboolean      trap_GetEntityToken( char *buffer, int bufferSize );
 int           trap_GetDemoState( void );
 int           trap_GetDemoPos( void );
 void          trap_GetDemoName( char *buffer, int size );
+
+void          trap_CompleteCallback( const char *complete );
 
 // cg_drawCrosshair settings
 #define CROSSHAIR_ALWAYSOFF       0

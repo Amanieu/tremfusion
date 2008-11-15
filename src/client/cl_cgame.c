@@ -30,6 +30,8 @@ extern qboolean loadCamera(const char *name);
 extern void startCamera(int time);
 extern qboolean getCameraInfo(int time, vec3_t *origin, vec3_t *angles);
 
+static void(*completer)(const char *s) = NULL;
+
 /*
 ====================
 CL_GetGameState
@@ -174,11 +176,32 @@ void CL_SetUserCmdValue( int userCmdValue, float sensitivityScale ) {
 
 /*
 =====================
+CL_CompleteCgameCommand
+=====================
+*/
+void CL_CompleteCgameCommand( char *args, int argNum ) {
+	Field_CompleteCgame( argNum );
+}
+
+/*
+=====================
+CL_CgameCompletion
+=====================
+*/
+void CL_CgameCompletion( void(*callback)(const char *s), int argNum ) {
+	completer = callback;
+	VM_Call( cgvm, CG_COMPLETE_COMMAND, argNum );
+	completer = NULL;
+}
+
+/*
+=====================
 CL_AddCgameCommand
 =====================
 */
 void CL_AddCgameCommand( const char *cmdName ) {
 	Cmd_AddCommand( cmdName, NULL );
+	Cmd_SetCommandCompletionFunc( cmdName, CL_CompleteCgameCommand );
 }
 
 /*
@@ -465,6 +488,10 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return 0;
 	case CG_REMOVECOMMAND:
 		Cmd_RemoveCommandSafe( VMA(1) );
+		return 0;
+	case CG_COMPLETE_CALLBACK:
+		if( completer )
+			completer( VMA(1) );
 		return 0;
 	case CG_SENDCLIENTCOMMAND:
 		CL_AddReliableCommand( VMA(1) );

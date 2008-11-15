@@ -1167,6 +1167,7 @@ void CL_InitUI( void ) {
 		Cmd_AddCommand( "messagemode6", NULL );
 		Cmd_AddCommand( "prompt", NULL );
 	}
+	Cmd_SetCommandCompletionFunc( "prompt", Cvar_CompleteCvarName );
 
 	// reset any CVAR_CHEAT cvars registered by ui
 	if ( !clc.demoplaying && !cl_connectedToCheatServer ) 

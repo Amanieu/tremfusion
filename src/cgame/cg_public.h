@@ -181,6 +181,7 @@ typedef enum
   CG_KEY_GETOVERSTRIKEMODE,
 
   CG_S_SOUNDDURATION,
+  CG_COMPLETE_CALLBACK,
 
   CG_MEMSET = 200,
   CG_MEMCPY,
@@ -247,10 +248,15 @@ typedef enum
   CG_EVENT_HANDLING,
   // void (*CG_EventHandling)(int type);
 
-  CG_CONSOLE_TEXT
+  CG_CONSOLE_TEXT,
   // void (*CG_ConsoleText)( void );
   // pass text that has been printed to the console to cgame
   // use Cmd_Argc() / Cmd_Argv() to read it
+
+  CG_COMPLETE_COMMAND
+  // char (*CG_CompleteCommand)( int argNum );
+  // will callback on all availible completions
+  // use Cmd_Argc() / Cmd_Argv() to read the command
 } cgameExport_t;
 
 //----------------------------------------------

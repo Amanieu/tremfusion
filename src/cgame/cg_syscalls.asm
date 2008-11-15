@@ -103,6 +103,8 @@ equ trap_Key_SetBinding               -100
 
 equ trap_S_SoundDuration              -103
 
+equ trap_CompleteCallback             -104
+
 equ memset                            -201
 equ memcpy                            -202
 equ strncpy                           -203

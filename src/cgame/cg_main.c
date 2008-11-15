@@ -84,6 +84,10 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
       CG_EventHandling( arg0 );
       return 0;
 
+    case CG_COMPLETE_COMMAND:
+      CG_CompleteCommand( arg0 );
+      return 0;
+
     default:
       CG_Error( "vmMain: unknown command %i", command );
       break;

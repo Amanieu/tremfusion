@@ -734,6 +734,7 @@ typedef struct {
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit );
 void Field_CompleteKeyname( void );
+void Field_CompleteCgame( int argNum );
 void Field_CompleteFilename( const char *dir,
 		const char *ext, qboolean stripExt );
 void Field_CompleteAlias( void );
@@ -973,6 +974,9 @@ void CL_StartHunkUsers( qboolean rendererOnly );
 
 void Key_KeynameCompletion( void(*callback)(const char *s) );
 // for keyname autocompletion
+
+void CL_CgameCompletion( void(*callback)(const char *s), int argNum );
+// for cgame command autocompletion
 
 void Key_WriteBindings( fileHandle_t f );
 // for writing the config files

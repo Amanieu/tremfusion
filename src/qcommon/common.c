@@ -3077,6 +3077,22 @@ void Field_CompleteKeyname( void )
 	if( !Field_Complete( ) )
 		Key_KeynameCompletion( PrintMatches );
 }
+
+/*
+===============
+Field_CompleteCgame
+===============
+*/
+void Field_CompleteCgame( int argNum )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	CL_CgameCompletion( FindMatches, argNum );
+
+	if( !Field_Complete( ) )
+		CL_CgameCompletion( PrintMatches, argNum );
+}
 #endif
 
 /*

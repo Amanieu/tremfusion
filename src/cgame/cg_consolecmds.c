@@ -29,19 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 
-void CG_TargetCommand_f( void )
-{
-  int   targetNum;
-  char  test[ 4 ];
-
-  targetNum = CG_CrosshairPlayer( );
-  if( !targetNum )
-    return;
-
-  trap_Argv( 1, test, 4 );
-  trap_SendConsoleCommand( va( "gc %i %i", targetNum, atoi( test ) ) );
-}
-
 /*
 =================
 CG_SizeUp_f
@@ -189,59 +176,53 @@ static void CG_TellAttacker_f( void )
 static void CG_SquadMark_f( void )
 {
   centity_t *cent;
-  vec3_t end;
-  trace_t trace;
+  int clientNum;
   
   // Find the player we are looking at
-  VectorMA( cg.refdef.vieworg, 131072, cg.refdef.viewaxis[ 0 ], end );
-  CG_Trace( &trace, cg.refdef.vieworg, NULL, NULL, end,
-            cg.snap->ps.clientNum, CONTENTS_SOLID | CONTENTS_BODY );
-  if( trace.entityNum >= MAX_CLIENTS )
+  clientNum = CG_CrosshairPlayer( );
+  if( clientNum == -1 )
     return;
 
   // Only mark teammates
-  cent = cg_entities + trace.entityNum;
-  if( cent->currentState.eType != ET_PLAYER ||
-      cgs.clientinfo[ trace.entityNum ].team !=
+  cent = cg_entities + clientNum;
+  if( cgs.clientinfo[ clientNum ].team !=
       cg.snap->ps.stats[ STAT_TEAM ] )
     return;
       
   cent->pe.squadMarked = !cent->pe.squadMarked;
 }
 
-static void CG_UIMenu_f( void )
+static struct
 {
-  trap_SendConsoleCommand( va( "menu %s\n", CG_Argv( 1 ) ) );
-}
-
-static consoleCommand_t commands[ ] =
+  char *cmd;
+  void ( *function )( void );
+  void ( *completer )( void );
+} commands[ ] =
 {
-  { "ui_menu", CG_UIMenu_f },
-  { "testgun", CG_TestGun_f },
-  { "testmodel", CG_TestModel_f },
-  { "nextframe", CG_TestModelNextFrame_f },
-  { "prevframe", CG_TestModelPrevFrame_f },
-  { "nextskin", CG_TestModelNextSkin_f },
-  { "prevskin", CG_TestModelPrevSkin_f },
-  { "viewpos", CG_Viewpos_f },
-  { "+scores", CG_ScoresDown_f },
-  { "-scores", CG_ScoresUp_f },
-  { "scoresUp", CG_scrollScoresUp_f },
-  { "scoresDown", CG_scrollScoresDown_f },
-  { "sizeup", CG_SizeUp_f },
-  { "sizedown", CG_SizeDown_f },
-  { "weapnext", CG_NextWeapon_f },
-  { "weapprev", CG_PrevWeapon_f },
-  { "weapon", CG_Weapon_f },
-  { "tell_target", CG_TellTarget_f },
-  { "tell_attacker", CG_TellAttacker_f },
-  { "tcmd", CG_TargetCommand_f },
-  { "testPS", CG_TestPS_f },
-  { "destroyTestPS", CG_DestroyTestPS_f },
-  { "testTS", CG_TestTS_f },
-  { "destroyTestTS", CG_DestroyTestTS_f },
-  { "reloadhud", CG_LoadHudMenu },
-  { "squadmark", CG_SquadMark_f },
+  { "testgun", CG_TestGun_f, NULL },
+  { "testmodel", CG_TestModel_f, NULL },
+  { "nextframe", CG_TestModelNextFrame_f, NULL },
+  { "prevframe", CG_TestModelPrevFrame_f, NULL },
+  { "nextskin", CG_TestModelNextSkin_f, NULL },
+  { "prevskin", CG_TestModelPrevSkin_f, NULL },
+  { "viewpos", CG_Viewpos_f, NULL },
+  { "+scores", CG_ScoresDown_f, NULL },
+  { "-scores", CG_ScoresUp_f, NULL },
+  { "scoresUp", CG_scrollScoresUp_f, NULL },
+  { "scoresDown", CG_scrollScoresDown_f, NULL },
+  { "sizeup", CG_SizeUp_f, NULL },
+  { "sizedown", CG_SizeDown_f, NULL },
+  { "weapnext", CG_NextWeapon_f, NULL },
+  { "weapprev", CG_PrevWeapon_f, NULL },
+  { "weapon", CG_Weapon_f, NULL },
+  { "tell_target", CG_TellTarget_f, NULL },
+  { "tell_attacker", CG_TellAttacker_f, NULL },
+  { "testPS", CG_TestPS_f, NULL },
+  { "destroyTestPS", CG_DestroyTestPS_f, NULL },
+  { "testTS", CG_TestTS_f, NULL },
+  { "destroyTestTS", CG_DestroyTestTS_f, NULL },
+  { "reloadhud", CG_LoadHudMenu, NULL },
+  { "squadmark", CG_SquadMark_f, NULL },
 };
 
 
@@ -333,4 +314,30 @@ void CG_InitConsoleCommands( void )
   trap_AddCommand( "deconstruct" );
   trap_AddCommand( "ignore" );
   trap_AddCommand( "unignore" );
+}
+
+
+/*
+=================
+CG_CompleteCommand
+
+The command has been tokenized and can be retrieved with
+Cmd_Argc() / Cmd_Argv()
+=================
+*/
+void CG_CompleteCommand( int argNum )
+{
+  const char  *cmd;
+  int         i;
+
+  cmd = CG_Argv( 0 );
+
+  for( i = 0; i < sizeof( commands ) / sizeof( commands[ 0 ] ); i++ )
+  {
+    if( !Q_stricmp( cmd, commands[ i ].cmd ) )
+    {
+      commands[ i ].completer( );
+      return;
+    }
+  }
 }
