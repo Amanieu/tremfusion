@@ -655,6 +655,12 @@ void Console_Key (int key) {
 		 ( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
 		historyLine++;
 		if (historyLine >= nextHistoryLine) {
+			if ( g_consoleField.buffer[0] ) {
+				// copy line to history buffer
+				historyEditLines[nextHistoryLine % COMMAND_HISTORY] = g_consoleField;
+				nextHistoryLine++;
+				CL_SaveConsoleHistory( );
+			}
 			historyLine = nextHistoryLine;
 			Field_Clear( &g_consoleField );
 			g_consoleField.widthInChars = g_console_field_width;
@@ -665,17 +671,7 @@ void Console_Key (int key) {
 	}
 
 	// console scrolling
-	if ( key == K_PGUP ) {
-		Con_PageUp();
-		return;
-	}
-
-	if ( key == K_PGDN) {
-		Con_PageDown();
-		return;
-	}
-
-	if ( key == K_MWHEELUP) {	//----(SA)	added some mousewheel functionality to the console
+	if ( key == K_MWHEELUP || key == K_PGUP ) {	//----(SA)	added some mousewheel functionality to the console
 		Con_PageUp();
 		if(keys[K_CTRL].down) {	// hold <ctrl> to accelerate scrolling
 			Con_PageUp();
@@ -684,7 +680,7 @@ void Console_Key (int key) {
 		return;
 	}
 
-	if ( key == K_MWHEELDOWN) {	//----(SA)	added some mousewheel functionality to the console
+	if ( key == K_MWHEELDOWN || key == K_PGDN ) {	//----(SA)	added some mousewheel functionality to the console
 		Con_PageDown();
 		if(keys[K_CTRL].down) {	// hold <ctrl> to accelerate scrolling
 			Con_PageDown();
@@ -1601,7 +1597,7 @@ void Key_SetCatcher( int catcher ) {
 
 // This must not exceed MAX_CMD_LINE
 #define			MAX_CONSOLE_SAVE_BUFFER	1024
-#define			CONSOLE_HISTORY_FILE    "q3history"
+#define			CONSOLE_HISTORY_FILE    "conhistory"
 static char	consoleSaveBuffer[ MAX_CONSOLE_SAVE_BUFFER ];
 static int	consoleSaveBufferSize = 0;
 
@@ -1618,7 +1614,7 @@ void CL_LoadConsoleHistory( void )
 	int						i, numChars, numLines = 0;
 	fileHandle_t	f;
 
-	consoleSaveBufferSize = FS_FOpenFileRead( CONSOLE_HISTORY_FILE, &f, qfalse );
+	consoleSaveBufferSize = FS_SV_FOpenFileRead( CONSOLE_HISTORY_FILE, &f );
 	if( !f )
 	{
 		Com_Printf( "Couldn't read %s.\n", CONSOLE_HISTORY_FILE );
@@ -1718,7 +1714,7 @@ void CL_SaveConsoleHistory( void )
 
 	consoleSaveBufferSize = strlen( consoleSaveBuffer );
 
-	f = FS_FOpenFileWrite( CONSOLE_HISTORY_FILE );
+	f = FS_SV_FOpenFileWrite( CONSOLE_HISTORY_FILE );
 	if( !f )
 	{
 		Com_Printf( "Couldn't write %s.\n", CONSOLE_HISTORY_FILE );
