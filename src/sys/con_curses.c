@@ -25,6 +25,17 @@
  * src/sys/con_curses.c
  */
 
+/*
+ * FIXME: major stability issues ater lots of prints
+ *
+ * TODO:
+ * history buffer
+ * tab completion
+ * finish input line handeling (like when size_of_string > width_of_window)
+ * add a clear function
+ * code cleanup
+ */
+
 #ifndef __STAND_ALONE__
 	#include "../qcommon/q_shared.h"
 	#include "../qcommon/qcommon.h"
@@ -61,7 +72,7 @@ static void DbgPrint ( const char *fmt, ... )
 }
 #endif
 
-#define LOG_BUF_SIZE 2048
+#define LOG_BUF_SIZE 1024
 
 static int con_state = 0; /* has CON_Init been run yet? */
 
@@ -69,11 +80,12 @@ static char logbuf[LOG_BUF_SIZE][1024]; /* buffer that holds all of the log line
 static int logline = 0; /* current log buffer line */
 static int loglinepos = 0; /* current position in the buffer */
 
-static char *logwinbuf[LOG_BUF_SIZE]; /* buffer for the log window (points to the log buffer) */
-static int logwinline = 0; /* current log window line */
-static int logwinlinepos = 0; /* current position on the current line */
+static int logwinline = 0;
+static int logwinlinepos = 0;
 
 static int reallogline = 0; /* count of total lines printed */
+
+static int scrollline = 0; /* current position in the scroll buffer */
 
 typedef struct
 {
@@ -89,10 +101,10 @@ typedef struct
 static _window rootwin; /* root window */
 
 /* windows */
-static _window win0;
-static _window win1;
-static _window win2;
-static _window win3;
+static _window win_title;
+static _window win_logframe;
+static _window win_log;
+static _window win_input;
 
 static char title[] = "[TremFusion Console]"; /* console title */
 
@@ -120,9 +132,9 @@ static void WinRefresh ( _window * );
 static void EraseWins ( void );
 static void MvWins ( void );
 
-static void LogPrint ( char * );
+static void LogPrint ( void );
 static void LogRedraw ( void );
-static void InputRedraw ( void );
+static void LogScroll ( void );
 
 /* tremulous functions */
 /* FIXME: already defined in in sys_local.h */
@@ -146,6 +158,8 @@ static void SetWins ( void )
 	#ifdef __DEBUG__
 	DbgPrint("SetWins()\n");
 	#endif
+
+	/* i think i found this trick in alsamixer */
 	struct winsize winsz = { 0, };
 
 	ioctl(fileno (stdout), TIOCGWINSZ, &winsz);
@@ -153,43 +167,31 @@ static void SetWins ( void )
 	rootwin.lines = winsz.ws_row;
 	rootwin.cols = winsz.ws_col;
 
-	/* NEVER FUCKING TRUST THIS FUNCTION: getmaxyx(rootwin.win, rootwin.lines, rootwin.cols); */
+	/* the above function replaces this one: getmaxyx(rootwin.win, rootwin.lines, rootwin.cols); */
 
-	#ifdef __DEBUG__
-	DbgPrint("%s(): rootwin.lines: '%i' rootwin.cols: '%i'\n", __FUNCTION__, rootwin.lines, rootwin.cols);
+	#ifdef __LOG_ONLY__
+	win_title.lines = 1;
+	#else
+	win_title.lines = 2;
 	#endif
+	win_title.cols = rootwin.cols;
+	win_title.x = 0;
+	win_title.y = 0;
 
-	win0.lines = 2;
-	win0.cols = rootwin.cols;
-	win0.x = 0;
-	win0.y = 0;
+	win_logframe.lines = (rootwin.lines - win_title.lines - 1);
+	win_logframe.cols = rootwin.cols;
+	win_logframe.x = 0;
+	win_logframe.y = (win_title.lines);
 
-	win1.lines = (rootwin.lines - win0.lines - 1);
-	win1.cols = rootwin.cols;
-	win1.x = 0;
-	win1.y = (win0.lines);
+	win_log.lines = (win_logframe.lines - 2);
+	win_log.cols = (win_logframe.cols - 2);
+	win_log.x = (win_logframe.x + 1);
+	win_log.y = (win_logframe.y + 1);
 
-	#ifdef __DEBUG__
-	DbgPrint("%s(): win1.lines: '%i' win1.cols: '%i' win1.x: '%i' win1.y: '%i'\n", __FUNCTION__, win1.lines, win1.cols, win1.x, win1.y);
-	#endif
-
-	win2.lines = (win1.lines - 2);
-	win2.cols = (win1.cols - 2);
-	win2.x = (win1.x + 1);
-	win2.y = (win1.y + 1);
-
-	#ifdef __DEBUG__
-	DbgPrint("%s(): win2.lines: '%i' win2.cols: '%i' win2.x: '%i' win2.y: '%i'\n", __FUNCTION__, win2.lines, win2.cols, win2.x, win2.y);
-	#endif
-
-	win3.lines = 1;
-	win3.cols = rootwin.cols;
-	win3.x = 0;
-	win3.y = (rootwin.lines - 1);
-
-	#ifdef __DEBUG__
-	DbgPrint("%s(): win3.lines: '%i' win3.cols: '%i' win3.x: '%i' win3.y: '%i'\n", __FUNCTION__, win3.lines, win3.cols, win3.x, win3.y);
-	#endif
+	win_input.lines = 1;
+	win_input.cols = rootwin.cols;
+	win_input.x = 0;
+	win_input.y = (rootwin.lines - 1);
 }
 
 /* make all of the happy windows */
@@ -209,10 +211,15 @@ static void InitWins ( void )
 	nodelay(rootwin.win, TRUE);
 	noecho();
 
-	NewWin(&win0);
-	NewWin(&win1);
-	NewWin(&win2);
-	NewWin(&win3);
+	NewWin(&win_title);
+	NewWin(&win_logframe);
+	NewWin(&win_log);
+	NewWin(&win_input);
+
+	leaveok(win_title.win, FALSE);
+	leaveok(win_logframe.win, FALSE);
+	leaveok(win_log.win, FALSE);
+	leaveok(win_input.win, FALSE);
 }
 
 /* refresh all of the windows */
@@ -224,10 +231,10 @@ static void RefreshWins ( void )
 	/* FIXME: if this is giving you problems KILL IT */
 	wnoutrefresh(rootwin.win);
 
-	wnoutrefresh(win0.win);
-	wnoutrefresh(win1.win);
-	wnoutrefresh(win2.win);
-	wnoutrefresh(win3.win);
+	wnoutrefresh(win_title.win);
+	wnoutrefresh(win_logframe.win);
+	wnoutrefresh(win_log.win);
+	wnoutrefresh(win_input.win);
 	doupdate();
 }
 
@@ -237,17 +244,19 @@ static void DrawWins ( void )
 	#ifdef __DEBUG__
 	DbgPrint("DrawWins()\n");
 	#endif
-	/* window 0: title window */
-	mvwprintw(win0.win, 0, 0, "%s", title);
+	/* title window */
+	mvwprintw(win_title.win, 0, 0, "%s", title);
 
-	/* window 1: log window (uesd for a boarder, window 4 sits inside this one) */
-	box(win1.win, 0, 0);
-	mvwprintw(win1.win, 0, 1, "[log]");
+	/* log window frame (uesd for a boarder, the log window sits ontop this one) */
+	box(win_logframe.win, 0, 0);
+	#ifndef __LOG_ONLY__
+	mvwprintw(win_logframe.win, 0, 1, "[log]");
+	#endif
 
-	/* window 2: the actual log window, sits inside window 1 */
+	/* the actual log window, sits ontop of window_logframe */
 
-	/* window 3: the shell window, the command prompt lives here */
-	mvwprintw(win3.win, 0, 0, "%s", input_prompt);
+	/* the input window, the command prompt lives here */
+	mvwprintw(win_input.win, 0, 0, "%s", input_prompt);
 }
 
 static void ResizeWins ( void )
@@ -258,10 +267,10 @@ static void ResizeWins ( void )
 	/* read this was needed out of the alsamixer source */
 	/* resizeterm(rootwin.lines, rootwin.cols); */
 
-	wresize(win0.win, win0.lines, win0.cols);
-	wresize(win1.win, win1.lines, win1.cols);
-	wresize(win2.win, win2.lines, win2.cols);
-	wresize(win3.win, win3.lines, win3.cols);
+	wresize(win_title.win, win_title.lines, win_title.cols);
+	wresize(win_logframe.win, win_logframe.lines, win_logframe.cols);
+	wresize(win_log.win, win_log.lines, win_log.cols);
+	wresize(win_input.win, win_input.lines, win_input.cols);
 }
 
 /* resize the windows, redraw them, and set the bear trap */
@@ -272,9 +281,10 @@ static void CursResize ( void )
 	#endif
 	signal(SIGWINCH, (void*) CursResize);
 
+	scrollline = 0;
+
 	endwin();
 	EraseWins();
-	//refresh();
 	RefreshWins();
 	SetWins();
 	ResizeWins();
@@ -297,7 +307,7 @@ static void InputRedraw ( void )
 	#ifdef __DEBUG__
 	DbgPrint("InputRedraw()\n");
 	#endif
-	mvwprintw(win3.win, 0, strlen(input_prompt), "%s", input_buf);
+	mvwprintw(win_input.win, 0, strlen(input_prompt), "%s", input_buf);
 }
 
 /* refresh a window */
@@ -313,59 +323,49 @@ static void WinRefresh ( _window * win )
 /* erase all windows */
 static void EraseWins ( void )
 {
-	werase(win0.win);
-	werase(win1.win);
-	werase(win2.win);
-	werase(win3.win);
+	werase(win_title.win);
+	werase(win_logframe.win);
+	werase(win_log.win);
+	werase(win_input.win);
 }
 
 static void MvWins ( void )
 {
-	mvwin(win0.win, win0.y, win0.x);
-	mvwin(win1.win, win1.y, win1.x);
-	mvwin(win2.win, win2.y, win2.x);
-	mvwin(win3.win, win3.y, win3.x);
+	mvwin(win_title.win, win_title.y, win_title.x);
+	mvwin(win_logframe.win, win_logframe.y, win_logframe.x);
+	mvwin(win_log.win, win_log.y, win_log.x);
+	mvwin(win_input.win, win_input.y, win_input.x);
 }
 
 /* print to the log screen */
-static void LogPrint ( char *msg )
+static void LogPrint ( void )
 {
-	int i;
-
-	if (logwinline >= win2.lines)
+	if ( logwinline >= win_log.lines )
 	{
 		logwinline--;
 
-		for(i = 0; i < logwinline; i++)
-		{
-			logwinbuf[i] = logwinbuf[(i + 1)];
-		}
-		logwinbuf[i] = msg;
+		int j;
+		werase(win_log.win);
 
-		logwinline++;
+		j = (logline - win_log.lines);
 
-		wclear(win2.win);
-		for(i = logwinline; i >= 0; i--)
+		for ( logwinline = 0; j <= logline; logwinline++, j++ )
 		{
-			mvwprintw(win2.win, i, 0, "%s", logwinbuf[i]);
+			mvwprintw(win_log.win, logwinline, 0, "%s", logbuf[j]);
 		}
 	}
 	else
 	{
-		logwinbuf[logwinline] = msg;
-		/* mvwprintw(win2.win, logwinline, 0, "%s", logwinbuf[logwinline]); */
-
-		int msglen = strlen(msg);
+		int msglen = strlen(logbuf[logline]);
 		int i;
 
 		for (i=0; i <= msglen; i++, logwinlinepos++)
 		{
-
-			if ( msg[i] == '\0' )
+			if ( logbuf[logline][i] == '\0' )
 			{
-				continue;
+				break;
 			}
-			else if ( msg[i] == '\n' )
+			else if ( logbuf[logline][i] == '\n' )
 			{
 				logwinline++;
 				/* FIXME: wtf, why is this wanting to be -2 to work!? */
@@ -374,59 +374,85 @@ static void LogPrint ( char *msg )
 			}
 			else
 			{
-				mvwaddch(win2.win, logwinline, logwinlinepos, msg[i]);
+				mvwaddch(win_log.win, logwinline, logwinlinepos, logbuf[logline][i]);
 			}
 		}
 	}
 
-	WinRefresh(&win2);
-        //logwinline++;
+	WinRefresh(&win_log);
 }
 
 /* redraw the log window after a resize or some such event */
 static void LogRedraw ( void )
 {
-	int i;
+	int i, j;
 
-	wclear(win2.win);
-	for(i = (logwinline - 1); i >= 0; i--)
+	werase(win_log.win);
+
+	if ( logline > win_log.lines )
 	{
-		mvwprintw(win2.win, i, 0, "%s", logwinbuf[i]);
+		j = (logline - win_log.lines);
+	}
+	else
+	{
+		j = 0;
+	}
+
+	for ( i = 0; ((i <= win_log.lines || j < logline) && i < logline); i++, j++ )
+	{
+		mvwprintw(win_log.win, i, 0, "%s", logbuf[j]);
 	}
 }
+
+/* draw the log window from the scroll point */
+static void LogScroll ( void )
+{
+	int i, j;
+
+	wclear(win_log.win);
+
+	if ( logline > win_log.lines )
+	{
+		j = ((logline - scrollline) - win_log.lines);
+	}
+	else
+	{
+		j = 0;
+	}
+
+	if ( j < 0 )
+	{
+		scrollline--;
+		return;
+	}
+
+	for ( i = 0; ((i <= win_log.lines || j < logline) && i < logline); i++, j++ )
+	{
+		mvwprintw(win_log.win, i, 0, "%s", logbuf[j]);
+	}
+
+	WinRefresh(&win_log);
+}
+
+
 
 
 /* -- tremulous functions -- */
 
-#if 0
-void CON_Print ( const char *msg )
-{
-	#ifdef __DEBUG__
-	DbgPrint("CON_Print()\n");
-	#endif
-	if ( con_state )
-	{
-		wprintw(win2.win, "%s", msg);
-		WinRefresh(&win2);
-	}
-	else
-	{
-		char buf[1024];
-		snprintf(buf, sizeof(buf), "WARNING: CON_Print() called before CON_Init()\nCon_Print(\"%s\")\n", msg);
-		ErrPrint(buf);
-	}
-}
-#endif
+
+
 
 void CON_Print ( const char *msg )
 {
 	if ( con_state )
 	{
-		if ( logline > LOG_BUF_SIZE )
+		if ( logline >= 100 )
 		{
 			logline = 0;
+			logwinline = 0;
 			snprintf(logbuf[logline], 41, "NOTICE: log buffer filled, starting over");
-			LogPrint(logbuf[logline]);
+			LogRedraw();
+			LogPrint();
 			logline++;
 		}
 
@@ -440,7 +466,11 @@ void CON_Print ( const char *msg )
 				logbuf[logline][loglinepos] = msg[i];
 				logbuf[logline][(loglinepos + 1)] = '\0';
 
-				LogPrint(logbuf[logline]);
+				/* dont print new data when we are scrolling through the backlog */
+				if ( !scrollline )
+				{
+					LogPrint();
+				}
 				logline++;
 				reallogline++;
 				loglinepos = -1;
@@ -451,10 +481,6 @@ void CON_Print ( const char *msg )
 			logbuf[logline][loglinepos] = msg[i];
 			logbuf[logline][(loglinepos + 1)] = '\0';
 		}
-
-		//LogPrint(logbuf[logline]);
-		//logline++;
-		//reallogline++;
 	}
 	else
 	{
@@ -482,7 +508,6 @@ void CON_Init ( void )
 
 		fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | O_NONBLOCK );
 
-		/* FIXME: add terminal checking (to make sure we have a usable TTY of sorts (would this be redundant since ncurses does this(it does do this right?)) */
 		if ( isatty(STDIN_FILENO) != 1 )
 		{
 			ErrPrint("WARNING: stdin is not a tty\n");
@@ -512,6 +537,7 @@ void CON_Shutdown ( void )
 	{
 		con_state--;
 		endwin();
+		fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) & ~O_NONBLOCK );
 	}
 	else
 	{
@@ -544,10 +570,10 @@ char *CON_Input ( void )
 
 				for (i = input_buf_pos; i >= 0; i--)
 				{
-					mvwdelch(win3.win, 0, (strlen(input_prompt) + i));
+					mvwdelch(win_input.win, 0, (strlen(input_prompt) + i));
 				}
 
-				WinRefresh(&win3);
+				WinRefresh(&win_input);
 
 				input_buf[0] = '\0';
 				input_buf_pos = 0;
@@ -576,11 +602,11 @@ char *CON_Input ( void )
 			{
 				input_buf[(input_buf_pos - 1)] = '\0';
 #ifdef __BUGGY_INPUT__
-				mvwdelch(win3.win, 0, (strlen(input_prompt) + (input_winbuf_pos - 1)));
+				mvwdelch(win_input.win, 0, (strlen(input_prompt) + (input_winbuf_pos - 1)));
 #else
-				mvwdelch(win3.win, 0, (strlen(input_prompt) + (input_buf_pos - 1)));
+				mvwdelch(win_input.win, 0, (strlen(input_prompt) + (input_buf_pos - 1)));
 #endif
-				WinRefresh(&win3);
+				WinRefresh(&win_input);
 
 				input_buf_pos--;
 #ifdef __BUGGY_INPUT__
@@ -625,6 +651,33 @@ char *CON_Input ( void )
 						return(NULL);
 					break;
 
+					case '5':
+						/* throw away the trailing ~ */
+						buf = wgetch(rootwin.win);
+
+						scrollline++;
+						LogScroll();
+
+						return(NULL);
+					break;
+
+					case '6':
+						/* throw away the trailing ~ */
+						buf = wgetch(rootwin.win);
+
+						if ( scrollline )
+						{
+							scrollline--;
+							LogScroll();
+						}
+						else
+						{
+							LogRedraw();
+						}
+
+						return(NULL);
+					break;
+
 					default:
 						return(NULL);
 					break;
@@ -638,26 +691,26 @@ char *CON_Input ( void )
 			input_buf[(input_buf_pos + 1)] = '\0';
 
 #ifdef __BUGGY_INPUT__
-			if ( input_buf_pos >= (win3.cols - strlen(input_prompt)) )
+			if ( input_buf_pos >= (win_input.cols - strlen(input_prompt)) )
 			{
 				int i;
 
 				for (i = input_winbuf_pos; i >= 0; i--)
 				{
-					mvwdelch(win3.win, 0, (strlen(input_prompt) + i));
+					mvwdelch(win_input.win, 0, (strlen(input_prompt) + i));
 				}
 
 				input_winbuf_pos = 0;
 			}
 
-			mvwaddch(win3.win, 0, (strlen(input_prompt) + input_winbuf_pos), buf);
-			WinRefresh(&win3);
+			mvwaddch(win_input.win, 0, (strlen(input_prompt) + input_winbuf_pos), buf);
+			WinRefresh(&win_input);
 
 			input_buf_pos++;
 			input_winbuf_pos++;
 #else
-			mvwaddch(win3.win, 0, (strlen(input_prompt) + input_buf_pos), buf);
-			WinRefresh(&win3);
+			mvwaddch(win_input.win, 0, (strlen(input_prompt) + input_buf_pos), buf);
+			WinRefresh(&win_input);
 
 			input_buf_pos++;
 #endif

@@ -367,6 +367,7 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CURSES),1)
      NOTSHLIBLDFLAGS = -lcurses
+     BASE_CFLAGS += -D__LOG_ONLY__
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -1495,9 +1496,9 @@ ifeq ($(PLATFORM),mingw32)
 else
   Q3OBJ += $(B)/client/sys_unix.o
   ifeq ($(USE_CURSES),1)
-    Q3DOBJ += $(B)/ded/con_curses.o
+    Q3OBJ += $(B)/client/con_curses.o
   else
-    Q3DOBJ += $(B)/ded/con_tty.o
+    Q3OBJ += $(B)/client/con_tty.o
   endif
 endif
 
