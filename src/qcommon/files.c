@@ -2777,8 +2777,7 @@ static void FS_ReorderExtraPaks( void )
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
 			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "@" ) && !Q_stricmp( s->dir->gamedir, BASEGAME )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ) && !Q_stricmp( s->dir->gamedir, fs_gamedir ))) {
+			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ))) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
@@ -2821,7 +2820,7 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". @ tremfusion-base", CVAR_ARCHIVE );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". tremfusion-base", CVAR_ARCHIVE );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
 
