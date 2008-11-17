@@ -132,6 +132,14 @@ ifndef USE_CODEC_VORBIS
   endif
 endif
 
+ifndef USE_CURSES
+  ifeq ($(PLATFORM),linux)
+    USE_CURSES=1
+  else
+    USE_CURSES=0
+  endif
+endif
+
 ifndef USE_MUMBLE
   ifeq ($(USE_TTY_CLIENT),1)
     USE_MUMBLE=0
@@ -394,6 +402,11 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LIBS += $(OGG_LIBS)
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     LIBS = -lcurses
+     BASE_CFLAGS += -D__LOG_ONLY__
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -1525,9 +1538,12 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/client/sys_win32.o \
     $(B)/client/con_win32.o
 else
-  Q3OBJ += \
-    $(B)/client/sys_unix.o \
-    $(B)/client/con_tty.o
+  Q3OBJ += $(B)/client/sys_unix.o
+  ifeq ($(USE_CURSES),1)
+    Q3OBJ += $(B)/client/con_curses.o
+  else
+    Q3OBJ += $(B)/client/con_tty.o
+  endif
 endif
 
 ifeq ($(USE_MUMBLE),1)
@@ -1680,9 +1696,12 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/ded/sys_win32.o \
     $(B)/ded/con_win32.o
 else
-  Q3DOBJ += \
-    $(B)/ded/sys_unix.o \
-    $(B)/ded/con_tty.o
+  Q3DOBJ += $(B)/ded/sys_unix.o
+  ifeq ($(USE_CURSES),1)
+    Q3DOBJ += $(B)/ded/con_curses.o
+  else
+    Q3DOBJ += $(B)/ded/con_tty.o
+  endif
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
