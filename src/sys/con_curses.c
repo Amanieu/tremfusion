@@ -158,14 +158,28 @@ static void CON_Resize(void)
 CON_Shutdown
 
 Never exit without calling this, or your terminal will be left in a pretty bad state
+This will also spit out the whole log to the terminal, so that it can be seen even after we close
 ==================
 */
 void CON_Shutdown(void)
 {
-	if (ncurses_on)
-		endwin();
-	else
+	int i;
+
+	if (!ncurses_on) {
 		CON_Shutdown_tty();
+		return;
+	}
+
+	endwin();
+
+	// Dump console to stderr
+	i = nextline;
+	do {
+		if (logbuf[i][0])
+			CON_Print_tty(logbuf[i]);
+		if (++i >= NUM_LOG_LINES)
+			i = 0;
+	} while (i != nextline);
 }
 
 /*
@@ -232,6 +246,7 @@ void CON_Init(void)
 
 	// Create the input field
 	inputwin = newwin(1, COLS - strlen(PROMPT) + 1, LINES - 1, strlen(PROMPT));
+	input_field.widthInChars = COLS - strlen(PROMPT) + 1;
 	wmove(inputwin, 0, 0);
 	if (ncurses_on)
 		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
