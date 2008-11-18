@@ -31,6 +31,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <fcntl.h>
 #include <sys/time.h>
 
+/* fallbacks for con_curses.c */
+#ifdef USE_CURSES
+#define CON_Init CON_Init_tty
+#define CON_Shutdown CON_Shutdown_tty
+#define CON_Print CON_Print_tty
+#define CON_Input CON_Input_tty
+#endif
+
 /*
 =============================================================
 tty console routines
@@ -55,7 +63,7 @@ static field_t TTY_con;
 
 // This is somewhat of aduplicate of the graphical console history
 // but it's safer more modular to have our own here
-#define CON_HISTORY 32
+#define CON_HISTORY 64
 static field_t ttyEditLines[ CON_HISTORY ];
 static int hist_current = -1, hist_count = 0;
 
@@ -189,6 +197,8 @@ void Hist_Add(field_t *field)
 	assert(hist_count >= 0);
 	assert(hist_current >= -1);
 	assert(hist_current <= hist_count);
+	if (!strcmp(ttyEditLines[0].buffer, field->buffer))
+		return;
 	// make some room
 	for (i=CON_HISTORY-1; i>0; i--)
 	{

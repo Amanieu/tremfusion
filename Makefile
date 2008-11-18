@@ -405,8 +405,8 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_CURSES),1)
-     LIBS = -lcurses
-     BASE_CFLAGS += -D__LOG_ONLY__
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
   endif
 
   ifeq ($(USE_MUMBLE),1)
@@ -1538,11 +1538,11 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/client/sys_win32.o \
     $(B)/client/con_win32.o
 else
-  Q3OBJ += $(B)/client/sys_unix.o
+  Q3OBJ += \
+    $(B)/client/sys_unix.o \
+    $(B)/client/con_tty.o
   ifeq ($(USE_CURSES),1)
     Q3OBJ += $(B)/client/con_curses.o
-  else
-    Q3OBJ += $(B)/client/con_tty.o
   endif
 endif
 
@@ -1696,11 +1696,11 @@ ifeq ($(PLATFORM),mingw32)
     $(B)/ded/sys_win32.o \
     $(B)/ded/con_win32.o
 else
-  Q3DOBJ += $(B)/ded/sys_unix.o
+  Q3DOBJ += \
+    $(B)/ded/sys_unix.o \
+    $(B)/ded/con_tty.o
   ifeq ($(USE_CURSES),1)
     Q3DOBJ += $(B)/ded/con_curses.o
-  else
-    Q3DOBJ += $(B)/ded/con_tty.o
   endif
 endif
 
