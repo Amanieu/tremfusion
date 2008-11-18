@@ -25,6 +25,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
 
+// curses.h defines COLOR_*, which are already defined in q_shared.h
+#undef COLOR_BLACK
+#undef COLOR_RED
+#undef COLOR_GREEN
+#undef COLOR_YELLOW
+#undef COLOR_BLUE
+#undef COLOR_MAGENTA
+#undef COLOR_CYAN
+#undef COLOR_WHITE
+
 #include <curses.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -55,6 +65,73 @@ static WINDOW *inputwin;
 #define NUM_LOG_LINES 1024
 static char logbuf[NUM_LOG_LINES][1024];
 static int nextline = 0;
+
+/*
+==================
+CON_ColorPrint
+==================
+*/
+#define Color2Pair(msg) (ColorIndex(*(msg + 1)) == 0 ? 8 : ColorIndex(*(msg + 1)))
+static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
+{
+	static char buffer[MAXPRINTMSG];
+	int length = 0;
+
+	// Use normal print if com_ansiColor is disabled
+	if (!com_ansiColor || !com_ansiColor->integer) {
+		wprintw(win, "%s", msg);
+		return;
+	}
+
+	wattrset(win, COLOR_PAIR(7));
+	while(*msg) {
+		if (Q_IsColorString(msg) || *msg == '\n') {
+			// First empty the buffer
+			if (length > 0) {
+				buffer[length] = '\0';
+				wprintw(win, "%s", buffer);
+				length = 0;
+			}
+
+			if (*msg == '\n') {
+				// Reset the color and then print a newline
+				wattrset(win, COLOR_PAIR(7));
+				waddch(win, '\n');
+				msg++;
+			} else {
+				// Set the color
+				wattrset(win, COLOR_PAIR(Color2Pair(msg)));
+				if (stripcodes)
+					msg += 2;
+				else {
+					if (length >= MAXPRINTMSG - 1)
+						break;
+					buffer[length] = *msg;
+					length++;
+					msg++;
+					if (length >= MAXPRINTMSG - 1)
+						break;
+					buffer[length] = *msg;
+					length++;
+					msg++;
+				}
+			}
+		} else {
+			if (length >= MAXPRINTMSG - 1)
+				break;
+
+			buffer[length] = *msg;
+			length++;
+			msg++;
+		}
+	}
+
+	// Empty anything still left in the buffer
+	if( length > 0 ) {
+		buffer[length] = '\0';
+		wprintw(win, "%s", buffer);
+	}
+}
 
 /*
 ==================
@@ -118,6 +195,20 @@ void CON_Init(void)
 	nodelay(rootwin, TRUE);
 	keypad(rootwin, TRUE);
 
+	// Set up colors
+	if (has_colors()) {
+		use_default_colors();
+		start_color();
+		init_pair(1, COLOR_RED, -1);
+		init_pair(2, COLOR_GREEN, -1);
+		init_pair(3, COLOR_YELLOW, -1);
+		init_pair(4, COLOR_BLUE, -1);
+		init_pair(5, COLOR_CYAN, -1);
+		init_pair(6, COLOR_MAGENTA, -1);
+		init_pair(7, -1, -1);
+		init_pair(8, COLOR_BLACK, -1);
+	}
+
 	// Create the border
 	borderwin = newwin(LINES - 2, COLS, 1, 0);
 	box(borderwin, 0, 0);
@@ -132,7 +223,7 @@ void CON_Init(void)
 		int i = nextline;
 		do {
 			if (logbuf[i][0])
-				wprintw(logwin, logbuf[i]);
+				CON_ColorPrint(logwin, logbuf[i], qtrue);
 			if (++i >= NUM_LOG_LINES)
 				i = 0;
 		} while (i != nextline);
@@ -141,10 +232,9 @@ void CON_Init(void)
 
 	// Create the input field
 	inputwin = newwin(1, COLS - strlen(PROMPT) + 1, LINES - 1, strlen(PROMPT));
-	if (!ncurses_on)
-		wmove(inputwin, 0, 0);
-	else
-		mvwprintw(inputwin, 0, 0, "%s", input_field.buffer);
+	wmove(inputwin, 0, 0);
+	if (ncurses_on)
+		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
 	wrefresh(inputwin);
 
 	// Display the title and input prompt
@@ -152,6 +242,7 @@ void CON_Init(void)
 	mvprintw(LINES - 1, 0, PROMPT);
 	refresh();
 
+	// Catch window resizes
 	signal(SIGWINCH, (void *)CON_Resize);
 
 	ncurses_on = qtrue;
@@ -164,7 +255,7 @@ CON_Input
 */
 char *CON_Input(void)
 {
-	int chr;
+	int chr, num_chars = 0;
 	static char text[MAX_EDIT_LINE];
 	field_t *history;
 
@@ -173,14 +264,18 @@ char *CON_Input(void)
 
 	while (1) {
 		chr = getch();
+		num_chars++;
 
 		// Special characters
 		switch (chr) {
 		case ERR:
-			wclear(inputwin);
-			mvwprintw(inputwin, 0, 0, "%s", input_field.buffer);
-			wmove(inputwin, 0, input_field.cursor);
-			wrefresh(inputwin);
+			if (num_chars > 1) {
+				wclear(inputwin);
+				wmove(inputwin, 0, 0);
+				CON_ColorPrint(inputwin, input_field.buffer, qfalse);
+				wmove(inputwin, 0, input_field.cursor);
+				wrefresh(inputwin);
+			}
 			return NULL;
 		case '\n':
 			if (!input_field.buffer[0])
@@ -189,6 +284,11 @@ char *CON_Input(void)
 			Hist_Add(&input_field);
 			strcpy(text, input_field.buffer);
 			Field_Clear(&input_field);
+			wclear(inputwin);
+			wmove(inputwin, 0, 0);
+			CON_ColorPrint(inputwin, input_field.buffer, qfalse);
+			wmove(inputwin, 0, input_field.cursor);
+			wrefresh(inputwin);
 			return text;
 		case '\t':
 			Field_AutoComplete(&input_field);
@@ -261,19 +361,19 @@ char *CON_Input(void)
 CON_Print
 ==================
 */
-void CON_Print(const char *message)
+void CON_Print(const char *msg)
 {
 	if (!ncurses_on) {
-		CON_Print_tty(message);
+		CON_Print_tty(msg);
 		return;
 	}
 
 	// Print the message in the log window
-	wprintw(logwin, message);
+	CON_ColorPrint(logwin, msg, qtrue);
 	wrefresh(logwin);
 
 	// Add the message to the log buffer
-	Q_strncpyz(logbuf[nextline], message, sizeof(logbuf[0]));
+	Q_strncpyz(logbuf[nextline], msg, sizeof(logbuf[0]));
 	nextline++;
 	if (nextline >= NUM_LOG_LINES)
 		nextline = 0;
