@@ -20,7 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
@@ -43,6 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define TITLE "---[ Tremfusion Console ]---"
 #define PROMPT "-> "
+#define INPUT_SCROLL 15
 
 // Functions from con_tty.c for fallback
 void CON_Shutdown_tty(void);
@@ -259,10 +259,15 @@ void CON_Init(void)
 
 	// Create the input field
 	inputwin = newwin(1, COLS - strlen(PROMPT) + 1, LINES - 1, strlen(PROMPT));
-	input_field.widthInChars = COLS - strlen(PROMPT) + 1;
+	input_field.widthInChars = COLS - strlen(PROMPT);
 	wmove(inputwin, 0, 0);
-	if (ncurses_on)
+	if (ncurses_on) {
+		if (input_field.cursor < input_field.scroll)
+			input_field.scroll = input_field.cursor;
+		else if ( input_field.cursor >= input_field.scroll + input_field.widthInChars )
+			input_field.scroll = input_field.cursor - input_field.widthInChars + 1;
 		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
+	}
 	wrefresh(inputwin);
 
 	// Display the title and input prompt
@@ -300,8 +305,14 @@ char *CON_Input(void)
 			if (num_chars > 1) {
 				wclear(inputwin);
 				wmove(inputwin, 0, 0);
-				CON_ColorPrint(inputwin, input_field.buffer, qfalse);
-				wmove(inputwin, 0, input_field.cursor);
+				if (input_field.cursor < input_field.scroll) {
+					input_field.scroll = input_field.cursor - INPUT_SCROLL;
+					if (input_field.scroll < 0)
+						input_field.scroll = 0;
+				} else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
+					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
+				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
+				wmove(inputwin, 0, input_field.cursor - input_field.scroll);
 				wrefresh(inputwin);
 			}
 			return NULL;
@@ -313,8 +324,6 @@ char *CON_Input(void)
 			Field_Clear(&input_field);
 			wclear(inputwin);
 			wmove(inputwin, 0, 0);
-			CON_ColorPrint(inputwin, input_field.buffer, qfalse);
-			wmove(inputwin, 0, input_field.cursor);
 			wrefresh(inputwin);
 			Com_Printf("]%s\n", text);
 			return text;
@@ -406,6 +415,6 @@ void CON_Print(const char *msg)
 		nextline = 0;
 
 	// Move the cursor back to the input field
-	wmove(inputwin, 0, input_field.cursor);
+	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
 	wrefresh(inputwin);
 }
