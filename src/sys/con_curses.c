@@ -367,6 +367,8 @@ char *CON_Input(void)
 			wscrl(logwin, -2);
 			wrefresh(logwin);
 			continue;
+		case '\b':
+		case 127:
 		case KEY_BACKSPACE:
 			if (input_field.cursor <= 0)
 				continue;
