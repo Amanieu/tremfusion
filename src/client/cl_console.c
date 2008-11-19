@@ -505,8 +505,6 @@ Con_Init
 ================
 */
 void Con_Init (void) {
-	int		i;
-	
 	cl_autoNamelog = Cvar_Get ("cl_autoNamelog", "0", CVAR_ARCHIVE);
 	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
@@ -531,11 +529,6 @@ void Con_Init (void) {
 	
 	Field_Clear( &g_consoleField );
 	g_consoleField.widthInChars = g_console_field_width;
-	for ( i = 0 ; i < COMMAND_HISTORY ; i++ ) {
-		Field_Clear( &historyEditLines[i] );
-		historyEditLines[i].widthInChars = g_console_field_width;
-	}
-	CL_LoadConsoleHistory( );
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);

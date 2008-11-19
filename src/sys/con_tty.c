@@ -62,12 +62,6 @@ static struct termios TTY_tc;
 
 static field_t TTY_con;
 
-// This is somewhat of aduplicate of the graphical console history
-// but it's safer more modular to have our own here
-#define CON_HISTORY 64
-static field_t ttyEditLines[ CON_HISTORY ];
-static int hist_current = -1, hist_count = 0;
-
 /*
 ==================
 CON_FlushIn
@@ -188,76 +182,6 @@ void CON_Shutdown( void )
 
 /*
 ==================
-Hist_Add
-==================
-*/
-void Hist_Add(field_t *field)
-{
-	int i;
-	assert(hist_count <= CON_HISTORY);
-	assert(hist_count >= 0);
-	assert(hist_current >= -1);
-	assert(hist_current <= hist_count);
-	hist_current = -1; // re-init
-	if (!strcmp(ttyEditLines[0].buffer, field->buffer))
-		return;
-	// make some room
-	for (i=CON_HISTORY-1; i>0; i--)
-	{
-		ttyEditLines[i] = ttyEditLines[i-1];
-	}
-	ttyEditLines[0] = *field;
-	if (hist_count<CON_HISTORY)
-	{
-		hist_count++;
-	}
-}
-
-/*
-==================
-Hist_Prev
-==================
-*/
-field_t *Hist_Prev( void )
-{
-	int hist_prev;
-	assert(hist_count <= CON_HISTORY);
-	assert(hist_count >= 0);
-	assert(hist_current >= -1);
-	assert(hist_current <= hist_count);
-	hist_prev = hist_current + 1;
-	if (hist_prev >= hist_count)
-	{
-		return NULL;
-	}
-	hist_current++;
-	return &(ttyEditLines[hist_current]);
-}
-
-/*
-==================
-Hist_Next
-==================
-*/
-field_t *Hist_Next( void )
-{
-	assert(hist_count <= CON_HISTORY);
-	assert(hist_count >= 0);
-	assert(hist_current >= -1);
-	assert(hist_current <= hist_count);
-	if (hist_current >= 0)
-	{
-		hist_current--;
-	}
-	if (hist_current == -1)
-	{
-		return NULL;
-	}
-	return &(ttyEditLines[hist_current]);
-}
-
-/*
-==================
 CON_Clear_f
 ==================
 */
@@ -332,7 +256,7 @@ char *CON_Input( void )
 	static char text[256];
 	int avail;
 	char key;
-	field_t *history;
+	const char *history;
 	size_t size;
 
 	if( ttycon_on )
@@ -359,7 +283,7 @@ char *CON_Input( void )
 				if (key == '\n')
 				{
 					// push it in history
-					Hist_Add(&TTY_con);
+					Hist_Add(TTY_con.buffer);
 					strcpy(text, TTY_con.buffer);
 					Field_Clear(&TTY_con);
 					key = '\n';
@@ -386,30 +310,27 @@ char *CON_Input( void )
 							switch (key)
 							{
 								case 'A':
-									history = Hist_Prev();
-									if (history)
-									{
-										CON_Hide();
-										TTY_con = *history;
-										CON_Show();
-									}
+									CON_Hide();
+									Q_strncpyz(TTY_con.buffer, Hist_Prev(), sizeof(TTY_con.buffer));
+									TTY_con.cursor = strlen(TTY_con.buffer);
+									CON_Show();
 									CON_FlushIn();
 									return NULL;
-									break;
 								case 'B':
 									history = Hist_Next();
 									CON_Hide();
 									if (history)
 									{
-										TTY_con = *history;
-									} else
+										Q_strncpyz(TTY_con.buffer, history, sizeof(TTY_con.buffer));
+										TTY_con.cursor = strlen(TTY_con.buffer);
+									} else if (TTY_con.buffer[0])
 									{
+										Hist_Add(TTY_con.buffer);
 										Field_Clear(&TTY_con);
 									}
 									CON_Show();
 									CON_FlushIn();
 									return NULL;
-									break;
 								case 'C':
 									return NULL;
 								case 'D':

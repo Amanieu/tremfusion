@@ -2532,6 +2532,7 @@ void Com_Init( char *commandLine ) {
 	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
 	VM_Init();
 	SV_Init();
+	Hist_Load();
 
 	com_dedicated->modified = qfalse;
 #ifndef DEDICATED
@@ -3241,3 +3242,123 @@ void Com_RandomBytes( byte *string, int len )
 		string[i] = (unsigned char)( rand() % 255 );
 }
 
+#define CON_HISTORY 64
+#define CON_HISTORY_FILE "conhistory"
+static char history[CON_HISTORY][MAX_EDIT_LINE];
+static int hist_current, hist_next;
+
+/*
+==================
+Hist_Load
+==================
+*/
+void Hist_Load(void)
+{
+	int i;
+	fileHandle_t f;
+	char *buf, *end;
+	char buffer[sizeof(history)];
+
+	FS_SV_FOpenFileRead(CON_HISTORY_FILE, &f);
+	if(!f) {
+		Com_Printf("Couldn't read %s.\n", CON_HISTORY_FILE);
+		return;
+	}
+	FS_Read(buffer, sizeof(buffer), f);
+	FS_FCloseFile(f);
+
+	buf = buffer;
+	for (i = 0; i < CON_HISTORY; i++) {
+		end = strchr(buf, '\n');
+		if (!end) {
+			end = buf + strlen(buf);
+			Q_strncpyz(history[i], buf, sizeof(history[0]));
+			break;
+		} else
+			*end = '\0';
+		Q_strncpyz(history[i], buf, sizeof(history[0]));
+		buf = end + 1;
+		if (!*buf)
+			break;
+	}
+
+	if (i > CON_HISTORY)
+		i = CON_HISTORY;
+	hist_current = hist_next = i + 1;
+}
+
+/*
+==================
+Hist_Save
+==================
+*/
+static void Hist_Save(void)
+{
+	int i;
+	fileHandle_t f;
+
+	f = FS_SV_FOpenFileWrite(CON_HISTORY_FILE);
+	if(!f) {
+		Com_Printf("Couldn't write %s.\n", CON_HISTORY_FILE);
+		return;
+	}
+
+	i = hist_next % CON_HISTORY;
+	do {
+		char *buf;
+		if (!history[i][0]) {
+			i = (i + 1) % CON_HISTORY;
+			continue;
+		}
+		buf = va("%s\n", history[i]);
+		FS_Write(buf, strlen(buf), f);
+		i = (i + 1) % CON_HISTORY;
+	} while (i != (hist_next - 1) % CON_HISTORY);
+
+	FS_FCloseFile(f);
+}
+
+/*
+==================
+Hist_Add
+==================
+*/
+void Hist_Add(const char *field)
+{
+	if (!strcmp(field, history[(hist_current - 1) % CON_HISTORY])) {
+		hist_current = hist_next;
+		return;
+	}
+
+	Q_strncpyz(history[hist_next % CON_HISTORY], field, sizeof(history[0]));
+	hist_next++;
+	hist_current = hist_next;
+	Hist_Save();
+}
+
+/*
+==================
+Hist_Prev
+==================
+*/
+const char *Hist_Prev( void )
+{
+	if ((hist_current - 1) % CON_HISTORY != hist_next % CON_HISTORY &&
+	    history[(hist_current - 1) % CON_HISTORY][0])
+		hist_current--;
+	return history[hist_current % CON_HISTORY];
+}
+
+/*
+==================
+Hist_Next
+==================
+*/
+const char *Hist_Next( void )
+{
+	if (hist_current % CON_HISTORY != hist_next % CON_HISTORY)
+		hist_current++;
+	if (hist_current % CON_HISTORY == hist_next % CON_HISTORY)
+		return NULL;
+	return history[hist_current % CON_HISTORY];
+}

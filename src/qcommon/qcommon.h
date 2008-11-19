@@ -1089,6 +1089,11 @@ qboolean Sys_LowPhysicalMemory( void );
 
 void CON_Clear_f( void );
 
+void Hist_Load( void );
+void Hist_Add( const char *field );
+const char *Hist_Next( void );
+const char *Hist_Prev( void );
+
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data
  * Compression book.  The ranks are not actually stored, but implicitly defined
  * by the location of a node within a doubly-linked list */

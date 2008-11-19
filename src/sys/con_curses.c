@@ -51,11 +51,6 @@ char *CON_Input_tty(void);
 void CON_Print_tty(const char *message);
 void CON_Clear_tty(void);
 
-// History functions from con_tty.c
-void Hist_Add(field_t *field);
-field_t *Hist_Next(void);
-field_t *Hist_Prev(void);
-
 static qboolean ncurses_on = qfalse;
 static field_t input_field;
 static WINDOW *rootwin;
@@ -290,7 +285,7 @@ char *CON_Input(void)
 {
 	int chr, num_chars = 0;
 	static char text[MAX_EDIT_LINE];
-	field_t *history;
+	const char *history;
 
 	if (!ncurses_on)
 		return CON_Input_tty();
@@ -313,8 +308,7 @@ char *CON_Input(void)
 		case '\n':
 			if (!input_field.buffer[0])
 				continue;
-			input_field.cursor = strlen(input_field.buffer);
-			Hist_Add(&input_field);
+			Hist_Add(input_field.buffer);
 			strcpy(text, input_field.buffer);
 			Field_Clear(&input_field);
 			wclear(inputwin);
@@ -322,7 +316,7 @@ char *CON_Input(void)
 			CON_ColorPrint(inputwin, input_field.buffer, qfalse);
 			wmove(inputwin, 0, input_field.cursor);
 			wrefresh(inputwin);
-			CON_Print(va("]%s\n", text));
+			Com_Printf("]%s\n", text);
 			return text;
 		case '\t':
 			Field_AutoComplete(&input_field);
@@ -337,17 +331,16 @@ char *CON_Input(void)
 				input_field.cursor++;
 			continue;
 		case KEY_UP:
-			history = Hist_Prev();
-			if (history)
-				input_field = *history;
+			Q_strncpyz(input_field.buffer, Hist_Prev(), sizeof(input_field.buffer));
+			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case KEY_DOWN:
 			history = Hist_Next();
-			if (history)
-				input_field = *history;
-			else if (input_field.buffer[0]) {
+			if (history) {
+				Q_strncpyz(input_field.buffer, history, sizeof(input_field.buffer));
 				input_field.cursor = strlen(input_field.buffer);
-				Hist_Add(&input_field);
+			} else if (input_field.buffer[0]) {
+				Hist_Add(input_field.buffer);
 				Field_Clear(&input_field);
 			}
 			continue;

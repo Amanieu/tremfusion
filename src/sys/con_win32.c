@@ -25,18 +25,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "sys_local.h"
 #include "windows.h"
 
-#define QCONSOLE_HISTORY 32
-
 static WORD qconsole_attrib;
 
 // saved console status
 static DWORD qconsole_orig_mode;
 static CONSOLE_CURSOR_INFO qconsole_orig_cursorinfo;
-
-// cmd history
-static char qconsole_history[ QCONSOLE_HISTORY ][ MAX_EDIT_LINE ];
-static int qconsole_history_pos = -1;
-static int qconsole_history_oldest = 0;
 
 // current edit buffer
 static char qconsole_line[ MAX_EDIT_LINE ];
@@ -65,73 +58,6 @@ static BOOL WINAPI CON_CtrlHandler( DWORD sig )
 
 /*
 ==================
-CON_HistAdd
-==================
-*/
-static void CON_HistAdd( void )
-{
-	Q_strncpyz( qconsole_history[ qconsole_history_oldest ], qconsole_line,
-		sizeof( qconsole_history[ qconsole_history_oldest ] ) );
-
-	if( qconsole_history_oldest >= QCONSOLE_HISTORY - 1 )
-		qconsole_history_oldest = 0;
-	else
-		qconsole_history_oldest++;
-
-	qconsole_history_pos = qconsole_history_oldest;
-}
-
-/*
-==================
-CON_HistPrev
-==================
-*/
-static void CON_HistPrev( void )
-{
-	int pos;
-
-	pos = ( qconsole_history_pos < 1 ) ?
-		( QCONSOLE_HISTORY - 1 ) : ( qconsole_history_pos - 1 );
-
-	// don' t allow looping through history
-	if( pos == qconsole_history_oldest )
-		return;
-
-	qconsole_history_pos = pos;
-	Q_strncpyz( qconsole_line, qconsole_history[ qconsole_history_pos ], 
-		sizeof( qconsole_line ) );
-	qconsole_linelen = strlen( qconsole_line );
-}
-
-/*
-==================
-CON_HistNext
-==================
-*/
-static void CON_HistNext( void )
-{
-	int pos;
-
-	pos = ( qconsole_history_pos >= QCONSOLE_HISTORY - 1 ) ?
-		0 : ( qconsole_history_pos + 1 ); 
-
-	// clear the edit buffer if they try to advance to a future command
-	if( pos == qconsole_history_oldest )
-	{
-		qconsole_line[ 0 ] = '\0';
-		qconsole_linelen = 0;
-		return;
-	}
-
-	qconsole_history_pos = pos;
-	Q_strncpyz( qconsole_line, qconsole_history[ qconsole_history_pos ],
-		sizeof( qconsole_line ) );
-	qconsole_linelen = strlen( qconsole_line );
-}
-
-
-/*
-==================
 CON_Clear_f
 
 Does nothing on win32 console
@@ -140,7 +66,6 @@ Does nothing on win32 console
 void CON_Clear_f( void )
 {
 }
-
 
 /*
 ==================
@@ -244,10 +169,6 @@ void CON_Init( void )
 	curs.dwSize = 1;
 	curs.bVisible = FALSE;
 	SetConsoleCursorInfo( qconsole_hout, &curs );
-
-	// initialize history
-	for( i = 0; i < QCONSOLE_HISTORY; i++ )
-		qconsole_history[ i ][ 0 ] = '\0';
 }
 
 /*
@@ -297,12 +218,24 @@ char *CON_Input( void )
 		}
 		else if( key == VK_UP )
 		{
-			CON_HistPrev();
+			Q_strncpyz( qconsole_line, Hist_Prev( ), sizeof( qconsole_line ) );
+			qconsole_linelen = strlen( qconsole_line );
 			break;
 		}
 		else if( key == VK_DOWN )
 		{
-			CON_HistNext();
+			const char *history = Hist_Next( );
+			if ( history )
+			{
+				Q_strncpyz( qconsole_line, history, sizeof( qconsole_line ) );
+				qconsole_linelen = strlen( qconsole_line );
+			}
+			else if ( qconsole_linelen )
+			{
+				Hist_Add(qconsole_line);
+				qconsole_line[0] = '\0';
+				qconsole_linelen = 0;
+			}
 			break;
 		}
 		else if( key == VK_TAB )
@@ -349,8 +282,8 @@ char *CON_Input( void )
 		return NULL;
 	}
 
-	CON_HistAdd();
-	Com_Printf( "%s\n", qconsole_line );
+	Hist_Add( qconsole_line );
+	Com_Printf( "]%s\n", qconsole_line );
 
 	qconsole_linelen = 0;
 
