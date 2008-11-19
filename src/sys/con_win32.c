@@ -132,6 +132,18 @@ static void CON_HistNext( void )
 
 /*
 ==================
+CON_Clear_f
+
+Does nothing on win32 console
+==================
+*/
+void CON_Clear_f( void )
+{
+}
+
+
+/*
+==================
 CON_Show
 ==================
 */

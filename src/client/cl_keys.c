@@ -616,15 +616,16 @@ void Console_Key (int key) {
 		}
 
 		// copy line to history buffer
-		historyEditLines[nextHistoryLine % COMMAND_HISTORY] = g_consoleField;
-		nextHistoryLine++;
-		historyLine = nextHistoryLine;
+		if ( strcmp(g_consoleField.buffer, historyEditLines[historyLine % COMMAND_HISTORY].buffer ) ) {
+			historyEditLines[nextHistoryLine % COMMAND_HISTORY] = g_consoleField;
+			nextHistoryLine++;
+			historyLine = nextHistoryLine;
+			CL_SaveConsoleHistory( );
+		}
 
 		Field_Clear( &g_consoleField );
 
 		g_consoleField.widthInChars = g_console_field_width;
-
-		CL_SaveConsoleHistory( );
 
 		if ( cls.state == CA_DISCONNECTED ) {
 			SCR_UpdateScreen ();	// force an update, because the command
@@ -655,7 +656,7 @@ void Console_Key (int key) {
 		 ( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
 		historyLine++;
 		if (historyLine >= nextHistoryLine) {
-			if ( g_consoleField.buffer[0] ) {
+			if ( g_consoleField.buffer[0] && strcmp(g_consoleField.buffer, historyEditLines[historyLine % COMMAND_HISTORY].buffer ) ) {
 				// copy line to history buffer
 				historyEditLines[nextHistoryLine % COMMAND_HISTORY] = g_consoleField;
 				nextHistoryLine++;

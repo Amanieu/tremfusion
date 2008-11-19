@@ -2517,6 +2517,9 @@ void Com_Init( char *commandLine ) {
 		Cmd_AddCommand ("crash", Com_Crash_f );
 		Cmd_AddCommand ("freeze", Com_Freeze_f);
 	}
+#ifdef DEDICATED
+	Cmd_AddCommand ("clear", CON_Clear_f);
+#endif
 	Cmd_AddCommand ("quit", Com_Quit_f);
 	Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 	Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );

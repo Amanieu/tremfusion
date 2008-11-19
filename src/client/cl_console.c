@@ -275,6 +275,8 @@ void Con_Clear_f (void) {
 	}
 
 	Con_Bottom();		// go to end
+
+	CON_Clear_f();		// clear the tty too
 }
 
 						

@@ -49,6 +49,7 @@ void CON_Shutdown_tty(void);
 void CON_Init_tty(void);
 char *CON_Input_tty(void);
 void CON_Print_tty(const char *message);
+void CON_Clear_tty(void);
 
 // History functions from con_tty.c
 void Hist_Add(field_t *field);
@@ -71,7 +72,7 @@ static int nextline = 0;
 CON_ColorPrint
 ==================
 */
-#define Color2Pair(msg) (ColorIndex(*(msg + 1)) == 0 ? 8 : ColorIndex(*(msg + 1)))
+#define Color2Pair(msg) (ColorIndex(*(msg + 1)) + 1)
 static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 {
 	static char buffer[MAXPRINTMSG];
@@ -83,7 +84,7 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 		return;
 	}
 
-	wattrset(win, COLOR_PAIR(7));
+	wattrset(win, COLOR_PAIR(8));
 	while(*msg) {
 		if (Q_IsColorString(msg) || *msg == '\n') {
 			// First empty the buffer
@@ -95,7 +96,7 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 
 			if (*msg == '\n') {
 				// Reset the color and then print a newline
-				wattrset(win, COLOR_PAIR(7));
+				wattrset(win, COLOR_PAIR(8));
 				waddch(win, '\n');
 				msg++;
 			} else {
@@ -151,6 +152,23 @@ static void CON_Resize(void)
 	resizeterm(winsz.ws_row, winsz.ws_col);
 	clear();
 	CON_Init();
+}
+
+/*
+==================
+CON_Clear_f
+==================
+*/
+void CON_Clear_f(void)
+{
+	if (!ncurses_on) {
+		CON_Clear_tty();
+		return;
+	}
+
+	memset(logbuf, 0, sizeof(logbuf));
+	wclear(logwin);
+	wrefresh(logwin);
 }
 
 /*
@@ -213,14 +231,14 @@ void CON_Init(void)
 	if (has_colors()) {
 		use_default_colors();
 		start_color();
-		init_pair(1, COLOR_RED, -1);
-		init_pair(2, COLOR_GREEN, -1);
-		init_pair(3, COLOR_YELLOW, -1);
-		init_pair(4, COLOR_BLUE, -1);
-		init_pair(5, COLOR_CYAN, -1);
-		init_pair(6, COLOR_MAGENTA, -1);
-		init_pair(7, -1, -1);
-		init_pair(8, COLOR_BLACK, -1);
+		init_pair(1, COLOR_BLACK, -1);
+		init_pair(2, COLOR_RED, -1);
+		init_pair(3, COLOR_GREEN, -1);
+		init_pair(4, COLOR_YELLOW, -1);
+		init_pair(5, COLOR_BLUE, -1);
+		init_pair(6, COLOR_CYAN, -1);
+		init_pair(7, COLOR_MAGENTA, -1);
+		init_pair(8, -1, -1);
 	}
 
 	// Create the border
@@ -304,6 +322,7 @@ char *CON_Input(void)
 			CON_ColorPrint(inputwin, input_field.buffer, qfalse);
 			wmove(inputwin, 0, input_field.cursor);
 			wrefresh(inputwin);
+			CON_Print(va("]%s\n", text));
 			return text;
 		case '\t':
 			Field_AutoComplete(&input_field);

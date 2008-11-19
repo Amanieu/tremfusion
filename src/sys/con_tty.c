@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CON_Shutdown CON_Shutdown_tty
 #define CON_Print CON_Print_tty
 #define CON_Input CON_Input_tty
+#define CON_Clear_f CON_Clear_tty
 #endif
 
 /*
@@ -197,6 +198,7 @@ void Hist_Add(field_t *field)
 	assert(hist_count >= 0);
 	assert(hist_current >= -1);
 	assert(hist_current <= hist_count);
+	hist_current = -1; // re-init
 	if (!strcmp(ttyEditLines[0].buffer, field->buffer))
 		return;
 	// make some room
@@ -209,7 +211,6 @@ void Hist_Add(field_t *field)
 	{
 		hist_count++;
 	}
-	hist_current = -1; // re-init
 }
 
 /*
@@ -253,6 +254,17 @@ field_t *Hist_Next( void )
 		return NULL;
 	}
 	return &(ttyEditLines[hist_current]);
+}
+
+/*
+==================
+CON_Clear_f
+==================
+*/
+void CON_Clear_f( void )
+{
+	Com_Printf("\033[2J"); /* VT100 clear screen */
+	Com_Printf("\033[0;0f"); /* VT100 move cursor to top left */
 }
 
 /*
