@@ -189,6 +189,7 @@ ifndef USE_OLD_HOMEPATH
   USE_OLD_HOMEPATH=1
 endif
 
+# Requires GCC >= 4.3
 ifndef USE_SSE
 USE_SSE=2
 endif
@@ -427,8 +428,8 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
-  RELEASE_CFLAGS=$(BASE_CFLAGS) -g -DNDEBUG $(OPTIMIZE)
+  DEBUG_CFLAGS = $(BASE_CFLAGS) -ggdb3 -O0
+  RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
 
@@ -1653,8 +1654,7 @@ Q3DOBJ = \
   $(B)/ded/null_snddma.o \
   \
   $(B)/ded/con_log.o \
-  $(B)/ded/sys_main.o \
-  $(B)/ded/SDL_cpuinfo.o
+  $(B)/ded/sys_main.o
 
 ifeq ($(ARCH),x86)
   Q3DOBJ += \
