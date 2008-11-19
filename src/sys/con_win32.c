@@ -59,12 +59,18 @@ static BOOL WINAPI CON_CtrlHandler( DWORD sig )
 /*
 ==================
 CON_Clear_f
-
-Does nothing on win32 console
 ==================
 */
 void CON_Clear_f( void )
 {
+	CONSOLE_SCREEN_BUFFER_INFO binfo;
+	COORD coord = { 0, 0 };
+	DWORD count;
+
+	GetConsoleScreenBufferInfo( qconsole_hout, &binfo );
+	FillConsoleOutputCharacter( qconsole_hout, (TCHAR) 32, binfo.dwSize.X * binfo.dwSize.Y, coord, &count );
+	FillConsoleOutputAttribute( qconsole_hout, binfo.wAttributes, binfo.dwSize.X * binfo.dwSize.Y, coord, &count );
+	SetConsoleCursorPosition( qconsole_hout, coord );
 }
 
 /*
@@ -138,7 +144,6 @@ void CON_Init( void )
 {
 	CONSOLE_CURSOR_INFO curs;
 	CONSOLE_SCREEN_BUFFER_INFO info;
-	int i;
 
 	// handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
