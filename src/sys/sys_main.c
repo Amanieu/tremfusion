@@ -31,18 +31,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
-#if !DEDICATED && !USE_TTY_CLIENT
-#	include <SDL.h>
-#	include <SDL_cpuinfo.h>
-#else
-#	include <SDL_cpuinfo.h>
-#endif
-
 #include "sys_local.h"
 #include "sys_loadlib.h"
 
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
+
+#if !DEDICATED && !USE_TTY_CLIENT
+#	include <SDL.h>
+#	include <SDL_cpuinfo.h>
+#elif id386_sse
+#	include <cpuid.h>
+#endif
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
@@ -168,6 +168,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 {
 	cpuFeatures_t features = 0;
 
+#if !DEDICATED && !USE_TTY_CLIENT
 	if( SDL_HasRDTSC( ) )    features |= CF_RDTSC;
 	if( SDL_HasMMX( ) )      features |= CF_MMX;
 	if( SDL_HasMMXExt( ) )   features |= CF_MMX_EXT;
@@ -176,6 +177,14 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 	if( SDL_HasSSE( ) )      features |= CF_SSE;
 	if( SDL_HasSSE2( ) )     features |= CF_SSE2;
 	if( SDL_HasAltiVec( ) )  features |= CF_ALTIVEC;
+#elif id386_sse
+	unsigned int a, b, c, d;
+
+	if(__get_cpuid(1, &a, &b, &c, &d)) {
+		if (d & bit_SSE)  features |= CF_SSE;
+		if (d & bit_SSE2) features |= CF_SSE2;
+	}
+#endif
 
 	return features;
 }
