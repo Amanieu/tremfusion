@@ -39,7 +39,7 @@ void CL_OpenClientLog(void) {
 			//get current time/date info
 			qtime_t now;
 			Com_RealTime( &now );
-			nowString = va( "%02d-%02d-%04d", now.tm_mday, 1 + now.tm_mon, 1900 + now.tm_year );
+			nowString = va( "%04d-%02d-%02d", 1900 + now.tm_year, 1 + now.tm_mon, now.tm_mday );
 			sprintf(FileLocation,"logs/%s.log", nowString );
 			LogFileHandle = FS_FOpenFileAppend( FileLocation ); //open file with filename as date
 			LogFileOpened = qtrue; //var to tell if files open
