@@ -23,15 +23,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "keycodes.h"
 
 typedef struct {
-	qboolean down;
-	int      repeats; // if > 1, it is autorepeating
-	qboolean detailed;
-	char     *pushBinding;
-	char     *releaseBinding;
+	qboolean	down;
+	int			repeats;		// if > 1, it is autorepeating
+	char		*binding;
 } qkey_t;
-
-#define KEY_PUSH qtrue
-#define KEY_RELEASE qfalse
 
 extern	qboolean	key_overstrikeMode;
 extern	qkey_t		keys[MAX_KEYS];
