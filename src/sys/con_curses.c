@@ -53,13 +53,12 @@ void CON_Clear_tty(void);
 
 static qboolean ncurses_on = qfalse;
 static field_t input_field;
-static WINDOW *rootwin;
 static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
 
-#define NUM_LOG_LINES 1024
-static char logbuf[NUM_LOG_LINES][1024];
+#define NUM_LOG_LINES 512
+static char logbuf[NUM_LOG_LINES][MAXPRINTMSG];
 static int nextline = 0;
 
 /*
@@ -141,7 +140,7 @@ static void CON_Resize(void)
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
-	keypad(rootwin, FALSE);
+	keypad(stdscr, FALSE);
 	endwin();
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
@@ -209,9 +208,8 @@ void CON_Init(void)
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 
-	// Initialize ncurses and create the root window
-	rootwin = initscr();
-	if (!rootwin) {
+	// Initialize ncurses and set up the root window
+	if (!initscr()) {
 		CON_Print_tty("Couldn't initialize ncurses, falling back to tty\n");
 		CON_Init_tty();
 		return;
@@ -219,8 +217,10 @@ void CON_Init(void)
 	cbreak();
 	noecho();
 	refresh();
-	nodelay(rootwin, TRUE);
-	keypad(rootwin, TRUE);
+	nonl();
+	intrflush(stdscr, FALSE);
+	nodelay(stdscr, TRUE);
+	keypad(stdscr, TRUE);
 
 	// Set up colors
 	if (has_colors()) {
@@ -330,6 +330,9 @@ char *CON_Input(void)
 		case '\t':
 			Field_AutoComplete(&input_field);
 			input_field.cursor = strlen(input_field.buffer);
+			continue;
+		case '\f':
+			CON_Resize();
 			continue;
 		case KEY_LEFT:
 			if (input_field.cursor > 0)
