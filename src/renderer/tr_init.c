@@ -68,6 +68,8 @@ cvar_t	*r_drawSun;
 cvar_t	*r_dynamiclight;
 cvar_t	*r_dlightBacks;
 
+cvar_t	*r_minEntityLight;
+
 cvar_t	*r_lodbias;
 cvar_t	*r_lodscale;
 
@@ -991,6 +993,9 @@ void R_Register( void )
 	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );
 
 	r_anaglyphMode = ri.Cvar_Get("r_anaglyphMode", "0", CVAR_ARCHIVE);
+
+	r_minEntityLight = ri.Cvar_Get("r_minEntityLight", "0", CVAR_ARCHIVE);
+	ri.Cvar_CheckRange( r_minEntityLight, 0.0f, 1, qfalse );
 
 	//
 	// temporary variables that can change at any time
