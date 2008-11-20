@@ -944,15 +944,19 @@ void Cmd_Alias_f(void)
 		for (i = 2; i < Cmd_Argc(); i++)
 			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
 
+		// Crude protection from infinite loops
+		if (!strcmp(Cmd_Argv(2), name))
+		{
+			Com_Printf("Can't make an alias to itself\n");
+			return;
+		}
+
 		// Create/update an alias
 		if (!alias)
 		{
-			// CopyString is not used because it can't be unallocated
 			alias = S_Malloc(sizeof(cmd_alias_t));
-			alias->name = S_Malloc(strlen(name) + 1);
-			strcpy(alias->name, name);
-			alias->exec = S_Malloc(strlen(exec) + 1);
-			strcpy(alias->exec, exec);
+			alias->name = CopyString(name);
+			alias->exec = CopyString(exec);
 			alias->next = cmd_aliases;
 			cmd_aliases = alias;
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
@@ -961,8 +965,7 @@ void Cmd_Alias_f(void)
 		{
 			// Reallocate the exec string
 			Z_Free(alias->exec);
-			alias->exec = S_Malloc(strlen(exec) + 1);
-			strcpy(alias->exec, exec);
+			alias->exec = CopyString(exec);
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}
