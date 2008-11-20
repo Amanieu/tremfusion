@@ -57,9 +57,12 @@ static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
 
-#define NUM_LOG_LINES 512
-static char logbuf[NUM_LOG_LINES][MAXPRINTMSG];
+#define NUM_LOG_LINES 1024
+static char logbuf[NUM_LOG_LINES][MAX_EDIT_LINE];
 static int nextline = 0;
+
+#define LOG_LINES (LINES - 4)
+#define LOG_COLS (COLS - 2)
 
 /*
 ==================
@@ -237,12 +240,12 @@ void CON_Init(void)
 	}
 
 	// Create the border
-	borderwin = newwin(LINES - 2, COLS, 1, 0);
+	borderwin = newwin(LOG_LINES + 2, LOG_COLS + 2, 1, 0);
 	box(borderwin, 0, 0);
 	wrefresh(borderwin);
 
 	// Create the log
-	logwin = newwin(LINES - 4, COLS - 2, 2, 1);
+	logwin = newwin(LOG_LINES, LOG_COLS, 2, 1);
 	scrollok(logwin, TRUE);
 	idlok(logwin, TRUE);
 	leaveok(logwin, TRUE);
@@ -271,8 +274,8 @@ void CON_Init(void)
 	wrefresh(inputwin);
 
 	// Display the title and input prompt
-	mvprintw(0, (COLS - strlen(TITLE)) / 2, TITLE);
-	mvprintw(LINES - 1, 0, PROMPT);
+	mvprintw(0, (COLS - strlen(TITLE)) / 2, "%s", TITLE);
+	mvprintw(LINES - 1, 0, "%s", PROMPT);
 	refresh();
 
 	// Catch window resizes
@@ -317,6 +320,7 @@ char *CON_Input(void)
 			}
 			return NULL;
 		case '\n':
+		case '\r':
 			if (!input_field.buffer[0])
 				continue;
 			Hist_Add(input_field.buffer);
