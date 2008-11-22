@@ -3325,7 +3325,7 @@ Hist_Add
 */
 void Hist_Add(const char *field)
 {
-	if (!strcmp(field, history[(hist_current - 1) % CON_HISTORY])) {
+	if (!strcmp(field, history[(hist_next - 1) % CON_HISTORY])) {
 		hist_current = hist_next;
 		return;
 	}
