@@ -112,9 +112,11 @@ typedef enum
 // The current lerp will finish out, then it will lerp to the new animation
 typedef struct
 {
+  refSkeleton_t  oldSkeleton;
   int         oldFrame;
   int         oldFrameTime;     // time when ->oldFrame was exactly on
 
+  refSkeleton_t  skeleton;
   int         frame;
   int         frameTime;        // time when ->frame will be exactly on
 
@@ -128,7 +130,20 @@ typedef struct
   int         animationNumber;  // may include ANIM_TOGGLEBIT
   animation_t *animation;
   int         animationTime;    // time when the first frame of the animation will be exact
+  float       animationScale;
+
+  int         old_animationNumber;
+  animation_t  *old_animation;
+  float       blendlerp;
+  float       blendtime;
+
 } lerpFrame_t;
+
+// debugging values:
+
+int           debug_anim_current;
+int           debug_anim_old;
+float         debug_anim_blend;
 
 //======================================================================
 
@@ -581,6 +596,10 @@ typedef struct
   vec3_t      lastNormal;
   vec3_t      lastAxis[ 3 ];
   smooth_t    sList[ MAXSMOOTHS ];
+
+  // death effect
+  int         deathTime;
+  float       deathScale;
 } playerEntity_t;
 
 typedef struct lightFlareStatus_s
@@ -739,20 +758,40 @@ typedef struct
   // gameplay
   char        modelName[ MAX_QPATH ];
   char        skinName[ MAX_QPATH ];
+  char        headModelName[ MAX_QPATH ];
+  char        headSkinName[ MAX_QPATH ];
 
   qboolean    newAnims;                   // true if using the new mission pack animations
   qboolean    fixedlegs;                  // true if legs yaw is always the same as torso yaw
   qboolean    fixedtorso;                 // true if torso never changes yaw
   qboolean    nonsegmented;               // true if model is Q2 style nonsegmented
+  qboolean    md5;                        // true if the model is an MD5 model
 
   vec3_t      headOffset;                 // move head in icon views
   footstep_t  footsteps;
   gender_t    gender;                     // from model
 
+
+#ifdef XPPM
+	// Tr3B: don't forget to add these values to CG_CopyClientInfoModel !
+	char            firstTorsoBoneName[MAX_QPATH];
+	char            lastTorsoBoneName[MAX_QPATH];
+
+	char            torsoControlBoneName[MAX_QPATH];
+	char            neckControlBoneName[MAX_QPATH];
+
+	vec3_t          modelScale;
+
+	qhandle_t       bodyModel;
+	qhandle_t       bodySkin;
+#endif
+
   qhandle_t   legsModel;
+  qhandle_t   legsAnimation;
   qhandle_t   legsSkin;
 
   qhandle_t   torsoModel;
+  qhandle_t   torsoAnimation;
   qhandle_t   torsoSkin;
 
   qhandle_t   headModel;
@@ -1189,6 +1228,9 @@ typedef struct
   qhandle_t   shadowMarkShader;
   qhandle_t   wakeMarkShader;
 
+  // effect shaders
+  qhandle_t   unlinkEffect;
+
   // buildable shaders
   qhandle_t   greenBuildShader;
   qhandle_t   redBuildShader;
@@ -1294,6 +1336,10 @@ typedef struct
   qhandle_t   healthCross3X;
   qhandle_t   healthCrossMedkit;
   qhandle_t   healthCrossPoisoned;
+
+  // debug utils
+  qhandle_t   debugPlayerAABB;
+  qhandle_t   debugPlayerAABB_twoSided;
 } cgMedia_t;
 
 typedef struct
@@ -1444,7 +1490,9 @@ extern  vmCvar_t    cg_crosshairSize;
 extern  vmCvar_t    cg_draw2D;
 extern  vmCvar_t    cg_drawStatus;
 extern  vmCvar_t    cg_animSpeed;
+extern  vmCvar_t    cg_animBlend;
 extern  vmCvar_t    cg_debugAnim;
+extern  vmCvar_t    cg_debugPlayerAnim;
 extern  vmCvar_t    cg_debugPosition;
 extern  vmCvar_t    cg_debugEvents;
 extern  vmCvar_t    cg_errorDecay;
@@ -1535,6 +1583,23 @@ extern  vmCvar_t    cg_voice;
 extern  vmCvar_t    cg_suppressWAnimWarnings;
 
 extern  vmCvar_t    cg_emoticons;
+
+// unlagged - client options
+extern vmCvar_t cg_delag;
+extern vmCvar_t cg_debugDelag;
+extern vmCvar_t cg_drawBBox;
+extern vmCvar_t cg_cmdTimeNudge;
+extern vmCvar_t sv_fps;
+extern vmCvar_t cg_projectileNudge;
+extern vmCvar_t cg_optimizePrediction;
+extern vmCvar_t cl_timeNudge;
+extern vmCvar_t cg_latentSnaps;
+extern vmCvar_t cg_latentCmds;
+extern vmCvar_t cg_plOut;
+
+// cg_unlagged.c ? From XreaL
+//
+void        CG_AddBoundingBox( centity_t *cent );
 
 //
 // cg_main.c
@@ -1640,6 +1705,12 @@ void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
+void        CG_SwingAngles( float destination, float swingTolerance, float clampTolerance, float speed, float *angle, qboolean *swinging );
+void        CG_AddPainTwitch( centity_t *cent, vec3_t torsoAngles );
+void        CG_PlayerPowerups( centity_t *cent, refEntity_t *torso, int noShadowID );
+void        CG_PlayerSprites( centity_t *cent );
+void        CG_PlayerSplash( centity_t *cent, class_t c );
+qboolean    CG_PlayerShadow( centity_t *cent, float *shadowPlane, class_t c );
 
 //
 // cg_buildable.c
@@ -1663,6 +1734,10 @@ void        CG_RunLerpFrame( lerpFrame_t *lf, float scale );
 void        CG_AnimMapObj( centity_t *cent );
 void        CG_ModelDoor( centity_t *cent );
 
+//
+// cg_player.c
+//
+void        CG_AddRefEntityWithPowerups(refEntity_t *ent, entityState_t *state, int team );
 //
 // cg_predict.c
 //
@@ -1701,6 +1776,8 @@ void        CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *pare
                                     qhandle_t parentModel, char *tagName );
 void        CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
                                            qhandle_t parentModel, char *tagName );
+void        CG_TransformSkeleton( refSkeleton_t *skel, const vec3_t scale );
+int         CG_UniqueNoShadowID( void );
 
 
 
@@ -1819,6 +1896,8 @@ void                CG_ParticleSystemEntity( centity_t *cent );
 
 void                CG_TestPS_f( void );
 void                CG_DestroyTestPS_f( void );
+qboolean            CG_FindClientHeadFile( char *filename, int length, clientInfo_t *ci, const char *teamName, const char *headModelName, const char *headSkinName, const char *base, const char *ext);
+qboolean            CG_FindClientModelFile( char *filename, int length, clientInfo_t *ci, const char *teamName, const char *modelName, const char *skinName, const char *base, const char *ext );
 
 //
 // cg_trails.c
@@ -1846,6 +1925,21 @@ void  CG_WritePTRCode( int code );
 // cg_tutorial.c
 //
 const char *CG_TutorialText( void );
+
+
+
+
+#ifdef XPPM
+//
+// cg_xppm.c
+//
+
+
+qboolean        CG_XPPM_RegisterClientModel(clientInfo_t * ci, const char *modelName, const char *skinName,
+											const char *headModelName, const char *headSkinName, const char *teamName);
+void            CG_XPPM_CopyClientInfoModel(clientInfo_t * from, clientInfo_t * to);
+void            CG_XPPM_Player(centity_t * cent);
+#endif
 
 //
 //===============================================
@@ -1964,14 +2058,17 @@ void          trap_R_LoadWorldMap( const char *mapname );
 // all media should be registered during level startup to prevent
 // hitches during gameplay
 qhandle_t     trap_R_RegisterModel( const char *name );     // returns rgb axis if not found
+qhandle_t     trap_R_RegisterAnimation(const char *name );
 qhandle_t     trap_R_RegisterSkin( const char *name );      // returns all white if not found
 qhandle_t     trap_R_RegisterShader( const char *name );      // returns all white if not found
 qhandle_t     trap_R_RegisterShaderNoMip( const char *name );     // returns all white if not found
+qhandle_t     trap_R_RegisterShaderLightAttenuation( const char *name );
 
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
 // Nothing is drawn until R_RenderScene is called.
 void          trap_R_ClearScene( void );
 void          trap_R_AddRefEntityToScene( const refEntity_t *re );
+void          trap_R_AddRefLightToScene( const refLight_t *light );
 
 // polys are intended for simple wall marks, not really for doing
 // significant construction
@@ -1987,6 +2084,11 @@ void          trap_R_DrawStretchPic( float x, float y, float w, float h,
 void          trap_R_ModelBounds( clipHandle_t model, vec3_t mins, vec3_t maxs );
 int           trap_R_LerpTag( orientation_t *tag, clipHandle_t mod, int startFrame, int endFrame,
                               float frac, const char *tagName );
+int           trap_R_BuildSkeleton( refSkeleton_t *skel, qhandle_t anim, int startFrame, int endFrame, float frac, qboolean clearOrigin );
+int           trap_R_BlendSkeleton( refSkeleton_t *skel, const refSkeleton_t *blend, float frac );
+int           trap_R_BoneIndex( qhandle_t h, const char *boneName );
+int           trap_R_AnimNumFrames( qhandle_t hAnim );
+int           trap_R_AnimFrameRate( qhandle_t hAnim );
 void          trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset );
 
 // The glconfig_t will not change during the life of a cgame.

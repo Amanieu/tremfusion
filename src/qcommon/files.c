@@ -1134,7 +1134,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 					&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
 					&& Q_stricmp( filename + l - 4, ".dat" )   // for journal files
 					&& Q_stricmp( filename + l - 3, ".py" ) // for python script files
-					&& Q_stricmp( filename + l - 4, ".lua" )) { // for lua script files
+					&& Q_stricmp( filename + l - 4, ".lua" ) // for lua script files
+					&& Q_stricmp( filename + l - 4, ".txt" ) // for menu script files
+					&& Q_stricmp( filename + l - 5, ".glsl" )) { // for glsl shader files
 					continue;
 				}
 			}

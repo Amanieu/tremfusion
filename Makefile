@@ -158,6 +158,10 @@ ifndef ENABLE_SCRIPT_UI
 ENABLE_SCRIPT_UI=1
 endif
 
+ifndef XPPM
+XPPM=1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -892,6 +896,10 @@ ifeq ($(ENABLE_SCRIPT_UI),1)
   CFLAGS += -DENABLE_SCRIPT_UI
 endif
 
+ifeq ($(XPPM),1)
+  CFLAGS += -DXPPM
+endif
+
 ifeq ($(V),1)
 echo_cmd=@:
 Q=
@@ -1551,6 +1559,7 @@ CGOBJ_ = \
   $(B)/base/cgame/cg_event.o \
   $(B)/base/cgame/cg_marks.o \
   $(B)/base/cgame/cg_players.o \
+  $(B)/base/cgame/cg_xppm.o \
   $(B)/base/cgame/cg_playerstate.o \
   $(B)/base/cgame/cg_predict.o \
   $(B)/base/cgame/cg_servercmds.o \

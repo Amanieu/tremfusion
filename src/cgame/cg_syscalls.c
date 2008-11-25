@@ -392,6 +392,46 @@ int   trap_R_LerpTag( orientation_t *tag, clipHandle_t mod, int startFrame, int 
   return syscall( CG_R_LERPTAG, tag, mod, startFrame, endFrame, PASSFLOAT(frac), tagName );
 }
 
+qhandle_t trap_R_RegisterAnimation(const char *name)
+{
+	return syscall(CG_R_REGISTERANIMATION, name);
+}
+
+qhandle_t trap_R_RegisterShaderLightAttenuation(const char *name)
+{
+	return syscall(CG_R_REGISTERSHADERLIGHTATTENUATION, name);
+}
+
+void trap_R_AddRefLightToScene(const refLight_t * light)
+{
+	syscall(CG_R_ADDREFLIGHTSTOSCENE, light);
+}
+
+int trap_R_BuildSkeleton(refSkeleton_t * skel, qhandle_t anim, int startFrame, int endFrame, float frac, qboolean clearOrigin)
+{
+	return syscall(CG_R_BUILDSKELETON, skel, anim, startFrame, endFrame, PASSFLOAT(frac), clearOrigin);
+}
+
+int trap_R_BlendSkeleton(refSkeleton_t * skel, const refSkeleton_t * blend, float frac)
+{
+	return syscall(CG_R_BLENDSKELETON, skel, blend, PASSFLOAT(frac));
+}
+
+int trap_R_BoneIndex(qhandle_t hModel, const char *boneName)
+{
+	return syscall(CG_R_BONEINDEX, hModel, boneName);
+}
+
+int trap_R_AnimNumFrames(qhandle_t hAnim)
+{
+	return syscall(CG_R_ANIMNUMFRAMES, hAnim);
+}
+
+int trap_R_AnimFrameRate(qhandle_t hAnim)
+{
+	return syscall(CG_R_ANIMFRAMERATE, hAnim);
+}
+
 void  trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset )
 {
   syscall( CG_R_REMAP_SHADER, oldShader, newShader, timeOffset );

@@ -97,6 +97,7 @@ qhandle_t RE_RegisterAnimation(const char *name)
 		return 0;
 	}
 	
+	Com_DPrintf( "Registering animation '%s' in RE_RegisterAnimation\n", name );
 	// search the currently loaded animations
 	for(hAnim = 1; hAnim < tr.numAnimations; hAnim++)
 	{
@@ -423,6 +424,7 @@ qhandle_t RE_RegisterAnimation(const char *name)
 	}
 	
 	// everything went ok
+	Com_DPrintf( "Registration succeeded\n" );
 	anim->type = AT_MD5;
 
 	ri.FS_FreeFile(buffer);
@@ -881,7 +883,7 @@ int RE_BuildSkeleton(refSkeleton_t * skel, qhandle_t hAnim, int startFrame, int 
 		return qtrue;
 	}
 	
-	//ri.Printf(PRINT_WARNING, "RE_BuildSkeleton: bad animation '%s' with handle %i\n", anim->name, hAnim);
+	ri.Printf(PRINT_WARNING, "RE_BuildSkeleton: bad animation '%s' with handle %i\n", anim->name, hAnim);
 	
 	// FIXME: clear existing bones and bounds?
 	return qfalse;

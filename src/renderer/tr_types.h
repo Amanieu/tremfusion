@@ -143,6 +143,9 @@ typedef struct
 
 	// extra animation information
 	refSkeleton_t   skeleton;
+
+    // extra light interaction information
+    int             noShadowID;
 } refEntity_t;
 
 typedef enum

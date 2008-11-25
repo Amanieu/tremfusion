@@ -734,6 +734,26 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
 
+/* XreaL extensions */
+	case CG_R_REGISTERANIMATION:
+			return re.RegisterAnimation(VMA(1));
+	case CG_R_REGISTERSHADERLIGHTATTENUATION:
+			return re.RegisterShaderLightAttenuation(VMA(1));
+	case CG_R_ADDREFLIGHTSTOSCENE:
+			re.AddRefLightToScene(VMA(1));
+			return 0;
+	case CG_R_BUILDSKELETON:
+			return re.BuildSkeleton(VMA(1), args[2], args[3], args[4], VMF(5), args[6]);
+	case CG_R_BLENDSKELETON:
+			return re.BlendSkeleton(VMA(1), VMA(2), VMF(3));
+	case CG_R_BONEINDEX:
+			return re.BoneIndex(args[1], VMA(2));
+	case CG_R_ANIMNUMFRAMES:
+			return re.AnimNumFrames(args[1]);
+	case CG_R_ANIMFRAMERATE:
+			return re.AnimFrameRate(args[1]);
+/* end XreaL extensions */
+	
 	default:
 	        assert(0);
 		Com_Error( ERR_DROP, "Bad cgame system trap: %ld", (long int) args[0] );

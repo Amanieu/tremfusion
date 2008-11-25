@@ -84,7 +84,7 @@ static void RB_LoadGPUShader(GLhandleARB program, const char *name, GLenum shade
 	size = ri.FS_ReadFile(filename, (void **)&buffer);
 	if(!buffer)
 	{
-		ri.Error(ERR_DROP, "Couldn't load %s", filename);
+		ri.Error(ERR_DROP, "Couldn't load %s (tr_shade.c)", filename);
 	}
 	
 	shader = qglCreateShaderObjectARB(shaderType);

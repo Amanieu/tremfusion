@@ -377,6 +377,7 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
   return qtrue;
 }
 
+
 /*
 ==========================
 CG_RegisterClientSkin
@@ -425,19 +426,34 @@ static qboolean CG_RegisterClientSkin( clientInfo_t *ci, const char *modelName, 
 CG_RegisterClientModelname
 ==========================
 */
-static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelName, const char *skinName )
+static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelName, const char *skinName, const char *headModelName, const char *headSkinName, const char *teamName )
 {
   char filename[ MAX_QPATH * 2 ];
 
+  
   // do this first so the nonsegmented property is set
   // load the animations
+  
+  // Check to see if we have an animation file or a character file, and
+  // load one of them. Character.cfg takes precedence
+  Com_sprintf( filename, sizeof( filename ), "models/players/%s/character.cfg", modelName );
+  if( CG_FileExists( filename ) ) {
+#ifdef XPPM
+	return CG_XPPM_RegisterClientModel(ci, modelName, skinName, headModelName, headSkinName, teamName);
+#else
+    Com_Printf( "Would have loaded %s, but this wasn't compiled with XPPM support. Attempting to use old md3 code...\n" );
+#endif
+  }
+
+  // At this point, the md5 loading code (XPPM from XreaL) has failed
+  // so use the older md3 code
   Com_sprintf( filename, sizeof( filename ), "models/players/%s/animation.cfg", modelName );
   if( !CG_ParseAnimationFile( filename, ci ) )
   {
     Com_Printf( "Failed to load animation file %s\n", filename );
     return qfalse;
   }
-
+  
   // load cmodels before models so filecache works
 
   if( !ci->nonsegmented )
@@ -484,7 +500,149 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
     return qfalse;
   }
 
+  ci->md5 = qfalse;
+
   return qtrue;
+}
+
+/*
+==========================
+CG_FindClientModelFile
+==========================
+*/
+qboolean CG_FindClientModelFile(char *filename, int length, clientInfo_t * ci, const char *teamName, const char *modelName,
+								const char *skinName, const char *base, const char *ext)
+{
+	char           *team, *charactersFolder;
+	int             i;
+
+	team = "default";
+	charactersFolder = "";
+	while(1)
+	{
+		for(i = 0; i < 2; i++)
+		{
+			if(i == 0 && teamName && *teamName)
+			{
+				//                              "models/players/characters/james/stroggs/lower_lily_red.skin"
+				Com_sprintf(filename, length, "models/players/%s%s/%s%s_%s_%s.%s", charactersFolder, modelName, teamName, base,
+							skinName, team, ext);
+			}
+			else
+			{
+				//                              "models/players/characters/james/lower_lily_red.skin"
+				Com_sprintf(filename, length, "models/players/%s%s/%s_%s_%s.%s", charactersFolder, modelName, base, skinName,
+							team, ext);
+			}
+
+			if(CG_FileExists(filename))
+			{
+				return qtrue;
+			}
+
+			if(i == 0 && teamName && *teamName)
+			{
+				//                              "models/players/characters/james/stroggs/lower_lily.skin"
+				Com_sprintf(filename, length, "models/players/%s%s/%s%s_%s.%s", charactersFolder, modelName, teamName, base,
+							skinName, ext);
+			}
+			else
+			{
+				//                              "models/players/characters/james/lower_lily.skin"
+				Com_sprintf(filename, length, "models/players/%s%s/%s_%s.%s", charactersFolder, modelName, base, skinName,
+							ext);
+			}
+
+			if(CG_FileExists(filename))
+			{
+				return qtrue;
+			}
+
+			if(!teamName || !*teamName)
+			{
+				break;
+			}
+		}
+
+		// if tried the heads folder first
+		if(charactersFolder[0])
+		{
+			break;
+		}
+		charactersFolder = "characters/";
+	}
+
+	return qfalse;
+}
+
+/*
+==========================
+CG_FindClientHeadFile
+==========================
+*/
+qboolean CG_FindClientHeadFile(char *filename, int length, clientInfo_t * ci, const char *teamName,
+							   const char *headModelName, const char *headSkinName, const char *base, const char *ext)
+{
+	char           *team, *headsFolder;
+	int             i;
+
+	team = "default";
+
+	if(headModelName[0] == '*')
+	{
+		headsFolder = "heads/";
+		headModelName++;
+	}
+	else
+	{
+		headsFolder = "";
+	}
+	while(1)
+	{
+		for(i = 0; i < 2; i++)
+		{
+			if(i == 0 && teamName && *teamName)
+			{
+				Com_sprintf(filename, length, "models/players/%s%s/%s/%s%s_%s.%s", headsFolder, headModelName, headSkinName,
+							teamName, base, team, ext);
+			}
+			else
+			{
+				Com_sprintf(filename, length, "models/players/%s%s/%s/%s_%s.%s", headsFolder, headModelName, headSkinName, base,
+							team, ext);
+			}
+			if(CG_FileExists(filename))
+			{
+				return qtrue;
+			}
+			if(i == 0 && teamName && *teamName)
+			{
+				Com_sprintf(filename, length, "models/players/%s%s/%s%s_%s.%s", headsFolder, headModelName, teamName, base,
+							headSkinName, ext);
+			}
+			else
+			{
+				Com_sprintf(filename, length, "models/players/%s%s/%s_%s.%s", headsFolder, headModelName, base, headSkinName,
+							ext);
+			}
+			if(CG_FileExists(filename))
+			{
+				return qtrue;
+			}
+			if(!teamName || !*teamName)
+			{
+				break;
+			}
+		}
+		// if tried the heads folder first
+		if(headsFolder[0])
+		{
+			break;
+		}
+		headsFolder = "heads/";
+	}
+
+	return qfalse;
 }
 
 /*
@@ -530,8 +688,11 @@ static void CG_LoadClientInfo( clientInfo_t *ci )
   int         i;
   const char  *s;
   int         clientNum;
+  char        teamname[MAX_QPATH];
 
-  if( !CG_RegisterClientModelname( ci, ci->modelName, ci->skinName ) )
+  teamname[0] = 0;
+
+  if( !CG_RegisterClientModelname( ci, ci->modelName, ci->skinName, ci->headModelName, ci->headSkinName, teamname ) )
     CG_Error( "CG_RegisterClientModelname( %s, %s ) failed", ci->modelName, ci->skinName );
 
   // sounds
@@ -601,6 +762,9 @@ CG_CopyClientInfoModel
 */
 static void CG_CopyClientInfoModel( clientInfo_t *from, clientInfo_t *to )
 {
+  if(from->md5)
+    CG_XPPM_CopyClientInfoModel( from, to );
+  else {
   VectorCopy( from->headOffset, to->headOffset );
   to->footsteps = from->footsteps;
   to->gender = from->gender;
@@ -620,6 +784,7 @@ static void CG_CopyClientInfoModel( clientInfo_t *from, clientInfo_t *to )
   memcpy( to->sounds, from->sounds, sizeof( to->sounds ) );
   memcpy( to->customFootsteps, from->customFootsteps, sizeof( to->customFootsteps ) );
   memcpy( to->customMetalFootsteps, from->customMetalFootsteps, sizeof( to->customMetalFootsteps ) );
+  }
 }
 
 
@@ -1038,7 +1203,7 @@ PLAYER ANGLES
 CG_SwingAngles
 ==================
 */
-static void CG_SwingAngles( float destination, float swingTolerance, float clampTolerance,
+void CG_SwingAngles( float destination, float swingTolerance, float clampTolerance,
                             float speed, float *angle, qboolean *swinging )
 {
   float swing;
@@ -1106,7 +1271,7 @@ static void CG_SwingAngles( float destination, float swingTolerance, float clamp
 CG_AddPainTwitch
 =================
 */
-static void CG_AddPainTwitch( centity_t *cent, vec3_t torsoAngles )
+void CG_AddPainTwitch( centity_t *cent, vec3_t torsoAngles )
 {
   int   t;
   float f;
@@ -1671,7 +1836,7 @@ CG_PlayerSprites
 Float sprites over the player's head
 ===============
 */
-static void CG_PlayerSprites( centity_t *cent )
+void CG_PlayerSprites( centity_t *cent )
 {
   if( cent->currentState.eFlags & EF_CONNECTION )
   {
@@ -1690,11 +1855,11 @@ Returns the Z component of the surface being shadowed
 ===============
 */
 #define SHADOW_DISTANCE   128
-static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane, class_t class )
+qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane, class_t class )
 {
   vec3_t        end, mins, maxs;
   trace_t       trace;
-  float         alpha;
+  float         alpha, shadowScale;
   entityState_t *es = &cent->currentState;
   vec3_t        surfNormal = { 0.0f, 0.0f, 1.0f };
 
@@ -1742,9 +1907,11 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane, class_t cl
 
   // add the mark as a temporary, so it goes directly to the renderer
   // without taking a spot in the cg_marks array
-  CG_ImpactMark( cgs.media.shadowMarkShader, trace.endpos, trace.plane.normal,
+  shadowScale = BG_ClassConfig( class )->shadowScale;
+  if(shadowScale > 0.0f)
+  	CG_ImpactMark( cgs.media.shadowMarkShader, trace.endpos, trace.plane.normal,
                  cent->pe.legs.yawAngle, 0.0f, 0.0f, 0.0f, alpha, qfalse,
-                 24.0f * BG_ClassConfig( class )->shadowScale, qtrue );
+                 24.0f * shadowScale, qtrue );
 
   return qtrue;
 }
@@ -1757,7 +1924,7 @@ CG_PlayerSplash
 Draw a mark at the water surface
 ===============
 */
-static void CG_PlayerSplash( centity_t *cent, class_t class )
+void CG_PlayerSplash( centity_t *cent, class_t class )
 {
   vec3_t      start, end;
   vec3_t      mins, maxs;
@@ -1963,6 +2130,14 @@ void CG_Player( centity_t *cent )
     CG_Error( "Bad clientNum on player entity" );
 
   ci = &cgs.clientinfo[ clientNum ];
+
+  if( ci->md5 ) {
+#ifdef XPPM
+    CG_XPPM_Player( cent );
+#endif
+    return;
+  }
+
 
   // it is possible to see corpses from disconnected players that may
   // not have valid clientinfo
@@ -2481,4 +2656,241 @@ void CG_Bleed( vec3_t origin, vec3_t normal, int entityNum )
     CG_SetParticleSystemNormal( ps, normal );
   }
 }
+
+/*
+===============
+CG_AddRefEntityWithPowerups
+
+Adds a piece with modifications or duplications for powerups
+===============
+*/
+void CG_AddRefEntityWithPowerups(refEntity_t * ent, entityState_t * state, int team)
+{
+
+/*
+ * Pulled from XreaL - I don't think we need it
+ */
+
+/*
+	if(state->powerups & (1 << PW_INVIS))
+	{
+		ent->customShader = cgs.media.invisShader;
+		trap_R_AddRefEntityToScene(ent);
+	}
+	else
+	{
+		*
+		   if ( state->eFlags & EF_KAMIKAZE ) {
+		   if (team == TEAM_BLUE)
+		   ent->customShader = cgs.media.blueKamikazeShader;
+		   else
+		   ent->customShader = cgs.media.redKamikazeShader;
+		   trap_R_AddRefEntityToScene( ent );
+		   }
+		   else { 
+		*
+		trap_R_AddRefEntityToScene(ent);
+		//}
+
+		if(state->powerups & (1 << PW_QUAD))
+		{
+			if(team == TEAM_RED)
+				ent->customShader = cgs.media.redQuadShader;
+			else
+				ent->customShader = cgs.media.quadShader;
+			trap_R_AddRefEntityToScene(ent);
+		}
+		if(state->powerups & (1 << PW_REGEN))
+		{
+			if(((cg.time / 100) % 10) == 1)
+			{
+				ent->customShader = cgs.media.regenShader;
+				trap_R_AddRefEntityToScene(ent);
+			}
+		}
+		if(state->powerups & (1 << PW_BATTLESUIT))
+		{
+			ent->customShader = cgs.media.battleSuitShader;
+			trap_R_AddRefEntityToScene(ent);
+		}
+	}
+
+*/
+}
+
+
+/*
+===============
+CG_PlayerPowerups
+===============
+*/
+void CG_PlayerPowerups(centity_t * cent, refEntity_t * torso, int noShadowID)
+{
+/*
+ * Pulled from XreaL - I don't think we need it
+ */
+
+/*
+	int             powerups;
+	clientInfo_t   *ci;
+	refLight_t      light;
+	float           radius;
+
+	powerups = cent->currentState.powerups;
+	if(!powerups)
+	{
+		return;
+	}
+
+	// quad gives a light
+	if(powerups & (1 << PW_QUAD))
+	{
+		// add light
+		memset(&light, 0, sizeof(refLight_t));
+
+		light.rlType = RL_OMNI;
+
+		VectorCopy(cent->lerpOrigin, light.origin);
+
+		light.color[0] = 0.2f;
+		light.color[1] = 0.2f;
+		light.color[2] = 1;
+
+		radius = 200 + (rand() & 31);
+
+		light.radius[0] = radius;
+		light.radius[1] = radius;
+		light.radius[2] = radius;
+
+		QuatClear(light.rotation);
+
+		light.noShadowID = noShadowID;
+
+		trap_R_AddRefLightToScene(&light);
+	}
+
+	// flight plays a looped sound
+	if(powerups & (1 << PW_FLIGHT))
+	{
+		trap_S_AddLoopingSound(cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.flightSound);
+	}
+
+	ci = &cgs.clientinfo[cent->currentState.clientNum];
+
+	// redflag
+	if(powerups & (1 << PW_REDFLAG))
+	{
+		if(ci->newAnims)
+		{
+			CG_PlayerFlag(cent, cgs.media.redFlagFlapSkin, torso);
+		}
+		else
+		{
+			CG_TrailItem(cent, cgs.media.redFlagModel);
+		}
+
+		// add light
+		memset(&light, 0, sizeof(refLight_t));
+
+		light.rlType = RL_OMNI;
+
+		VectorCopy(cent->lerpOrigin, light.origin);
+
+		light.color[0] = 1.0;
+		light.color[1] = 0.2f;
+		light.color[2] = 0.2f;
+
+		radius = 200 + (rand() & 31);
+
+		light.radius[0] = radius;
+		light.radius[1] = radius;
+		light.radius[2] = radius;
+
+		QuatClear(light.rotation);
+
+		light.noShadowID = noShadowID;
+
+		trap_R_AddRefLightToScene(&light);
+	}
+
+	// blueflag
+	if(powerups & (1 << PW_BLUEFLAG))
+	{
+		if(ci->newAnims)
+		{
+			CG_PlayerFlag(cent, cgs.media.blueFlagFlapSkin, torso);
+		}
+		else
+		{
+			CG_TrailItem(cent, cgs.media.blueFlagModel);
+		}
+
+		// add light
+		memset(&light, 0, sizeof(refLight_t));
+
+		light.rlType = RL_OMNI;
+
+		VectorCopy(cent->lerpOrigin, light.origin);
+
+		light.color[0] = 0.2f;
+		light.color[1] = 0.2f;
+		light.color[2] = 1;
+
+		radius = 200 + (rand() & 31);
+
+		light.radius[0] = radius;
+		light.radius[1] = radius;
+		light.radius[2] = radius;
+
+		QuatClear(light.rotation);
+
+		light.noShadowID = noShadowID;
+
+		trap_R_AddRefLightToScene(&light);
+	}
+
+	// neutralflag
+	if(powerups & (1 << PW_NEUTRALFLAG))
+	{
+		if(ci->newAnims)
+		{
+			CG_PlayerFlag(cent, cgs.media.neutralFlagFlapSkin, torso);
+		}
+		else
+		{
+			CG_TrailItem(cent, cgs.media.neutralFlagModel);
+		}
+
+		// add light
+		memset(&light, 0, sizeof(refLight_t));
+
+		light.rlType = RL_OMNI;
+
+		VectorCopy(cent->lerpOrigin, light.origin);
+
+		light.color[0] = 1;
+		light.color[1] = 1;
+		light.color[2] = 1;
+
+		radius = 200 + (rand() & 31);
+
+		light.radius[0] = radius;
+		light.radius[1] = radius;
+		light.radius[2] = radius;
+
+		QuatClear(light.rotation);
+
+		light.noShadowID = noShadowID;
+
+		trap_R_AddRefLightToScene(&light);
+	}
+
+	// haste leaves smoke trails
+	if(powerups & (1 << PW_HASTE))
+	{
+		CG_HasteTrail(cent);
+	}
+*/
+}
+
 

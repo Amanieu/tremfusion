@@ -5575,7 +5575,7 @@ static void ScanAndLoadGuideFiles(void)
 		sum += ri.FS_ReadFile(filename, (void **)&buffers[i]);
 		if(!buffers[i])
 		{
-			ri.Error(ERR_DROP, "Couldn't load %s", filename);
+			ri.Error(ERR_DROP, "Couldn't load %s (tr_shader.c:5578)", filename);
 		}
 		
 		strcat(s_guideText, "\n");
@@ -5800,7 +5800,7 @@ static void ScanAndLoadShaderFiles(void)
 		sum += ri.FS_ReadFile(filename, (void **)&buffers[i]);
 		if(!buffers[i])
 		{
-			ri.Error(ERR_DROP, "Couldn't load %s", filename);
+			ri.Error(ERR_DROP, "Couldn't load %s (tr_shader.c:5803)", filename);
 		}
 		
 		strcat(s_shaderText, "\n");

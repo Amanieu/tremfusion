@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void R_LoadTGA ( const char *name, byte **pic, int *width, int *height, byte alphaByte)
 {
-	int             columns, rows, numPixels;
+	int             columns, rows, numPixels, file_read;
 	byte           *pixbuf;
 	int             row, column;
 	byte           *buf_p;
@@ -37,9 +37,10 @@ void R_LoadTGA ( const char *name, byte **pic, int *width, int *height, byte alp
 	//
 	// load the file
 	//
-	ri.FS_ReadFile((char *)name, (void **)&buffer);
+	file_read = ri.FS_ReadFile((char *)name, (void **)&buffer);
 	if(!buffer)
 	{
+		ri.Printf(PRINT_DEVELOPER, "Got back %d from FS_ReadFile when reading tga image '%s'\n", file_read, (char*)name);
 		return;
 	}
 

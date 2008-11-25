@@ -1366,6 +1366,8 @@ CL_GetMotd_f
 void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
+	return;
+
 	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
 	if ( !NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );

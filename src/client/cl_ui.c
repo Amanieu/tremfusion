@@ -1116,10 +1116,12 @@ void CL_InitUI( void ) {
 	// load the dll or bytecode
 	if ( cl_connectedToPureServer != 0 ) {
 		// if sv_pure is set we only allow qvms to be loaded
+		Com_DPrintf( "Only allowing QVMs as we are connected to a pure server.\n" );
 		interpret = VMI_COMPILED;
 	}
 	else {
 		interpret = Cvar_VariableValue( "vm_ui" );
+		Com_DPrintf( "Setting interpretation mode to %d\n", interpret );
 	}
 	uivm = VM_Create( "ui", CL_UISystemCalls, interpret );
 	if ( !uivm ) {

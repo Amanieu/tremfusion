@@ -2437,7 +2437,7 @@ void G_RunFrame( int levelTime )
   //G_UpdateZaps( msec );
 
   // see if it is time to end the level
-  CheckExitRules( );
+  //CheckExitRules( );
 
   // update to team status?
   CheckTeamStatus( );

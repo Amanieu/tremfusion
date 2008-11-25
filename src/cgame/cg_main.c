@@ -125,7 +125,9 @@ vmCvar_t  cg_crosshairSize;
 vmCvar_t  cg_draw2D;
 vmCvar_t  cg_drawStatus;
 vmCvar_t  cg_animSpeed;
+vmCvar_t  cg_animBlend;
 vmCvar_t  cg_debugAnim;
+vmCvar_t  cg_debugPlayerAnim;
 vmCvar_t  cg_debugPosition;
 vmCvar_t  cg_debugEvents;
 vmCvar_t  cg_errorDecay;
@@ -218,6 +220,18 @@ vmCvar_t  cg_suppressWAnimWarnings;
 vmCvar_t  cg_voice;
 vmCvar_t  cg_emoticons;
 
+//unlagged - client options
+vmCvar_t        cg_delag;
+vmCvar_t        cg_debugDelag;
+vmCvar_t        cg_drawBBox;
+vmCvar_t        cg_cmdTimeNudge;
+vmCvar_t        sv_fps;
+vmCvar_t        cg_projectileNudge;
+vmCvar_t        cg_optimizePrediction;
+vmCvar_t        cl_timeNudge;
+vmCvar_t        cg_latentSnaps;
+vmCvar_t        cg_latentCmds;
+vmCvar_t        cg_plOut;
 
 typedef struct
 {
@@ -260,7 +274,9 @@ static cvarTable_t cvarTable[ ] =
   { &cg_runroll, "cg_runroll", "0.005", CVAR_ARCHIVE },
   { &cg_swingSpeed, "cg_swingSpeed", "0.3", CVAR_CHEAT },
   { &cg_animSpeed, "cg_animspeed", "1", CVAR_CHEAT },
+  { &cg_animBlend, "cg_animblend", "5.0", CVAR_ARCHIVE },
   { &cg_debugAnim, "cg_debuganim", "0", CVAR_CHEAT },
+  { &cg_debugPlayerAnim, "cg_debugplayeranim", "0", CVAR_CHEAT },
   { &cg_debugPosition, "cg_debugposition", "0", CVAR_CHEAT },
   { &cg_debugEvents, "cg_debugevents", "0", CVAR_CHEAT },
   { &cg_errorDecay, "cg_errordecay", "100", 0 },
@@ -345,7 +361,23 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_voice, "voice", "default", CVAR_USERINFO|CVAR_ARCHIVE},
 
-  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE}
+  { &cg_emoticons, "cg_emoticons", "1", CVAR_LATCH|CVAR_ARCHIVE},
+
+//unlagged - client options
+	{&cg_delag, "cg_delag", "1", CVAR_ARCHIVE | CVAR_USERINFO},
+	{&cg_debugDelag, "cg_debugDelag", "0", CVAR_USERINFO | CVAR_CHEAT},
+	{&cg_drawBBox, "cg_drawBBox", "0", CVAR_CHEAT},
+	{&cg_cmdTimeNudge, "cg_cmdTimeNudge", "0", CVAR_ARCHIVE | CVAR_USERINFO},
+	// this will be automagically copied from the server
+	{&sv_fps, "sv_fps", "20", 0},
+	{&cg_projectileNudge, "cg_projectileNudge", "0", CVAR_ARCHIVE},
+	{&cg_optimizePrediction, "cg_optimizePrediction", "1", CVAR_ARCHIVE},
+	{&cl_timeNudge, "cl_timeNudge", "0", CVAR_ARCHIVE},
+	{&cg_latentSnaps, "cg_latentSnaps", "0", CVAR_USERINFO | CVAR_CHEAT},
+	{&cg_latentCmds, "cg_latentCmds", "0", CVAR_USERINFO | CVAR_CHEAT},
+	{&cg_plOut, "cg_plOut", "0", CVAR_USERINFO | CVAR_CHEAT},
+//unlagged - client options
+
 };
 
 static int   cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );

@@ -114,6 +114,67 @@ void CG_DrawBoundingBox( vec3_t origin, vec3_t mins, vec3_t maxs )
   CG_DrawBoxFace( pmp, mmp, mmm, pmm );
   CG_DrawBoxFace( mmm, mpm, ppm, pmm );
 }
+/*
+=================
+CG_TransformSkeleton
+
+transform relative bones to absolute ones required for vertex skinning
+=================
+*/
+void CG_TransformSkeleton(refSkeleton_t * skel, const vec3_t scale)
+{
+	int             i;
+	refBone_t      *bone;
+
+	switch (skel->type)
+	{
+		case SK_INVALID:
+		case SK_ABSOLUTE:
+			return;
+
+		default:
+			break;
+	}
+
+	// calculate absolute transforms
+	for(i = 0, bone = &skel->bones[0]; i < skel->numBones; i++, bone++)
+	{
+		if(bone->parentIndex >= 0)
+		{
+			vec3_t          rotated;
+			quat_t          quat;
+
+			refBone_t      *parent;
+
+			parent = &skel->bones[bone->parentIndex];
+
+			QuatTransformVector(parent->rotation, bone->origin, rotated);
+
+			if(scale)
+			{
+				rotated[0] *= scale[0];
+				rotated[1] *= scale[1];
+				rotated[2] *= scale[2];
+			}
+
+			VectorAdd(parent->origin, rotated, bone->origin);
+
+			QuatMultiply1(parent->rotation, bone->rotation, quat);
+			QuatCopy(quat, bone->rotation);
+		}
+	}
+
+	skel->type = SK_ABSOLUTE;
+
+	if(scale)
+	{
+		VectorCopy(scale, skel->scale);
+	}
+	else
+	{
+		VectorSet(skel->scale, 1, 1, 1);
+	}
+}
 
 
 /*
@@ -1212,3 +1273,21 @@ void CG_AddPacketEntities( void )
   }
 }
 
+/*
+===============
+CG_UniqueNoShadowID
+===============
+*/
+int CG_UniqueNoShadowID(void)
+{
+	static int      noShadowID = 1;
+
+	noShadowID++;
+
+	if(!noShadowID)
+	{
+		noShadowID = 1;
+	}
+
+	return noShadowID;
+}

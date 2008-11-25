@@ -755,6 +755,10 @@ typedef enum
 
 typedef struct animation_s
 {
+
+  qhandle_t     handle; // registered md5Animation or whatever
+  qboolean      clearOrigin; // reset the origin bone
+
   int   firstFrame;
   int   numFrames;
   int   loopFrames;     // 0 to numFrames

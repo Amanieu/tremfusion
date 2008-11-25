@@ -1815,7 +1815,9 @@ static void R_LoadImage(char **buffer, byte ** pic, int *width, int *height, int
 		char			localName[ MAX_QPATH ];
 		const char	   *ext;
 		byte            alphaByte;
-		
+	
+		ri.Printf( PRINT_DEVELOPER, "Loading image '%s' as a normal image\n", localName );
+
 		// Tr3B: clear alpha of normalmaps for displacement mapping
 		if(*bits & IF_NORMALMAP)
 			alphaByte = 0x00;
@@ -1844,6 +1846,7 @@ static void R_LoadImage(char **buffer, byte ** pic, int *width, int *height, int
 			{
 				if( *pic == NULL )
 				{
+					ri.Printf( PRINT_DEVELOPER, "Image loader failed, retrying with no extension\n" );
 					// Loader failed, most likely because the file isn't there;
 					// try again without the extension
 					orgNameFailed = qtrue;
@@ -1854,6 +1857,9 @@ static void R_LoadImage(char **buffer, byte ** pic, int *width, int *height, int
 					// Something loaded
 					return;
 				}
+			} else {
+				// no loader was found
+				ri.Printf( PRINT_DEVELOPER, "WARNING: couldn't find an image loader for a file of extension %s\n", ext);
 			}
 		}
 
@@ -1864,6 +1870,7 @@ static void R_LoadImage(char **buffer, byte ** pic, int *width, int *height, int
 			char *altName = va( "%s.%s", localName, imageLoaders[ i ].ext );
 
 			// Load
+			ri.Printf( PRINT_DEVELOPER, "Testing image load for '%s' extension\n", imageLoaders[ i ].ext );
 			imageLoaders[ i ].ImageLoader( altName, pic, width, height, alphaByte );
 
 			if( *pic )
@@ -1933,6 +1940,7 @@ image_t        *R_FindImageFile(const char *name, int bits, filterType_t filterT
 					ri.Printf(PRINT_ALL, "WARNING: reused image %s with mixed glWrapType parm\n", name);
 				}
 			}
+			ri.Printf(PRINT_DEVELOPER, "Using image from hash table\n");
 			return image;
 		}
 	}
@@ -1942,6 +1950,7 @@ image_t        *R_FindImageFile(const char *name, int bits, filterType_t filterT
 	R_LoadImage(&buffer_p, &pic, &width, &height, &bits);
 	if(pic == NULL)
 	{
+		ri.Printf(PRINT_DEVELOPER, "WARNING: R_LoadImage returned a NULL pic\n");
 		return NULL;
 	}
 

@@ -545,6 +545,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	vmHeader_t	*header;
 	int			i, remaining;
 
+	Com_DPrintf( "Creating VM module '%s' with interpret mode %d\n", module, interpret );
 	if ( !module || !module[0] || !systemCalls ) {
 		Com_Error( ERR_FATAL, "VM_Create: bad parms" );
 	}
@@ -554,6 +555,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	// see if we already have the VM
 	for ( i = 0 ; i < MAX_VM ; i++ ) {
 		if (!Q_stricmp(vmTable[i].name, module)) {
+			Com_DPrintf( "Pulling VM from table entry %d\n", i );
 			vm = &vmTable[i];
 			return vm;
 		}
@@ -562,6 +564,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	// find a free vm
 	for ( i = 0 ; i < MAX_VM ; i++ ) {
 		if ( !vmTable[i].name[0] ) {
+			Com_DPrintf( "Free VM found in vm table at %d\n", i );
 			break;
 		}
 	}
@@ -589,6 +592,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 
 	// load the image
 	if( !( header = VM_LoadQVM( vm, qtrue ) ) ) {
+		Com_DPrintf( "Failed to load the qvm in VM_LoadQVM\n" );
 		return NULL;
 	}
 
