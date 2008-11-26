@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2008 Amanieu d'Antras & Griffon Bowman
+Copyright (C) 2008 Amanieu d'Antras
 
 This file is part of Tremfusion.
 
@@ -43,33 +43,44 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define TITLE "---[ Tremfusion Console ]---"
 #define PROMPT "-> "
 #define INPUT_SCROLL 15
+#define LOG_SCROLL 5
+#define MAX_LOG_LINES 1024
+#define LOG_BUF_SIZE 65536
 
-// Functions from con_tty.c for fallback
+// Functions from the tty console for fallback
 void CON_Shutdown_tty(void);
 void CON_Init_tty(void);
 char *CON_Input_tty(void);
 void CON_Print_tty(const char *message);
 void CON_Clear_tty(void);
 
-static qboolean ncurses_on = qfalse;
+static qboolean curses_on = qfalse;
 static field_t input_field;
 static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
 
-#define NUM_LOG_LINES 1024
-static char logbuf[NUM_LOG_LINES][MAX_EDIT_LINE];
-static int nextline = 0;
+static char logbuf[LOG_BUF_SIZE];
+static char *insert = logbuf;
+static int scrollline = 0;
+static int lastline = 1;
 
 #define LOG_LINES (LINES - 4)
 #define LOG_COLS (COLS - 2)
+
+static inline void CON_SetColor(WINDOW *win, int color)
+{
+	if (color == 0)
+		wattrset(win, COLOR_PAIR(color + 1) | A_BOLD);
+	else
+		wattrset(win, COLOR_PAIR(color + 1) | A_NORMAL);
+}
 
 /*
 ==================
 CON_ColorPrint
 ==================
 */
-#define Color2Pair(msg) (ColorIndex(*(msg + 1)) + 1)
 static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 {
 	static char buffer[MAXPRINTMSG];
@@ -81,7 +92,7 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 		return;
 	}
 
-	wattrset(win, COLOR_PAIR(8));
+	CON_SetColor(win, 7);
 	while(*msg) {
 		if (Q_IsColorString(msg) || *msg == '\n') {
 			// First empty the buffer
@@ -93,12 +104,12 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 
 			if (*msg == '\n') {
 				// Reset the color and then print a newline
-				wattrset(win, COLOR_PAIR(8));
+				CON_SetColor(win, 7);
 				waddch(win, '\n');
 				msg++;
 			} else {
 				// Set the color
-				wattrset(win, COLOR_PAIR(Color2Pair(msg)));
+				CON_SetColor(win, ColorIndex(*(msg + 1)));
 				if (stripcodes)
 					msg += 2;
 				else {
@@ -158,14 +169,19 @@ CON_Clear_f
 */
 void CON_Clear_f(void)
 {
-	if (!ncurses_on) {
+	if (!curses_on) {
 		CON_Clear_tty();
 		return;
 	}
 
+	// Clear the log and the window
 	memset(logbuf, 0, sizeof(logbuf));
 	wclear(logwin);
-	wrefresh(logwin);
+	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+
+	// Move the cursor back to the input field
+	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
+	wrefresh(inputwin);
 }
 
 /*
@@ -178,9 +194,7 @@ This will also spit out the whole log to the terminal, so that it can be seen ev
 */
 void CON_Shutdown(void)
 {
-	int i;
-
-	if (!ncurses_on) {
+	if (!curses_on) {
 		CON_Shutdown_tty();
 		return;
 	}
@@ -188,35 +202,37 @@ void CON_Shutdown(void)
 	endwin();
 
 	// Dump console to stderr
-	i = nextline;
-	do {
-		if (logbuf[i][0])
-			CON_Print_tty(logbuf[i]);
-		if (++i >= NUM_LOG_LINES)
-			i = 0;
-	} while (i != nextline);
+	CON_Print_tty(logbuf);
 }
 
 /*
 ==================
 CON_Init
 
-Initialize the console in ncurses mode, fall back to tty mode on failure
+Initialize the console in curses mode, fall back to tty mode on failure
 ==================
 */
 void CON_Init(void)
 {
+	int col;
+
 	// If the process is backgrounded (running non interactively)
 	// then SIGTTIN or SIGTOU is emitted, if not caught, turns into a SIGSTP
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 
-	// Initialize ncurses and set up the root window
-	if (!initscr()) {
-		CON_Print_tty("Couldn't initialize ncurses, falling back to tty\n");
-		CON_Init_tty();
-		return;
+	// Initialize curses and set up the root window
+	if (!curses_on) {
+		SCREEN *test = newterm(NULL, stdout, stdin);
+		if (!test) {
+			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
+			CON_Init_tty();
+			return;
+		}
+		endwin();
+		delscreen(test);
 	}
+	initscr();
 	cbreak();
 	noecho();
 	refresh();
@@ -242,36 +258,35 @@ void CON_Init(void)
 	// Create the border
 	borderwin = newwin(LOG_LINES + 2, LOG_COLS + 2, 1, 0);
 	box(borderwin, 0, 0);
-	wrefresh(borderwin);
+	wnoutrefresh(borderwin);
 
-	// Create the log
-	logwin = newwin(LOG_LINES, LOG_COLS, 2, 1);
+	// Create the log window
+	logwin = newpad(MAX_LOG_LINES, LOG_COLS);
 	scrollok(logwin, TRUE);
 	idlok(logwin, TRUE);
 	leaveok(logwin, TRUE);
-	if (ncurses_on) {
-		int i = nextline;
-		do {
-			if (logbuf[i][0])
-				CON_ColorPrint(logwin, logbuf[i], qtrue);
-			if (++i >= NUM_LOG_LINES)
-				i = 0;
-		} while (i != nextline);
-	}
-	wrefresh(logwin);
+	if (curses_on)
+		CON_ColorPrint(logwin, logbuf, qtrue);
+	getyx(logwin, lastline, col);
+	if (col)
+		lastline++;
+	scrollline = lastline - LOG_LINES;
+	if (scrollline < 0)
+		scrollline = 0;
+	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Create the input field
 	inputwin = newwin(1, COLS - strlen(PROMPT) + 1, LINES - 1, strlen(PROMPT));
 	input_field.widthInChars = COLS - strlen(PROMPT);
 	wmove(inputwin, 0, 0);
-	if (ncurses_on) {
+	if (curses_on) {
 		if (input_field.cursor < input_field.scroll)
 			input_field.scroll = input_field.cursor;
-		else if ( input_field.cursor >= input_field.scroll + input_field.widthInChars )
+		else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 			input_field.scroll = input_field.cursor - input_field.widthInChars + 1;
 		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
 	}
-	wrefresh(inputwin);
+	wnoutrefresh(inputwin);
 
 	// Display the title and input prompt
 	mvprintw(0, (COLS - strlen(TITLE)) / 2, "%s", TITLE);
@@ -281,7 +296,7 @@ void CON_Init(void)
 	// Catch window resizes
 	signal(SIGWINCH, (void *)CON_Resize);
 
-	ncurses_on = qtrue;
+	curses_on = qtrue;
 }
 
 /*
@@ -295,7 +310,7 @@ char *CON_Input(void)
 	static char text[MAX_EDIT_LINE];
 	const char *history;
 
-	if (!ncurses_on)
+	if (!curses_on)
 		return CON_Input_tty();
 
 	while (1) {
@@ -321,6 +336,7 @@ char *CON_Input(void)
 			return NULL;
 		case '\n':
 		case '\r':
+		case KEY_ENTER:
 			if (!input_field.buffer[0])
 				continue;
 			Hist_Add(input_field.buffer);
@@ -332,6 +348,7 @@ char *CON_Input(void)
 			Com_Printf("]%s\n", text);
 			return text;
 		case '\t':
+		case KEY_STAB:
 			Field_AutoComplete(&input_field);
 			input_field.cursor = strlen(input_field.buffer);
 			continue;
@@ -367,12 +384,18 @@ char *CON_Input(void)
 			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case KEY_NPAGE:
-			wscrl(logwin, 2);
-			wrefresh(logwin);
+			if (lastline > scrollline + LOG_LINES) {
+				scrollline += LOG_SCROLL;
+				if (scrollline + LOG_LINES > MAX_LOG_LINES)
+					scrollline = MAX_LOG_LINES - LOG_LINES;
+				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+			}
 			continue;
 		case KEY_PPAGE:
-			wscrl(logwin, -2);
-			wrefresh(logwin);
+			scrollline -= LOG_SCROLL;
+			if (scrollline < 0)
+				scrollline = 0;
+			prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 			continue;
 		case '\b':
 		case 127:
@@ -408,20 +431,34 @@ CON_Print
 */
 void CON_Print(const char *msg)
 {
-	if (!ncurses_on) {
+	int col;
+	qboolean scroll = (lastline > scrollline && lastline <= scrollline + LOG_LINES);
+
+	if (!curses_on) {
 		CON_Print_tty(msg);
 		return;
 	}
 
 	// Print the message in the log window
 	CON_ColorPrint(logwin, msg, qtrue);
-	wrefresh(logwin);
+	getyx(logwin, lastline, col);
+	if (col)
+		lastline++;
+	if (scroll) {
+		scrollline = lastline - LOG_LINES;
+		if (scrollline < 0)
+			scrollline = 0;
+	}
+	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Add the message to the log buffer
-	Q_strncpyz(logbuf[nextline], msg, sizeof(logbuf[0]));
-	nextline++;
-	if (nextline >= NUM_LOG_LINES)
-		nextline = 0;
+	if (insert + strlen(msg) >= logbuf + sizeof(logbuf)) {
+		memmove(logbuf, logbuf + sizeof(logbuf) / 2, sizeof(logbuf) / 2);
+		memset(logbuf + sizeof(logbuf) / 2, 0, sizeof(logbuf) / 2);
+		insert -= sizeof(logbuf) / 2;
+	}
+	strcpy(insert, msg);
+	insert += strlen(msg);
 
 	// Move the cursor back to the input field
 	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
