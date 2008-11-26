@@ -61,6 +61,7 @@ static field_t input_field;
 static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
+static WINDOW *scrollwin;
 
 static char logbuf[LOG_BUF_SIZE];
 static char *insert = logbuf;
@@ -68,8 +69,32 @@ static int scrollline = 0;
 static int lastline = 1;
 
 #define LOG_LINES (LINES - 4)
-#define LOG_COLS (COLS - 2)
+#define LOG_COLS (COLS - 3)
 
+/*
+==================
+CON_DrawScrollBar
+==================
+*/
+static void CON_DrawScrollBar(void)
+{
+	int scroll;
+
+	if (lastline <= LOG_LINES)
+		scroll = 0;
+	else
+		scroll = scrollline * (LOG_LINES - 1) / (lastline - LOG_LINES);
+
+	wclear(scrollwin);
+	mvwaddch(scrollwin, scroll, 0, ACS_BLOCK);
+	wnoutrefresh(scrollwin);
+}
+
+/*
+==================
+CON_SetColor
+==================
+*/
 static inline void CON_SetColor(WINDOW *win, int color)
 {
 	if (color == 0)
@@ -280,6 +305,13 @@ void CON_Init(void)
 		scrollline = 0;
 	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
+	// Create the scroll bar
+	scrollwin = newwin(LOG_LINES, 1, 2, COLS - 1);
+	wbkgd(scrollwin, ACS_VLINE);
+	CON_DrawScrollBar();
+	mvaddch(1, COLS - 1, ACS_UARROW);
+	mvaddch(LINES - 2, COLS - 1, ACS_DARROW);
+
 	// Create the input field
 	inputwin = newwin(1, COLS - strlen(PROMPT), LINES - 1, strlen(PROMPT));
 	input_field.widthInChars = COLS - strlen(PROMPT) - 1;
@@ -390,6 +422,7 @@ char *CON_Input(void)
 				if (scrollline + LOG_LINES > lastline)
 					scrollline = lastline - LOG_LINES;
 				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+				CON_DrawScrollBar();
 			}
 			continue;
 		case KEY_PPAGE:
@@ -398,6 +431,7 @@ char *CON_Input(void)
 				if (scrollline < 0)
 					scrollline = 0;
 				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+				CON_DrawScrollBar();
 			}
 			continue;
 		case '\b':
@@ -462,6 +496,9 @@ void CON_Print(const char *msg)
 	}
 	strcpy(insert, msg);
 	insert += strlen(msg);
+
+	// Update the scrollbar
+	CON_DrawScrollBar();
 
 	// Move the cursor back to the input field
 	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
