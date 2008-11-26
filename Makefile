@@ -133,11 +133,7 @@ ifndef USE_CODEC_VORBIS
 endif
 
 ifndef USE_CURSES
-  ifeq ($(PLATFORM),linux)
-    USE_CURSES=1
-  else
-    USE_CURSES=0
-  endif
+  USE_CURSES=1
 endif
 
 ifndef USE_MUMBLE
@@ -220,6 +216,7 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
 FTDIR=$(MOUNT_DIR)/freetype2
+PDCDIR=$(MOUNT_DIR)/pdcurses
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -504,6 +501,11 @@ ifeq ($(PLATFORM),darwin)
     endif
   endif
 
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
+  endif
+
   BASE_CFLAGS += -D_THREAD_SAFE=1
 
   ifeq ($(USE_LOCAL_HEADERS),1)
@@ -644,6 +646,11 @@ ifeq ($(PLATFORM),mingw32)
     else
       CLIENT_LIBS += $(OGG_LIBS)
     endif
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     LIBS += $(LIBSDIR)/win32/pdcurses.a
+     BASE_CFLAGS += -DUSE_CURSES -I$(PDCDIR)
   endif
 
   ifeq ($(ARCH),x86)
@@ -1515,6 +1522,10 @@ Q3OBJ += \
   $(B)/client/zutil.o
 endif
 
+ifeq ($(USE_CURSES),1)
+  Q3OBJ += $(B)/client/con_curses.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1539,9 +1550,6 @@ else
   Q3OBJ += \
     $(B)/client/sys_unix.o \
     $(B)/client/con_tty.o
-  ifeq ($(USE_CURSES),1)
-    Q3OBJ += $(B)/client/con_curses.o
-  endif
 endif
 
 ifeq ($(USE_MUMBLE),1)
@@ -1672,6 +1680,10 @@ Q3DOBJ += \
   $(B)/ded/zutil.o
 endif
 
+ifeq ($(USE_CURSES),1)
+  Q3DOBJ += $(B)/ded/con_curses.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3DOBJ += $(B)/ded/vm_x86.o
@@ -1696,9 +1708,6 @@ else
   Q3DOBJ += \
     $(B)/ded/sys_unix.o \
     $(B)/ded/con_tty.o
-  ifeq ($(USE_CURSES),1)
-    Q3DOBJ += $(B)/ded/con_curses.o
-  endif
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)

@@ -38,7 +38,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 
 #define TITLE "---[ Tremfusion Console ]---"
 #define PROMPT "-> "
@@ -151,6 +153,7 @@ The window has just been resized, move everything back into place
 */
 static void CON_Resize(void)
 {
+#ifndef _WIN32
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
@@ -160,6 +163,7 @@ static void CON_Resize(void)
 	resizeterm(winsz.ws_row, winsz.ws_col);
 	clear();
 	CON_Init();
+#endif
 }
 
 /*
@@ -180,8 +184,8 @@ void CON_Clear_f(void)
 	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Move the cursor back to the input field
-	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
-	wrefresh(inputwin);
+	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+	refresh();
 }
 
 /*
@@ -216,10 +220,12 @@ void CON_Init(void)
 {
 	int col;
 
+#ifndef _WIN32
 	// If the process is backgrounded (running non interactively)
 	// then SIGTTIN or SIGTOU is emitted, if not caught, turns into a SIGSTP
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
+#endif
 
 	// Initialize curses and set up the root window
 	if (!curses_on) {
@@ -235,11 +241,11 @@ void CON_Init(void)
 	initscr();
 	cbreak();
 	noecho();
-	refresh();
 	nonl();
 	intrflush(stdscr, FALSE);
 	nodelay(stdscr, TRUE);
 	keypad(stdscr, TRUE);
+	refresh();
 
 	// Set up colors
 	if (has_colors()) {
@@ -264,7 +270,6 @@ void CON_Init(void)
 	logwin = newpad(MAX_LOG_LINES, LOG_COLS);
 	scrollok(logwin, TRUE);
 	idlok(logwin, TRUE);
-	leaveok(logwin, TRUE);
 	if (curses_on)
 		CON_ColorPrint(logwin, logbuf, qtrue);
 	getyx(logwin, lastline, col);
@@ -276,9 +281,8 @@ void CON_Init(void)
 	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Create the input field
-	inputwin = newwin(1, COLS - strlen(PROMPT) + 1, LINES - 1, strlen(PROMPT));
-	input_field.widthInChars = COLS - strlen(PROMPT);
-	wmove(inputwin, 0, 0);
+	inputwin = newwin(1, COLS - strlen(PROMPT), LINES - 1, strlen(PROMPT));
+	input_field.widthInChars = COLS - strlen(PROMPT) - 1;
 	if (curses_on) {
 		if (input_field.cursor < input_field.scroll)
 			input_field.scroll = input_field.cursor;
@@ -291,10 +295,13 @@ void CON_Init(void)
 	// Display the title and input prompt
 	mvprintw(0, (COLS - strlen(TITLE)) / 2, "%s", TITLE);
 	mvprintw(LINES - 1, 0, "%s", PROMPT);
+	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
 	refresh();
 
+#ifndef _WIN32
 	// Catch window resizes
 	signal(SIGWINCH, (void *)CON_Resize);
+#endif
 
 	curses_on = qtrue;
 }
@@ -321,7 +328,6 @@ char *CON_Input(void)
 		case ERR:
 			if (num_chars > 1) {
 				wclear(inputwin);
-				wmove(inputwin, 0, 0);
 				if (input_field.cursor < input_field.scroll) {
 					input_field.scroll = input_field.cursor - INPUT_SCROLL;
 					if (input_field.scroll < 0)
@@ -329,8 +335,9 @@ char *CON_Input(void)
 				} else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
 				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
-				wmove(inputwin, 0, input_field.cursor - input_field.scroll);
 				wrefresh(inputwin);
+				move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+				refresh();
 			}
 			return NULL;
 		case '\n':
@@ -342,8 +349,9 @@ char *CON_Input(void)
 			strcpy(text, input_field.buffer);
 			Field_Clear(&input_field);
 			wclear(inputwin);
-			wmove(inputwin, 0, 0);
 			wrefresh(inputwin);
+			move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+			refresh();
 			Com_Printf("]%s\n", text);
 			return text;
 		case '\t':
@@ -379,8 +387,8 @@ char *CON_Input(void)
 		case KEY_NPAGE:
 			if (lastline > scrollline + LOG_LINES) {
 				scrollline += LOG_SCROLL;
-				if (scrollline + LOG_LINES > MAX_LOG_LINES)
-					scrollline = MAX_LOG_LINES - LOG_LINES;
+				if (scrollline + LOG_LINES > lastline)
+					scrollline = lastline - LOG_LINES;
 				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 			}
 			continue;
@@ -456,6 +464,6 @@ void CON_Print(const char *msg)
 	insert += strlen(msg);
 
 	// Move the cursor back to the input field
-	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
-	wrefresh(inputwin);
+	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+	refresh();
 }
