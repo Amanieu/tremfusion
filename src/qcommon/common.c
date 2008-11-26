@@ -3243,7 +3243,11 @@ void Com_RandomBytes( byte *string, int len )
 }
 
 #define CON_HISTORY 64
+#ifdef DEDICATED
+#define CON_HISTORY_FILE "conhistory_server"
+#else
 #define CON_HISTORY_FILE "conhistory"
+#endif
 static char history[CON_HISTORY][MAX_EDIT_LINE];
 static int hist_current, hist_next;
 
