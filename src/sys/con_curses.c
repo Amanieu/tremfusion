@@ -392,10 +392,12 @@ char *CON_Input(void)
 			}
 			continue;
 		case KEY_PPAGE:
-			scrollline -= LOG_SCROLL;
-			if (scrollline < 0)
-				scrollline = 0;
-			prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+			if (scrollline > 0) {
+				scrollline -= LOG_SCROLL;
+				if (scrollline < 0)
+					scrollline = 0;
+				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+			}
 			continue;
 		case '\b':
 		case 127:
