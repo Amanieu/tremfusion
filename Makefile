@@ -528,7 +528,7 @@ ifeq ($(PLATFORM),darwin)
       LIBOGG=$(B)/libogg.a
       LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
     else
-      CLIENT_LDFLAGS += $(OGG_LIBS)
+      CLIENT_LIBS += $(OGG_LIBS)
     endif
   endif
 
@@ -614,7 +614,7 @@ ifeq ($(PLATFORM),mingw32)
 
   LIBS = -lws2_32 -lwinmm
   CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
-  CLIENT_LDFLAGS = -mwindows
+  CLIENT_LDFLAGS = 
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
