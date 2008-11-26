@@ -42,8 +42,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/ioctl.h>
 #endif
 
-#define TITLE "---[ Tremfusion Console ]---"
-#define PROMPT "-> "
+#define TITLE "^4---[ ^3Tremfusion Console ^4]---"
+#define PROMPT "^3-> "
 #define INPUT_SCROLL 15
 #define LOG_SCROLL 5
 #define MAX_LOG_LINES 1024
@@ -112,12 +112,6 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 {
 	static char buffer[MAXPRINTMSG];
 	int length = 0;
-
-	// Use normal print if com_ansiColor is disabled
-	if (!com_ansiColor || !com_ansiColor->integer) {
-		wprintw(win, "%s", msg);
-		return;
-	}
 
 	CON_SetColor(win, 7);
 	while(*msg) {
@@ -209,7 +203,7 @@ void CON_Clear_f(void)
 	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Move the cursor back to the input field
-	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 	refresh();
 }
 
@@ -288,6 +282,7 @@ void CON_Init(void)
 
 	// Create the border
 	borderwin = newwin(LOG_LINES + 2, LOG_COLS + 2, 1, 0);
+	CON_SetColor(borderwin, 2);
 	box(borderwin, 0, 0);
 	wnoutrefresh(borderwin);
 
@@ -307,14 +302,16 @@ void CON_Init(void)
 
 	// Create the scroll bar
 	scrollwin = newwin(LOG_LINES, 1, 2, COLS - 1);
-	wbkgd(scrollwin, ACS_VLINE);
+	wbkgd(scrollwin, ACS_VLINE | COLOR_PAIR(6));
 	CON_DrawScrollBar();
+	CON_SetColor(scrollwin, 1);
+	CON_SetColor(stdscr, 2);
 	mvaddch(1, COLS - 1, ACS_UARROW);
 	mvaddch(LINES - 2, COLS - 1, ACS_DARROW);
 
 	// Create the input field
-	inputwin = newwin(1, COLS - strlen(PROMPT), LINES - 1, strlen(PROMPT));
-	input_field.widthInChars = COLS - strlen(PROMPT) - 1;
+	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT), LINES - 1, Q_PrintStrlen(PROMPT));
+	input_field.widthInChars = COLS - Q_PrintStrlen(PROMPT) - 1;
 	if (curses_on) {
 		if (input_field.cursor < input_field.scroll)
 			input_field.scroll = input_field.cursor;
@@ -325,9 +322,11 @@ void CON_Init(void)
 	wnoutrefresh(inputwin);
 
 	// Display the title and input prompt
-	mvprintw(0, (COLS - strlen(TITLE)) / 2, "%s", TITLE);
-	mvprintw(LINES - 1, 0, "%s", PROMPT);
-	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+	move(0, (COLS - Q_PrintStrlen(TITLE)) / 2);
+	CON_ColorPrint(stdscr, TITLE, qtrue);
+	move(LINES - 1, 0);
+	CON_ColorPrint(stdscr, PROMPT, qtrue);
+	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 	refresh();
 
 #ifndef _WIN32
@@ -368,7 +367,7 @@ char *CON_Input(void)
 					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
 				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
 				wrefresh(inputwin);
-				move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+				move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 				refresh();
 			}
 			return NULL;
@@ -382,7 +381,7 @@ char *CON_Input(void)
 			Field_Clear(&input_field);
 			wclear(inputwin);
 			wrefresh(inputwin);
-			move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+			move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 			refresh();
 			Com_Printf("]%s\n", text);
 			return text;
@@ -501,6 +500,6 @@ void CON_Print(const char *msg)
 	CON_DrawScrollBar();
 
 	// Move the cursor back to the input field
-	move(LINES - 1, strlen(PROMPT) + input_field.cursor - input_field.scroll);
+	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 	refresh();
 }
