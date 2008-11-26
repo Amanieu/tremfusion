@@ -256,7 +256,6 @@ char *CON_Input( void )
 	static char text[256];
 	int avail;
 	char key;
-	const char *history;
 	size_t size;
 
 	if( ttycon_on )
@@ -317,17 +316,9 @@ char *CON_Input( void )
 									CON_FlushIn();
 									return NULL;
 								case 'B':
-									history = Hist_Next();
 									CON_Hide();
-									if (history)
-									{
-										Q_strncpyz(TTY_con.buffer, history, sizeof(TTY_con.buffer));
-										TTY_con.cursor = strlen(TTY_con.buffer);
-									} else if (TTY_con.buffer[0])
-									{
-										Hist_Add(TTY_con.buffer);
-										Field_Clear(&TTY_con);
-									}
+									Q_strncpyz(TTY_con.buffer, Hist_Next(TTY_con.buffer), sizeof(TTY_con.buffer));
+									TTY_con.cursor = strlen(TTY_con.buffer);
 									CON_Show();
 									CON_FlushIn();
 									return NULL;

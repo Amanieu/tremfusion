@@ -229,18 +229,8 @@ char *CON_Input( void )
 		}
 		else if( key == VK_DOWN )
 		{
-			const char *history = Hist_Next( );
-			if ( history )
-			{
-				Q_strncpyz( qconsole_line, history, sizeof( qconsole_line ) );
-				qconsole_linelen = strlen( qconsole_line );
-			}
-			else if ( qconsole_linelen )
-			{
-				Hist_Add(qconsole_line);
-				qconsole_line[0] = '\0';
-				qconsole_linelen = 0;
-			}
+			Q_strncpyz( qconsole_line, Hist_Next( qconsole_line ), sizeof( qconsole_line ) );
+			qconsole_linelen = strlen( qconsole_line );
 			break;
 		}
 		else if( key == VK_TAB )

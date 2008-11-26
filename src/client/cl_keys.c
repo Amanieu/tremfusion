@@ -643,18 +643,12 @@ void Console_Key (int key) {
 
 	if ( (key == K_MWHEELDOWN && keys[K_SHIFT].down) || ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) ||
 		 ( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
-		const char *history = Hist_Next();
-		if ( history ) {
-			Q_strncpyz( g_consoleField.buffer, history, sizeof( g_consoleField.buffer ) );
-			g_consoleField.cursor = strlen( g_consoleField.buffer );
-			if ( g_consoleField.cursor >= g_consoleField.widthInChars ) {
-				g_consoleField.scroll = g_consoleField.cursor - g_consoleField.widthInChars + 1;
-			} else {
-				g_consoleField.scroll = 0;
-			}
-		} else if ( g_consoleField.buffer[0] ) {
-			Hist_Add( g_consoleField.buffer );
-			Field_Clear( &g_consoleField );
+		Q_strncpyz( g_consoleField.buffer, Hist_Next( g_consoleField.buffer ), sizeof( g_consoleField.buffer ) );
+		g_consoleField.cursor = strlen( g_consoleField.buffer );
+		if ( g_consoleField.cursor >= g_consoleField.widthInChars ) {
+			g_consoleField.scroll = g_consoleField.cursor - g_consoleField.widthInChars + 1;
+		} else {
+			g_consoleField.scroll = 0;
 		}
 		return;
 	}

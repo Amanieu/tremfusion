@@ -3354,11 +3354,14 @@ const char *Hist_Prev( void )
 Hist_Next
 ==================
 */
-const char *Hist_Next( void )
+const char *Hist_Next( const char *field )
 {
 	if (hist_current % CON_HISTORY != hist_next % CON_HISTORY)
 		hist_current++;
-	if (hist_current % CON_HISTORY == hist_next % CON_HISTORY)
-		return NULL;
+	if (hist_current % CON_HISTORY == hist_next % CON_HISTORY) {
+		if (*field && strcmp(field, history[(hist_current - 1) % CON_HISTORY]))
+			Hist_Add(field);
+		return "";
+	}
 	return history[hist_current % CON_HISTORY];
 }

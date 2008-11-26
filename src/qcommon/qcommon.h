@@ -1091,7 +1091,7 @@ void CON_Clear_f( void );
 
 void Hist_Load( void );
 void Hist_Add( const char *field );
-const char *Hist_Next( void );
+const char *Hist_Next( const char *field );
 const char *Hist_Prev( void );
 
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data

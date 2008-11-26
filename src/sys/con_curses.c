@@ -308,7 +308,6 @@ char *CON_Input(void)
 {
 	int chr, num_chars = 0;
 	static char text[MAX_EDIT_LINE];
-	const char *history;
 
 	if (!curses_on)
 		return CON_Input_tty();
@@ -368,14 +367,8 @@ char *CON_Input(void)
 			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case KEY_DOWN:
-			history = Hist_Next();
-			if (history) {
-				Q_strncpyz(input_field.buffer, history, sizeof(input_field.buffer));
-				input_field.cursor = strlen(input_field.buffer);
-			} else if (input_field.buffer[0]) {
-				Hist_Add(input_field.buffer);
-				Field_Clear(&input_field);
-			}
+			Q_strncpyz(input_field.buffer, Hist_Next(input_field.buffer), sizeof(input_field.buffer));
+			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case KEY_HOME:
 			input_field.cursor = 0;
