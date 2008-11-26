@@ -1673,6 +1673,7 @@ void R_AddEntitySurfaces(void)
 							break;
 
 						case MOD_BAD:	// null model axis
+							Com_DPrintf( "Showing bad model from index %d\n", tr.currentModel->index );
 							if((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
 							{
 								break;

@@ -532,7 +532,7 @@ void R_AddMD5Surfaces(trRefEntity_t * ent)
 	qboolean        personalModel;
 	
 	model = tr.currentModel->md5;
-	
+	Com_DPrintf( "Adding MD5 Surfaces\n" );
 	// don't add third_person objects if not in a portal
 	personalModel = (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal;
 

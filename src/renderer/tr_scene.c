@@ -226,6 +226,7 @@ void RE_AddRefEntityToScene(const refEntity_t * ent)
 {
 	if(!tr.registered)
 	{
+        Com_DPrintf( "Error: Attempted to add a refEntity_t to the scene when tr was not yet registered\n" );
 		return;
 	}
 	

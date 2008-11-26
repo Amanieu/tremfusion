@@ -42,6 +42,7 @@ model_t        *R_GetModelByHandle(qhandle_t index)
 	// out of range gets the defualt model
 	if(index < 1 || index >= tr.numModels)
 	{
+		Com_DPrintf( "Attempted to get model number %d - returning the default model\n", index );
 		return tr.models[0];
 	}
 
@@ -107,6 +108,7 @@ qhandle_t RE_RegisterModel(const char *name)
 		return 0;
 	}
 
+	Com_DPrintf( "RE_RegisterModel: Registering model '%s'\n", name );
 	// search the currently loaded models
 	for(hModel = 1; hModel < tr.numModels; hModel++)
 	{
@@ -234,6 +236,7 @@ qhandle_t RE_RegisterModel(const char *name)
 	// we still keep the model_t around, so if the model name is asked for
 	// again, we won't bother scanning the filesystem
 	mod->type = MOD_BAD;
+	ri.Printf(PRINT_WARNING, "Failed to register model '%s'\n", name);
 	return 0;
 }
 
@@ -470,6 +473,7 @@ static qboolean R_LoadMD5(model_t * mod, void *buffer, const char *modName)
 	quat_t          boneQuat;
 	matrix_t        boneMat;
 
+    Com_DPrintf( "Loading MD5 '%s' at model index %d...\n", modName, mod->index );
 	buf_p = (char *) buffer;
 	
 	// skip MD5Version indent string

@@ -486,6 +486,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
   {
     Com_sprintf( filename, sizeof( filename ), "models/players/%s/nonseg.md3", modelName );
     ci->nonSegModel = trap_R_RegisterModel( filename );
+	Com_Printf( "Registration of the model '%s' returned %d\n", filename, (int)(ci->nonSegModel) );
     if( !ci->nonSegModel )
     {
       Com_Printf( "Failed to load model file %s\n", filename );
@@ -762,12 +763,13 @@ CG_CopyClientInfoModel
 */
 static void CG_CopyClientInfoModel( clientInfo_t *from, clientInfo_t *to )
 {
-  if(from->md5)
-    CG_XPPM_CopyClientInfoModel( from, to );
-  else {
+  //if(from->md5)
+    //CG_XPPM_CopyClientInfoModel( from, to );
+  //else {
   VectorCopy( from->headOffset, to->headOffset );
   to->footsteps = from->footsteps;
   to->gender = from->gender;
+  to->md5 = from->md5;
 
   to->legsModel = from->legsModel;
   to->legsSkin = from->legsSkin;
@@ -784,7 +786,7 @@ static void CG_CopyClientInfoModel( clientInfo_t *from, clientInfo_t *to )
   memcpy( to->sounds, from->sounds, sizeof( to->sounds ) );
   memcpy( to->customFootsteps, from->customFootsteps, sizeof( to->customFootsteps ) );
   memcpy( to->customMetalFootsteps, from->customMetalFootsteps, sizeof( to->customMetalFootsteps ) );
-  }
+  //}
 }
 
 
@@ -833,6 +835,8 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci )
   int   i;
   clientInfo_t  *match;
 
+  Com_Printf( "CG_ScanForExistingClientInfo: Scanning for client info with modelName '%s' and skinName '%s'\n", ci->modelName, ci->skinName );
+
   for( i = PCL_NONE + 1; i < PCL_NUM_CLASSES; i++ )
   {
     match = &cgs.corpseinfo[ i ];
@@ -843,6 +847,7 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci )
     if( !Q_stricmp( ci->modelName, match->modelName ) &&
         !Q_stricmp( ci->skinName, match->skinName ) )
     {
+      Com_Printf( "CG_ScanForExistingClientInfo: Found matching client info at cgs.corpseinfo[ %d ]\n", i );
       // this clientinfo is identical, so use it's handles
       CG_CopyClientInfoModel( match, ci );
 
@@ -850,6 +855,7 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci )
     }
   }
 
+  Com_Printf( "CG_ScanForExistingClientInfo: Failed to find matching client info\n" );
   // shouldn't happen
   return qfalse;
 }
@@ -900,6 +906,7 @@ void CG_NewClientInfo( int clientNum )
   const char    *v;
   char          *slash;
 
+  Com_Printf( "CG_NewClientInfo saving new client info to %d\n", clientNum );
   ci = &cgs.clientinfo[ clientNum ];
 
   configstring = CG_ConfigString( clientNum + CS_PLAYERS );
@@ -2131,6 +2138,7 @@ void CG_Player( centity_t *cent )
 
   ci = &cgs.clientinfo[ clientNum ];
 
+  CG_Printf( "Called CG_Player on cent with clientNum %d and modelName %s md5 %d nonsegmented %d, gender %d\n", clientNum, ci->modelName, ci->md5, ci->nonsegmented, ci->gender );
   if( ci->md5 ) {
 #ifdef XPPM
     CG_XPPM_Player( cent );
@@ -2656,241 +2664,3 @@ void CG_Bleed( vec3_t origin, vec3_t normal, int entityNum )
     CG_SetParticleSystemNormal( ps, normal );
   }
 }
-
-/*
-===============
-CG_AddRefEntityWithPowerups
-
-Adds a piece with modifications or duplications for powerups
-===============
-*/
-void CG_AddRefEntityWithPowerups(refEntity_t * ent, entityState_t * state, int team)
-{
-
-/*
- * Pulled from XreaL - I don't think we need it
- */
-
-/*
-	if(state->powerups & (1 << PW_INVIS))
-	{
-		ent->customShader = cgs.media.invisShader;
-		trap_R_AddRefEntityToScene(ent);
-	}
-	else
-	{
-		*
-		   if ( state->eFlags & EF_KAMIKAZE ) {
-		   if (team == TEAM_BLUE)
-		   ent->customShader = cgs.media.blueKamikazeShader;
-		   else
-		   ent->customShader = cgs.media.redKamikazeShader;
-		   trap_R_AddRefEntityToScene( ent );
-		   }
-		   else { 
-		*
-		trap_R_AddRefEntityToScene(ent);
-		//}
-
-		if(state->powerups & (1 << PW_QUAD))
-		{
-			if(team == TEAM_RED)
-				ent->customShader = cgs.media.redQuadShader;
-			else
-				ent->customShader = cgs.media.quadShader;
-			trap_R_AddRefEntityToScene(ent);
-		}
-		if(state->powerups & (1 << PW_REGEN))
-		{
-			if(((cg.time / 100) % 10) == 1)
-			{
-				ent->customShader = cgs.media.regenShader;
-				trap_R_AddRefEntityToScene(ent);
-			}
-		}
-		if(state->powerups & (1 << PW_BATTLESUIT))
-		{
-			ent->customShader = cgs.media.battleSuitShader;
-			trap_R_AddRefEntityToScene(ent);
-		}
-	}
-
-*/
-}
-
-
-/*
-===============
-CG_PlayerPowerups
-===============
-*/
-void CG_PlayerPowerups(centity_t * cent, refEntity_t * torso, int noShadowID)
-{
-/*
- * Pulled from XreaL - I don't think we need it
- */
-
-/*
-	int             powerups;
-	clientInfo_t   *ci;
-	refLight_t      light;
-	float           radius;
-
-	powerups = cent->currentState.powerups;
-	if(!powerups)
-	{
-		return;
-	}
-
-	// quad gives a light
-	if(powerups & (1 << PW_QUAD))
-	{
-		// add light
-		memset(&light, 0, sizeof(refLight_t));
-
-		light.rlType = RL_OMNI;
-
-		VectorCopy(cent->lerpOrigin, light.origin);
-
-		light.color[0] = 0.2f;
-		light.color[1] = 0.2f;
-		light.color[2] = 1;
-
-		radius = 200 + (rand() & 31);
-
-		light.radius[0] = radius;
-		light.radius[1] = radius;
-		light.radius[2] = radius;
-
-		QuatClear(light.rotation);
-
-		light.noShadowID = noShadowID;
-
-		trap_R_AddRefLightToScene(&light);
-	}
-
-	// flight plays a looped sound
-	if(powerups & (1 << PW_FLIGHT))
-	{
-		trap_S_AddLoopingSound(cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.flightSound);
-	}
-
-	ci = &cgs.clientinfo[cent->currentState.clientNum];
-
-	// redflag
-	if(powerups & (1 << PW_REDFLAG))
-	{
-		if(ci->newAnims)
-		{
-			CG_PlayerFlag(cent, cgs.media.redFlagFlapSkin, torso);
-		}
-		else
-		{
-			CG_TrailItem(cent, cgs.media.redFlagModel);
-		}
-
-		// add light
-		memset(&light, 0, sizeof(refLight_t));
-
-		light.rlType = RL_OMNI;
-
-		VectorCopy(cent->lerpOrigin, light.origin);
-
-		light.color[0] = 1.0;
-		light.color[1] = 0.2f;
-		light.color[2] = 0.2f;
-
-		radius = 200 + (rand() & 31);
-
-		light.radius[0] = radius;
-		light.radius[1] = radius;
-		light.radius[2] = radius;
-
-		QuatClear(light.rotation);
-
-		light.noShadowID = noShadowID;
-
-		trap_R_AddRefLightToScene(&light);
-	}
-
-	// blueflag
-	if(powerups & (1 << PW_BLUEFLAG))
-	{
-		if(ci->newAnims)
-		{
-			CG_PlayerFlag(cent, cgs.media.blueFlagFlapSkin, torso);
-		}
-		else
-		{
-			CG_TrailItem(cent, cgs.media.blueFlagModel);
-		}
-
-		// add light
-		memset(&light, 0, sizeof(refLight_t));
-
-		light.rlType = RL_OMNI;
-
-		VectorCopy(cent->lerpOrigin, light.origin);
-
-		light.color[0] = 0.2f;
-		light.color[1] = 0.2f;
-		light.color[2] = 1;
-
-		radius = 200 + (rand() & 31);
-
-		light.radius[0] = radius;
-		light.radius[1] = radius;
-		light.radius[2] = radius;
-
-		QuatClear(light.rotation);
-
-		light.noShadowID = noShadowID;
-
-		trap_R_AddRefLightToScene(&light);
-	}
-
-	// neutralflag
-	if(powerups & (1 << PW_NEUTRALFLAG))
-	{
-		if(ci->newAnims)
-		{
-			CG_PlayerFlag(cent, cgs.media.neutralFlagFlapSkin, torso);
-		}
-		else
-		{
-			CG_TrailItem(cent, cgs.media.neutralFlagModel);
-		}
-
-		// add light
-		memset(&light, 0, sizeof(refLight_t));
-
-		light.rlType = RL_OMNI;
-
-		VectorCopy(cent->lerpOrigin, light.origin);
-
-		light.color[0] = 1;
-		light.color[1] = 1;
-		light.color[2] = 1;
-
-		radius = 200 + (rand() & 31);
-
-		light.radius[0] = radius;
-		light.radius[1] = radius;
-		light.radius[2] = radius;
-
-		QuatClear(light.rotation);
-
-		light.noShadowID = noShadowID;
-
-		trap_R_AddRefLightToScene(&light);
-	}
-
-	// haste leaves smoke trails
-	if(powerups & (1 << PW_HASTE))
-	{
-		CG_HasteTrail(cent);
-	}
-*/
-}
-
-

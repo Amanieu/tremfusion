@@ -1200,6 +1200,7 @@ void CG_AddPacketEntities( void )
   ps = &cg.predictedPlayerState;
   BG_PlayerStateToEntityState( ps, &cg.predictedPlayerEntity.currentState, qfalse );
   cg.predictedPlayerEntity.valid = qtrue;
+  //Com_Printf( "Adding predicted player entity...\n" );
   CG_AddCEntity( &cg.predictedPlayerEntity );
 
   // lerp the non-predicted value for lightning gun origins

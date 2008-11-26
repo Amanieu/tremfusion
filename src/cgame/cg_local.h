@@ -782,7 +782,6 @@ typedef struct
 
 	vec3_t          modelScale;
 
-	qhandle_t       bodyModel;
 	qhandle_t       bodySkin;
 #endif
 
@@ -1707,7 +1706,6 @@ void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
 void        CG_SwingAngles( float destination, float swingTolerance, float clampTolerance, float speed, float *angle, qboolean *swinging );
 void        CG_AddPainTwitch( centity_t *cent, vec3_t torsoAngles );
-void        CG_PlayerPowerups( centity_t *cent, refEntity_t *torso, int noShadowID );
 void        CG_PlayerSprites( centity_t *cent );
 void        CG_PlayerSplash( centity_t *cent, class_t c );
 qboolean    CG_PlayerShadow( centity_t *cent, float *shadowPlane, class_t c );
@@ -1734,10 +1732,6 @@ void        CG_RunLerpFrame( lerpFrame_t *lf, float scale );
 void        CG_AnimMapObj( centity_t *cent );
 void        CG_ModelDoor( centity_t *cent );
 
-//
-// cg_player.c
-//
-void        CG_AddRefEntityWithPowerups(refEntity_t *ent, entityState_t *state, int team );
 //
 // cg_predict.c
 //
