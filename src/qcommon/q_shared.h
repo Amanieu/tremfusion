@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -301,6 +301,15 @@ MATHLIB
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
+typedef vec_t vec3a_t[4] ALIGN(16);
+typedef vec_t quat_t[4] ALIGN(16);
+typedef vec_t matrix_t[16] ALIGN(16);
+#if id386_sse >= 1
+#define vec3aLoad(vec3a)       v4fLoadA(vec3a)
+#define vec3Load(vec3)         vec3_to_v4f(vec3)
+#define vec3aStore(vec3a, v4f) v4fStoreA(vec3a, v4f)
+#define vec3Store(vec3, v4f)   v4f_to_vec3(vec3, v4f)
+#endif
 typedef vec_t vec4_t[4];
 typedef vec_t vec5_t[5];
 
@@ -434,7 +443,6 @@ void ByteToDir( int b, vec3_t dir );
 #if	1
 
 #define DotProduct(x,y)			((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
-#define AngleBetween(a, b) RAD2DEG(acos(DotProduct(a,b)/(VectorLength(a)*VectorLength(b))))
 #define VectorSubtract(a,b,c)	((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2])
 #define VectorAdd(a,b,c)		((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2])
 #define VectorCopy(a,b)			((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])

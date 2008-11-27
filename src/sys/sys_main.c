@@ -2,20 +2,20 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -31,21 +31,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
-#if !DEDICATED && !USE_TTY_CLIENT
-#ifdef USE_LOCAL_HEADERS
-#	include "SDL.h"
-#	include "SDL_cpuinfo.h"
-#else
-#	include <SDL.h>
-#	include <SDL_cpuinfo.h>
-#endif
-#endif
-
 #include "sys_local.h"
 #include "sys_loadlib.h"
 
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
+
+#if !DEDICATED && !USE_TTY_CLIENT
+#	include <SDL.h>
+#	include <SDL_cpuinfo.h>
+#elif id386_sse
+#	include <cpuid.h>
+#endif
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
@@ -180,6 +177,13 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 	if( SDL_HasSSE( ) )      features |= CF_SSE;
 	if( SDL_HasSSE2( ) )     features |= CF_SSE2;
 	if( SDL_HasAltiVec( ) )  features |= CF_ALTIVEC;
+#elif id386_sse
+	unsigned int a, b, c, d;
+
+	if(__get_cpuid(1, &a, &b, &c, &d)) {
+		if (d & bit_SSE)  features |= CF_SSE;
+		if (d & bit_SSE2) features |= CF_SSE2;
+	}
 #endif
 
 	return features;
@@ -395,7 +399,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	char  fname[MAX_OSPATH];
 	char  *basepath;
 	char  *homepath;
-	char  *homepath2;
+	char  *extrapath;
 	char  *pwdpath;
 	char  *gamedir;
 
@@ -407,18 +411,18 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	pwdpath = Sys_Cwd();
 	basepath = Cvar_VariableString( "fs_basepath" );
 	homepath = Cvar_VariableString( "fs_homepath" );
-	homepath2 = Cvar_VariableString( "fs_homepath2" );
+	extrapath = Cvar_VariableString( "fs_extrapath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
 	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
 
-	if(!libHandle && homepath)
+	if(!libHandle && *homepath)
 		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
 
-	if(!libHandle && homepath)
-		libHandle = Sys_TryLibraryLoad(homepath2, gamedir, fname, fqpath);
+	if(!libHandle && *extrapath)
+		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname, fqpath);
 
-	if(!libHandle && basepath)
+	if(!libHandle && *basepath)
 		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
 
 	if(!libHandle) {
@@ -550,10 +554,9 @@ int main( int argc, char **argv )
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
+	CON_Init( );
 	Com_Init( commandLine );
 	NET_Init( );
-
-	CON_Init( );
 
 	signal( SIGILL, Sys_SigHandler );
 	signal( SIGFPE, Sys_SigHandler );

@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -1796,7 +1796,10 @@ Called directly from cgame
 void RE_LoadWorldMap( const char *name ) {
 	int			i;
 	dheader_t	*header;
-	byte		*buffer;
+	union {
+		byte *b;
+		void *v;
+	} buffer;
 	byte		*startMarker;
 
 	if ( tr.worldMapLoaded ) {
@@ -1814,8 +1817,8 @@ void RE_LoadWorldMap( const char *name ) {
 	tr.worldMapLoaded = qtrue;
 
 	// load it
-    ri.FS_ReadFile( name, (void **)&buffer );
-	if ( !buffer ) {
+    ri.FS_ReadFile( name, &buffer.v );
+	if ( !buffer.b ) {
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 	}
 
@@ -1832,7 +1835,7 @@ void RE_LoadWorldMap( const char *name ) {
 	startMarker = ri.Hunk_Alloc(0, h_low);
 	c_gridVerts = 0;
 
-	header = (dheader_t *)buffer;
+	header = (dheader_t *)buffer.b;
 	fileBase = (byte *)header;
 
 	i = LittleLong (header->version);
@@ -1864,6 +1867,6 @@ void RE_LoadWorldMap( const char *name ) {
 	// only set tr.world now that we know the entire level has loaded properly
 	tr.world = &s_worldData;
 
-    ri.FS_FreeFile( buffer );
+    ri.FS_FreeFile( buffer.v );
 }
 

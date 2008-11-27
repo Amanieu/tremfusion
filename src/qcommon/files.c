@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "q_shared.h"
 #include "qcommon.h"
-#include "unzip.h"
+#include "../zlib/unzip.h"
 
 /*
 =============================================================================
@@ -179,7 +179,7 @@ typedef struct fileInPack_s {
 } fileInPack_t;
 
 typedef struct {
-	char			pakFilename[MAX_OSPATH];	// /tremulous/base/pak0.pk3
+	char			pakFilename[MAX_OSPATH];	// ~/.tremfusion/base/pak0.pk3
 	char			pakBasename[MAX_OSPATH];	// pak0
 	char			pakGamename[MAX_OSPATH];	// base
 	unzFile			handle;						// handle to zip file
@@ -207,7 +207,7 @@ typedef struct searchpath_s {
 static	char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 static	cvar_t		*fs_debug;
 static	cvar_t		*fs_homepath;
-static	cvar_t		*fs_homepath2;
+static	cvar_t		*fs_extrapath;
 
 #ifdef MACOS_X
 // Also search the .app bundle for .pk3 files
@@ -218,6 +218,7 @@ static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
 static	cvar_t		*fs_extrapaks;
+static	cvar_t		*fs_restrict;
         cvar_t		*fs_autogen;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
@@ -290,9 +291,10 @@ FS_PakIsPure
 =================
 */
 qboolean FS_PakIsPure( pack_t *pack ) {
+#ifndef DEDICATED
 	int i;
-
-	if ( fs_numServerPaks ) {
+	extern int cl_connectedToPureServer;
+	if ( fs_numServerPaks && ( cl_connectedToPureServer || fs_restrict->integer ) ) {
 		for ( i = 0 ; i < fs_numServerPaks ; i++ ) {
 			// FIXME: also use hashed file names
 			// NOTE TTimo: a pk3 with same checksum but different name would be validated too
@@ -308,6 +310,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 		}
 		return qfalse;	// not on the pure server pak list or extra pak list
 	}
+#endif
 	return qtrue;
 }
 
@@ -596,8 +599,8 @@ qboolean FS_FileExists( const char *file )
 		return qtrue;
 	}
 
-	if (Q_stricmp(fs_homepath->string,fs_homepath2->string)) {
-		testpath = FS_BuildOSPath( fs_homepath2->string, fs_gamedir, file );
+	if (Q_stricmp(fs_homepath->string,fs_extrapath->string)) {
+		testpath = FS_BuildOSPath( fs_extrapath->string, fs_gamedir, file );
 
 		f = fopen( testpath, "rb" );
 		if (f) {
@@ -630,8 +633,8 @@ qboolean FS_SV_FileExists( const char *file )
 		return qtrue;
 	}
 
-	if (Q_stricmp(fs_homepath->string,fs_homepath2->string)) {
-		testpath = FS_BuildOSPath( fs_homepath2->string, file, "");
+	if (Q_stricmp(fs_homepath->string,fs_extrapath->string)) {
+		testpath = FS_BuildOSPath( fs_extrapath->string, file, "");
 		testpath[strlen(testpath)-1] = '\0';
 
 		f = fopen( testpath, "rb" );
@@ -724,16 +727,16 @@ int FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp ) {
 	fsh[f].handleSync = qfalse;
 	if (!fsh[f].handleFiles.file.o)
 	{
-		// If fs_homepath == fs_homepath2, don't bother
-		if (Q_stricmp(fs_homepath->string,fs_homepath2->string))
+		// If fs_homepath == fs_extrapath, don't bother
+		if (Q_stricmp(fs_homepath->string,fs_extrapath->string))
 		{
-			// search homepath2
-			ospath = FS_BuildOSPath( fs_homepath2->string, filename, "" );
+			// search extrapath
+			ospath = FS_BuildOSPath( fs_extrapath->string, filename, "" );
 			ospath[strlen(ospath)-1] = '\0';
 
 			if ( fs_debug->integer )
 			{
-				Com_Printf( "FS_SV_FOpenFileRead (fs_homepath2): %s\n", ospath );
+				Com_Printf( "FS_SV_FOpenFileRead (fs_extrapath): %s\n", ospath );
 			}
 
 			fsh[f].handleFiles.file.o = fopen( ospath, "rb" );
@@ -2774,8 +2777,7 @@ static void FS_ReorderExtraPaks( void )
 		for (s = *p_insert_index; s; s = s->next) {
 			// the part of the list before p_insert_index has been sorted already
 			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "@" ) && !Q_stricmp( s->dir->gamedir, BASEGAME )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ) && !Q_stricmp( s->dir->gamedir, fs_gamedir ))) {
+			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ))) {
 				// move this element to the insert list
 				*p_previous = s->next;
 				s->next = *p_insert_index;
@@ -2801,24 +2803,25 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-	const char *homePath, *homePath2;
+	const char *homePath, *extraPath;
 
 	Com_Printf( "----- FS_Startup -----\n" );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
-	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	homePath = Sys_DefaultHomePath(&homePath2);
+	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_LATCH|CVAR_SYSTEMINFO );
+	homePath = Sys_DefaultHomePath(&extraPath);
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
 	}
-	if (!homePath2) {
-		homePath2 = "";
+	if (!extraPath) {
+		extraPath = "";
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
-	fs_homepath2 = Cvar_Get ("fs_homepath2", homePath2, CVAR_INIT|CVAR_PROTECTED );
-	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". @ tremfusion-base", CVAR_ARCHIVE );
+	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
+	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". tremfusion-base", CVAR_ARCHIVE );
+	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
 
 	// add search path elements in reverse priority order
@@ -2835,8 +2838,8 @@ static void FS_Startup( const char *gameName )
 	#endif
 
 	// NOTE: same filtering below for mods and basegame
-	if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
-		FS_AddGameDirectory ( fs_homepath2->string, gameName );
+	if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
+		FS_AddGameDirectory ( fs_extrapath->string, gameName );
 	}
 	if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
 		FS_AddGameDirectory ( fs_homepath->string, gameName );
@@ -2852,8 +2855,8 @@ static void FS_Startup( const char *gameName )
 			FS_AddGameDirectory(fs_apppath->string, fs_basegame->string);
 		}
 		#endif
-		if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
-			FS_AddGameDirectory(fs_homepath2->string, fs_basegame->string);
+		if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
+			FS_AddGameDirectory(fs_extrapath->string, fs_basegame->string);
 		}
 		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
 			FS_AddGameDirectory(fs_homepath->string, fs_basegame->string);
@@ -2870,8 +2873,8 @@ static void FS_Startup( const char *gameName )
 			FS_AddGameDirectory(fs_apppath->string, fs_gamedirvar->string);
 		}
 		#endif
-		if (fs_homepath2->string[0] && Q_stricmp(fs_homepath2->string,fs_homepath->string)) {
-			FS_AddGameDirectory(fs_homepath2->string, fs_gamedirvar->string);
+		if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
+			FS_AddGameDirectory(fs_extrapath->string, fs_gamedirvar->string);
 		}
 		if (fs_homepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
 			FS_AddGameDirectory(fs_homepath->string, fs_gamedirvar->string);
@@ -3222,9 +3225,12 @@ void FS_InitFilesystem( void ) {
 	// has already been initialized
 	Com_StartupVariable( "fs_basepath" );
 	Com_StartupVariable( "fs_homepath" );
-	Com_StartupVariable( "fs_homepath2" );
+	Com_StartupVariable( "fs_extrapath" );
+	Com_StartupVariable( "fs_basegame" );
 	Com_StartupVariable( "fs_game" );
 	Com_StartupVariable( "fs_autogen" );
+	Com_StartupVariable( "fs_extrapaks" );
+	Com_StartupVariable( "fs_restrict" );
 
 	// try to start up normally
 	FS_Startup( BASEGAME );

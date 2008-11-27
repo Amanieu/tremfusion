@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -1008,7 +1008,6 @@ void ClientUserinfoChanged( int clientNum )
   char      c1[ MAX_INFO_STRING ];
   char      c2[ MAX_INFO_STRING ];
   char      userinfo[ MAX_INFO_STRING ];
-  char      buf[ MAX_INFO_STRING ];
 
   ent = g_entities + clientNum;
   client = ent->client;
@@ -1069,8 +1068,7 @@ void ClientUserinfoChanged( int clientNum )
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
         // log renames to demo
-        Info_SetValueForKey( buf, "name", client->pers.netname );
-        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buf ) );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", clientNum, client->pers.netname ) );
       }
     }
   }
@@ -1298,7 +1296,6 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
-  char      buffer[ MAX_INFO_STRING ] = "";
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -1351,10 +1348,8 @@ void ClientBegin( int clientNum )
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 
   // log to demo
-  Info_SetValueForKey( buffer, "name", client->pers.netname );
-  Info_SetValueForKey( buffer, "ip", client->pers.ip );
-  Info_SetValueForKey( buffer, "team", va( "%d", client->pers.teamSelection ) );
-  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, buffer ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", clientNum,
+                 client->pers.netname, client->pers.teamSelection ) );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );

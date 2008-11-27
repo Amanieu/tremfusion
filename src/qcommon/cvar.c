@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -362,7 +362,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				var_name, var->resetString, var_value );
 		}
 		// if we have a latched string, take that value now
-		if ( var->latchedString ) {
+		if ( var->latchedString && ( ( var->flags & CVAR_VM_CREATED ) || !( flags & CVAR_VM_CREATED ) ) ) {
 			char *s;
 
 			s = var->latchedString;
@@ -578,7 +578,10 @@ void Cvar_SetSafe( const char *var_name, const char *value )
 				"\"%s\"\n", var_name );
 		return;
 	}
-	Cvar_Set( var_name, value );
+	if( flags != CVAR_NONEXISTENT && flags & CVAR_LATCH && !( flags & CVAR_VM_CREATED ) )
+		Cvar_SetLatched( var_name, value );
+	else
+		Cvar_Set( var_name, value );
 }
 
 /*

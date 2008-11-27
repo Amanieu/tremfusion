@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -88,7 +88,7 @@ int	c_totalPatchEdges;
 static const patchCollide_t	*debugPatchCollide;
 static const facet_t		*debugFacet;
 static qboolean		debugBlock;
-static vec3_t		debugBlockPoints[4];
+static vec3a_t		debugBlockPoints[4];
 
 /*
 =================
@@ -105,6 +105,11 @@ void CM_ClearLevelPatches( void ) {
 CM_SignbitsForNormal
 =================
 */
+#if id386_sse >= 1
+static int CM_SignbitsForNormal_sse( v4f normal ) {
+	return v4fSignBits( normal ) & 0x07;
+}
+#endif
 static int CM_SignbitsForNormal( vec3_t normal ) {
 	int	bits, j;
 
@@ -125,6 +130,26 @@ Returns false if the triangle is degenrate.
 The normal will point out of the clock for clockwise ordered points
 =====================
 */
+#if id386_sse >= 1
+static qboolean CM_PlaneFromPoints_sse( v4f *plane, v4f a, v4f b, v4f c ) {
+	v4f	d1, d2;
+	v4f     planeVec;
+	s4f     planeLength;
+
+	d1 = v4fSub( b, a );
+	d2 = v4fSub( c, a );
+	planeVec = v4fCrossProduct( d2, d1 );
+	planeLength = v4fVectorLengthSquared( planeVec );
+	if ( v4fAll(v4fEq( planeLength, v4fZero )) ) {
+		return qfalse;
+	}
+
+	planeVec = v4fScale( v4fInverseRoot( planeLength ), planeVec );
+	planeVec = v4fMix( planeVec, v4fDotProduct( a, planeVec ), 0,0,0,1 );
+	*plane = planeVec;
+	return qtrue;
+}
+#endif
 static qboolean CM_PlaneFromPoints( vec4_t plane, vec3_t a, vec3_t b, vec3_t c ) {
 	vec3_t	d1, d2;
 
@@ -156,6 +181,27 @@ Returns true if the given quadratic curve is not flat enough for our
 collision detection purposes
 =================
 */
+#if id386_sse >= 1
+static qboolean	CM_NeedsSubdivision_sse( v4f a, v4f b, v4f c ) {
+	v4f		cmid;
+	v4f		lmid;
+	v4f		delta;
+	s4f		dist;
+	s4f             subdivide_distance = s4fInit(SUBDIVIDE_DISTANCE * SUBDIVIDE_DISTANCE);
+
+	// calculate the linear midpoint
+	lmid = v4fMid( a, c );
+
+	// calculate the exact curve midpoint
+	cmid = v4fMid( v4fMid( a, b ), v4fMid( b, c ) );
+
+	// see if the curve is far enough away from the linear mid
+	delta = v4fSub( cmid, lmid );
+	dist = v4fVectorLengthSquared( delta );
+	
+	return v4fAny(v4fGe(dist, subdivide_distance));
+}
+#endif
 static qboolean	CM_NeedsSubdivision( vec3_t a, vec3_t b, vec3_t c ) {
 	vec3_t		cmid;
 	vec3_t		lmid;
@@ -188,9 +234,22 @@ a, b, and c are control points.
 the subdivided sequence will be: a, out1, out2, out3, c
 ===============
 */
-static void CM_Subdivide( vec3_t a, vec3_t b, vec3_t c, vec3_t out1, vec3_t out2, vec3_t out3 ) {
-	int		i;
+#if id386_sse >= 1
+static void CM_Subdivide_sse( v4f a, v4f b, v4f c, vec3a_t out1, vec3a_t out2, vec3a_t out3 ) {
+	v4f o1, o2, o3;
 
+	o1 = v4fMid( a, b );
+	o3 = v4fMid( b, c );
+	o2 = v4fMid( o1, o3 );
+
+	vec3aStore( out1, o1 );
+	vec3aStore( out2, o2 );
+	vec3aStore( out3, o3);
+}
+#endif
+static void CM_Subdivide( vec3_t a, vec3_t b, vec3_t c, vec3_t out1, vec3_t out2, vec3_t out3 ) {
+	int i;
+	
 	for ( i = 0 ; i < 3 ; i++ ) {
 		out1[i] = 0.5 * (a[i] + b[i]);
 		out3[i] = 0.5 * (b[i] + c[i]);
@@ -205,8 +264,53 @@ CM_TransposeGrid
 Swaps the rows and columns in place
 =================
 */
+#if id386_sse >= 1
+static void CM_TransposeGrid_sse( cGrid_t *grid ) {
+	int		i, j, l;
+	v4f		temp;
+	qboolean	tempWrap;
+
+	if ( grid->width > grid->height ) {
+		for ( i = 0 ; i < grid->height ; i++ ) {
+			for ( j = i + 1 ; j < grid->width ; j++ ) {
+				if ( j < grid->height ) {
+					// swap the value
+					temp = vec3aLoad( grid->points[i][j] );
+					vec3aStore( grid->points[i][j], vec3aLoad( grid->points[j][i] ) );
+					vec3aStore( grid->points[j][i], temp );
+				} else {
+					// just copy
+					vec3aStore( grid->points[i][j], vec3aLoad( grid->points[j][i] ) );
+				}
+			}
+		}
+	} else {
+		for ( i = 0 ; i < grid->width ; i++ ) {
+			for ( j = i + 1 ; j < grid->height ; j++ ) {
+				if ( j < grid->width ) {
+					// swap the value
+					temp = vec3aLoad( grid->points[j][i] );
+					vec3aStore( grid->points[j][i], vec3aLoad( grid->points[i][j] ) );
+					vec3aStore( grid->points[i][j], temp );
+				} else {
+					// just copy
+					vec3aStore( grid->points[j][i], vec3aLoad( grid->points[i][j] ) );
+				}
+			}
+		}
+	}
+
+	l = grid->width;
+	grid->width = grid->height;
+	grid->height = l;
+
+	tempWrap = grid->wrapWidth;
+	grid->wrapWidth = grid->wrapHeight;
+	grid->wrapHeight = tempWrap;
+}
+#endif
 static void CM_TransposeGrid( cGrid_t *grid ) {
-	int			i, j, l;
+	int		i, j, l;
 	vec3_t		temp;
 	qboolean	tempWrap;
 
@@ -256,6 +360,29 @@ CM_SetGridWrapWidth
 If the left and right columns are exactly equal, set grid->wrapWidth qtrue
 ===================
 */
+#if id386_sse >= 1
+static void CM_SetGridWrapWidth_sse( cGrid_t *grid ) {
+	int	i;
+	s4f	d;
+	v4f     firstPoint, lastPoint;
+	s4f     epsilon = s4fInit( WRAP_POINT_EPSILON );
+
+	for ( i = 0 ; i < grid->height ; i++ ) {
+		firstPoint = vec3aLoad( grid->points[0][i] );
+		lastPoint = vec3aLoad( grid->points[grid->width-1][i] );
+		
+		d = v4fAbs( v4fSub( firstPoint, lastPoint ) );
+		if ( v4fAny( v4fGt( d, epsilon ) ) ) {
+			break;
+		}
+	}
+	if ( i == grid->height ) {
+		grid->wrapWidth = qtrue;
+	} else {
+		grid->wrapWidth = qfalse;
+	}
+}
+#endif
 static void CM_SetGridWrapWidth( cGrid_t *grid ) {
 	int		i, j;
 	float	d;
@@ -287,6 +414,72 @@ all the aproximating points are within SUBDIVIDE_DISTANCE
 from the true curve
 =================
 */
+#if id386_sse >= 1
+static void CM_SubdivideGridColumns_sse( cGrid_t *grid ) {
+	int	i, j, k;
+	v4f	prev, mid, next;
+	
+	for ( i = 0 ; i < grid->width - 2 ;  ) {
+		// grid->points[i][x] is an interpolating control point
+		// grid->points[i+1][x] is an aproximating control point
+		// grid->points[i+2][x] is an interpolating control point
+
+		//
+		// first see if we can collapse the aproximating collumn away
+		//
+		for ( j = 0 ; j < grid->height ; j++ ) {
+			prev = vec3aLoad( grid->points[i][j] );
+			mid = vec3aLoad( grid->points[i+1][j] );
+			next = vec3aLoad( grid->points[i+2][j] );
+			if ( CM_NeedsSubdivision_sse( prev, mid, next ) ) {
+				break;
+			}
+		}
+		if ( j == grid->height ) {
+			// all of the points were close enough to the linear midpoints
+			// that we can collapse the entire column away
+			for ( j = 0 ; j < grid->height ; j++ ) {
+				// remove the column
+				for ( k = i + 2 ; k < grid->width ; k++ ) {
+					mid = vec3aLoad( grid->points[k][j] );
+					vec3aStore( grid->points[k-1][j], mid );
+				}
+			}
+
+			grid->width--;
+
+			// go to the next curve segment
+			i++;
+			continue;
+		}
+
+		//
+		// we need to subdivide the curve
+		//
+		for ( j = 0 ; j < grid->height ; j++ ) {
+			// save the control points now
+			prev = vec3aLoad( grid->points[i][j] );
+			mid = vec3aLoad( grid->points[i+1][j] );
+			next = vec3aLoad( grid->points[i+2][j] );
+
+			// make room for two additional columns in the grid
+			// columns i+1 will be replaced, column i+2 will become i+4
+			// i+1, i+2, and i+3 will be generated
+			for ( k = grid->width - 1 ; k > i + 1 ; k-- ) {
+				vec3aStore( grid->points[k+2][j], vec3aLoad( grid->points[k][j] ) );
+			}
+
+			// generate the subdivided points
+			CM_Subdivide_sse( prev, mid, next, grid->points[i+1][j], grid->points[i+2][j], grid->points[i+3][j] );
+		}
+
+		grid->width += 2;
+
+		// the new aproximating point at i+1 may need to be removed
+		// or subdivided farther, so don't advance i
+	}
+}
+#endif
 static void CM_SubdivideGridColumns( cGrid_t *grid ) {
 	int		i, j, k;
 
@@ -355,6 +548,18 @@ CM_ComparePoints
 ======================
 */
 #define	POINT_EPSILON	0.1
+#if id386_sse >= 1
+static qboolean CM_ComparePoints_sse( vec3a_t a, vec3a_t b ) {
+	v4f     aVec, bVec;
+	s4f	d;
+	s4f     epsilon = s4fInit( POINT_EPSILON );
+
+	aVec = vec3aLoad( a );
+	bVec = vec3aLoad( b );
+	d = v4fAbs( v4fSub( aVec, bVec ) );
+	return v4fAll( v4fLe( d, epsilon ) );
+}
+#endif
 static qboolean CM_ComparePoints( float *a, float *b ) {
 	float		d;
 
@@ -380,6 +585,34 @@ CM_RemoveDegenerateColumns
 If there are any identical columns, remove them
 =================
 */
+#if id386_sse >= 1
+static void CM_RemoveDegenerateColumns_sse( cGrid_t *grid ) {
+	int		i, j, k;
+
+	for ( i = 0 ; i < grid->width - 1 ; i++ ) {
+		for ( j = 0 ; j < grid->height ; j++ ) {
+			if ( !CM_ComparePoints_sse( grid->points[i][j], grid->points[i+1][j] ) ) {
+				break;
+			}
+		}
+
+		if ( j != grid->height ) {
+			continue;	// not degenerate
+		}
+
+		for ( j = 0 ; j < grid->height ; j++ ) {
+			// remove the column
+			for ( k = i + 2 ; k < grid->width ; k++ ) {
+				vec3aStore( grid->points[k-1][j], vec3aLoad( grid->points[k][j] ) );
+			}
+		}
+		grid->width--;
+
+		// check against the next column
+		i--;
+	}
+}
+#endif
 static void CM_RemoveDegenerateColumns( cGrid_t *grid ) {
 	int		i, j, k;
 
@@ -429,7 +662,31 @@ static	facet_t			facets[MAX_PATCH_PLANES]; //maybe MAX_FACETS ??
 CM_PlaneEqual
 ==================
 */
-int CM_PlaneEqual(patchPlane_t *p, float plane[4], int *flipped) {
+#if id386_sse >= 1
+static int CM_PlaneEqual_sse(patchPlane_t *p, v4f plane, int *flipped) {
+	v4f invplane;
+	v4f epsilon = v4fInit( NORMAL_EPSILON, NORMAL_EPSILON,
+			       NORMAL_EPSILON, DIST_EPSILON );
+	v4f pPlane = v4fLoadU( p->plane );
+
+	if (v4fAll( v4fLt( v4fAbs( v4fSub( plane, pPlane ) ), epsilon ) ) )
+	{
+		*flipped = qfalse;
+		return qtrue;
+	}
+
+	invplane = v4fNeg( plane );
+
+	if (v4fAll( v4fLt( v4fAbs( v4fSub( invplane, pPlane ) ), epsilon ) ) )
+	{
+		*flipped = qtrue;
+		return qtrue;
+	}
+
+	return qfalse;
+}
+#endif
+static int CM_PlaneEqual(patchPlane_t *p, float plane[4], int *flipped) {
 	float invplane[4];
 
 	if (
@@ -463,7 +720,35 @@ int CM_PlaneEqual(patchPlane_t *p, float plane[4], int *flipped) {
 CM_SnapVector
 ==================
 */
-void CM_SnapVector(vec3_t normal) {
+#if id386_sse >= 1
+static v4f CM_SnapVector_sse(v4f normal) {
+	s4f     epsilon = s4fInit( NORMAL_EPSILON );
+
+	int     oneBits = v4fSignBits( v4fLt( v4fAbs( v4fSub( normal, v4fOne ) ), epsilon ) );
+	int     mOneBits = v4fSignBits( v4fLt( v4fAbs( v4fSub( normal, v4fMOne ) ), epsilon ) );
+
+	if ( oneBits & 0x01 ) {
+		return s4fToX( v4fOne );
+	}
+	if ( mOneBits & 0x01 ) {
+		return s4fToX( v4fMOne );
+	}
+	if ( oneBits & 0x02 ) {
+		return s4fToY( v4fOne );
+	}
+	if ( mOneBits & 0x02 ) {
+		return s4fToY( v4fMOne );
+	}
+	if ( oneBits & 0x04 ) {
+		return s4fToZ( v4fOne );
+	}
+	if ( mOneBits & 0x04 ) {
+		return s4fToZ( v4fMOne );
+	}
+	return normal;
+}
+#endif
+static void CM_SnapVector(vec3_t normal) {
 	int		i;
 
 	for (i=0 ; i<3 ; i++)
@@ -488,7 +773,31 @@ void CM_SnapVector(vec3_t normal) {
 CM_FindPlane2
 ==================
 */
-int CM_FindPlane2(float plane[4], int *flipped) {
+#if id386_sse >= 1
+static int CM_FindPlane2_sse(v4f plane, int *flipped) {
+	int i;
+
+	// see if the points are close enough to an existing plane
+	for ( i = 0 ; i < numPlanes ; i++ ) {
+		if (CM_PlaneEqual_sse(&planes[i], plane, flipped)) return i;
+	}
+
+	// add a new plane
+	if ( numPlanes == MAX_PATCH_PLANES ) {
+		Com_Error( ERR_DROP, "CM_FindPlane2_sse: MAX_PATCH_PLANES" );
+	}
+
+	v4fStoreU( planes[numPlanes].plane, plane );
+	planes[numPlanes].signbits = CM_SignbitsForNormal_sse( plane );
+
+	numPlanes++;
+
+	*flipped = qfalse;
+
+	return numPlanes-1;
+}
+#endif
+static int CM_FindPlane2(float plane[4], int *flipped) {
 	int i;
 
 	// see if the points are close enough to an existing plane
@@ -516,6 +825,60 @@ int CM_FindPlane2(float plane[4], int *flipped) {
 CM_FindPlane
 ==================
 */
+#if id386_sse >= 1
+static int CM_FindPlane_sse( v4f p1, v4f p2, v4f p3 ) {
+	v4f	plane;
+	v4f     planeVec;
+	v4f     planeDist;
+	int	i;
+	v4f	d, epsilon = s4fInit( PLANE_TRI_EPSILON );
+
+	if ( !CM_PlaneFromPoints_sse( &plane, p1, p2, p3 ) ) {
+		return -1;
+	}
+
+	// see if the points are close enough to an existing plane
+	for ( i = 0 ; i < numPlanes ; i++ ) {
+		planeVec = v4fLoadU( planes[i].plane );
+		planeDist = v4fW( planeVec );
+		planeVec = v4fXYZ( planeVec );
+		
+		if ( v4fSignBits( v4fDotProduct( plane, planeVec ) ) != 0 ) {
+			continue;	// allow backwards planes?
+		}
+
+		d = v4fAbs( v4fSub( v4fDotProduct( p1, planeVec ), planeDist ) );
+		if ( v4fAny( v4fGt( d, epsilon ) ) ) {
+			continue;
+		}
+
+		d = v4fAbs( v4fSub( v4fDotProduct( p2, planeVec ), planeDist ) );
+		if ( v4fAny( v4fGt( d, epsilon ) ) ) {
+			continue;
+		}
+
+		d = v4fAbs( v4fSub( v4fDotProduct( p3, planeVec ), planeDist ) );
+		if ( v4fAny( v4fGt( d, epsilon ) ) ) {
+			continue;
+		}
+
+		// found it
+		return i;
+	}
+
+	// add a new plane
+	if ( numPlanes == MAX_PATCH_PLANES ) {
+		Com_Error( ERR_DROP, "CM_FindPlane_sse: MAX_PATCH_PLANES" );
+	}
+
+	v4fStoreU( planes[numPlanes].plane, plane );
+	planes[numPlanes].signbits = CM_SignbitsForNormal_sse( plane );
+
+	numPlanes++;
+
+	return numPlanes-1;
+}
+#endif
 static int CM_FindPlane( float *p1, float *p2, float *p3 ) {
 	float	plane[4];
 	int		i;
@@ -568,6 +931,30 @@ static int CM_FindPlane( float *p1, float *p2, float *p3 ) {
 CM_PointOnPlaneSide
 ==================
 */
+#if id386_sse >= 1
+static int CM_PointOnPlaneSide_sse( v4f p, int planeNum ) {
+	v4f	plane;
+	s4f	d;
+	s4f     epsilon = s4fInit( PLANE_TRI_EPSILON );
+
+	if ( planeNum == -1 ) {
+		return SIDE_ON;
+	}
+	plane = v4fLoadU( planes[ planeNum ].plane );
+
+	d = v4fPlaneDist(p, plane);
+
+	if ( v4fAny( v4fGt( d, epsilon ) ) ) {
+		return SIDE_FRONT;
+	}
+
+	if ( v4fAny( v4fLt( d, v4fNeg( epsilon ) ) ) ) {
+		return SIDE_BACK;
+	}
+
+	return SIDE_ON;
+}
+#endif
 static int CM_PointOnPlaneSide( float *p, int planeNum ) {
 	float	*plane;
 	float	d;
@@ -595,7 +982,7 @@ static int CM_PointOnPlaneSide( float *p, int planeNum ) {
 CM_GridPlane
 ==================
 */
-static int	CM_GridPlane( int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2], int i, int j, int tri ) {
+static int CM_GridPlane( int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2], int i, int j, int tri ) {
 	int		p;
 
 	p = gridPlanes[i][j][tri];
@@ -617,6 +1004,60 @@ static int	CM_GridPlane( int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2], int i,
 CM_EdgePlaneNum
 ==================
 */
+#if id386_sse >= 1
+static int CM_EdgePlaneNum_sse( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2], int i, int j, int k ) {
+	v4f	 p1, p2;
+	v4f	 up;
+	int	 p;
+
+	switch ( k ) {
+	case 0:	// top border
+		p1 = vec3aLoad( grid->points[i][j] );
+		p2 = vec3aLoad( grid->points[i+1][j] );
+		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p1, p2, up );
+
+	case 2:	// bottom border
+		p1 = vec3aLoad( grid->points[i][j+1] );
+		p2 = vec3aLoad( grid->points[i+1][j+1] );
+		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p2, p1, up );
+
+	case 3: // left border
+		p1 = vec3aLoad( grid->points[i][j] );
+		p2 = vec3aLoad( grid->points[i][j+1] );
+		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p2, p1, up );
+
+	case 1:	// right border
+		p1 = vec3aLoad( grid->points[i+1][j] );
+		p2 = vec3aLoad( grid->points[i+1][j+1] );
+		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p1, p2, up );
+
+	case 4:	// diagonal out of triangle 0
+		p1 = vec3aLoad( grid->points[i+1][j+1] );
+		p2 = vec3aLoad( grid->points[i][j] );
+		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p1, p2, up );
+
+	case 5:	// diagonal out of triangle 1
+		p1 = vec3aLoad( grid->points[i][j] );
+		p2 = vec3aLoad( grid->points[i+1][j+1] );
+		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		up = v4fMA( p1, v4fFour, vec3Load( planes[ p ].plane ) );
+		return CM_FindPlane_sse( p1, p2, up );
+	}
+
+	Com_Error( ERR_DROP, "CM_EdgePlaneNum: bad k" );
+	return -1;
+}
+#endif
 static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2], int i, int j, int k ) {
 	float	*p1, *p2;
 	vec3_t		up;
@@ -676,6 +1117,79 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 CM_SetBorderInward
 ===================
 */
+#if id386_sse >= 1
+static void CM_SetBorderInward_sse( facet_t *facet, cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2],
+				    int i, int j, int which ) {
+	int	k, l;
+	float	*points[4];
+	int	numPoints;
+
+	switch ( which ) {
+	case -1:
+		points[0] = grid->points[i][j];
+		points[1] = grid->points[i+1][j];
+		points[2] = grid->points[i+1][j+1];
+		points[3] = grid->points[i][j+1];
+		numPoints = 4;
+		break;
+	case 0:
+		points[0] = grid->points[i][j];
+		points[1] = grid->points[i+1][j];
+		points[2] = grid->points[i+1][j+1];
+		numPoints = 3;
+		break;
+	case 1:
+		points[0] = grid->points[i+1][j+1];
+		points[1] = grid->points[i][j+1];
+		points[2] = grid->points[i][j];
+		numPoints = 3;
+		break;
+	default:
+		Com_Error( ERR_FATAL, "CM_SetBorderInward: bad parameter" );
+		numPoints = 0;
+		break;
+	}
+
+	for ( k = 0 ; k < facet->numBorders ; k++ ) {
+		int		front, back;
+
+		front = 0;
+		back = 0;
+
+		for ( l = 0 ; l < numPoints ; l++ ) {
+			int	side;
+
+			side = CM_PointOnPlaneSide_sse( vec3aLoad( points[l] ),
+							facet->borderPlanes[k] );
+			if ( side == SIDE_FRONT ) {
+				front++;
+			} if ( side == SIDE_BACK ) {
+				back++;
+			}
+		}
+
+		if ( front && !back ) {
+			facet->borderInward[k] = qtrue;
+		} else if ( back && !front ) {
+			facet->borderInward[k] = qfalse;
+		} else if ( !front && !back ) {
+			// flat side border
+			facet->borderPlanes[k] = -1;
+		} else {
+			// bisecting side border
+			Com_DPrintf( "WARNING: CM_SetBorderInward: mixed plane sides\n" );
+			facet->borderInward[k] = qfalse;
+			if ( !debugBlock ) {
+				debugBlock = qtrue;
+				vec3aStore( debugBlockPoints[0], vec3aLoad( grid->points[i][j] ) );
+				vec3aStore( debugBlockPoints[1], vec3aLoad( grid->points[i+1][j] ) );
+				vec3aStore( debugBlockPoints[2], vec3aLoad( grid->points[i+1][j+1] ) );
+				vec3aStore( debugBlockPoints[3], vec3aLoad( grid->points[i][j+1] ) );
+			}
+		}
+	}
+}
+#endif
 static void CM_SetBorderInward( facet_t *facet, cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2],
 						  int i, int j, int which ) {
 	int		k, l;
@@ -754,6 +1268,49 @@ CM_ValidateFacet
 If the facet isn't bounded by its borders, we screwed up.
 ==================
 */
+#if id386_sse >= 1
+static qboolean CM_ValidateFacet_sse( facet_t *facet ) {
+	v4f		plane, b0, b1, max = s4fInit( MAX_MAP_BOUNDS );
+	int		j;
+	winding_t	*w;
+	vec3a_t		bounds[2];
+
+	if ( facet->surfacePlane == -1 ) {
+		return qfalse;
+	}
+
+	plane = v4fLoadU( planes[ facet->surfacePlane ].plane );
+	w = BaseWindingForPlane_sse( plane );
+	for ( j = 0 ; j < facet->numBorders && w ; j++ ) {
+		if ( facet->borderPlanes[j] == -1 ) {
+			FreeWinding( w );
+			return qfalse;
+		}
+		plane = v4fLoadU( planes[ facet->borderPlanes[j] ].plane );
+		if ( !facet->borderInward[j] ) {
+			plane = v4fNeg( plane );
+		}
+		ChopWindingInPlace_sse( &w, plane, 0.1f );
+	}
+
+	if ( !w ) {
+		return qfalse;		// winding was completely chopped away
+	}
+
+	// see if the facet is unreasonably large
+	WindingBounds_sse( w, bounds[0], bounds[1] );
+	FreeWinding( w );
+	
+	b0 = vec3aLoad( bounds[0] );
+	b1 = vec3aLoad( bounds[1] );
+	if( v4fAny( v4fGt( v4fSub( b1, b0 ), max ) ) ||
+	    v4fAny( v4fGe( b0, max) ) ||
+	    v4fAny( v4fGe( v4fNeg( b1 ), max ) ) ) {
+		return qfalse;
+	}
+	return qtrue;		// winding is fine
+}
+#endif
 static qboolean CM_ValidateFacet( facet_t *facet ) {
 	float		plane[4];
 	int			j;
@@ -806,7 +1363,170 @@ static qboolean CM_ValidateFacet( facet_t *facet ) {
 CM_AddFacetBevels
 ==================
 */
-void CM_AddFacetBevels( facet_t *facet ) {
+#if id386_sse >= 1
+static void CM_AddFacetBevels_sse( facet_t *facet ) {
+	v4f        plane, newplane;
+	v4f        axisPlanes[6];
+	s4f        len;
+	int        i, j, k, l;
+	int        flipped;
+	s4f        d;
+	winding_t *w, *w2;
+	vec3a_t    mins, maxs;
+	v4f        minsVec, maxsVec, vec, vec2;
+
+	plane = v4fLoadU( planes[ facet->surfacePlane ].plane );
+
+	w = BaseWindingForPlane_sse( plane );
+	for ( j = 0 ; j < facet->numBorders && w ; j++ ) {
+		if (facet->borderPlanes[j] == facet->surfacePlane) continue;
+		plane = v4fLoadU( planes[ facet->borderPlanes[j] ].plane );
+
+		if ( !facet->borderInward[j] ) {
+			plane = v4fNeg( plane );
+		}
+
+		ChopWindingInPlace_sse( &w, plane, 0.1f );
+	}
+	if ( !w ) {
+		return;
+	}
+
+	WindingBounds_sse(w, mins, maxs);
+	minsVec = vec3aLoad(mins);
+	maxsVec = vec3aLoad(maxs);
+
+	// generate the 6 axis planes
+	axisPlanes[0] = v4fNeg( v4fOr(s4fToX(v4fOne), s4fToW(v4fX(minsVec))));
+	axisPlanes[1] =         v4fOr(s4fToX(v4fOne), s4fToW(v4fX(maxsVec)));
+	axisPlanes[2] = v4fNeg( v4fOr(s4fToY(v4fOne), s4fToW(v4fY(minsVec))));
+	axisPlanes[3] =         v4fOr(s4fToY(v4fOne), s4fToW(v4fY(maxsVec)));
+	axisPlanes[4] = v4fNeg( v4fOr(s4fToZ(v4fOne), s4fToW(v4fZ(minsVec))));
+	axisPlanes[5] =         v4fOr(s4fToZ(v4fOne), s4fToW(v4fZ(maxsVec)));
+	
+	// add the axial planes
+	for ( j = 0 ; j < 6 ; j++ )
+	{
+		plane = axisPlanes[j];
+		
+		//if it's the surface plane
+		if (CM_PlaneEqual_sse( &planes[facet->surfacePlane], plane, &flipped)) {
+			continue;
+		}
+		// see if the plane is allready present
+		for ( i = 0 ; i < facet->numBorders ; i++ ) {
+			if (CM_PlaneEqual_sse( &planes[facet->borderPlanes[i]], plane, &flipped))
+				break;
+		}
+		
+		if ( i == facet->numBorders ) {
+			if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+			facet->borderPlanes[facet->numBorders] = CM_FindPlane2_sse(plane, &flipped);
+			facet->borderNoAdjust[facet->numBorders] = 0;
+			facet->borderInward[facet->numBorders] = flipped;
+			facet->numBorders++;
+		}
+	}
+	//
+	// add the edge bevels
+	//
+	// test the non-axial plane edges
+	for ( j = 0 ; j < w->numpoints ; j++ )
+	{
+		k = (j+1)%w->numpoints;
+		vec = v4fSub( vec3Load( w->p[j]), vec3Load(w->p[k]) );
+		//if it's a degenerate edge
+		len = v4fVectorLengthSquared( vec );
+		if (v4fAll(v4fLt(len, v4fZeroDotTwoFive)))
+			continue;
+		vec = v4fScale(v4fInverseRoot(len), vec);
+		vec = CM_SnapVector_sse(vec);
+		if (v4fAny(v4fEq(vec, v4fOne)) ||
+		    v4fAny(v4fEq(vec, v4fMOne)))
+			continue;	// only test non-axial edges
+
+		// try the six possible slanted axials from this edge
+		for ( k = 0; k < 6; k++ )
+		{
+			// construct a plane
+			vec2 = axisPlanes[k];
+			plane = v4fCrossProduct (vec, vec2);
+			len = v4fVectorLengthSquared( plane );
+			if (v4fAll(v4fLt(len, v4fZeroDotTwoFive)))
+				continue;
+			plane = v4fScale(v4fInverseRoot(len), plane);
+			plane = v4fOr(v4fXYZ(plane), s4fToW(v4fDotProduct(vec3Load(w->p[j]), plane)));
+
+			// if all the points of the facet winding are
+			// behind this plane, it is a proper edge bevel
+			for ( l = 0 ; l < w->numpoints ; l++ )
+			{
+				d = v4fPlaneDist(vec3Load(w->p[l]), plane);
+				if (v4fAny(v4fGt(d, v4fZeroDotOne)))
+					break;	// point in front
+			}
+			if ( l < w->numpoints )
+				continue;
+			
+			//if it's the surface plane
+			if (CM_PlaneEqual_sse(&planes[facet->surfacePlane], plane, &flipped)) {
+				continue;
+			}
+			// see if the plane is allready present
+			for ( i = 0 ; i < facet->numBorders ; i++ ) {
+				if (CM_PlaneEqual_sse(&planes[facet->borderPlanes[i]], plane, &flipped)) {
+					break;
+				}
+			}
+			
+			if ( i == facet->numBorders ) {
+				if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+				facet->borderPlanes[facet->numBorders] = CM_FindPlane2_sse(plane, &flipped);
+				
+				for ( i = 0 ; i < facet->numBorders ; i++ ) {
+					if (facet->borderPlanes[facet->numBorders] ==
+					    facet->borderPlanes[i]) Com_Printf("WARNING: bevel plane already used\n");
+				}
+				
+				facet->borderNoAdjust[facet->numBorders] = 0;
+				facet->borderInward[facet->numBorders] = flipped;
+				//
+				w2 = CopyWinding(w);
+				newplane = v4fLoadU(planes[facet->borderPlanes[facet->numBorders]].plane);
+				if (!facet->borderInward[facet->numBorders])
+				{
+					newplane = v4fNeg(newplane);
+				} //end if
+				ChopWindingInPlace_sse( &w2, newplane, 0.1f );
+				if (!w2) {
+					Com_DPrintf("WARNING: CM_AddFacetBevels... invalid bevel\n");
+					continue;
+				}
+				else {
+					FreeWinding(w2);
+				}
+				//
+				facet->numBorders++;
+				//already got a bevel
+//					break;
+			}
+		}
+	}
+	
+	FreeWinding( w );
+
+#ifndef BSPC
+	//add opposite plane
+	facet->borderPlanes[facet->numBorders] = facet->surfacePlane;
+	facet->borderNoAdjust[facet->numBorders] = 0;
+	facet->borderInward[facet->numBorders] = qtrue;
+	facet->numBorders++;
+#endif //BSPC
+
+	Com_DPrintf("AddFacetBevels: %d borders\n", facet->numBorders);
+}
+#endif
+static void CM_AddFacetBevels( facet_t *facet ) {
 
 	int i, j, k, l;
 	int axis, dir, order, flipped;
@@ -965,6 +1685,7 @@ void CM_AddFacetBevels( facet_t *facet ) {
 	facet->numBorders++;
 #endif //BSPC
 
+	Com_DPrintf("AddFacetBevels: %d borders\n", facet->numBorders);
 }
 
 typedef enum {
@@ -979,6 +1700,164 @@ typedef enum {
 CM_PatchCollideFromGrid
 ==================
 */
+#if id386_sse >= 1
+static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
+	int		i, j;
+	v4f		p1, p2, p3;
+	int		gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2];
+	facet_t		*facet;
+	int		borders[4];
+	int		noAdjust[4];
+
+	numPlanes = 0;
+	numFacets = 0;
+
+	// find the planes for each triangle of the grid
+	for ( i = 0 ; i < grid->width - 1 ; i++ ) {
+		for ( j = 0 ; j < grid->height - 1 ; j++ ) {
+			p1 = vec3aLoad( grid->points[i][j] );
+			p2 = vec3aLoad( grid->points[i+1][j] );
+			p3 = vec3aLoad( grid->points[i+1][j+1] );
+			gridPlanes[i][j][0] = CM_FindPlane_sse( p1, p2, p3 );
+
+			p1 = vec3aLoad( grid->points[i+1][j+1] );
+			p2 = vec3aLoad( grid->points[i][j+1] );
+			p3 = vec3aLoad( grid->points[i][j] );
+			gridPlanes[i][j][1] = CM_FindPlane_sse( p1, p2, p3 );
+		}
+	}
+
+	// create the borders for each facet
+	for ( i = 0 ; i < grid->width - 1 ; i++ ) {
+		for ( j = 0 ; j < grid->height - 1 ; j++ ) {
+			 
+			borders[EN_TOP] = -1;
+			if ( j > 0 ) {
+				borders[EN_TOP] = gridPlanes[i][j-1][1];
+			} else if ( grid->wrapHeight ) {
+				borders[EN_TOP] = gridPlanes[i][grid->height-2][1];
+			} 
+			noAdjust[EN_TOP] = ( borders[EN_TOP] == gridPlanes[i][j][0] );
+			if ( borders[EN_TOP] == -1 || noAdjust[EN_TOP] ) {
+				borders[EN_TOP] = CM_EdgePlaneNum_sse( grid, gridPlanes, i, j, 0 );
+			}
+
+			borders[EN_BOTTOM] = -1;
+			if ( j < grid->height - 2 ) {
+				borders[EN_BOTTOM] = gridPlanes[i][j+1][0];
+			} else if ( grid->wrapHeight ) {
+				borders[EN_BOTTOM] = gridPlanes[i][0][0];
+			}
+			noAdjust[EN_BOTTOM] = ( borders[EN_BOTTOM] == gridPlanes[i][j][1] );
+			if ( borders[EN_BOTTOM] == -1 || noAdjust[EN_BOTTOM] ) {
+				borders[EN_BOTTOM] = CM_EdgePlaneNum_sse( grid, gridPlanes, i, j, 2 );
+			}
+
+			borders[EN_LEFT] = -1;
+			if ( i > 0 ) {
+				borders[EN_LEFT] = gridPlanes[i-1][j][0];
+			} else if ( grid->wrapWidth ) {
+				borders[EN_LEFT] = gridPlanes[grid->width-2][j][0];
+			}
+			noAdjust[EN_LEFT] = ( borders[EN_LEFT] == gridPlanes[i][j][1] );
+			if ( borders[EN_LEFT] == -1 || noAdjust[EN_LEFT] ) {
+				borders[EN_LEFT] = CM_EdgePlaneNum_sse( grid, gridPlanes, i, j, 3 );
+			}
+
+			borders[EN_RIGHT] = -1;
+			if ( i < grid->width - 2 ) {
+				borders[EN_RIGHT] = gridPlanes[i+1][j][1];
+			} else if ( grid->wrapWidth ) {
+				borders[EN_RIGHT] = gridPlanes[0][j][1];
+			}
+			noAdjust[EN_RIGHT] = ( borders[EN_RIGHT] == gridPlanes[i][j][0] );
+			if ( borders[EN_RIGHT] == -1 || noAdjust[EN_RIGHT] ) {
+				borders[EN_RIGHT] = CM_EdgePlaneNum_sse( grid, gridPlanes, i, j, 1 );
+			}
+
+			if ( numFacets == MAX_FACETS ) {
+				Com_Error( ERR_DROP, "MAX_FACETS" );
+			}
+			facet = &facets[numFacets];
+			Com_Memset( facet, 0, sizeof( *facet ) );
+
+			if ( gridPlanes[i][j][0] == gridPlanes[i][j][1] ) {
+				if ( gridPlanes[i][j][0] == -1 ) {
+					continue;		// degenrate
+				}
+				facet->surfacePlane = gridPlanes[i][j][0];
+				facet->numBorders = 4;
+				facet->borderPlanes[0] = borders[EN_TOP];
+				facet->borderNoAdjust[0] = noAdjust[EN_TOP];
+				facet->borderPlanes[1] = borders[EN_RIGHT];
+				facet->borderNoAdjust[1] = noAdjust[EN_RIGHT];
+				facet->borderPlanes[2] = borders[EN_BOTTOM];
+				facet->borderNoAdjust[2] = noAdjust[EN_BOTTOM];
+				facet->borderPlanes[3] = borders[EN_LEFT];
+				facet->borderNoAdjust[3] = noAdjust[EN_LEFT];
+				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, -1 );
+				if ( CM_ValidateFacet_sse( facet ) ) {
+					CM_AddFacetBevels( facet );
+					numFacets++;
+				}
+			} else {
+				// two seperate triangles
+				facet->surfacePlane = gridPlanes[i][j][0];
+				facet->numBorders = 3;
+				facet->borderPlanes[0] = borders[EN_TOP];
+				facet->borderNoAdjust[0] = noAdjust[EN_TOP];
+				facet->borderPlanes[1] = borders[EN_RIGHT];
+				facet->borderNoAdjust[1] = noAdjust[EN_RIGHT];
+				facet->borderPlanes[2] = gridPlanes[i][j][1];
+				if ( facet->borderPlanes[2] == -1 ) {
+					facet->borderPlanes[2] = borders[EN_BOTTOM];
+					if ( facet->borderPlanes[2] == -1 ) {
+						facet->borderPlanes[2] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 4 );
+					}
+				}
+ 				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 0 );
+				if ( CM_ValidateFacet_sse( facet ) ) {
+					CM_AddFacetBevels( facet );
+					numFacets++;
+				}
+
+				if ( numFacets == MAX_FACETS ) {
+					Com_Error( ERR_DROP, "MAX_FACETS" );
+				}
+				facet = &facets[numFacets];
+				Com_Memset( facet, 0, sizeof( *facet ) );
+
+				facet->surfacePlane = gridPlanes[i][j][1];
+				facet->numBorders = 3;
+				facet->borderPlanes[0] = borders[EN_BOTTOM];
+				facet->borderNoAdjust[0] = noAdjust[EN_BOTTOM];
+				facet->borderPlanes[1] = borders[EN_LEFT];
+				facet->borderNoAdjust[1] = noAdjust[EN_LEFT];
+				facet->borderPlanes[2] = gridPlanes[i][j][0];
+				if ( facet->borderPlanes[2] == -1 ) {
+					facet->borderPlanes[2] = borders[EN_TOP];
+					if ( facet->borderPlanes[2] == -1 ) {
+						facet->borderPlanes[2] = CM_EdgePlaneNum_sse( grid, gridPlanes, i, j, 5 );
+					}
+				}
+				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 1 );
+				if ( CM_ValidateFacet_sse( facet ) ) {
+					CM_AddFacetBevels( facet );
+					numFacets++;
+				}
+			}
+		}
+	}
+
+	// copy the results out
+	pf->numPlanes = numPlanes;
+	pf->numFacets = numFacets;
+	pf->facets = Hunk_Alloc( numFacets * sizeof( *pf->facets ), h_high );
+	Com_Memcpy( pf->facets, facets, numFacets * sizeof( *pf->facets ) );
+	pf->planes = Hunk_Alloc( numPlanes * sizeof( *pf->planes ), h_high );
+	Com_Memcpy( pf->planes, planes, numPlanes * sizeof( *pf->planes ) );
+}
+#endif
 static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf ) {
 	int				i, j;
 	float			*p1, *p2, *p3;
@@ -1147,6 +2026,76 @@ collision detection with a patch mesh.
 Points is packed as concatenated rows.
 ===================
 */
+#if id386_sse >= 1
+struct patchCollide_s	*CM_GeneratePatchCollide_sse( int width, int height, vec3a_t *points ) {
+	patchCollide_t	*pf;
+	cGrid_t		grid;
+	int		i, j;
+	v4f             bounds0, bounds1;
+
+	if ( width <= 2 || height <= 2 || !points ) {
+		Com_Error( ERR_DROP, "CM_GeneratePatchFacets: bad parameters: (%i, %i, %p)",
+			width, height, (void *)points );
+	}
+
+	if ( !(width & 1) || !(height & 1) ) {
+		Com_Error( ERR_DROP, "CM_GeneratePatchFacets: even sizes are invalid for quadratic meshes" );
+	}
+
+	if ( width > MAX_GRID_SIZE || height > MAX_GRID_SIZE ) {
+		Com_Error( ERR_DROP, "CM_GeneratePatchFacets: source is > MAX_GRID_SIZE" );
+	}
+
+	// build a grid
+	grid.width = width;
+	grid.height = height;
+	grid.wrapWidth = qfalse;
+	grid.wrapHeight = qfalse;
+	for ( i = 0 ; i < width ; i++ ) {
+		for ( j = 0 ; j < height ; j++ ) {
+			vec3aStore( grid.points[i][j], vec3aLoad( points[j*width + i] ) );
+		}
+	}
+
+	// subdivide the grid
+	CM_SetGridWrapWidth_sse( &grid );
+	CM_SubdivideGridColumns_sse( &grid );
+	CM_RemoveDegenerateColumns_sse( &grid );
+
+	CM_TransposeGrid_sse( &grid );
+
+	CM_SetGridWrapWidth_sse( &grid );
+	CM_SubdivideGridColumns_sse( &grid );
+	CM_RemoveDegenerateColumns_sse( &grid );
+
+	// we now have a grid of points exactly on the curve
+	// the aproximate surface defined by these points will be
+	// collided against
+	pf = Hunk_Alloc( sizeof( *pf ), h_high );
+
+	bounds0 = s4fInit( 99999);
+	bounds1 = s4fInit(-99999);
+	for ( i = 0 ; i < grid.width ; i++ ) {
+		for ( j = 0 ; j < grid.height ; j++ ) {
+			bounds0 = v4fMin( bounds0, vec3aLoad( grid.points[i][j] ) );
+			bounds1 = v4fMax( bounds1, vec3aLoad( grid.points[i][j] ) );
+		}
+	}
+	vec3aStore(pf->bounds[0], bounds0);
+	vec3aStore(pf->bounds[1], bounds1);
+
+	c_totalPatchBlocks += ( grid.width - 1 ) * ( grid.height - 1 );
+
+	// generate a bsp tree for the surface
+	CM_PatchCollideFromGrid_sse( &grid, pf );
+
+	// expand by one unit for epsilon purposes
+	vec3aStore(pf->bounds[0], v4fSub(vec3aLoad(pf->bounds[0]), v4fOne));
+	vec3aStore(pf->bounds[1], v4fAdd(vec3aLoad(pf->bounds[1]), v4fOne));
+
+	return pf;
+}
+#endif
 struct patchCollide_s	*CM_GeneratePatchCollide( int width, int height, vec3_t *points ) {
 	patchCollide_t	*pf;
 	cGrid_t			grid;
@@ -1230,6 +2179,109 @@ CM_TracePointThroughPatchCollide
   special case for point traces because the patch collide "brushes" have no volume
 ====================
 */
+#if id386_sse >= 1
+void CM_TracePointThroughPatchCollide_sse( traceWork_t *tw, const struct patchCollide_s *pc ) {
+	qboolean	frontFacing[MAX_PATCH_PLANES];
+	float		intersection[MAX_PATCH_PLANES];
+	float		intersect;
+	const patchPlane_t	*planes;
+	const facet_t	*facet;
+	int		i, j, k;
+	s4f		offset, planeDist;
+	v4f             plane;
+	float		d1, d2;
+#ifndef BSPC
+	static cvar_t *cv;
+#endif //BSPC
+
+#ifndef BSPC
+	if ( !cm_playerCurveClip->integer || !tw->isPoint ) {
+		return;
+	}
+#endif
+
+	// determine the trace's relationship to all planes
+	planes = pc->planes;
+	for ( i = 0 ; i < pc->numPlanes ; i++, planes++ ) {
+		plane = v4fLoadU( planes->plane );
+		planeDist = v4fW( plane );
+		offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ] ), plane );
+		offset = v4fSub( offset, planeDist );
+		d1 = s4fToFloat( v4fAdd( v4fDotProduct( vec3aLoad( tw->start ), plane ), offset ) );
+		d2 = s4fToFloat( v4fAdd( v4fDotProduct( vec3aLoad( tw->end ), plane ), offset ) );
+		if ( d1 <= 0 ) {
+			frontFacing[i] = qfalse;
+		} else {
+			frontFacing[i] = qtrue;
+		}
+		if ( d1 == d2 ) {
+			intersection[i] = 99999;
+		} else {
+			intersection[i] = d1 / ( d1 - d2 );
+			if ( intersection[i] <= 0 ) {
+				intersection[i] = 99999;
+			}
+		}
+	}
+
+
+	// see if any of the surface planes are intersected
+	facet = pc->facets;
+	for ( i = 0 ; i < pc->numFacets ; i++, facet++ ) {
+		if ( !frontFacing[facet->surfacePlane] ) {
+			continue;
+		}
+		intersect = intersection[facet->surfacePlane];
+		if ( intersect < 0 ) {
+			continue;		// surface is behind the starting point
+		}
+		if ( intersect > tw->trace.fraction ) {
+			continue;		// already hit something closer
+		}
+		for ( j = 0 ; j < facet->numBorders ; j++ ) {
+			k = facet->borderPlanes[j];
+			if ( frontFacing[k] ^ facet->borderInward[j] ) {
+				if ( intersection[k] > intersect ) {
+					break;
+				}
+			} else {
+				if ( intersection[k] < intersect ) {
+					break;
+				}
+			}
+		}
+		if ( j == facet->numBorders ) {
+			// we hit this facet
+#ifndef BSPC
+			if (!cv) {
+				cv = Cvar_Get( "r_debugSurfaceUpdate", "1", 0 );
+			}
+			if (cv->integer) {
+				debugPatchCollide = pc;
+				debugFacet = facet;
+			}
+#endif //BSPC
+			planes = &pc->planes[facet->surfacePlane];
+
+			// calculate intersection with a slight pushoff
+			plane = v4fLoadU( planes->plane );
+			planeDist = v4fW( plane );
+			offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ]), plane );
+			offset = v4fSub( offset, planeDist );
+			d1 = s4fToFloat( v4fAdd( v4fDotProduct( vec3aLoad( tw->start ), plane ), planeDist ) );
+			d2 = s4fToFloat( v4fAdd( v4fDotProduct( vec3aLoad( tw->end ), plane ), planeDist ) );
+			tw->trace.fraction = ( d1 - SURFACE_CLIP_EPSILON ) / ( d1 - d2 );
+
+			if ( tw->trace.fraction < 0 ) {
+				tw->trace.fraction = 0;
+			}
+
+			vec3Store( tw->trace.plane.normal, plane );
+			tw->trace.plane.dist = s4fToFloat( planeDist );
+		}
+	}
+}
+#endif
 void CM_TracePointThroughPatchCollide( traceWork_t *tw, const struct patchCollide_s *pc ) {
 	qboolean	frontFacing[MAX_PATCH_PLANES];
 	float		intersection[MAX_PATCH_PLANES];
@@ -1330,6 +2382,49 @@ void CM_TracePointThroughPatchCollide( traceWork_t *tw, const struct patchCollid
 CM_CheckFacetPlane
 ====================
 */
+#if id386_sse >= 1
+int CM_CheckFacetPlane_sse(v4f plane, v4f planeDist, v4f start, v4f end,
+			   float *enterFrac, float *leaveFrac, int *hit) {
+	float d1, d2, f;
+
+	*hit = qfalse;
+
+	d1 = s4fToFloat( v4fSub( v4fDotProduct( start, plane ), planeDist ) );
+	d2 = s4fToFloat( v4fSub( v4fDotProduct( end, plane ), planeDist ) );
+
+	// if completely in front of face, no intersection with the entire facet
+	if (d1 > 0 && ( d2 >= SURFACE_CLIP_EPSILON || d2 >= d1 )  ) {
+		return qfalse;
+	}
+
+	// if it doesn't cross the plane, the plane isn't relevent
+	if (d1 <= 0 && d2 <= 0 ) {
+		return qtrue;
+	}
+
+	// crosses face
+	if (d1 > d2) {	// enter
+		f = (d1-SURFACE_CLIP_EPSILON) / (d1-d2);
+		if ( f < 0 ) {
+			f = 0;
+		}
+		//always favor previous plane hits and thus also the surface plane hit
+		if (f > *enterFrac) {
+			*enterFrac = f;
+			*hit = qtrue;
+		}
+	} else {	// leave
+		f = (d1+SURFACE_CLIP_EPSILON) / (d1-d2);
+		if ( f > 1 ) {
+			f = 1;
+		}
+		if (f < *leaveFrac) {
+			*leaveFrac = f;
+		}
+	}
+	return qtrue;
+}
+#endif
 int CM_CheckFacetPlane(float *plane, vec3_t start, vec3_t end, float *enterFrac, float *leaveFrac, int *hit) {
 	float d1, d2, f;
 
@@ -1376,6 +2471,142 @@ int CM_CheckFacetPlane(float *plane, vec3_t start, vec3_t end, float *enterFrac,
 CM_TraceThroughPatchCollide
 ====================
 */
+#if id386_sse >= 1
+void CM_TraceThroughPatchCollide_sse( traceWork_t *tw, const struct patchCollide_s *pc ) {
+	int           i, j, hit, hitnum;
+	float         enterFrac, leaveFrac;
+	patchPlane_t *planes;
+	facet_t      *facet;
+	v4f           plane, bestplane;
+	s4f           planeDist, bestplaneDist, offset, t;
+	v4f           startp, endp;
+#ifndef BSPC
+	static cvar_t *cv;
+#endif //BSPC
+
+	if ( !CM_BoundsIntersect_sse( vec3aLoad( tw->bounds[0] ),
+				      vec3aLoad( tw->bounds[1] ),
+				      vec3aLoad( pc->bounds[0] ),
+				      vec3aLoad( pc->bounds[1] ) ) ) {
+		return;
+	}
+
+	if (tw->isPoint) {
+		CM_TracePointThroughPatchCollide( tw, pc );
+		return;
+	}
+
+	bestplane = bestplaneDist = v4fZero;
+	
+	facet = pc->facets;
+	for ( i = 0 ; i < pc->numFacets ; i++, facet++ ) {
+		enterFrac = -1.0;
+		leaveFrac = 1.0;
+		hitnum = -1;
+		//
+		planes = &pc->planes[ facet->surfacePlane ];
+		plane = v4fLoadU( planes->plane );
+		planeDist = v4fW( plane );
+		if ( tw->type == TT_CAPSULE ) {
+			// adjust the plane distance apropriately for radius
+			planeDist = v4fAdd( planeDist, s4fInit( tw->sphere.radius ) );
+
+			// find the closest point on the capsule to the plane
+			t = v4fDotProduct( plane, vec3aLoad( tw->sphere.offset ) );
+			if ( v4fAny( v4fGt( t, v4fZero ) ) ) {
+				startp = v4fSub( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+				endp = v4fSub( vec3aLoad( tw->end ), vec3aLoad( tw->sphere.offset ) );
+			}
+			else {
+				startp = v4fAdd( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+				endp = v4fAdd( vec3aLoad( tw->end ), vec3aLoad( tw->sphere.offset ) );
+			}
+		}
+		else {
+			offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ] ), plane);
+			plane = v4fSub( plane, offset );
+			startp = vec3aLoad( tw->start );
+			endp = vec3aLoad( tw->end );
+		}
+
+		if (!CM_CheckFacetPlane_sse(plane, planeDist, startp, endp,
+					    &enterFrac, &leaveFrac, &hit)) {
+			continue;
+		}
+		if (hit) {
+			bestplane = plane;
+			bestplaneDist = planeDist;
+		}
+
+		for ( j = 0; j < facet->numBorders; j++ ) {
+			planes = &pc->planes[ facet->borderPlanes[j] ];
+			if (facet->borderInward[j]) {
+				plane = v4fNeg( v4fLoadU( planes->plane ) );
+			}
+			else {
+				plane = v4fLoadU( planes->plane );
+			}
+			planeDist = v4fW( plane );
+			if ( tw->type == TT_CAPSULE ) {
+				// adjust the plane distance apropriately for radius
+				planeDist = v4fAdd( planeDist, s4fInit( tw->sphere.radius ) );
+
+				// find the closest point on the capsule to the plane
+				t = v4fDotProduct( plane, vec3aLoad( tw->sphere.offset ) );
+				if ( v4fAny( v4fGt( t, v4fZero ) ) ) {
+					startp = v4fSub( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+					startp = v4fSub( vec3aLoad( tw->end ), vec3aLoad( tw->sphere.offset ) );
+				}
+				else {
+					startp = v4fAdd( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+					startp = v4fAdd( vec3aLoad( tw->end ), vec3aLoad( tw->sphere.offset ) );
+				}
+			}
+			else {
+				// NOTE: this works even though the plane might be flipped because the bbox is centered
+				offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ] ), plane);
+				planeDist = v4fAdd( planeDist, v4fAbs( offset ) );
+				startp = vec3aLoad( tw->start );
+				endp = vec3aLoad( tw->end );
+			}
+
+			if (!CM_CheckFacetPlane_sse(plane, planeDist, startp, endp,
+						    &enterFrac, &leaveFrac, &hit)) {
+				break;
+			}
+			if (hit) {
+				hitnum = j;
+				bestplane = plane;
+				planeDist = bestplaneDist;
+			}
+		}
+		if (j < facet->numBorders) continue;
+		//never clip against the back side
+		if (hitnum == facet->numBorders - 1) continue;
+
+		if (enterFrac < leaveFrac && enterFrac >= 0) {
+			if (enterFrac < tw->trace.fraction) {
+				if (enterFrac < 0) {
+					enterFrac = 0;
+				}
+#ifndef BSPC
+				if (!cv) {
+					cv = Cvar_Get( "r_debugSurfaceUpdate", "1", 0 );
+				}
+				if (cv && cv->integer) {
+					debugPatchCollide = pc;
+					debugFacet = facet;
+				}
+#endif //BSPC
+
+				tw->trace.fraction = enterFrac;
+				vec3Store( tw->trace.plane.normal, bestplane );
+				tw->trace.plane.dist = s4fToFloat( bestplaneDist );
+			}
+		}
+	}
+}
+#endif
 void CM_TraceThroughPatchCollide( traceWork_t *tw, const struct patchCollide_s *pc ) {
 	int i, j, hit, hitnum;
 	float offset, enterFrac, leaveFrac, t;
@@ -1517,6 +2748,91 @@ POSITION TEST
 CM_PositionTestInPatchCollide
 ====================
 */
+#if id386_sse >= 1
+qboolean CM_PositionTestInPatchCollide_sse( traceWork_t *tw,
+					    const struct patchCollide_s *pc ) {
+	int      i, j;
+	s4f      offset;
+	patchPlane_t *planes;
+	facet_t	*facet;
+	v4f      plane;
+	s4f      planeDist, t;
+	v4f      startp;
+
+	if (tw->isPoint) {
+		return qfalse;
+	}
+	//
+	facet = pc->facets;
+	for ( i = 0 ; i < pc->numFacets ; i++, facet++ ) {
+		planes = &pc->planes[ facet->surfacePlane ];
+		plane = v4fLoadU( planes->plane );
+		planeDist = v4fW( plane );
+		if ( tw->type == TT_CAPSULE ) {
+			// adjust the plane distance apropriately for radius
+			planeDist = v4fAdd( planeDist, s4fInit( tw->sphere.radius ) );
+
+			// find the closest point on the capsule to the plane
+			t = v4fDotProduct( plane, vec3aLoad( tw->sphere.offset ) );
+			if ( v4fAny( v4fGt( t, v4fZero ) ) ) {
+				startp = v4fSub( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+			}
+			else {
+				startp = v4fAdd( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset ) );
+			}
+		}
+		else {
+			offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ] ), plane);
+			planeDist = v4fSub( planeDist, offset );
+			startp = vec3aLoad( tw->start );
+		}
+
+		if( v4fAny( v4fGt( v4fDotProduct( plane, startp ), planeDist ) ) ) {
+			continue;
+		}
+
+		for ( j = 0; j < facet->numBorders; j++ ) {
+			planes = &pc->planes[ facet->borderPlanes[j] ];
+			if (facet->borderInward[j]) {
+				plane = v4fNeg( v4fLoadU( planes->plane ) );
+			}
+			else {
+				plane = v4fLoadU( planes->plane );
+			}
+			planeDist = v4fW( plane );
+			if ( tw->type == TT_CAPSULE ) {
+				// adjust the plane distance apropriately for radius
+				planeDist = v4fAdd( planeDist, s4fInit( tw->sphere.radius ) );
+
+				// find the closest point on the capsule to the plane
+				t = v4fDotProduct( plane, vec3aLoad( tw->sphere.offset ) );
+				if ( v4fAny( v4fGt( t, v4fZero ) ) ) {
+					startp = v4fSub( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset) );
+				}
+				else {
+					startp = v4fAdd( vec3aLoad( tw->start ), vec3aLoad( tw->sphere.offset) );
+				}
+			}
+			else {
+				// NOTE: this works even though the plane might be flipped because the bbox is centered
+				offset = v4fDotProduct( vec3aLoad( tw->offsets[ planes->signbits ] ), plane);
+				planeDist = v4fAdd( planeDist, v4fAbs(offset) );
+				startp = vec3aLoad( tw->start );
+			}
+
+			if ( v4fAny( v4fGt( v4fDotProduct( plane, startp ), planeDist ) ) ) {
+				break;
+			}
+		}
+		if (j < facet->numBorders) {
+			continue;
+		}
+		// inside this patch facet
+		return qtrue;
+	}
+	return qfalse;
+}
+#endif
 qboolean CM_PositionTestInPatchCollide( traceWork_t *tw, const struct patchCollide_s *pc ) {
 	int i, j;
 	float offset, t;

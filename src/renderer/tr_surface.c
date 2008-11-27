@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -24,6 +24,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #if idppc_altivec && !defined(MACOS_X)
 #include <altivec.h>
+#endif
+#if id386_sse >= 1
+#include "../qcommon/qsse.h"
 #endif
 
 /*
@@ -596,6 +599,25 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
             components[-2] = z;
         } while(count--);
     }
+#elif id386_sse >= 1
+    if (com_sse->integer >= 1) {
+	while (count--) {
+	    v4f normalVec = v4fLoadU((float *)normals);
+	    s4f dotProd = v4fDotProduct(normalVec, normalVec);
+	    s4f factor = v4fInverseRoot(dotProd);
+
+	    normalVec = v4fScale(factor, normalVec);
+	    v4fStoreU((float *)normals, normalVec);
+
+	    normals++;
+	}
+    }
+    else {
+    	while (count--) {
+	    VectorNormalizeFast(normals[0]);
+	    normals++;
+	}
+    }
 #else // No assembly version for this architecture, or C_ONLY defined
 	// given the input, it's safe to call VectorNormalizeFast
     while (count--) {
@@ -689,6 +711,118 @@ static void LerpMeshVertexes_altivec(md3Surface_t *surf, float backlerp)
 			vec_ste(newNormalsFloatVec,0,outXyz);
 			vec_ste(newNormalsFloatVec,4,outXyz);
 			vec_ste(newNormalsFloatVec,8,outXyz);
+		}
+	} else {
+		//
+		// interpolate and copy the vertex and normal
+		//
+		oldXyz = (short *)((byte *)surf + surf->ofsXyzNormals)
+			+ (backEnd.currentEntity->e.oldframe * surf->numVerts * 4);
+		oldNormals = oldXyz + 3;
+
+		oldXyzScale = MD3_XYZ_SCALE * backlerp;
+		oldNormalScale = backlerp;
+
+		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
+			oldXyz += 4, newXyz += 4, oldNormals += 4, newNormals += 4,
+			outXyz += 4, outNormal += 4) 
+		{
+			vec3_t uncompressedOldNormal, uncompressedNewNormal;
+
+			// interpolate the xyz
+			outXyz[0] = oldXyz[0] * oldXyzScale + newXyz[0] * newXyzScale;
+			outXyz[1] = oldXyz[1] * oldXyzScale + newXyz[1] * newXyzScale;
+			outXyz[2] = oldXyz[2] * oldXyzScale + newXyz[2] * newXyzScale;
+
+			// FIXME: interpolate lat/long instead?
+			lat = ( newNormals[0] >> 8 ) & 0xff;
+			lng = ( newNormals[0] & 0xff );
+			lat *= 4;
+			lng *= 4;
+			uncompressedNewNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
+			uncompressedNewNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
+			uncompressedNewNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+
+			lat = ( oldNormals[0] >> 8 ) & 0xff;
+			lng = ( oldNormals[0] & 0xff );
+			lat *= 4;
+			lng *= 4;
+
+			uncompressedOldNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
+			uncompressedOldNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
+			uncompressedOldNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+
+			outNormal[0] = uncompressedOldNormal[0] * oldNormalScale + uncompressedNewNormal[0] * newNormalScale;
+			outNormal[1] = uncompressedOldNormal[1] * oldNormalScale + uncompressedNewNormal[1] * newNormalScale;
+			outNormal[2] = uncompressedOldNormal[2] * oldNormalScale + uncompressedNewNormal[2] * newNormalScale;
+
+//			VectorNormalize (outNormal);
+		}
+    	VectorArrayNormalize((vec4_t *)tess.normal[tess.numVertexes], numVerts);
+   	}
+}
+#endif
+
+#if id386_sse >= 2
+static void LerpMeshVertexes_sse2(md3Surface_t *surf, float backlerp)
+{
+	short	*oldXyz, *newXyz, *oldNormals, *newNormals;
+	float	*outXyz, *outNormal;
+	float    oldXyzScale;
+	float    newXyzScale;
+	float    oldNormalScale;
+	float    newNormalScale;
+	int	 vertNum;
+	unsigned lat, lng;
+	int	 numVerts;
+
+	outXyz = tess.xyz[tess.numVertexes];
+	outNormal = tess.normal[tess.numVertexes];
+
+	newXyz = (short *)((byte *)surf + surf->ofsXyzNormals)
+		+ (backEnd.currentEntity->e.frame * surf->numVerts * 4);
+	newNormals = newXyz + 3;
+
+	newXyzScale = MD3_XYZ_SCALE * (1.0 - backlerp);
+	newNormalScale = 1.0 - backlerp;
+
+	numVerts = surf->numVerts;
+
+	if ( backlerp == 0 ) {
+		v8s     newNormalsVec;
+		v4i     newNormalsIntVec, dummy;
+		v4f     newNormalsFloatVec;
+		s4f     newXyzScaleVec = s4fInit(newXyzScale);
+		
+		//
+		// just copy the vertexes
+		//
+		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
+			newXyz += 4, newNormals += 4,
+			outXyz += 4, outNormal += 4) 
+		{
+			newNormalsVec = v8sLoadU(newXyz);
+			v8s_to_v4i(newNormalsVec, newNormalsIntVec, dummy);
+			newNormalsFloatVec = v4i_to_v4f(newNormalsIntVec);
+			newNormalsFloatVec = v4fScale(newXyzScaleVec, newNormalsFloatVec);
+			//outXyz[0] = newXyz[0] * newXyzScale;
+			//outXyz[1] = newXyz[1] * newXyzScale;
+			//outXyz[2] = newXyz[2] * newXyzScale;
+
+			lat = ( newNormals[0] >> 8 ) & 0xff;
+			lng = ( newNormals[0] & 0xff );
+			lat *= (FUNCTABLE_SIZE/256);
+			lng *= (FUNCTABLE_SIZE/256);
+
+			// decode X as cos( lat ) * sin( long )
+			// decode Y as sin( lat ) * sin( long )
+			// decode Z as cos( long )
+
+			outNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
+			outNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
+			outNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+			
+			v4fStoreA(outXyz, newNormalsFloatVec);
 		}
 	} else {
 		//
@@ -839,25 +973,14 @@ static void LerpMeshVertexes_scalar(md3Surface_t *surf, float backlerp)
    	}
 }
 
-static void LerpMeshVertexes(md3Surface_t *surf, float backlerp)
-{
-#if idppc_altivec
-	if (com_altivec->integer) {
-		// must be in a seperate function or G3 systems will crash.
-		LerpMeshVertexes_altivec( surf, backlerp );
-		return;
-	}
-#endif // idppc_altivec
-	LerpMeshVertexes_scalar( surf, backlerp );
-}
-
 
 /*
 =============
 RB_SurfaceMesh
 =============
 */
-void RB_SurfaceMesh(md3Surface_t *surface) {
+#if idppc_altivec
+static void RB_SurfaceMesh_altivec(md3Surface_t *surface) {
 	int				j;
 	float			backlerp;
 	int				*triangles;
@@ -874,7 +997,92 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 	RB_CHECKOVERFLOW( surface->numVerts, surface->numTriangles*3 );
 
-	LerpMeshVertexes (surface, backlerp);
+	LerpMeshVertexes_altivec (surface, backlerp);
+
+	triangles = (int *) ((byte *)surface + surface->ofsTriangles);
+	indexes = surface->numTriangles * 3;
+	Bob = tess.numIndexes;
+	Doug = tess.numVertexes;
+	for (j = 0 ; j < indexes ; j++) {
+		tess.indexes[Bob + j] = Doug + triangles[j];
+	}
+	tess.numIndexes += indexes;
+
+	texCoords = (float *) ((byte *)surface + surface->ofsSt);
+
+	numVerts = surface->numVerts;
+	for ( j = 0; j < numVerts; j++ ) {
+		tess.texCoords[Doug + j][0][0] = texCoords[j*2+0];
+		tess.texCoords[Doug + j][0][1] = texCoords[j*2+1];
+		// FIXME: fill in lightmapST for completeness?
+	}
+
+	tess.numVertexes += surface->numVerts;
+
+}
+#endif
+
+#if id386_sse >= 2
+static void RB_SurfaceMesh_sse2(md3Surface_t *surface) {
+	int				j;
+	float			backlerp;
+	unsigned			*triangles;
+	float			*texCoords;
+	int				indexes;
+	int				Bob, Doug;
+	int				numVerts;
+
+	if (  backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame ) {
+		backlerp = 0;
+	} else  {
+		backlerp = backEnd.currentEntity->e.backlerp;
+	}
+
+	RB_CHECKOVERFLOW( surface->numVerts, surface->numTriangles*3 );
+
+	LerpMeshVertexes_sse2 (surface, backlerp);
+
+	triangles = (unsigned *) ((byte *)surface + surface->ofsTriangles);
+	indexes = surface->numTriangles * 3;
+	Bob = tess.numIndexes;
+	Doug = tess.numVertexes;
+	
+	CopyArrayAndAddConstant_sse2(&tess.indexes[Bob], triangles,
+				     Doug, indexes);
+	tess.numIndexes += indexes;
+
+	texCoords = (float *) ((byte *)surface + surface->ofsSt);
+
+	numVerts = surface->numVerts;
+	for ( j = 0; j < numVerts; j++ ) {
+		tess.texCoords[Doug + j][0][0] = texCoords[j*2+0];
+		tess.texCoords[Doug + j][0][1] = texCoords[j*2+1];
+		// FIXME: fill in lightmapST for completeness?
+	}
+
+	tess.numVertexes += surface->numVerts;
+
+}
+#endif
+
+void RB_SurfaceMesh_scalar(md3Surface_t *surface) {
+	int				j;
+	float			backlerp;
+	int				*triangles;
+	float			*texCoords;
+	int				indexes;
+	int				Bob, Doug;
+	int				numVerts;
+
+	if (  backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame ) {
+		backlerp = 0;
+	} else  {
+		backlerp = backEnd.currentEntity->e.backlerp;
+	}
+
+	RB_CHECKOVERFLOW( surface->numVerts, surface->numTriangles*3 );
+
+	LerpMeshVertexes_scalar (surface, backlerp);
 
 	triangles = (int *) ((byte *)surface + surface->ofsTriangles);
 	indexes = surface->numTriangles * 3;
@@ -898,13 +1106,87 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 }
 
+void RB_SurfaceMesh(md3Surface_t *surface) {
+#if idppc_altivec
+  if (com_altivec->integer) {
+    RB_SurfaceMesh_altivec( surface );
+    return;
+  }
+#endif // idppc_altivec
+#if id386_sse >= 2
+  if (com_sse->integer >= 2) {
+    RB_SurfaceMesh_sse2( surface );
+    return;
+  }
+#endif // id386_sse
+  RB_SurfaceMesh_scalar( surface );
+}
+
 
 /*
 ==============
 RB_SurfaceFace
 ==============
 */
-void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
+#if id386_sse >= 2
+static void RB_SurfaceFace_sse2( srfSurfaceFace_t *surf ) {
+	int		 i;
+	unsigned	*indices, *tessIndexes;
+	float		*v;
+	int		 ndx;
+	int		 Bob;
+	v4i              Mask1, Mask2, dataVec, nextVec;
+	int		 numPoints;
+	int		 dlightBits;
+	
+	RB_CHECKOVERFLOW( surf->numPoints, surf->numIndices );
+	
+	dlightBits = surf->dlightBits[backEnd.smpFrame];
+	tess.dlightBits |= dlightBits;
+	
+	indices = ( unsigned * ) ( ( ( char  * ) surf ) + surf->ofsIndices );
+	
+	Bob = tess.numVertexes;
+	tessIndexes = tess.indexes + tess.numIndexes;
+	
+	CopyArrayAndAddConstant_sse2(tessIndexes, indices, Bob, surf->numIndices);
+	tess.numIndexes += surf->numIndices;
+	
+	v = surf->points[0];
+	
+	ndx = tess.numVertexes;
+	
+	numPoints = surf->numPoints;
+	
+	if ( tess.shader->needsNormal ) {
+		v4i normalVec = v4iLoadU((int *)surf->plane.normal);
+		for ( i = 0, ndx = tess.numVertexes; i < numPoints; i++, ndx++ ) {
+			v4iStoreA((int *)&(tess.normal[ndx]), normalVec);
+		}
+	}
+	
+	Mask1 = v4iInit(0, 0, 0, -1);
+	Mask2 = v4iInit(-1, -1, -1, 0);
+	for ( i = 0, v = surf->points[0], ndx = tess.numVertexes; i < numPoints; i++, v += VERTEXSIZE, ndx++ ) {
+		dataVec = v4iLoadU((int *)v);
+		nextVec = v4iLoadU((int *)(v + 4));
+		
+		v4iStoreA((int *)&(tess.xyz[ndx]), dataVec);
+		dataVec = v4iOr(v4iAnd(Mask1, dataVec), v4iAnd(Mask2, nextVec));
+		dataVec = _mm_shuffle_epi32(dataVec, 0x93);
+		v4iStoreA((int *)&(tess.texCoords[ndx][0][0]), dataVec);
+		
+		nextVec = _mm_shuffle_epi32(nextVec, 0xff);
+		* ( unsigned int * ) &tess.vertexColors[ndx] = _mm_cvtsi128_si32(nextVec);
+		tess.vertexDlightBits[ndx] = dlightBits;
+	}
+	
+	
+	tess.numVertexes += surf->numPoints;
+}
+#endif
+
+static ID_INLINE void RB_SurfaceFace_scalar( srfSurfaceFace_t *surf ) {
 	int			i;
 	unsigned	*indices, *tessIndexes;
 	float		*v;
@@ -954,6 +1236,16 @@ void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 
 
 	tess.numVertexes += surf->numPoints;
+}
+
+void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
+#if id386_sse >= 2
+	if (com_sse->integer >= 2) {
+		RB_SurfaceFace_sse2( surf );
+		return;
+	}
+#endif // id386_sse
+	RB_SurfaceFace_scalar ( surf );
 }
 
 

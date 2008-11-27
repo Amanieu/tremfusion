@@ -2,7 +2,7 @@
 ===========================================================================
 Copyright (C) 2004-2006 Tony J. White
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
 This shrubbot implementation is the original work of Tony J. White.
 
@@ -14,18 +14,18 @@ inactive project shrubet (http://www.etstats.com/shrubet/index.php?ver=2)
 by Ryan Mannion.   However, shrubet was a closed-source project and
 none of it's code has been copied, only it's functionality.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -2761,7 +2761,6 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
   char oldname[ MAX_NAME_LENGTH ];
   char err[ MAX_STRING_CHARS ];
   char userinfo[ MAX_INFO_STRING ];
-  char buf[ MAX_INFO_STRING ];
   char *s;
   gentity_t *victim = NULL;
 
@@ -2804,8 +2803,7 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
           newname,
           ( ent ) ? ent->client->pers.netname : "console" ) );
   // log renames to demo
-  Info_SetValueForKey( buf, "name", newname );
-  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", (int)(victim - g_entities), buf ) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", (int)(victim - g_entities), newname ) );
   return qtrue;
 }
 

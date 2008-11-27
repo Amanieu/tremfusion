@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -211,9 +211,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL4_REGEN                9
 #define LEVEL4_COST                 2
 
-#define FLIER_CLAW_REPEAT           1000
-#define FLIER_CLAW_K_SCALE          1.0f
-
 
 
 /*
@@ -339,12 +336,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HOVEL_SPLASHRADIUS          200
 #define HOVEL_CREEPSIZE             120
 #define HOVEL_VALUE                 ABVM(8)
-
-#define FLIER_SPEED                 1.2f
-#define FLIER_VALUE                 AVM(250)
-#define FLIER_HEALTH                AHM(125)
-#define FLIER_REGEN                 3
-#define FLIER_COST                  0
 
 
 

@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -786,7 +786,6 @@ typedef struct {
 
 void		Com_QueueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 int			Com_EventLoop( void );
-sysEvent_t	Com_GetSystemEvent( void );
 
 char		*CopyString( const char *in );
 void		Info_Print( const char *s );
@@ -829,6 +828,7 @@ extern	cvar_t	*com_maxfpsUnfocused;
 extern	cvar_t	*com_minimized;
 extern	cvar_t	*com_maxfpsMinimized;
 extern	cvar_t	*com_altivec;
+extern	cvar_t	*com_sse;
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
@@ -1086,6 +1086,13 @@ void	Sys_FreeFileList( char **list );
 void	Sys_Sleep(int msec);
 
 qboolean Sys_LowPhysicalMemory( void );
+
+void CON_Clear_f( void );
+
+void Hist_Load( void );
+void Hist_Add( const char *field );
+const char *Hist_Next( const char *field );
+const char *Hist_Prev( void );
 
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data
  * Compression book.  The ranks are not actually stored, but implicitly defined

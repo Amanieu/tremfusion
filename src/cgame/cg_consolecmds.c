@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -28,19 +28,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "cg_local.h"
 
 
-
-void CG_TargetCommand_f( void )
-{
-  int   targetNum;
-  char  test[ 4 ];
-
-  targetNum = CG_CrosshairPlayer( );
-  if( !targetNum )
-    return;
-
-  trap_Argv( 1, test, 4 );
-  trap_SendConsoleCommand( va( "gc %i %i", targetNum, atoi( test ) ) );
-}
 
 /*
 =================
@@ -209,14 +196,8 @@ static void CG_SquadMark_f( void )
   cent->pe.squadMarked = !cent->pe.squadMarked;
 }
 
-static void CG_UIMenu_f( void )
-{
-  trap_SendConsoleCommand( va( "menu %s\n", CG_Argv( 1 ) ) );
-}
-
 static consoleCommand_t commands[ ] =
 {
-  { "ui_menu", CG_UIMenu_f },
   { "testgun", CG_TestGun_f },
   { "testmodel", CG_TestModel_f },
   { "nextframe", CG_TestModelNextFrame_f },
@@ -235,7 +216,6 @@ static consoleCommand_t commands[ ] =
   { "weapon", CG_Weapon_f },
   { "tell_target", CG_TellTarget_f },
   { "tell_attacker", CG_TellAttacker_f },
-  { "tcmd", CG_TargetCommand_f },
   { "testPS", CG_TestPS_f },
   { "destroyTestPS", CG_DestroyTestPS_f },
   { "testTS", CG_TestTS_f },

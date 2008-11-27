@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -67,3 +67,22 @@ void	ChopWindingInPlace (winding_t **w, vec3_t normal, vec_t dist, vec_t epsilon
 // frees the original if clipped
 
 void pw(winding_t *w);
+
+#if id386_sse >= 1
+vec_t	WindingArea_sse (winding_t *w);
+void	WindingCenter_sse (winding_t *w, vec3a_t center);
+void	ClipWindingEpsilon_sse (winding_t *in, v4f plane, vec_t epsilon,
+				winding_t **front, winding_t **back);
+winding_t	*ChopWinding_sse (winding_t *in, v4f plane);
+winding_t	*ReverseWinding_sse (winding_t *w);
+winding_t	*BaseWindingForPlane_sse (v4f plane);
+void	CheckWinding_sse (winding_t *w);
+void	WindingPlane_sse (winding_t *w, vec3a_t normal, vec_t *dist);
+void	RemoveColinearPoints_sse (winding_t *w);
+int	WindingOnPlaneSide_sse (winding_t *w, v4f plane);
+void	WindingBounds_sse (winding_t *w, vec3a_t mins, vec3a_t maxs);
+
+void	AddWindingToConvexHull_sse( winding_t *w, winding_t **hull, v4f normal );
+
+void	ChopWindingInPlace_sse (winding_t **w, v4f plane, vec_t epsilon);
+#endif

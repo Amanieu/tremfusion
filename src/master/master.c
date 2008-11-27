@@ -1,7 +1,7 @@
 /*
 	master.c
 
-	A master server for Tremulous
+	A master server for Tremfusion
 
 	Copyright (C) 2002-2005  Mathieu Olivier
 

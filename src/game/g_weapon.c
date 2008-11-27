@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -1475,24 +1475,6 @@ void FireWeapon3( gentity_t *ent )
       slowBlobFire( ent );
       break;
 
-    case WP_AFLIER:
-      if( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_FLIER )
-      {
-        ent->client->pers.classSelection = PCL_ALIEN_FLIER_FLY;
-        ent->client->ps.stats[ STAT_CLASS ] = PCL_ALIEN_FLIER_FLY;
-        //G_Printf( "going to flying mode for client %d\n", ent - g_entities );
-      }
-      else if( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_FLIER_FLY )
-      {
-        ent->client->pers.classSelection = PCL_ALIEN_FLIER;
-        ent->client->ps.stats[ STAT_CLASS ] = PCL_ALIEN_FLIER;
-        //G_Printf( "going to walking mode for client %d\n", ent - g_entities );
-      }
-      else
-        G_Error( "Class %s tried to enter flying mode!\n", 
-            BG_Class( ent->client->ps.stats[ STAT_CLASS ] )->name );
-      break;
-
     default:
       break;
   }
@@ -1526,11 +1508,6 @@ void FireWeapon2( gentity_t *ent )
 
     case WP_LUCIFER_CANNON:
       LCChargeFire( ent, qtrue );
-      break;
-
-    case WP_AFLIER:
-      VectorMA( ent->client->ps.velocity, 10.f, forward, 
-          ent->client->ps.velocity );
       break;
 
     case WP_ABUILD:

@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -1488,9 +1488,6 @@ void G_DemoSetClient( void )
   s = Info_ValueForKey( buffer, "name" );
   if( *s )
     Q_strncpyz( client->pers.netname, s, sizeof( client->pers.netname ) );
-  s = Info_ValueForKey( buffer, "ip" );
-  if( *s )
-    Q_strncpyz( client->pers.ip, s, sizeof( client->pers.ip ) );
   s = Info_ValueForKey( buffer, "team" );
   if( *s )
     client->pers.teamSelection = atoi( s );
@@ -2399,20 +2396,17 @@ void CheckDemo( void )
   // Don't do anything if no change
   if ( g_demoState.integer == level.demoState )
     return;
+  level.demoState = g_demoState.integer;
 
   // log all connected clients
   if ( g_demoState.integer == DS_RECORDING )
   {
-    char buffer[ MAX_INFO_STRING ] = "";
     for ( i = 0; i < level.maxclients; i++ )
     {
       if ( level.clients[ i ].pers.connected == CON_CONNECTED )
-      {
-        Info_SetValueForKey( buffer, "name", level.clients[ i ].pers.netname );
-        Info_SetValueForKey( buffer, "ip", level.clients[ i ].pers.ip );
-        Info_SetValueForKey( buffer, "team", va( "%d", level.clients[ i ].pers.teamSelection ) );
-        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, buffer ) );
-      }
+        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", i,
+                       level.clients[ i ].pers.netname,
+                       level.clients[ i ].pers.teamSelection ) );
     }
   }
 
@@ -2426,7 +2420,6 @@ void CheckDemo( void )
         G_ChangeTeam( g_entities + i, TEAM_NONE );
     }
   }
-  level.demoState = g_demoState.integer;
 }
 
 /*

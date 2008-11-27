@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -325,7 +325,10 @@ static void Cmd_ExecFile( char *f )
 	Cbuf_InsertText (f);
 }
 void Cmd_Exec_f( void ) {
-	char	*f;
+	union {
+		char	*c;
+		void	*v;
+	} f;
 	int		len;
 	char	filename[MAX_QPATH];
 	fileHandle_t h;
@@ -336,28 +339,28 @@ void Cmd_Exec_f( void ) {
 		return;
 	}
 
-	Com_Printf ("execing %s\n",Cmd_Argv(1));
+	Com_Printf ("execing %s\n", Cmd_Argv(1));
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" ); 
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 
 	len = FS_SV_FOpenFileRead(filename, &h);
 	if (h)
 	{
 		success = qtrue;
-		f = Hunk_AllocateTempMemory(len + 1);
-		FS_Read(f, len, h);
-		f[len] = 0;
+		f.v = Hunk_AllocateTempMemory(len + 1);
+		FS_Read(f.v, len, h);
+		f.c[len] = 0;
 		FS_FCloseFile(h);
-		Cmd_ExecFile(f);
-		Hunk_FreeTempMemory(f);
+		Cmd_ExecFile(f.c);
+		Hunk_FreeTempMemory(f.v);
 	}
 
-	FS_ReadFile( filename, (void **)&f);
-	if (f) {
+	FS_ReadFile( filename, &f.v);
+	if (f.c) {
 		success = qtrue;
-		Cmd_ExecFile(f);
-		FS_FreeFile (f);
+		Cmd_ExecFile(f.c);
+		FS_FreeFile (f.v);
 	}
 
 	if (!success)
@@ -685,11 +688,7 @@ Just prints the rest of the line to the console
 */
 void Cmd_Echo_f (void)
 {
-	int		i;
-	
-	for (i=1 ; i<Cmd_Argc() ; i++)
-		Com_Printf ("%s ",Cmd_Argv(i));
-	Com_Printf ("\n");
+	Com_Printf ("%s\n", Cmd_Args());
 }
 
 
@@ -941,15 +940,19 @@ void Cmd_Alias_f(void)
 		for (i = 2; i < Cmd_Argc(); i++)
 			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
 
+		// Crude protection from infinite loops
+		if (!strcmp(Cmd_Argv(2), name))
+		{
+			Com_Printf("Can't make an alias to itself\n");
+			return;
+		}
+
 		// Create/update an alias
 		if (!alias)
 		{
-			// CopyString is not used because it can't be unallocated
 			alias = S_Malloc(sizeof(cmd_alias_t));
-			alias->name = S_Malloc(strlen(name) + 1);
-			strcpy(alias->name, name);
-			alias->exec = S_Malloc(strlen(exec) + 1);
-			strcpy(alias->exec, exec);
+			alias->name = CopyString(name);
+			alias->exec = CopyString(exec);
 			alias->next = cmd_aliases;
 			cmd_aliases = alias;
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
@@ -958,8 +961,7 @@ void Cmd_Alias_f(void)
 		{
 			// Reallocate the exec string
 			Z_Free(alias->exec);
-			alias->exec = S_Malloc(strlen(exec) + 1);
-			strcpy(alias->exec, exec);
+			alias->exec = CopyString(exec);
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}

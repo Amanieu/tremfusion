@@ -2,20 +2,20 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Quake III Arena source code.
+This file is part of Tremfusion.
 
-Quake III Arena source code is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Quake III Arena source code is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Quake III Arena source code; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -57,7 +57,10 @@ void R_LoadJPG( const char *filename, unsigned char **pic, int *width, int *heig
   unsigned pixelcount, memcount;
   unsigned char *out;
   int len;
-  byte	*fbuffer;
+	union {
+		byte *b;
+		void *v;
+	} fbuffer;
   byte  *buf;
 
   /* In this example we want to open the input file before doing anything else,
@@ -66,8 +69,8 @@ void R_LoadJPG( const char *filename, unsigned char **pic, int *width, int *heig
    * requires it in order to read binary files.
    */
 
-  len = ri.FS_ReadFile ( ( char * ) filename, (void **)&fbuffer);
-  if (!fbuffer || len < 0) {
+  len = ri.FS_ReadFile ( ( char * ) filename, &fbuffer.v);
+  if (!fbuffer.b || len < 0) {
 	return;
   }
 
@@ -85,7 +88,7 @@ void R_LoadJPG( const char *filename, unsigned char **pic, int *width, int *heig
 
   /* Step 2: specify data source (eg, a file) */
 
-  jpeg_mem_src(&cinfo, fbuffer, len);
+  jpeg_mem_src(&cinfo, fbuffer.b, len);
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -203,7 +206,7 @@ void R_LoadJPG( const char *filename, unsigned char **pic, int *width, int *heig
    * so as to simplify the setjmp error logic above.  (Actually, I don't
    * think that jpeg_destroy can do an error exit, but why assume anything...)
    */
-  ri.FS_FreeFile (fbuffer);
+  ri.FS_FreeFile (fbuffer.v);
 
   /* At this point you may want to check to see whether any corrupt-data
    * warnings occurred (test whether jerr.pub.num_warnings is nonzero).

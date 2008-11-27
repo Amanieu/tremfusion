@@ -1,5 +1,5 @@
 #
-# Tremulous Makefile
+# Tremfusion Makefile
 #
 # GNU Make required
 #
@@ -49,16 +49,19 @@ endif
 -include Makefile.local
 
 ifndef PLATFORM
-PLATFORM=$(COMPILE_PLATFORM)
+  PLATFORM=$(COMPILE_PLATFORM)
 endif
 export PLATFORM
 
 ifeq ($(COMPILE_ARCH),powerpc)
   COMPILE_ARCH=ppc
 endif
+ifeq ($(COMPILE_ARCH),powerpc64)
+  COMPILE_ARCH=ppc64
+endif
 
 ifndef ARCH
-ARCH=$(COMPILE_ARCH)
+  ARCH=$(COMPILE_ARCH)
 endif
 export ARCH
 
@@ -74,23 +77,31 @@ endif
 export CROSS_COMPILING
 
 ifndef COPYDIR
-COPYDIR="/usr/local/games/tremulous"
+  COPYDIR="/usr/local/games/tremulous"
 endif
 
 ifndef MOUNT_DIR
-MOUNT_DIR=src
+  MOUNT_DIR=src
 endif
 
 ifndef BUILD_DIR
-BUILD_DIR=build
+  BUILD_DIR=build
 endif
 
 ifndef GENERATE_DEPENDENCIES
-GENERATE_DEPENDENCIES=1
+  GENERATE_DEPENDENCIES=1
+endif
+
+ifndef USE_TTY_CLIENT
+  USE_TTY_CLIENT=0
 endif
 
 ifndef USE_OPENAL
-USE_OPENAL=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_OPENAL=0
+  else
+    USE_OPENAL=1
+  endif
 endif
 
 ifndef USE_OPENAL_DLOPEN
@@ -102,7 +113,7 @@ ifndef USE_OPENAL_DLOPEN
 endif
 
 ifndef USE_CURL
-USE_CURL=1
+  USE_CURL=1
 endif
 
 ifndef USE_CURL_DLOPEN
@@ -114,48 +125,69 @@ ifndef USE_CURL_DLOPEN
 endif
 
 ifndef USE_CODEC_VORBIS
-USE_CODEC_VORBIS=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_CODEC_VORBIS=0
+  else
+    USE_CODEC_VORBIS=1
+  endif
+endif
+
+ifndef USE_CURSES
+  USE_CURSES=1
 endif
 
 ifndef USE_MUMBLE
-USE_MUMBLE=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_MUMBLE=0
+  else
+    USE_MUMBLE=1
+  endif
 endif
 
 ifndef USE_VOIP
-USE_VOIP=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_VOIP=0
+  else
+    USE_VOIP=1
+  endif
 endif
 
 ifndef USE_INTERNAL_SPEEX
-USE_INTERNAL_SPEEX=1
+  USE_INTERNAL_SPEEX=1
 endif
 
 ifndef USE_INTERNAL_ZLIB
-USE_INTERNAL_ZLIB=1
-endif
-
-ifndef USE_TTY_CLIENT
-USE_TTY_CLIENT=0
+  USE_INTERNAL_ZLIB=1
 endif
 
 ifndef USE_LOCAL_HEADERS
-USE_LOCAL_HEADERS=1
+  USE_LOCAL_HEADERS=1
 endif
 
 ifndef BUILD_MASTER_SERVER
-BUILD_MASTER_SERVER=0
+  BUILD_MASTER_SERVER=0
 endif
 
 # Disable this on release builds
 ifndef USE_SCM_VERSION
-USE_SCM_VERSION=1
+  USE_SCM_VERSION=1
 endif
 
 ifndef USE_FREETYPE
-USE_FREETYPE=1
+  ifeq ($(USE_TTY_CLIENT),1)
+    USE_FREETYPE=0
+  else
+    USE_FREETYPE=1
+  endif
 endif
 
 ifndef USE_OLD_HOMEPATH
-USE_OLD_HOMEPATH=1
+  USE_OLD_HOMEPATH=1
+endif
+
+# Requires GCC >= 4.3
+ifndef USE_SSE
+USE_SSE=2
 endif
 
 #############################################################################
@@ -184,6 +216,7 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
 FTDIR=$(MOUNT_DIR)/freetype2
+PDCDIR=$(MOUNT_DIR)/pdcurses
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -263,14 +296,14 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
-    -pipe
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe
 
   ifneq ($(USE_TTY_CLIENT),1)
     BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
   else
     BASE_CFLAGS += -DUSE_TTY_CLIENT
   endif
+  BASE_CFLAGS += $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
@@ -304,6 +337,14 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
+  ifeq ($(USE_SSE),2)
+    BASE_CFLAGS += -msse2 -fno-tree-vectorize
+  else
+    ifeq ($(USE_SSE),1)
+      BASE_CFLAGS += -msse -fno-tree-vectorize
+    endif
+  endif
+
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -314,14 +355,19 @@ ifeq ($(PLATFORM),linux)
     HAVE_VM_COMPILED = true
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
+    OPTIMIZE = -O3 -march=i686 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
   else
+  USE_SSE=0
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -maltivec
-    HAVE_VM_COMPILED=false
+    HAVE_VM_COMPILED=true
+  endif
+  ifeq ($(ARCH),ppc64)
+    BASE_CFLAGS += -maltivec
+    HAVE_VM_COMPILED=true
   endif
   endif
   endif
@@ -357,12 +403,13 @@ ifeq ($(PLATFORM),linux)
     CLIENT_LIBS += $(OGG_LIBS)
   endif
 
-  ifeq ($(USE_MUMBLE),1)
-    CLIENT_LIBS += -lrt
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
   endif
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(SDLHDIR)/include
+  ifeq ($(USE_MUMBLE),1)
+    CLIENT_LIBS += -lrt
   endif
 
   ifeq ($(USE_FREETYPE),1)
@@ -378,7 +425,7 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
+  DEBUG_CFLAGS = $(BASE_CFLAGS) -ggdb3 -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
@@ -390,13 +437,15 @@ else # ifeq Linux
 ifeq ($(PLATFORM),darwin)
   HAVE_VM_COMPILED=true
   CLIENT_LIBS=
-  OPTIMIZE=
+  OPTIMIZE=-O3
   
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -faltivec
-    OPTIMIZE += -O3
+  endif
+  ifeq ($(ARCH),ppc64)
+    BASE_CFLAGS += -faltivec
   endif
   ifeq ($(ARCH),x86)
     OPTIMIZE += -march=prescott -mfpmath=sse
@@ -452,6 +501,11 @@ ifeq ($(PLATFORM),darwin)
     endif
   endif
 
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
+  endif
+
   BASE_CFLAGS += -D_THREAD_SAFE=1
 
   ifeq ($(USE_LOCAL_HEADERS),1)
@@ -474,7 +528,7 @@ ifeq ($(PLATFORM),darwin)
       LIBOGG=$(B)/libogg.a
       LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
     else
-      CLIENT_LDFLAGS += $(OGG_LIBS)
+      CLIENT_LIBS += $(OGG_LIBS)
     endif
   endif
 
@@ -511,8 +565,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
-    -DUSE_ICON
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON
 
   # In the absence of wspiapi.h, require Windows XP or later
   ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
@@ -547,7 +600,7 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
-  OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
+  OPTIMIZE = -O3 -march=i686 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
 
@@ -561,7 +614,7 @@ ifeq ($(PLATFORM),mingw32)
 
   LIBS = -lws2_32 -lwinmm
   CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
-  CLIENT_LDFLAGS = -mwindows
+  CLIENT_LDFLAGS = 
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -593,6 +646,11 @@ ifeq ($(PLATFORM),mingw32)
     else
       CLIENT_LIBS += $(OGG_LIBS)
     endif
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     LIBS += $(LIBSDIR)/win32/pdcurses.a
+     BASE_CFLAGS += -DUSE_CURSES -I$(PDCDIR)
   endif
 
   ifeq ($(ARCH),x86)
@@ -630,7 +688,7 @@ ifeq ($(PLATFORM),freebsd)
   endif #alpha test
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
@@ -656,7 +714,7 @@ ifeq ($(PLATFORM),freebsd)
   else
   ifeq ($(ARCH),x86)
     RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -mtune=pentiumpro \
-      -march=pentium -fomit-frame-pointer -pipe \
+      -march=pentiumpro -fomit-frame-pointer -pipe \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -funroll-loops -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -699,7 +757,7 @@ ifeq ($(PLATFORM),openbsd)
   ARCH=i386
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
@@ -720,7 +778,7 @@ ifeq ($(PLATFORM),openbsd)
 
   BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 \
-    -march=pentium -fomit-frame-pointer -pipe \
+    -march=pentiumpro -fomit-frame-pointer -pipe \
     -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
     -funroll-loops -fstrength-reduce
   HAVE_VM_COMPILED=false
@@ -764,7 +822,7 @@ ifeq ($(PLATFORM),netbsd)
   SHLIBLDFLAGS=-shared $(LDFLAGS)
   THREAD_LIBS=-lpthread
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
   ifneq ($(ARCH),x86)
     BASE_CFLAGS += -DNO_VM_COMPILED
@@ -828,7 +886,7 @@ ifeq ($(PLATFORM),sunos)
   endif
 
 
-  BASE_CFLAGS = -Wall -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe -DUSE_ICON $(shell sdl-config --cflags)
 
   OPTIMIZE = -O3 -funroll-loops
@@ -840,7 +898,7 @@ ifeq ($(PLATFORM),sunos)
       -funroll-loops #-mv8plus
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
+    OPTIMIZE = -O3 -march=i686 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -955,11 +1013,11 @@ BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
 BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
 ifeq ($(V),1)
-echo_cmd=@:
-Q=
+  echo_cmd=@:
+  Q=
 else
-echo_cmd=@echo
-Q=@
+  echo_cmd=@echo
+  Q=@
 endif
 
 define DO_CC
@@ -1050,25 +1108,25 @@ targets: makedirs
 	@echo "  CC: $(CC)"
 	@echo ""
 	@echo "  CFLAGS:"
-	@for i in $(CFLAGS); \
+	-@for i in $(CFLAGS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  LDFLAGS:"
-	@for i in $(LDFLAGS); \
+	-@for i in $(LDFLAGS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  LIBS:"
-	@for i in $(LIBS); \
+	-@for i in $(LIBS); \
 	do \
 		echo "    $$i"; \
 	done
 	@echo ""
 	@echo "  Output:"
-	@for i in $(TARGETS); \
+	-@for i in $(TARGETS); \
 	do \
 		echo "    $$i"; \
 	done
@@ -1100,7 +1158,7 @@ makedirs:
 # QVM BUILD TOOLS
 #############################################################################
 
-TOOLS_OPTIMIZE = -g -O2 -Wall
+TOOLS_OPTIMIZE = -g -O2 -Wall -fno-strict-aliasing
 TOOLS_CFLAGS = $(TOOLS_OPTIMIZE) \
                -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
                -I$(Q3LCCSRCDIR) \
@@ -1312,6 +1370,7 @@ Q3OBJ = \
   \
   $(B)/client/q_math.o \
   $(B)/client/q_shared.o \
+  $(B)/client/qsse.o \
   \
   $(B)/client/unzip.o \
   $(B)/client/ioapi.o \
@@ -1463,6 +1522,10 @@ Q3OBJ += \
   $(B)/client/zutil.o
 endif
 
+ifeq ($(USE_CURSES),1)
+  Q3OBJ += $(B)/client/con_curses.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1471,7 +1534,10 @@ ifeq ($(HAVE_VM_COMPILED),true)
     Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
   endif
   ifeq ($(ARCH),ppc)
-    Q3OBJ += $(B)/client/vm_ppc.o
+    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
   endif
 endif
 
@@ -1584,6 +1650,7 @@ Q3DOBJ = \
   \
   $(B)/ded/q_math.o \
   $(B)/ded/q_shared.o \
+  $(B)/ded/qsse.o \
   \
   $(B)/ded/unzip.o \
   $(B)/ded/ioapi.o \
@@ -1613,6 +1680,10 @@ Q3DOBJ += \
   $(B)/ded/zutil.o
 endif
 
+ifeq ($(USE_CURSES),1)
+  Q3DOBJ += $(B)/ded/con_curses.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3DOBJ += $(B)/ded/vm_x86.o
@@ -1621,7 +1692,10 @@ ifeq ($(HAVE_VM_COMPILED),true)
     Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
   endif
   ifeq ($(ARCH),ppc)
-    Q3DOBJ += $(B)/ded/vm_ppc.o
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
   endif
 endif
 

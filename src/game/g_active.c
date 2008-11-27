@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -1430,22 +1430,6 @@ void ClientThink_real( gentity_t *ent )
     client->ps.stats[ STAT_STATE ] &= ~SS_POISONED;
 
   client->ps.gravity = g_gravity.value;
-
-  if( client->pers.classSelection == PCL_ALIEN_FLIER_FLY )
-  {
-    vec3_t forward;
-    float scale;
-    AngleVectors( client->ps.viewangles, forward, NULL, NULL );
-    scale = AngleBetween( client->ps.velocity, forward );
-    if( Q_isnan( scale ) )
-      scale = 0.f;
-    scale = 1 - ( scale / 180.f );
-    VectorScale( client->ps.velocity, scale, forward );
-    forward[2] = 0.f;
-    scale = VectorLength( forward ) / 100.f;
-    if( scale > 1.f )
-      client->ps.gravity /= scale;
-  }
 
   if( BG_InventoryContainsUpgrade( UP_MEDKIT, client->ps.stats ) &&
       BG_UpgradeIsActive( UP_MEDKIT, client->ps.stats ) )

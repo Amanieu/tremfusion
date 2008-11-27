@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -67,6 +67,11 @@ cvar_t	*r_fastsky;
 cvar_t	*r_drawSun;
 cvar_t	*r_dynamiclight;
 cvar_t	*r_dlightBacks;
+
+cvar_t	*r_minEntityLight;
+
+cvar_t	*r_specularLighting;
+cvar_t	*r_specularLightingExponent;
 
 cvar_t	*r_lodbias;
 cvar_t	*r_lodscale;
@@ -946,6 +951,9 @@ void R_Register( void )
 	r_stereoEnabled = ri.Cvar_Get( "r_stereoEnabled", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_ignoreFastPath = ri.Cvar_Get( "r_ignoreFastPath", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_greyscale = ri.Cvar_Get("r_greyscale", "0", CVAR_ARCHIVE | CVAR_LATCH);
+	r_specularLighting = ri.Cvar_Get("r_specularLighting", "0", CVAR_ARCHIVE | CVAR_LATCH);
+	r_specularLightingExponent = ri.Cvar_Get("r_specularLightingExponent", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	ri.Cvar_CheckRange( r_specularLightingExponent, 0.0f, 1, qfalse );
 
 	//
 	// temporary latched variables that can only change over a restart
@@ -991,6 +999,9 @@ void R_Register( void )
 	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );
 
 	r_anaglyphMode = ri.Cvar_Get("r_anaglyphMode", "0", CVAR_ARCHIVE);
+
+	r_minEntityLight = ri.Cvar_Get("r_minEntityLight", "0", CVAR_ARCHIVE);
+	ri.Cvar_CheckRange( r_minEntityLight, 0.0f, 1, qfalse );
 
 	//
 	// temporary variables that can change at any time
