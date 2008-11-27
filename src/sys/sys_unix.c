@@ -44,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(const char **path2)
+char *Sys_DefaultHomePath(char **path2)
 {
 	char *p;
 
@@ -66,14 +66,6 @@ char *Sys_DefaultHomePath(const char **path2)
 			Q_strcat( homePath, sizeof( homePath ), "/.tremfusion" );
 #endif
 #endif
-			if( mkdir( homePath, 0777 ) )
-			{
-				if( errno != EEXIST )
-				{
-					Sys_Error( "Unable to create directory \"%s\", error is %s(%d)\n",
-							homePath, strerror( errno ), errno );
-				}
-			}
 		}
 	}
 

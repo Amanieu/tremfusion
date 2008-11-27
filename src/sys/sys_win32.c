@@ -46,7 +46,7 @@ static char homePathOld[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ================
 */
-char *Sys_DefaultHomePath( const char **path2 )
+char *Sys_DefaultHomePath( char **path2 )
 {
 	TCHAR szPath[MAX_PATH];
 	FARPROC qSHGetFolderPath;
@@ -92,26 +92,10 @@ char *Sys_DefaultHomePath( const char **path2 )
 		}
 		Q_strncpyz( homePathOld, szPath, sizeof( homePath ) );
 		Q_strcat( homePathOld, sizeof( homePathOld ), "\\Tremulous" );
-		if( !CreateDirectory( homePathOld, NULL ) )
-		{
-			if( GetLastError() != ERROR_ALREADY_EXISTS )
-			{
-				Com_Printf("Unable to create directory \"%s\"\n", homePathOld );
-				*path2 = NULL;
-			}
-		}
 		*path2 = homePathOld;
 #else
 		*path2 = NULL;
 #endif
-		if( !CreateDirectory( homePath, NULL ) )
-		{
-			if( GetLastError() != ERROR_ALREADY_EXISTS )
-			{
-				Com_Printf("Unable to create directory \"%s\"\n", homePath );
-				return NULL;
-			}
-		}
 		FreeLibrary(shfolder);
 	}
 

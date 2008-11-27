@@ -2803,7 +2803,7 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-	const char *homePath, *extraPath;
+	char *homePath, *extraPath;
 
 	Com_Printf( "----- FS_Startup -----\n" );
 
@@ -2814,8 +2814,12 @@ static void FS_Startup( const char *gameName )
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
 	}
+	FS_CreatePath(homePath);
 	if (!extraPath) {
 		extraPath = "";
+	}
+	if (extraPath[0]) {
+		FS_CreatePath(extraPath);
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
