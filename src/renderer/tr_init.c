@@ -1000,7 +1000,7 @@ void R_Register( void )
 
 	r_anaglyphMode = ri.Cvar_Get("r_anaglyphMode", "0", CVAR_ARCHIVE);
 
-	r_minEntityLight = ri.Cvar_Get("r_minEntityLight", "0", CVAR_ARCHIVE);
+	r_minEntityLight = ri.Cvar_Get("r_minEntityLight", "1", CVAR_ARCHIVE);
 	ri.Cvar_CheckRange( r_minEntityLight, 0.0f, 1, qfalse );
 
 	//
