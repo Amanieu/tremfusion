@@ -614,7 +614,7 @@ ifeq ($(PLATFORM),mingw32)
 
   LIBS = -lws2_32 -lwinmm
   CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
-  CLIENT_LDFLAGS = 
+  CLIENT_LDFLAGS = -mwindows
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)

@@ -648,5 +648,8 @@ void Sys_PlatformInit( void )
 	}
 	else
 		SDL_VIDEODRIVER_externallySet = qfalse;
+
+	// Display a console
+	AllocConsole();
 #endif
 }
