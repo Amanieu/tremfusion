@@ -425,7 +425,7 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  DEBUG_CFLAGS = $(BASE_CFLAGS) -ggdb3 -O0
+  DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
@@ -723,7 +723,7 @@ ifeq ($(PLATFORM),freebsd)
   endif
   endif
 
-  DEBUG_CFLAGS=$(BASE_CFLAGS) -g
+  DEBUG_CFLAGS=$(BASE_CFLAGS) -g -O0
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
@@ -1158,7 +1158,7 @@ makedirs:
 # QVM BUILD TOOLS
 #############################################################################
 
-TOOLS_OPTIMIZE = -g -O2 -Wall -fno-strict-aliasing
+TOOLS_OPTIMIZE = -O2 -Wall -fno-strict-aliasing
 TOOLS_CFLAGS = $(TOOLS_OPTIMIZE) \
                -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
                -I$(Q3LCCSRCDIR) \
