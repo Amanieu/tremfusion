@@ -355,7 +355,7 @@ ifeq ($(PLATFORM),linux)
     HAVE_VM_COMPILED = true
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i686 -fomit-frame-pointer \
+    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -600,7 +600,7 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
-  OPTIMIZE = -O3 -march=i686 -fno-omit-frame-pointer \
+  OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
 
@@ -714,7 +714,7 @@ ifeq ($(PLATFORM),freebsd)
   else
   ifeq ($(ARCH),x86)
     RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -mtune=pentiumpro \
-      -march=pentiumpro -fomit-frame-pointer -pipe \
+      -march=pentium -fomit-frame-pointer -pipe \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -funroll-loops -fstrength-reduce
     HAVE_VM_COMPILED=true
@@ -778,7 +778,7 @@ ifeq ($(PLATFORM),openbsd)
 
   BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 \
-    -march=pentiumpro -fomit-frame-pointer -pipe \
+    -march=pentium -fomit-frame-pointer -pipe \
     -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
     -funroll-loops -fstrength-reduce
   HAVE_VM_COMPILED=false
@@ -898,7 +898,7 @@ ifeq ($(PLATFORM),sunos)
       -funroll-loops #-mv8plus
   else
   ifeq ($(ARCH),x86)
-    OPTIMIZE = -O3 -march=i686 -fomit-frame-pointer \
+    OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
     HAVE_VM_COMPILED=true
