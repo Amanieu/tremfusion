@@ -185,9 +185,8 @@ ifndef USE_OLD_HOMEPATH
   USE_OLD_HOMEPATH=1
 endif
 
-# Requires GCC >= 4.3
 ifndef USE_SSE
-USE_SSE=0
+  USE_SSE=0
 endif
 
 #############################################################################
@@ -337,14 +336,6 @@ ifeq ($(PLATFORM),linux)
     endif
   endif
 
-  ifeq ($(USE_SSE),2)
-    BASE_CFLAGS += -msse2 -fno-tree-vectorize
-  else
-    ifeq ($(USE_SSE),1)
-      BASE_CFLAGS += -msse -fno-tree-vectorize
-    endif
-  endif
-
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -353,6 +344,7 @@ ifeq ($(PLATFORM),linux)
       -fstrength-reduce
     # experimental x86_64 jit compiler! you need GNU as
     HAVE_VM_COMPILED = true
+    USE_SSE=2
   else
   ifeq ($(ARCH),x86)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
@@ -370,6 +362,14 @@ ifeq ($(PLATFORM),linux)
     HAVE_VM_COMPILED=true
   endif
   endif
+  endif
+
+  ifeq ($(USE_SSE),2)
+    BASE_CFLAGS += -msse2 -mfpmath=sse
+  else
+    ifeq ($(USE_SSE),1)
+      BASE_CFLAGS += -msse -mfpmath=sse
+    endif
   endif
 
   ifneq ($(HAVE_VM_COMPILED),true)

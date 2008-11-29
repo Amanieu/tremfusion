@@ -2380,18 +2380,11 @@ static void Com_DetectSSE(void)
 	// Only detect if user hasn't forcibly disabled it.
 #if id386_sse >= 1
 	if (com_sse->integer > 0) {
-		static int      sse = 0;
-		static qboolean detected = qfalse;
-		if (!detected) {
-			sse = ( Sys_GetProcessorFeatures( ) & (CF_SSE | CF_SSE2 ) );
-			detected = qtrue;
-		}
-		
-		if ( com_sse->integer >= 2 && ( sse & CF_SSE2 ) ) {
+		if ( com_sse->integer >= 2 && id386_sse >= 2 ) {
 			Cvar_Set( "com_sse", "2" ); // SSE2 supported
 			InitSSEMode();
 		}
-		else if ( com_sse->integer >= 1 && ( sse & CF_SSE ) ) {
+		else if ( com_sse->integer >= 1 ) {
 			Cvar_Set(" com_sse", "1" ); // SSE1 supported
 			InitSSEMode();
 		} else {
@@ -2569,7 +2562,7 @@ void Com_Init( char *commandLine ) {
 #endif
 	Com_DetectSSE();
 #if id386
-	Com_Printf ("SSE support is %d\n", com_sse->integer);
+	Com_Printf ("SSE support is version %d\n", com_sse->integer);
 #endif
 	
 	Com_Printf ("--- Common Initialization Complete ---\n");
