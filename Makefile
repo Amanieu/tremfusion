@@ -101,12 +101,12 @@ ifndef USE_OPENAL_DLOPEN
   endif
 endif
 
-ifndef USE_GMP_DLOPEN
-USE_GMP_DLOPEN=0
+ifndef USE_CRYPTO
+  USE_CRYPTO=1
 endif
 
-ifndef USE_NETTLE_DLOPEN
-USE_NETTLE_DLOPEN=0
+ifndef USE_INTERNAL_NETTLE
+  USE_INTERNAL_NETTLE=1
 endif
 
 ifndef USE_CURL
@@ -192,6 +192,8 @@ SDLHDIR=$(MOUNT_DIR)/SDL12
 ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
 FTDIR=$(MOUNT_DIR)/freetype2
+NTLDIR=$(MOUNT_DIR)/nettle
+GMPDIR=$(MOUNT_DIR)/gmp
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -271,7 +273,7 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -Wno-pointer-sign -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -pipe
 
   ifneq ($(USE_TTY_CLIENT),1)
@@ -311,14 +313,16 @@ ifeq ($(PLATFORM),linux)
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
-  
-  ifeq ($(USE_NETTLE_DLOPEN),1)
-    BASE_CFLAGS += -DUSE_NETTLE_DLOPEN
-  else
-    USE_GMP_DLOPEN = 0
-  endif
-  ifeq ($(USE_GMP_DLOPEN),1)
-    BASE_CFLAGS += -DUSE_GMP_DLOPEN
+
+  ifeq ($(USE_CRYPTO),1)
+    BASE_CFLAGS += -DUSE_CRYPTO
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(NTLDIR) -I$(GMPDIR)
+    else
+      ifeq ($(USE_INTERNAL_NETTLE),1)
+        BASE_CFLAGS += -I$(NTLDIR)
+      endif
+    endif
   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
@@ -374,10 +378,10 @@ ifeq ($(PLATFORM),linux)
     CLIENT_LDFLAGS += $(OGG_LIBS)
   endif
 
-  ifneq ($(USE_NETTLE_DLOPEN),1)
-    LDFLAGS += -lnettle
-  endif
-  ifneq ($(USE_GMP_DLOPEN),1)
+  ifeq ($(USE_CRYPTO),1)
+    ifneq ($(USE_INTERNAL_NETTLE),1)
+      LDFLAGS += -lnettle
+    endif
     LDFLAGS += -lgmp
   endif
 
@@ -537,7 +541,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
+  BASE_CFLAGS = -Wall -Wno-pointer-sign -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON
 
   # In the absence of wspiapi.h, require Windows XP or later
@@ -573,13 +577,15 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
-  ifeq ($(USE_NETTLE_DLOPEN),1)
-    BASE_CFLAGS += -DUSE_NETTLE_DLOPEN
-  else
-    USE_GMP_DLOPEN = 0
-  endif
-  ifeq ($(USE_GMP_DLOPEN),1)
-    BASE_CFLAGS += -DUSE_GMP_DLOPEN
+  ifeq ($(USE_CRYPTO),1)
+    BASE_CFLAGS += -DUSE_CRYPTO
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(NTLDIR) -I$(GMPDIR)
+    else
+      ifeq ($(USE_INTERNAL_NETTLE),1)
+        BASE_CFLAGS += -I$(NTLDIR)
+      endif
+    endif
   endif
 
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
@@ -629,11 +635,11 @@ ifeq ($(PLATFORM),mingw32)
     endif
   endif
 
-  ifneq ($(USE_NETTLE_DLOPEN),1)
-    LDFLAGS += -lnettle
-  endif
-  ifneq ($(USE_GMP_DLOPEN),1)
-    LDFLAGS += -lgmp
+  ifeq ($(USE_CRYPTO),1)
+    ifneq ($(USE_INTERNAL_NETTLE),1)
+      LDFLAGS += -lnettle
+    endif
+    LDFLAGS += $(LIBSDIR)/win32/libgmp.a
   endif
 
   ifeq ($(ARCH),x86)
@@ -1504,6 +1510,26 @@ Q3OBJ += \
   $(B)/client/zutil.o
 endif
 
+ifeq ($(USE_CRYPTO),1)
+ifeq ($(USE_INTERNAL_NETTLE),1)
+Q3OBJ += \
+  $(B)/client/bignum.o \
+  $(B)/client/bignum-random.o \
+  $(B)/client/buffer-init.o \
+  $(B)/client/nettle-buffer.o \
+  $(B)/client/rsa2sexp.o \
+  $(B)/client/rsa.o \
+  $(B)/client/rsa-decrypt.o \
+  $(B)/client/rsa-encrypt.o \
+  $(B)/client/rsa-keygen.o \
+  $(B)/client/rsa-sign.o \
+  $(B)/client/sexp2bignum.o \
+  $(B)/client/sexp2rsa.o \
+  $(B)/client/sexp.o \
+  $(B)/client/sexp-format.o
+endif
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3OBJ += $(B)/client/vm_x86.o
@@ -1651,6 +1677,26 @@ Q3DOBJ += \
   $(B)/ded/inflate.o \
   $(B)/ded/inftrees.o \
   $(B)/ded/zutil.o
+endif
+
+ifeq ($(USE_CRYPTO),1)
+ifeq ($(USE_INTERNAL_NETTLE),1)
+Q3DOBJ += \
+  $(B)/ded/bignum.o \
+  $(B)/ded/bignum-random.o \
+  $(B)/ded/buffer-init.o \
+  $(B)/ded/nettle-buffer.o \
+  $(B)/ded/rsa2sexp.o \
+  $(B)/ded/rsa.o \
+  $(B)/ded/rsa-decrypt.o \
+  $(B)/ded/rsa-encrypt.o \
+  $(B)/ded/rsa-keygen.o \
+  $(B)/ded/rsa-sign.o \
+  $(B)/ded/sexp2bignum.o \
+  $(B)/ded/sexp2rsa.o \
+  $(B)/ded/sexp.o \
+  $(B)/ded/sexp-format.o
+endif
 endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
@@ -1836,6 +1882,9 @@ $(B)/client/%.o: $(SPEEXDIR)/%.c
 $(B)/client/%.o: $(ZDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(NTLDIR)/nettle/%.c
+	$(DO_CC)
+
 $(B)/client/%.o: $(RDIR)/%.c
 	$(DO_CC)
 
@@ -1865,6 +1914,9 @@ $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(ZDIR)/%.c
+	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(NTLDIR)/nettle/%.c
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.c

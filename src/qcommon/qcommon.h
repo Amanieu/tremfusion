@@ -834,8 +834,6 @@ extern	cvar_t	*com_maxfpsUnfocused;
 extern	cvar_t	*com_minimized;
 extern	cvar_t	*com_maxfpsMinimized;
 extern	cvar_t	*com_altivec;
-extern	cvar_t  *com_gmpLibName;
-extern	cvar_t  *com_nettleLibName;
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;

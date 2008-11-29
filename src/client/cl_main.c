@@ -125,8 +125,10 @@ cvar_t  *cl_consoleFontSize;
 cvar_t  *cl_consoleFontKerning;
 
 
+#ifdef USE_CRYPTO
 struct rsa_public_key public_key;
 struct rsa_private_key private_key;
+#endif
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -3171,12 +3173,13 @@ If not then generate a new keypair
 */
 static void CL_GeneratePKey(void)
 {
+#ifdef USE_CRYPTO
 	int len;
 	fileHandle_t f;
 	void *buf;
 
-	qrsa_public_key_init( &public_key );
-	qrsa_private_key_init( &private_key );
+	rsa_public_key_init( &public_key );
+	rsa_private_key_init( &private_key );
 
 	len = FS_SV_FOpenFileRead( PKEY_FILE, &f );
 	if ( !f || len < 1 )
@@ -3188,7 +3191,7 @@ static void CL_GeneratePKey(void)
 	FS_Read( buf, len, f );
 	FS_FCloseFile( f );
 
-	if ( !qrsa_keypair_from_sexp( &public_key, &private_key, 0 , len, buf ) )
+	if ( !rsa_keypair_from_sexp( &public_key, &private_key, 0 , len, buf ) )
 	{
 		Com_Printf( "Invalid RSA keypair in PKEY, regenerating\n" );
 		Z_Free( buf );
@@ -3196,18 +3199,18 @@ static void CL_GeneratePKey(void)
 	}
 
 	Z_Free( buf );
-	Com_Printf( "PKEY found.\n" );
+	Com_DPrintf( "PKEY found.\n" );
 	return;
 
 new_key:
-	qmpz_set_ui(public_key.e, RSA_PUBLIC_EXPONENT);
-	if ( !qrsa_generate_keypair( &public_key, &private_key, NULL, qnettle_random, NULL, NULL, RSA_KEY_LENGTH, 0 ) )
+	mpz_set_ui(public_key.e, RSA_PUBLIC_EXPONENT);
+	if ( !rsa_generate_keypair( &public_key, &private_key, NULL, qnettle_random, NULL, NULL, RSA_KEY_LENGTH, 0 ) )
 		goto keygen_error;
 
 	struct nettle_buffer key_buffer;
 	int key_buffer_len = 0;
 	qnettle_buffer_init(&key_buffer, &key_buffer_len);
-	if ( !qrsa_keypair_to_sexp( &key_buffer, NULL, &public_key, &private_key ) )
+	if ( !rsa_keypair_to_sexp( &key_buffer, NULL, &public_key, &private_key ) )
 		goto keygen_error;
 
 	f = FS_SV_FOpenFileWrite( PKEY_FILE );
@@ -3215,11 +3218,11 @@ new_key:
 	{
 		Com_Printf( "PKEY could not open %s for write, RSA support will be disabled\n", PKEY_FILE );
 		Cvar_Set( "cl_pubkeyID", "0" );
-		CRYPTO_Shutdown();
+		Crypto_Shutdown();
 		return;
 	}
 	FS_Write( key_buffer.contents, key_buffer.size, f );
-	qnettle_buffer_clear( &key_buffer );
+	nettle_buffer_clear( &key_buffer );
 	FS_FCloseFile( f );
 	Com_Printf( "PKEY generated\n" );
 	return;
@@ -3227,7 +3230,11 @@ new_key:
 keygen_error:
 	Com_Printf( "Error generating RSA keypair, RSA support will be disabled\n" );
 	Cvar_Set( "cl_pubkeyID", "0" );
-	CRYPTO_Shutdown();
+	Crypto_Shutdown();
+#else
+	Com_DPrintf( "RSA support is disabled\n" );
+	return;
+#endif
 } 
 
 /*

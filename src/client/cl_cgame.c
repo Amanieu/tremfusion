@@ -359,9 +359,10 @@ rescan:
 		return qtrue;
 	}
 
+#ifdef USE_CRYPTO
 	if ( cl_pubkeyID->integer && !strcmp( cmd, "pubkey_request" ) ) {
 		char buffer[ MAX_STRING_CHARS ] = "pubkey ";
-		qmpz_get_str( buffer + 7, 16, public_key.n );
+		mpz_get_str( buffer + 7, 16, public_key.n );
 		CL_AddReliableCommand( buffer );
 		return qfalse;
 	}
@@ -370,16 +371,17 @@ rescan:
 		char buffer[ MAX_STRING_CHARS ] = "pubkey_identify ";
 		unsigned int msg_len = MAX_STRING_CHARS - 16;
 		mpz_t message;
-		qmpz_init_set_str( message, Cmd_Argv( 1 ), 16 );
-		if ( qrsa_decrypt( &private_key, &msg_len, (unsigned char *) buffer + 16, message ) )
+		mpz_init_set_str( message, Cmd_Argv( 1 ), 16 );
+		if ( rsa_decrypt( &private_key, &msg_len, (unsigned char *) buffer + 16, message ) )
 		{
-			qnettle_mpz_set_str_256_u( message, msg_len, (unsigned char *) buffer + 16 );
-			qmpz_get_str( buffer + 16, 16, message );
+			nettle_mpz_set_str_256_u( message, msg_len, (unsigned char *) buffer + 16 );
+			mpz_get_str( buffer + 16, 16, message );
 			CL_AddReliableCommand( buffer );
 		}
-		qmpz_clear( message );
+		mpz_clear( message );
 		return qfalse;
 	}
+#endif
 
 	// we may want to put a "connect to other server" command here
 
