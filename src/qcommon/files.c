@@ -2381,6 +2381,12 @@ void FS_Path_f( void ) {
 	searchpath_t	*s;
 	int				i;
 
+	Com_Printf ("fs_homepath: %s\n", fs_homepath->string);
+	Com_Printf ("fs_extrapath: %s\n", fs_extrapath->string);
+	Com_Printf ("fs_basepath: %s\n", fs_basepath->string);
+	Com_Printf ("fs_game: %s\n", fs_gamedirvar->string);
+	Com_Printf ("fs_basegame: %s\n", fs_basegame->string);
+
 	Com_Printf ("Current search path:\n");
 	for (s = fs_searchpaths; s; s = s->next) {
 		if (s->pack) {
@@ -3243,6 +3249,9 @@ void FS_InitFilesystem( void ) {
 	// busted and error out now, rather than getting an unreadable
 	// graphics screen when the font fails to load
 	if ( FS_ReadFile( "default.cfg", NULL ) <= 0 ) {
+		// show the search paths
+		FS_Path_f();
+
 		Com_Error( ERR_FATAL, "Couldn't find game data" );
 	}
 
@@ -3274,6 +3283,9 @@ void FS_Restart( int checksumFeed ) {
 	// busted and error out now, rather than getting an unreadable
 	// graphics screen when the font fails to load
 	if ( FS_ReadFile( "default.cfg", NULL ) <= 0 ) {
+		// show the search paths
+		FS_Path_f();
+
 		// this might happen when connecting to a pure server not using our base pk3
 		if (lastValidBase[0]) {
 			FS_PureServerSetLoadedPaks("", "");
