@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/cm_public.h"
 
+#include "../qcommon/crypto.h"
+
 //Ignore __attribute__ on non-gcc platforms
 #ifndef __GNUC__
 #ifndef __attribute__
@@ -855,6 +857,7 @@ typedef enum {
 	TAG_GENERAL,
 	TAG_BOTLIB,
 	TAG_RENDERER,
+	TAG_CRYPTO,
 	TAG_SMALL,
 	TAG_STATIC
 } memtag_t;

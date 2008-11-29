@@ -2915,6 +2915,41 @@ void Cmd_Damage_f( gentity_t *ent )
             ( nonloc ? DAMAGE_NO_LOCDAMAGE : 0 ), MOD_TARGET_LASER );
 }
 
+static void Cmd_Pubkey_f( gentity_t *ent )
+{
+  char buffer[ RSA_STRING_LENGTH ];
+  if ( trap_Argc() != 2 || ent->client->pers.id[0] )
+    return;
+  trap_Argv( 1, ent->client->pers.id, sizeof( ent->client->pers.id ) );
+  if (!trap_RSA_GenerateMessage( ent->client->pers.id, ent->client->pers.pubkey_msg, buffer ))
+  {
+    // bad public key
+    ent->client->pers.id[0] = '\0';
+    ent->client->pers.pubkey_authenticated = -1;
+    ent->client->pers.pubkey_msg[0] = '\0';
+    return;
+  }
+  trap_SendServerCommand( ent - g_entities, va( "pubkey_decrypt %s", buffer ) );
+}
+
+static void Cmd_Pubkey_Identify_f( gentity_t *ent )
+{
+  char buffer[ RSA_STRING_LENGTH ];
+  char userinfo[ MAX_INFO_STRING ];
+  if ( trap_Argc() != 2 || !ent->client->pers.pubkey_msg[0] )
+    return;
+  trap_Argv( 1, buffer, sizeof( buffer ) );
+  if ( Q_stricmp( buffer, ent->client->pers.pubkey_msg ) )
+    return;
+  ent->client->pers.pubkey_authenticated = 1;
+  ent->client->pers.pubkey_msg[0] = '\0';
+  ent->client->pers.admin = G_admin_admin( ent->client->pers.id );
+  trap_GetUserinfo( ent - g_entities, userinfo, sizeof( userinfo ) );
+  Info_SetValueForKey( userinfo, "name", ent->client->pers.connect_name );
+  trap_SetUserinfo( ent - g_entities, userinfo );
+  ClientUserinfoChanged( ent - g_entities );
+}
+
 /*
 ==================
 G_FloodLimited
@@ -2989,6 +3024,9 @@ commands_t cmds[ ] = {
   // game commands
   { "ptrcverify", 0, Cmd_PTRCVerify_f },
   { "ptrcrestore", 0, Cmd_PTRCRestore_f },
+
+  { "pubkey", CMD_INTERMISSION, Cmd_Pubkey_f },
+  { "pubkey_identify", CMD_INTERMISSION, Cmd_Pubkey_Identify_f },
 
   { "follow", 0, Cmd_Follow_f },
   { "follownext", 0, Cmd_FollowCycle_f },

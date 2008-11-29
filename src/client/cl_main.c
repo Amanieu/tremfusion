@@ -105,6 +105,8 @@ cvar_t	*cl_altTab;
 
 cvar_t  *cl_dlURLOverride;
 
+cvar_t  *cl_pubkeyID;
+
 cvar_t  *cl_demoConfig; 
 cvar_t  *cl_humanConfig; 
 cvar_t  *cl_alienConfig; 
@@ -122,6 +124,11 @@ cvar_t  *cl_consoleFont;
 cvar_t  *cl_consoleFontSize;
 cvar_t  *cl_consoleFontKerning;
 
+
+#ifdef USE_CRYPTO
+struct rsa_public_key public_key;
+struct rsa_private_key private_key;
+#endif
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -3157,6 +3164,80 @@ static void CL_GenerateQKey(void)
 } 
 
 /*
+===============
+CL_GeneratePKey
+
+Check if the PKEY file contains a valid RSA keypair
+If not then generate a new keypair
+===============
+*/
+static void CL_GeneratePKey(void)
+{
+#ifdef USE_CRYPTO
+	int len;
+	fileHandle_t f;
+	void *buf;
+
+	rsa_public_key_init( &public_key );
+	rsa_private_key_init( &private_key );
+
+	len = FS_SV_FOpenFileRead( PKEY_FILE, &f );
+	if ( !f || len < 1 )
+	{
+		Com_Printf( "PKEY file not found, regenerating\n" );
+		goto new_key;
+	}
+	buf = Z_TagMalloc( len, TAG_CRYPTO );
+	FS_Read( buf, len, f );
+	FS_FCloseFile( f );
+
+	if ( !rsa_keypair_from_sexp( &public_key, &private_key, 0 , len, buf ) )
+	{
+		Com_Printf( "Invalid RSA keypair in PKEY, regenerating\n" );
+		Z_Free( buf );
+		goto new_key;
+	}
+
+	Z_Free( buf );
+	Com_DPrintf( "PKEY found.\n" );
+	return;
+
+new_key:
+	mpz_set_ui(public_key.e, RSA_PUBLIC_EXPONENT);
+	if ( !rsa_generate_keypair( &public_key, &private_key, NULL, qnettle_random, NULL, NULL, RSA_KEY_LENGTH, 0 ) )
+		goto keygen_error;
+
+	struct nettle_buffer key_buffer;
+	int key_buffer_len = 0;
+	qnettle_buffer_init(&key_buffer, &key_buffer_len);
+	if ( !rsa_keypair_to_sexp( &key_buffer, NULL, &public_key, &private_key ) )
+		goto keygen_error;
+
+	f = FS_SV_FOpenFileWrite( PKEY_FILE );
+	if( !f )
+	{
+		Com_Printf( "PKEY could not open %s for write, RSA support will be disabled\n", PKEY_FILE );
+		Cvar_Set( "cl_pubkeyID", "0" );
+		Crypto_Shutdown();
+		return;
+	}
+	FS_Write( key_buffer.contents, key_buffer.size, f );
+	nettle_buffer_clear( &key_buffer );
+	FS_FCloseFile( f );
+	Com_Printf( "PKEY generated\n" );
+	return;
+
+keygen_error:
+	Com_Printf( "Error generating RSA keypair, RSA support will be disabled\n" );
+	Cvar_Set( "cl_pubkeyID", "0" );
+	Crypto_Shutdown();
+#else
+	Com_DPrintf( "RSA support is disabled\n" );
+	return;
+#endif
+} 
+
+/*
 ====================
 CL_Init
 ====================
@@ -3257,6 +3338,8 @@ void CL_Init( void ) {
 	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
 	cl_dlURLOverride = Cvar_Get ("cl_dlURLOverride", "", CVAR_ARCHIVE);
+
+	cl_pubkeyID = Cvar_Get ("cl_pubkeyID", "1", CVAR_ARCHIVE | CVAR_USERINFO);
 
 	cl_demoConfig = Cvar_Get ("cl_demoConfig", "", CVAR_ARCHIVE);
 	cl_humanConfig = Cvar_Get ("cl_humanConfig", "", CVAR_ARCHIVE);
@@ -3378,7 +3461,9 @@ void CL_Init( void ) {
 
 	Cvar_Set( "cl_running", "1" );
 
-	CL_GenerateQKey();
+	CL_GenerateQKey();	
+	if (cl_pubkeyID->integer)
+		CL_GeneratePKey();
 	Cvar_Get( "cl_guid", "", CVAR_USERINFO | CVAR_ROM );
 	CL_UpdateGUID( NULL, 0 );
 

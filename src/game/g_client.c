@@ -1082,8 +1082,8 @@ void ClientUserinfoChanged( int clientNum )
     {
       trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE
         " renamed to %s\n\"", oldname, client->pers.netname ) );
-      G_LogPrintf( "ClientRename: %i [%s] (%s) \"%s^7\" -> \"%s^7\"\n", clientNum,
-         client->pers.ip, client->pers.guid, oldname, client->pers.netname );
+      G_LogPrintf( "ClientRename: %i [%s] \"%s^7\" -> \"%s^7\"\n", clientNum,
+         client->pers.ip, oldname, client->pers.netname );
       G_admin_namelog_update( client, qfalse );
     }
   }
@@ -1212,7 +1212,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   gentity_t *ent;
-  char      guid[ 33 ];
   char      reason[ MAX_STRING_CHARS ] = {""};
 
   ent = &g_entities[ clientNum ];
@@ -1221,9 +1220,6 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   memset( client, 0, sizeof( *client ) );
 
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
-
-  value = Info_ValueForKey( userinfo, "cl_guid" );
-  Q_strncpyz( guid, value, sizeof( guid ) );
 
   // check for admin ban
   if( G_admin_ban_check( userinfo, reason, sizeof( reason ) ) )
@@ -1238,25 +1234,37 @@ char *ClientConnect( int clientNum, qboolean firstTime )
       strcmp( g_password.string, value ) != 0 )
     return "Invalid password";
 
-  // add guid to session so we don't have to keep parsing userinfo everywhere
-  if( !guid[0] )
-  {
-    Q_strncpyz( client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-      sizeof( client->pers.guid ) );
-  }
-  else
-  {
-    Q_strncpyz( client->pers.guid, guid, sizeof( client->pers.guid ) );
-  }
+  // they can connect
+  ent->client = level.clients + clientNum;
+  client = ent->client;
+
+  memset( client, 0, sizeof(*client) );
 
   // save ip
   value = Info_ValueForKey( userinfo, "ip" );
   Q_strncpyz( client->pers.ip, value, sizeof( client->pers.ip ) );
 
+  // Get id and admin status
+  if ( atoi( Info_ValueForKey( userinfo, "cl_pubkeyID" ) ) )
+  {
+    // remove admin from client
+    client->pers.pubkey_authenticated = 0;
+    client->pers.id[0] = '\0';
+    client->pers.pubkey_msg[0] = '\0';
+    // save name before we get renamed to UnamedPlayer
+    Q_strncpyz( client->pers.connect_name, Info_ValueForKey( userinfo, "name" ), sizeof( client->pers.connect_name ) );
+  }
+  else
+  {
+    Q_strncpyz( client->pers.id, Info_ValueForKey( userinfo, "cl_guid" ), sizeof( client->pers.id ) );
+    client->pers.pubkey_authenticated = -1;
+  }
+
   // check for local client
   if( !strcmp( client->pers.ip, "localhost" ) )
     client->pers.localClient = qtrue;
-  client->pers.adminLevel = G_admin_level( ent );
+
+  client->pers.admin = G_admin_admin( client->pers.id );
 
   client->pers.connected = CON_CONNECTING;
 
@@ -1268,8 +1276,8 @@ char *ClientConnect( int clientNum, qboolean firstTime )
 
   // get and distribute relevent paramters
   ClientUserinfoChanged( clientNum );
-  G_LogPrintf( "ClientConnect: %i [%s] (%s) \"%s^7\"\n", clientNum,
-   client->pers.ip, client->pers.guid, client->pers.netname );
+  G_LogPrintf( "ClientConnect: %i [%s] \"%s^7\"\n", clientNum,
+   client->pers.ip, client->pers.netname );
 
   // don't do the "xxx connected" messages if they were caried over from previous level
   if( firstTime )
@@ -1344,6 +1352,10 @@ void ClientBegin( int clientNum )
 
   // request the clients PTR code
   trap_SendServerCommand( ent - g_entities, "ptrcrequest" );
+
+  // get pubkey
+  if ( client->pers.pubkey_authenticated == 0 )
+    trap_SendServerCommand( ent - g_entities, "pubkey_request" );
 
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 
@@ -1713,8 +1725,8 @@ void ClientDisconnect( int clientNum )
   if( ent->client->pers.connection )
     ent->client->pers.connection->clientNum = -1;
 
-  G_LogPrintf( "ClientDisconnect: %i [%s] (%s) \"%s^7\"\n", clientNum,
-   ent->client->pers.ip, ent->client->pers.guid, ent->client->pers.netname );
+  G_LogPrintf( "ClientDisconnect: %i [%s] \"%s^7\"\n", clientNum,
+   ent->client->pers.ip, ent->client->pers.netname );
 
   trap_UnlinkEntity( ent );
   ent->s.modelindex = 0;

@@ -2526,6 +2526,14 @@ void Com_Init( char *commandLine ) {
 	VM_Init();
 	SV_Init();
 	Hist_Load();
+	if (!Crypto_Init())
+	{
+		// Disable all crypto functions
+		Cvar_Get("g_adminPubkeyID", "0", CVAR_ROM);
+#ifndef DEDICATED
+		Cvar_Get("cl_pubkeyID", "0", CVAR_ROM);
+#endif
+	}
 
 	com_dedicated->modified = qfalse;
 #ifndef DEDICATED

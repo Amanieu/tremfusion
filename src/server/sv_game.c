@@ -107,6 +107,40 @@ void SV_GameDropClient( int clientNum, const char *reason ) {
 
 
 /*
+===============
+SV_RSAGenMsg
+
+Generate an encrypted RSA message
+===============
+*/
+int SV_RSAGenMsg( const char *pubkey, char *cleartext, char *encrypted ) {
+#ifdef USE_CRYPTO
+	struct rsa_public_key public_key;
+	mpz_t message;
+	unsigned char buffer[ RSA_KEY_LENGTH / 8 - 11 ];
+	int retval;
+	Com_RandomBytes( buffer, RSA_KEY_LENGTH / 8 - 11 );
+	nettle_mpz_init_set_str_256_u( message, RSA_KEY_LENGTH / 8 - 11, buffer );
+	mpz_get_str( cleartext, 16, message );
+	rsa_public_key_init( &public_key );
+	mpz_set_ui( public_key.e, RSA_PUBLIC_EXPONENT );
+	retval = mpz_set_str( public_key.n, pubkey, 16 ) + 1;
+	if ( retval )
+	{
+		rsa_public_key_prepare( &public_key );
+		retval = rsa_encrypt( &public_key, NULL, qnettle_random, RSA_KEY_LENGTH / 8 - 11, buffer, message );
+	}
+	rsa_public_key_clear( &public_key );
+	mpz_get_str( encrypted, 16, message );
+	mpz_clear( message );
+	return retval;
+#else
+	return 0;
+#endif
+}
+
+
+/*
 =================
 SV_SetBrushModel
 
@@ -441,6 +475,8 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 				SV_DemoWriteGameCommand( args[1], VMA(2) );
 		}
 		return 0;
+	case G_RSA_GENMSG:
+		return SV_RSAGenMsg( VMA(1), VMA(2), VMA(3) );
 
 	//====================================
 
