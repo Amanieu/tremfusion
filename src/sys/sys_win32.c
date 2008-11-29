@@ -651,5 +651,6 @@ void Sys_PlatformInit( void )
 
 	// Display a console
 	AllocConsole();
+	SetConsoleTitle("Tremfusion Console");
 #endif
 }
