@@ -282,7 +282,7 @@ SV_ChangeMaxClients
 void SV_ChangeMaxClients( void ) {
 	int		oldMaxClients;
 	int		i, j;
-	client_t	*oldClients;
+	client_t	*oldClients = NULL;
 	int		count = 0;
 	qboolean firstTime = svs.clients == NULL;
 

@@ -2547,7 +2547,7 @@ static int Parse_Directive_include(source_t *source)
         break;
       }
       if (token.type == TT_PUNCTUATION && *token.string == '>') break;
-      strncat(path, token.string, MAX_QPATH);
+      strncat(path, token.string, MAX_QPATH - strlen(path));
     }
     if (*token.string != '>')
     {
