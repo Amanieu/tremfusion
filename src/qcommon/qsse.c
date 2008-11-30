@@ -46,7 +46,7 @@ v4f v4fFour;
 v4f v4fTwoTwentyThree;  // = 2^23
 
 static v4f loadInts(int a, int b, int c, int d) {
-	int x[4] ALIGN(16);
+	int x[4] ALIGNED(16);
 	
 	x[0] = a;
 	x[1] = b;
