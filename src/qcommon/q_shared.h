@@ -159,9 +159,9 @@ typedef int		clipHandle_t;
 #define PAD(x,y) (((x)+(y)-1) & ~((y)-1))
 
 #ifdef __GNUC__
-#define ALIGN(x) __attribute__((aligned(x)))
+#define ALIGNED(x) __attribute__((aligned(x)))
 #else
-#define ALIGN(x)
+#define ALIGNED(x)
 #endif
 
 #ifndef NULL
@@ -301,9 +301,9 @@ MATHLIB
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
-typedef vec_t vec3a_t[4] ALIGN(16);
-typedef vec_t quat_t[4] ALIGN(16);
-typedef vec_t matrix_t[16] ALIGN(16);
+typedef vec_t vec3a_t[4] ALIGNED(16);
+typedef vec_t quat_t[4] ALIGNED(16);
+typedef vec_t matrix_t[16] ALIGNED(16);
 #if id386_sse >= 1
 #define vec3aLoad(vec3a)       v4fLoadA(vec3a)
 #define vec3Load(vec3)         vec3_to_v4f(vec3)

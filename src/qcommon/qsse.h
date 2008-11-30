@@ -513,7 +513,7 @@ v4fAndNot(v4f a, v4f b) {
 
 static ID_INLINE v4f
 v4fMix(v4f v0, v4f v1, int idx0, int idx1, int idx2, int idx3) {
-	int idx[4] ALIGN(16) = { -idx0, -idx1, -idx2, -idx3 };
+	int idx[4] ALIGNED(16) = { -idx0, -idx1, -idx2, -idx3 };
 	v4f mask = v4fLoadA( (float *)idx );
 	return _mm_or_ps( _mm_and_ps( mask, v1 ), _mm_andnot_ps( mask, v0 ));
 }
@@ -815,7 +815,7 @@ v4f_to_vec3(vec3_t trg, v4f src) {
 	trg[1] = s4fToFloat( v4fY( src ) );
 	trg[2] = s4fToFloat( v4fZ( src ) );
 #else
-	float tmp[4] ALIGN(16);
+	float tmp[4] ALIGNED(16);
 	
 	v4fStoreA( tmp, src );
 	*(int *)&(trg[0]) = *(int *)&(tmp[0]);
