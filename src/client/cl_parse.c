@@ -386,6 +386,7 @@ void CL_SystemInfoChanged( void ) {
 	FS_PureServerSetReferencedPaks( s, t );
 
 	gameSet = qfalse;
+	baseGameSet = qfalse;
 	// scan through all the variables in the systeminfo and locally set cvars to match
 	s = systemInfo;
 	while ( s ) {
