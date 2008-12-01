@@ -189,6 +189,10 @@ ifndef USE_SSE
   USE_SSE=0
 endif
 
+ifndef USE_PYTHON
+  USE_PYTHON=1
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -218,6 +222,7 @@ FTDIR=$(MOUNT_DIR)/freetype2
 PDCDIR=$(MOUNT_DIR)/pdcurses
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
+PYTHONDIR=$(MOUNT_DIR)/python
 TEMPDIR=/tmp
 
 # set PKG_CONFIG_PATH to influence this, e.g.
@@ -335,7 +340,11 @@ ifeq ($(PLATFORM),linux)
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
-
+  
+  ifeq ($(USE_PYTHON),1)
+    BASE_CFLAGS += -DUSE_PYTHON -I/usr/include/python2.5
+  endif
+  
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -415,7 +424,10 @@ ifeq ($(PLATFORM),linux)
   ifeq ($(USE_FREETYPE),1)
     CLIENT_LIBS += $(shell freetype-config --libs)
   endif
-
+  
+  ifeq ($(USE_PYTHON),1)
+    CLIENT_LIBS += -lpython2.5
+  endif
   ifeq ($(ARCH),x86)
     # linux32 make ...
     BASE_CFLAGS += -m32
@@ -1565,6 +1577,12 @@ ifneq ($(USE_TTY_CLIENT),1)
     $(B)/clientsmp/sdl_glimp.o
 endif
 
+ifeq ($(USE_PYTHON),1)
+  Q3OBJ += \
+    $(B)/client/p_main.o \
+    $(B)/client/p_cvar.o
+endif
+
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
@@ -1888,7 +1906,9 @@ $(B)/client/%.o: $(SYSDIR)/%.rc
 $(B)/client/%.o: $(NDIR)/%.c
 	$(DO_CC)
 
-
+$(B)/client/%.o: $(PYTHONDIR)/%.c
+	$(DO_CC)
+	
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
 

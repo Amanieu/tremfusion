@@ -101,12 +101,12 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
 
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to
 						   , qboolean force );
-void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to, 
+void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
 						 int number );
 
 void MSG_WriteDeltaSharedEntity( msg_t *msg, void *from, void *to
 						   , qboolean force, int number );
-void MSG_ReadDeltaSharedEntity( msg_t *msg, void *from, void *to, 
+void MSG_ReadDeltaSharedEntity( msg_t *msg, void *from, void *to,
 						 int number );
 
 void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
@@ -187,7 +187,7 @@ void		NET_Sleep(int msec);
 
 #define MAX_DOWNLOAD_WINDOW			8		// max of eight download frames
 #define MAX_DOWNLOAD_BLKSIZE		2048	// 2048 byte block chunks
- 
+
 
 /*
 Netchan handles packet fragmentation and out of order / duplicate suppression
@@ -207,7 +207,7 @@ typedef struct {
 
 	// incoming fragment assembly buffer
 	int			fragmentSequence;
-	int			fragmentLength;	
+	int			fragmentLength;
 	byte		fragmentBuffer[MAX_MSGLEN];
 
 	// outgoing fragment buffer
@@ -283,7 +283,7 @@ enum svc_ops_e {
 //
 enum clc_ops_e {
 	clc_bad,
-	clc_nop, 		
+	clc_nop,
 	clc_move,				// [[usercmd_t]
 	clc_moveNoDelta,		// [[usercmd_t]
 	clc_clientCommand,		// [string] message
@@ -330,7 +330,7 @@ typedef enum {
 } sharedTraps_t;
 
 void	VM_Init( void );
-vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
+vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 				   vmInterpret_t interpret );
 // module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
 
@@ -688,9 +688,9 @@ const char *FS_LoadedPakPureChecksums( void );
 const char *FS_ReferencedPakNames( void );
 const char *FS_ReferencedPakChecksums( void );
 const char *FS_ReferencedPakPureChecksums( void );
-// Returns a space separated string containing the checksums of all loaded 
-// AND referenced pk3 files. Servers with sv_pure set will get this string 
-// back from clients for pure validation 
+// Returns a space separated string containing the checksums of all loaded
+// AND referenced pk3 files. Servers with sv_pure set will get this string
+// back from clients for pure validation
 
 void FS_ClearPakReferences( int flags );
 // clears referenced booleans on loaded pk3s
@@ -997,6 +997,13 @@ qboolean SV_GameCommand( void );
 //
 qboolean UI_GameCommand( void );
 
+
+//
+// Python interface
+//
+void P_Init(void);
+void P_Shutdown(void);
+
 /*
 ==============================================================
 
@@ -1102,7 +1109,7 @@ const char *Hist_Prev( void );
 #define INTERNAL_NODE (HMAX+1)
 
 typedef struct nodetype {
-	struct	nodetype *left, *right, *parent; /* tree structure */ 
+	struct	nodetype *left, *right, *parent; /* tree structure */
 	struct	nodetype *next, *prev; /* doubly-linked list */
 	struct	nodetype **head; /* highest ranked node in block */
 	int		weight;

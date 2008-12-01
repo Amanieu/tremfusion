@@ -137,6 +137,10 @@ void Sys_Exit( int ex )
 	SDL_Quit( );
 #endif
 
+#if !DEDICATED && defined(USE_PYTHON)
+	P_Shutdown();
+#endif
+
 #ifdef NDEBUG
 	exit( ex );
 #else
@@ -548,6 +552,10 @@ int main( int argc, char **argv )
 	CON_Init( );
 	Com_Init( commandLine );
 	NET_Init( );
+
+#if !DEDICATED && USE_PYTHON
+	P_Init();
+#endif
 
 	signal( SIGILL, Sys_SigHandler );
 	signal( SIGFPE, Sys_SigHandler );
