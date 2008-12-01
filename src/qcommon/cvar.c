@@ -362,7 +362,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				var_name, var->resetString, var_value );
 		}
 		// if we have a latched string, take that value now
-		if ( var->latchedString && ( ( var->flags & CVAR_VM_CREATED ) || !( flags & CVAR_VM_CREATED ) ) ) {
+		if ( var->latchedString ) {
 			char *s;
 
 			s = var->latchedString;
@@ -578,10 +578,7 @@ void Cvar_SetSafe( const char *var_name, const char *value )
 				"\"%s\"\n", var_name );
 		return;
 	}
-	if( flags != CVAR_NONEXISTENT && flags & CVAR_LATCH && !( flags & CVAR_VM_CREATED ) )
-		Cvar_SetLatched( var_name, value );
-	else
-		Cvar_Set( var_name, value );
+	Cvar_Set( var_name, value );
 }
 
 /*
