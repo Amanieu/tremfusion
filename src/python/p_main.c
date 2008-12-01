@@ -121,9 +121,9 @@ char *stdout_catcher = "import tremfusion\n"
 "sys.stderr = StderrCatcher()\n";
 
 void Cmd_CompletePyName( char *args, int argNum ) {
-    if( argNum == 2 ) {
-        Field_CompleteFilename( "python", "py", qfalse );
-    }
+        if( argNum == 2 ) {
+                Field_CompleteFilename( "python", "py", qfalse );
+        }
 }
 
 void P_script_f( void )
@@ -140,12 +140,12 @@ void P_script_f( void )
                            Cmd_Argv(1));
                 return;
         }
-        args = PyList_New(Cmd_Argc() - 2);
+        args = PyList_New(Cmd_Argc() - 1);
 
-        for (i = 0; i < Cmd_Argc() - 2; i++)
+        for (i = 0; i < Cmd_Argc() - 1; i++)
         {
                 PyList_SET_ITEM(args, i,
-                                PyString_FromString(Cmd_Argv( i + 2 )));
+                                PyString_FromString(Cmd_Argv( i + 1 )));
         }
         if(PyObject_SetAttrString(tremfusion_module, "args", args))
                 PyErr_Print();
