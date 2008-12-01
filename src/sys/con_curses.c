@@ -402,8 +402,12 @@ char *CON_Input(void)
 				} else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
 				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
-				CON_UpdateCursor();
+#ifdef _WIN32
+				wrefresh(inputwin); // If this is not done the cursor moves strangely
+#else
 				wnoutrefresh(inputwin);
+#endif
+				CON_UpdateCursor();
 				doupdate();
 			}
 			return NULL;
