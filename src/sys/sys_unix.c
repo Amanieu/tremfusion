@@ -54,13 +54,13 @@ char *Sys_DefaultHomePath(char **path2)
 		{
 			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremulous" );
 #else
 			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremfusion" );
 #endif
 #else
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 			Q_strcat( homePath, sizeof( homePath ), "/.tremulous" );
 #else
 			Q_strcat( homePath, sizeof( homePath ), "/.tremfusion" );

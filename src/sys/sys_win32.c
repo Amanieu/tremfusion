@@ -76,13 +76,13 @@ char *Sys_DefaultHomePath( char **path2 )
 			return NULL;
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
 #else
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
 #endif
 
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
