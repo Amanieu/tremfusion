@@ -403,6 +403,7 @@ char *CON_Input(void)
 					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
 				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
 				CON_UpdateCursor();
+				wnoutrefresh(inputwin);
 				doupdate();
 			}
 			return NULL;
@@ -415,6 +416,7 @@ char *CON_Input(void)
 			strcpy(text, input_field.buffer);
 			Field_Clear(&input_field);
 			werase(inputwin);
+			wnoutrefresh(inputwin);
 			CON_UpdateCursor();
 			//doupdate();
 			Com_Printf("]%s\n", text);
