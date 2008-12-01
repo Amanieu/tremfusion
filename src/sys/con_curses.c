@@ -113,7 +113,7 @@ static inline void CON_UpdateCursor(void)
 	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
 	wnoutrefresh(stdscr);
 #else
-	wmove(inputwin, LINES - 1, input_field.cursor - input_field.scroll);
+	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
 	wnoutrefresh(inputwin);
 #endif
 }
@@ -236,7 +236,7 @@ void CON_Clear_f(void)
 
 	// Clear the log and the window
 	memset(logbuf, 0, sizeof(logbuf));
-	wclear(logwin);
+	werase(logwin);
 	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Move the cursor back to the input field
