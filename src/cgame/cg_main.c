@@ -463,9 +463,11 @@ static void CG_SetPVars( void )
   trap_Cvar_Set( "p_credits", va( "%d", ps->persistant[ PERS_CREDIT ] ) );
   trap_Cvar_Set( "p_score", va( "%d", ps->persistant[ PERS_SCORE ] ) );
   trap_Cvar_Set( "p_attacker", va( "%d", CG_LastAttacker( ) ) );
-  trap_Cvar_Set( "p_attackername", cgs.clientinfo[ CG_LastAttacker( ) ].name );
+  if ( CG_LastAttacker( ) != -1 )
+    trap_Cvar_Set( "p_attackername", cgs.clientinfo[ CG_LastAttacker( ) ].name );
   trap_Cvar_Set( "p_crosshair", va( "%d", CG_CrosshairPlayer( ) ) );
-  trap_Cvar_Set( "p_crosshairrname", cgs.clientinfo[ CG_CrosshairPlayer( ) ].name );
+  if ( CG_CrosshairPlayer( ) != -1 )
+    trap_Cvar_Set( "p_crosshairrname", cgs.clientinfo[ CG_CrosshairPlayer( ) ].name );
 }
 
 /*
