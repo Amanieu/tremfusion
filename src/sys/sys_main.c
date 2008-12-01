@@ -137,7 +137,7 @@ void Sys_Exit( int ex )
 	SDL_Quit( );
 #endif
 
-#if !DEDICATED && defined(USE_PYTHON)
+#ifdef USE_PYTHON
 	P_Shutdown();
 #endif
 
@@ -553,7 +553,7 @@ int main( int argc, char **argv )
 	Com_Init( commandLine );
 	NET_Init( );
 
-#if !DEDICATED && USE_PYTHON
+#ifdef USE_PYTHON
 	P_Init();
 #endif
 

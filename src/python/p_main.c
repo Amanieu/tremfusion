@@ -120,6 +120,12 @@ char *stdout_catcher = "import tremfusion\n"
 "sys.stdout = StdoutCatcher()\n"
 "sys.stderr = StderrCatcher()\n";
 
+void Cmd_CompletePyName( char *args, int argNum ) {
+    if( argNum == 2 ) {
+        Field_CompleteFilename( "python", "py", qfalse );
+    }
+}
+
 void P_script_f( void )
 {
         int i;
@@ -127,7 +133,7 @@ void P_script_f( void )
         char *filepath;
         PyObject *args;
 
-        filepath = Find_File(va("python/%s.py", Cmd_Argv(1)));
+        filepath = Find_File(va("python/%s", Cmd_Argv(1)));
         if(!filepath)
         {
                 Com_Printf(S_COLOR_RED "ERROR: couldn't load script file %s\n",
@@ -167,6 +173,7 @@ void P_Init(void)
 
         P_CvarModuleInit();
         Cmd_AddCommand("script", P_script_f);
+        Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);
         Com_Printf("----- finished P_Init -----\n");
 }
 

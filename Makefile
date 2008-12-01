@@ -426,7 +426,7 @@ ifeq ($(PLATFORM),linux)
   endif
   
   ifeq ($(USE_PYTHON),1)
-    CLIENT_LIBS += -lpython2.5
+    LIBS += -lpython2.5
   endif
   ifeq ($(ARCH),x86)
     # linux32 make ...
@@ -1728,6 +1728,12 @@ else
     $(B)/ded/con_tty.o
 endif
 
+ifeq ($(USE_PYTHON),1)
+  Q3DOBJ += \
+    $(B)/ded/p_main.o \
+    $(B)/ded/p_cvar.o
+endif
+
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
@@ -1928,6 +1934,9 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
 $(B)/ded/%.o: $(NDIR)/%.c
+	$(DO_DED_CC)
+	
+$(B)/ded/%.o: $(PYTHONDIR)/%.c
 	$(DO_DED_CC)
 
 # Extra dependencies to ensure the SVN version is incorporated
