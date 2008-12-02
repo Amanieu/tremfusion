@@ -801,9 +801,12 @@ to be configured even if they don't have defined names.
 */
 int Key_StringToKeynum( char *str ) {
 	keyname_t	*kn;
-	
+
 	if ( !str || !str[0] ) {
 		return -1;
+	}
+	if ( str[0] == '+' && str[1] ) { // Hack for compatibility with old Tremfusion
+		str++;
 	}
 	if ( !str[1] ) {
 		return str[0];
