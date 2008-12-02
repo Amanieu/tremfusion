@@ -213,11 +213,15 @@ static void CON_Resize(void)
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
-	keypad(stdscr, FALSE);
-	endwin();
+	if (winsz.ws_col < 4 || winsz.ws_row < 5)
+		return;
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
 	clear();
+	delwin(logwin);
+	delwin(borderwin);
+	delwin(inputwin);
+	delwin(scrollwin);
 	CON_Init();
 #endif
 }
