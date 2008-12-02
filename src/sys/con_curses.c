@@ -217,11 +217,11 @@ static void CON_Resize(void)
 		return;
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
-	clear();
 	delwin(logwin);
 	delwin(borderwin);
 	delwin(inputwin);
 	delwin(scrollwin);
+	erase();
 	CON_Init();
 #endif
 }
