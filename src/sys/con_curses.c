@@ -222,6 +222,7 @@ static void CON_Resize(void)
 	delwin(inputwin);
 	delwin(scrollwin);
 	erase();
+	wnoutrefresh(stdscr);
 	CON_Init();
 #endif
 }
@@ -297,28 +298,28 @@ void CON_Init(void)
 		}
 		endwin();
 		delscreen(test);
-	}
-	initscr();
-	cbreak();
-	noecho();
-	nonl();
-	intrflush(stdscr, FALSE);
-	nodelay(stdscr, TRUE);
-	keypad(stdscr, TRUE);
-	wnoutrefresh(stdscr);
+		initscr();
+		cbreak();
+		noecho();
+		nonl();
+		intrflush(stdscr, FALSE);
+		nodelay(stdscr, TRUE);
+		keypad(stdscr, TRUE);
+		wnoutrefresh(stdscr);
 
-	// Set up colors
-	if (has_colors()) {
-		use_default_colors();
-		start_color();
-		init_pair(1, COLOR_BLACK, -1);
-		init_pair(2, COLOR_RED, -1);
-		init_pair(3, COLOR_GREEN, -1);
-		init_pair(4, COLOR_YELLOW, -1);
-		init_pair(5, COLOR_BLUE, -1);
-		init_pair(6, COLOR_CYAN, -1);
-		init_pair(7, COLOR_MAGENTA, -1);
-		init_pair(8, -1, -1);
+		// Set up colors
+		if (has_colors()) {
+			use_default_colors();
+			start_color();
+			init_pair(1, COLOR_BLACK, -1);
+			init_pair(2, COLOR_RED, -1);
+			init_pair(3, COLOR_GREEN, -1);
+			init_pair(4, COLOR_YELLOW, -1);
+			init_pair(5, COLOR_BLUE, -1);
+			init_pair(6, COLOR_CYAN, -1);
+			init_pair(7, COLOR_MAGENTA, -1);
+			init_pair(8, -1, -1);
+		}
 	}
 
 	// Create the border
@@ -356,7 +357,7 @@ void CON_Init(void)
 			input_field.scroll = input_field.cursor;
 		else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 			input_field.scroll = input_field.cursor - input_field.widthInChars + 1;
-		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
+		CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
 	}
 	CON_UpdateCursor();
 	wnoutrefresh(inputwin);
