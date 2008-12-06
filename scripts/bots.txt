@@ -1,0 +1,84 @@
+
+
+{
+
+name		Gargoyle
+
+model		gargoyle
+
+aifile	bots/gargoyle_c.c
+
+}
+
+
+
+
+
+{
+
+name		Capt_Pain
+
+model		sarge
+
+aifile	bots/capt_pain_c.c
+
+}
+
+
+
+{
+
+name		Kyonshi
+
+model		kyonshi
+
+aifile	bots/kyonshi_c.c
+
+}
+
+
+
+{
+
+name		Major
+
+model		major
+
+aifile	bots/major_c.c
+
+}
+
+
+
+// for the sake of the ctf menu
+
+
+
+
+
+
+
+{
+
+name		Sarge
+
+model		sarge
+
+aifile	bots/capt_pain_c.c
+
+}
+
+
+
+{
+
+name		Grunt
+
+model		gargoyle/tech
+
+aifile	bots/gargoyle_c.c
+
+}
+
+
+

@@ -80,8 +80,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CS_PLAYERS          (CS_PARTICLE_SYSTEMS+MAX_GAME_PARTICLE_SYSTEMS)
 #define CS_PRECACHES        (CS_PLAYERS+MAX_CLIENTS)
 #define CS_LOCATIONS        (CS_PRECACHES+MAX_CLIENTS)
+#define CS_BOTINFOS			(CS_LOCATIONS+MAX_LOCATIONS)	// cyr, should only be used for localhost games
 
-#define CS_MAX              (CS_LOCATIONS+MAX_LOCATIONS)
+#define CS_MAX              (CS_BOTINFOS+MAX_CLIENTS)		// (CS_LOCATIONS+MAX_LOCATIONS)
 
 #if (CS_MAX) > MAX_CONFIGSTRINGS
 #error overflow: (CS_MAX) > MAX_CONFIGSTRINGS

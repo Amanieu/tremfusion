@@ -168,6 +168,10 @@ ifndef BUILD_MASTER_SERVER
   BUILD_MASTER_SERVER=0
 endif
 
+ifndef USE_NEURAL_NET
+USE_NEURAL_NET=0
+endif
+
 # Disable this on release builds
 ifndef USE_SCM_VERSION
   USE_SCM_VERSION=1
@@ -202,6 +206,7 @@ ASMDIR=$(MOUNT_DIR)/asm
 SYSDIR=$(MOUNT_DIR)/sys
 GDIR=$(MOUNT_DIR)/game
 CGDIR=$(MOUNT_DIR)/cgame
+BLIBDIR=$(MOUNT_DIR)/botlib
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6b
@@ -938,6 +943,8 @@ ifeq ($(PLATFORM),sunos)
   THREAD_LIBS=-lpthread
   LIBS=-lsocket -lnsl -ldl -lm
 
+  BOTCFLAGS=-O0
+
   CLIENT_LIBS +=$(shell sdl-config --libs) -lGL
 
 else # ifeq sunos
@@ -1024,6 +1031,12 @@ else
   DEPEND_CFLAGS =
 endif
 
+Q3LCC_FLAGS =
+
+ifeq ($(USE_NEURAL_NET),1)
+  Q3LCC_FLAGS += -DUSE_NEURAL_NET
+endif
+
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
 BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
@@ -1045,6 +1058,11 @@ $(echo_cmd) "SMP_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
 endef
 
+define DO_BOT_CC
+$(echo_cmd) "BOT_CC $<"
+$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(BOTCFLAGS) -DBOTLIB -o $@ -c $<
+endef
+
 ifeq ($(GENERATE_DEPENDENCIES),1)
   DO_QVM_DEP=cat $(@:%.o=%.d) | sed -e 's/\.o/\.asm/g' >> $(@:%.o=%.d)
 endif
@@ -1057,19 +1075,19 @@ endef
 
 define DO_GAME_CC
 $(echo_cmd) "GAME_CC $<"
-$(Q)$(CC) -DGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DGAME $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
 define DO_CGAME_CC
 $(echo_cmd) "CGAME_CC $<"
-$(Q)$(CC) -DCGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DCGAME $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
 define DO_UI_CC
 $(echo_cmd) "UI_CC $<"
-$(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) $(Q3LCC_FLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
 endef
 
@@ -1290,22 +1308,22 @@ $(Q3LCC): $(Q3LCCOBJ) $(Q3RCC) $(Q3CPP)
 
 define DO_Q3LCC
 $(echo_cmd) "Q3LCC $<"
-$(Q)$(Q3LCC) -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -o $@ $<
 endef
 
 define DO_CGAME_Q3LCC
 $(echo_cmd) "CGAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
 endef
 
 define DO_GAME_Q3LCC
 $(echo_cmd) "GAME_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
 endef
 
 define DO_UI_Q3LCC
 $(echo_cmd) "UI_Q3LCC $<"
-$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
+$(Q)$(Q3LCC) $(Q3LCC_FLAGS) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
 endef
 
 
@@ -1373,6 +1391,7 @@ Q3OBJ = \
   \
   $(B)/client/cl_curl.o \
   \
+  $(B)/client/sv_bot.o \
   $(B)/client/sv_ccmds.o \
   $(B)/client/sv_client.o \
   $(B)/client/sv_demo.o \
@@ -1386,6 +1405,35 @@ Q3OBJ = \
   $(B)/client/q_math.o \
   $(B)/client/q_shared.o \
   $(B)/client/qsse.o \
+  \
+  $(B)/client/be_aas_bspq3.o \
+  $(B)/client/be_aas_cluster.o \
+  $(B)/client/be_aas_debug.o \
+  $(B)/client/be_aas_entity.o \
+  $(B)/client/be_aas_file.o \
+  $(B)/client/be_aas_main.o \
+  $(B)/client/be_aas_move.o \
+  $(B)/client/be_aas_optimize.o \
+  $(B)/client/be_aas_reach.o \
+  $(B)/client/be_aas_route.o \
+  $(B)/client/be_aas_routealt.o \
+  $(B)/client/be_aas_sample.o \
+  $(B)/client/be_ai_char.o \
+  $(B)/client/be_ai_chat.o \
+  $(B)/client/be_ai_gen.o \
+  $(B)/client/be_ai_goal.o \
+  $(B)/client/be_ai_move.o \
+  $(B)/client/be_ai_weap.o \
+  $(B)/client/be_ai_weight.o \
+  $(B)/client/be_ea.o \
+  $(B)/client/be_interface.o \
+  $(B)/client/l_crc.o \
+  $(B)/client/l_libvar.o \
+  $(B)/client/l_log.o \
+  $(B)/client/l_memory.o \
+  $(B)/client/l_precomp.o \
+  $(B)/client/l_script.o \
+  $(B)/client/l_struct.o \
   \
   $(B)/client/unzip.o \
   $(B)/client/ioapi.o \
@@ -1637,6 +1685,7 @@ endif
 #############################################################################
 
 Q3DOBJ = \
+  $(B)/ded/sv_bot.o \
   $(B)/ded/sv_client.o \
   $(B)/ded/sv_ccmds.o \
   $(B)/ded/sv_demo.o \
@@ -1671,6 +1720,35 @@ Q3DOBJ = \
   $(B)/ded/ioapi.o \
   $(B)/ded/vm.o \
   $(B)/ded/vm_interpreted.o \
+  \
+  $(B)/ded/be_aas_bspq3.o \
+  $(B)/ded/be_aas_cluster.o \
+  $(B)/ded/be_aas_debug.o \
+  $(B)/ded/be_aas_entity.o \
+  $(B)/ded/be_aas_file.o \
+  $(B)/ded/be_aas_main.o \
+  $(B)/ded/be_aas_move.o \
+  $(B)/ded/be_aas_optimize.o \
+  $(B)/ded/be_aas_reach.o \
+  $(B)/ded/be_aas_route.o \
+  $(B)/ded/be_aas_routealt.o \
+  $(B)/ded/be_aas_sample.o \
+  $(B)/ded/be_ai_char.o \
+  $(B)/ded/be_ai_chat.o \
+  $(B)/ded/be_ai_gen.o \
+  $(B)/ded/be_ai_goal.o \
+  $(B)/ded/be_ai_move.o \
+  $(B)/ded/be_ai_weap.o \
+  $(B)/ded/be_ai_weight.o \
+  $(B)/ded/be_ea.o \
+  $(B)/ded/be_interface.o \
+  $(B)/ded/l_crc.o \
+  $(B)/ded/l_libvar.o \
+  $(B)/ded/l_log.o \
+  $(B)/ded/l_memory.o \
+  $(B)/ded/l_precomp.o \
+  $(B)/ded/l_script.o \
+  $(B)/ded/l_struct.o \
   \
   $(B)/ded/null_client.o \
   $(B)/ded/null_input.o \
@@ -1795,6 +1873,13 @@ GOBJ_ = \
   $(B)/base/game/bg_lib.o \
   $(B)/base/game/bg_alloc.o \
   $(B)/base/game/bg_voice.o \
+  \
+  $(B)/base/game/ai_main.o \
+  $(B)/base/game/ai_utils.o \
+  $(B)/base/game/ai_human.o \
+  $(B)/base/game/ai_alien.o \
+  $(B)/base/game/ai_chat.o \
+  \
   $(B)/base/game/g_active.o \
   $(B)/base/game/g_client.o \
   $(B)/base/game/g_cmds.o \
@@ -1815,9 +1900,16 @@ GOBJ_ = \
   $(B)/base/game/g_ptr.o \
   $(B)/base/game/g_weapon.o \
   $(B)/base/game/g_admin.o \
+  $(B)/base/game/g_bot.o \
   \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o
+
+ifeq ($(USE_NEURAL_NET),1)
+GOBJ_ +=  \
+  $(B)/base/game/ai_humannet.o
+endif
+
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
@@ -1876,6 +1968,9 @@ $(B)/client/%.o: $(SDIR)/%.c
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(BLIBDIR)/%.c
+	$(DO_BOT_CC)
+
 $(B)/client/%.o: $(JPDIR)/%.c
 	$(DO_CC)
 
@@ -1915,6 +2010,9 @@ $(B)/ded/%.o: $(CMDIR)/%.c
 
 $(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(BLIBDIR)/%.c
+	$(DO_BOT_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.c
 	$(DO_DED_CC)
