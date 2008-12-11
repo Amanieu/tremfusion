@@ -464,11 +464,11 @@ void Cmd_Math_f( void ) {
     op = Cmd_Argv( 2 );
     if ( !strcmp( op, "++" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v ) + 1 ) );
+      Cvar_SetValueLatched( v, ( atof( v ) + 1 ) );
     }
     else if ( !strcmp( op, "--" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v ) - 1 ) );
+      Cvar_SetValueLatched( v, ( atof( v ) - 1 ) );
     }
     else
     {
@@ -483,24 +483,24 @@ void Cmd_Math_f( void ) {
     v1 = Cmd_Argv( 3 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v ) + atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v ) + atof( v1 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v ) - atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v ) - atof( v1 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v ) * atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v ) * atof( v1 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( atoi( v1 ) == 0 )
+      if ( atof( v1 ) == 0.f )
       {
       	Com_Printf ("Cannot divide by 0!\n");
       	return;
 	  }
-      Cvar_SetValueLatched( v, ( atoi( v ) / atoi( v1 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v ) / atof( v1 ) ) );
     }
     else
     {
@@ -516,24 +516,24 @@ void Cmd_Math_f( void ) {
     v2 = Cmd_Argv( 5 );
     if ( !strcmp( op, "+" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v1 ) + atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v1 ) + atof( v2 ) ) );
     }
     else if ( !strcmp( op, "-" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v1 ) - atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v1 ) - atof( v2 ) ) );
     }
     else if ( !strcmp( op, "*" ) )
     {
-      Cvar_SetValueLatched( v, ( atoi( v1 ) * atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v1 ) * atof( v2 ) ) );
     }
     else if ( !strcmp( op, "/" ) )
     {
-      if ( atoi( v2 ) == 0 )
+      if ( atof( v2 ) == 0.f )
       {
       	Com_Printf ("Cannot divide by 0!\n");
       	return;
 	  }
-      Cvar_SetValueLatched( v, ( atoi( v1 ) / atoi( v2 ) ) );
+      Cvar_SetValueLatched( v, ( atof( v1 ) / atof( v2 ) ) );
     }
     else
     {
@@ -644,33 +644,33 @@ void Cmd_Calc_f( void ) {
   // Add
   if( !strcmp( func, "+"  ) )
   {
-  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) + atoi(arg2)) );
+  	Com_Printf ("%s %s %s = %f\n", arg1, func, arg2, (atof(arg1) + atof(arg2)) );
  	return;
   }
   
   // Subtract
   else if( !strcmp( func, "-"  ) )
   {
-  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) - atoi(arg2)) );
+  	Com_Printf ("%s %s %s = %f\n", arg1, func, arg2, (atof(arg1) - atof(arg2)) );
  	return;
   }
   
   // Divide
   else if( !strcmp( func, "/"  ) )
   {
-     if( atoi(arg2) == 0 )
+     if( atof(arg2) == 0.f )
      {
       Com_Printf ("Cannot divide by zero!\n" );
       return;
      }
-  	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) / atoi(arg2)) );
+  	Com_Printf ("%s %s %s = %f\n", arg1, func, arg2, (atof(arg1) / atof(arg2)) );
  	return;
   }
   
   // Multiply
   else if( !strcmp( func, "*"  ) || !strcmp( func, "x"  ) )
   {
- 	Com_Printf ("%s %s %s = %i\n", arg1, func, arg2, (atoi(arg1) * atoi(arg2)) );
+ 	Com_Printf ("%s %s %s = %f\n", arg1, func, arg2, (atof(arg1) * atof(arg2)) );
 	return;
   }
   
