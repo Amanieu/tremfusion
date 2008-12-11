@@ -1053,7 +1053,7 @@ void R_Register( void )
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 	
 	// for cell shading algorithm selection
-	r_celshadalgo = ri.Cvar_Get ("r_celshadalgo", "0", CVAR_LATCH);
+	r_celshadalgo = ri.Cvar_Get ("r_celshadalgo", "0", CVAR_LATCH | CVAR_ARCHIVE);
 	// cel outline option
 	r_celoutline = ri.Cvar_Get("r_celoutline","0", CVAR_ARCHIVE);
 
