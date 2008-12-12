@@ -697,7 +697,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
     BotAILoadMap( restart );
   }
 
-  G_RemapTeamShaders( );
+  //G_RemapTeamShaders( );
 
   // so the server counts the spawns without a client attached
   G_CountSpawns( );
