@@ -60,7 +60,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // >  0.6 && <= 1.0 = splash damage by shooting nearby geometry
 #define CHARACTERISTIC_AIM_SKILL					16	//float [0, 1]
 //weapon specific aim skill
-#define CHARACTERISTIC_AIM_SKILL_LASGUN		17	//float [0, 1]
+#define CHARACTERISTIC_AIM_SKILL_LASGUN				17	//float [0, 1]
 #define CHARACTERISTIC_AIM_SKILL_GRENADELAUNCHER	18	//float [0, 1]
 #define CHARACTERISTIC_AIM_SKILL_PLASMAGUN			19	//float [0, 1]
 #define CHARACTERISTIC_AIM_SKILL_BFG10K				20	//float [0, 1]
@@ -68,67 +68,67 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //chat
 //========================================================
 //file with chats
-#define CHARACTERISTIC_CHAT_FILE					21	//string
+#define CHARACTERISTIC_CHAT_FILE					31	//string
 //name of the chat character
-#define CHARACTERISTIC_CHAT_NAME					22	//string
+#define CHARACTERISTIC_CHAT_NAME					32	//string
 //characters per minute type speed
-#define CHARACTERISTIC_CHAT_CPM						23	//integer [1, 4000]
+#define CHARACTERISTIC_CHAT_CPM						33	//integer [1, 4000]
 //tendency to insult/praise
-#define CHARACTERISTIC_CHAT_INSULT					24	//float [0, 1]
+#define CHARACTERISTIC_CHAT_INSULT					34	//float [0, 1]
 //tendency to chat misc
-#define CHARACTERISTIC_CHAT_MISC					25	//float [0, 1]
+#define CHARACTERISTIC_CHAT_MISC					35	//float [0, 1]
 //tendency to chat at start or end of level
-#define CHARACTERISTIC_CHAT_STARTENDLEVEL			26	//float [0, 1]
+#define CHARACTERISTIC_CHAT_STARTENDLEVEL			36	//float [0, 1]
 //tendency to chat entering or exiting the game
-#define CHARACTERISTIC_CHAT_ENTEREXITGAME			27	//float [0, 1]
+#define CHARACTERISTIC_CHAT_ENTEREXITGAME			37	//float [0, 1]
 //tendency to chat when killed someone
-#define CHARACTERISTIC_CHAT_KILL					28	//float [0, 1]
+#define CHARACTERISTIC_CHAT_KILL					38	//float [0, 1]
 //tendency to chat when died
-#define CHARACTERISTIC_CHAT_DEATH					29	//float [0, 1]
+#define CHARACTERISTIC_CHAT_DEATH					39	//float [0, 1]
 //tendency to chat when enemy suicides
-#define CHARACTERISTIC_CHAT_ENEMYSUICIDE			30	//float [0, 1]
+#define CHARACTERISTIC_CHAT_ENEMYSUICIDE			40	//float [0, 1]
 //tendency to chat when hit while talking
-#define CHARACTERISTIC_CHAT_HITTALKING				31	//float [0, 1]
+#define CHARACTERISTIC_CHAT_HITTALKING				41	//float [0, 1]
 //tendency to chat when bot was hit but didn't dye
-#define CHARACTERISTIC_CHAT_HITNODEATH				32	//float [0, 1]
+#define CHARACTERISTIC_CHAT_HITNODEATH				42	//float [0, 1]
 //tendency to chat when bot hit the enemy but enemy didn't dye
-#define CHARACTERISTIC_CHAT_HITNOKILL				33	//float [0, 1]
+#define CHARACTERISTIC_CHAT_HITNOKILL				43	//float [0, 1]
 //tendency to randomly chat
-#define CHARACTERISTIC_CHAT_RANDOM					34	//float [0, 1]
+#define CHARACTERISTIC_CHAT_RANDOM					44	//float [0, 1]
 //tendency to reply
-#define CHARACTERISTIC_CHAT_REPLY					35	//float [0, 1]
+#define CHARACTERISTIC_CHAT_REPLY					45	//float [0, 1]
 //========================================================
 //movement
 //========================================================
 //tendency to crouch
-#define CHARACTERISTIC_CROUCHER						36	//float [0, 1]
+#define CHARACTERISTIC_CROUCHER						56	//float [0, 1]
 //tendency to jump
-#define CHARACTERISTIC_JUMPER						37	//float [0, 1]
+#define CHARACTERISTIC_JUMPER						57	//float [0, 1]
 //tendency to walk
-#define CHARACTERISTIC_WALKER						48	//float [0, 1]
+#define CHARACTERISTIC_WALKER						58	//float [0, 1]
 //tendency to jump using a weapon
-#define CHARACTERISTIC_WEAPONJUMPING				38	//float [0, 1]
+#define CHARACTERISTIC_WEAPONJUMPING				59	//float [0, 1]
 //tendency to use the grapple hook when available
-#define CHARACTERISTIC_GRAPPLE_USER					39	//float [0, 1]	//use this!!
+#define CHARACTERISTIC_GRAPPLE_USER					60	//float [0, 1]	//use this!!
 //========================================================
 //goal
 //========================================================
 //item weight file
-#define CHARACTERISTIC_ITEMWEIGHTS					40	//string
+#define CHARACTERISTIC_ITEMWEIGHTS					70	//string
 //the aggression of the bot
-#define CHARACTERISTIC_AGGRESSION					41	//float [0, 1]
+#define CHARACTERISTIC_AGGRESSION					71	//float [0, 1]
 //the self preservation of the bot (rockets near walls etc.)
-#define CHARACTERISTIC_SELFPRESERVATION				42	//float [0, 1]
+#define CHARACTERISTIC_SELFPRESERVATION				72	//float [0, 1]
 //how likely the bot is to take revenge
-#define CHARACTERISTIC_VENGEFULNESS					43	//float [0, 1]	//use this!!
+#define CHARACTERISTIC_VENGEFULNESS					73	//float [0, 1]	//use this!!
 //tendency to camp
-#define CHARACTERISTIC_CAMPER						44	//float [0, 1]
+#define CHARACTERISTIC_CAMPER						74	//float [0, 1]
 //========================================================
 //========================================================
 //tendency to get easy frags
-#define CHARACTERISTIC_EASY_FRAGGER					45	//float [0, 1]
+#define CHARACTERISTIC_EASY_FRAGGER					75	//float [0, 1]
 //how alert the bot is (view distance)
-#define CHARACTERISTIC_ALERTNESS					46	//float [0, 1]
+#define CHARACTERISTIC_ALERTNESS					76	//float [0, 1]
 //how much the bot fires it's weapon
-#define CHARACTERISTIC_FIRETHROTTLE					47	//float [0, 1]
+#define CHARACTERISTIC_FIRETHROTTLE					77	//float [0, 1]
 
