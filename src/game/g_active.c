@@ -747,7 +747,7 @@ void ClientTimerActions( gentity_t *ent, int msec )
         if( boostEntity->s.eType == ET_BUILDABLE &&
             boostEntity->s.modelindex == BA_A_BOOSTER &&
             boostEntity->spawned && boostEntity->health > 0 &&
-            G_FindOvermind( boostEntity ) )
+            G_IsOvermindBuilt( ) )
           new_modifier = BOOSTER_REGEN_MOD;
         else if( boostEntity->client && boostEntity->health > 0 &&
                  boostEntity->client->pers.teamSelection == TEAM_ALIENS )
