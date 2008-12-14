@@ -298,6 +298,105 @@ void CL_Voip_f( void )
 	}
 }
 
+/*
+============
+CL_VoipParseTargets
+
+Sets clc.voipTarget[123] according to cl_voipSendTarget
+Generally we don't want who's listening to change during a transmission,
+so this is only called when the first key is pressed
+============
+*/
+void CL_VoipParseTargets( void )
+{
+	char buffer[32];
+	const char *target = cl_voipSendTarget->string;
+
+	if( Q_stricmp( target, "attacker" ) == 0 )
+	{
+		int player = VM_Call( cgvm, CG_LAST_ATTACKER );
+		if( player < 0 )
+			Q_strncpyz( buffer, "none", sizeof( buffer ) );
+		else
+			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+		target = buffer;
+	}
+	else if( Q_stricmp( target, "crosshair" ) == 0 )
+	{
+		int player = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+		if( player < 0 )
+			Q_strncpyz( buffer, "none", sizeof( buffer ) );
+		else
+			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+		target = buffer;
+	}
+
+	if( !target[0] || Q_stricmp( target, "all" ) == 0 )
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = INT_MAX;
+	else if( Q_stricmp( target, "none" ) == 0 )
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+	else if( Q_stricmp( target, "team" ) == 0 )
+	{
+		char *t = Info_ValueForKey( cl.gameState.stringData +
+			cl.gameState.stringOffsets[CS_PLAYERS + clc.clientNum],
+			"t" );
+		int i, myteam;
+		if( t[0] )
+			myteam = atoi( t );
+		else
+		{
+			myteam = -1;
+			Com_Printf( S_COLOR_RED "Couldn't retrieve client team "
+				"information\n" );
+		}
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+		for( i = 0; i < MAX_CLIENTS; i++ )
+		{
+			if( i == clc.clientNum )
+				continue;
+			t = Info_ValueForKey( cl.gameState.stringData +
+				cl.gameState.stringOffsets[CS_PLAYERS +
+					clc.clientNum], "t" );
+			if( !t[0] )
+				continue;
+			if( myteam == atoi( t ) )
+			{
+				if( i <= 30 )
+					clc.voipTarget1 |= 1 << i;
+				else if( ( i - 31 ) <= 30 )
+					clc.voipTarget2 |= 1 << ( i - 31 );
+				else if( ( i - 62 ) <= 30 )
+					clc.voipTarget3 |= 1 << ( i - 62 );
+			}
+		}
+	}
+	else
+	{
+		char *end;
+		int val;
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+		while( 1 )
+		{
+			while( *target && !isdigit(*target ) )
+				target++;
+			if( !*target )
+				break;
+			val = strtol( target, &end, 10 );
+			assert( target != end );
+			if( val < 0 || val >= MAX_CLIENTS )
+				Com_Printf( S_COLOR_YELLOW "WARNING: VoIP "
+					"target %d is not a valid client "
+					"number\n", val );
+			else if( val <= 31 )
+				clc.voipTarget1 |= 1 << val;
+			else if( ( val -= 32 ) <= 31 )
+				clc.voipTarget2 |= 1 << val;
+			else if( ( val -= 32 ) <= 31 )
+				clc.voipTarget3 |= 1 << val;
+			target = end;
+		}
+	}
+}
 
 static
 void CL_VoipNewGeneration(void)
@@ -382,6 +481,7 @@ void CL_CaptureVoip(void)
 		S_MasterGain(cl_voipGainDuringCapture->value);
 		S_StartCapture();
 		CL_VoipNewGeneration();
+		CL_VoipParseTargets();
 	}
 
 	if ((cl_voipSend->integer) || (finalFrame)) { // user wants to capture audio?
