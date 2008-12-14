@@ -1058,7 +1058,7 @@ void BotBeginIntermission( void )
   int i;
   for (i = 0; i < MAX_CLIENTS; i++) {
     if (botstates[i] && botstates[i]->inuse) {
-      if (botstates[i]->team == TEAM_HUMANS)
+      if (botstates[i]->team == TEAM_HUMANS || botstates[i]->team == TEAM_ALIENS)
       {
         BotChat_EndLevel(botstates[i]);
         trap_BotEnterChat(botstates[i]->cs, 0, botstates[i]->chatto);
