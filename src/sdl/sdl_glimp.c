@@ -220,7 +220,6 @@ vidmode_t vidModes[] =
 	{ 2048,	1536,	1 },
 	{ 856,	480,	1 }
 };
-static int numVidModes = ( sizeof( vidModes ) / sizeof( vidModes[0] ) );
 static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 {
 	const char*   glstring;
@@ -263,15 +262,9 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	if( !failSafe )
 	{
-		if( r_customwidth->modified && !r_width->modified )
-			ri.Cvar_Set( "r_width", r_customwidth->string );
-		if( r_customheight->modified && !r_height->modified )
-			ri.Cvar_Set( "r_height", r_customheight->string );
-		if( r_custompixelAspect->modified && !r_pixelAspect->modified )
-			ri.Cvar_Set( "r_pixelAspect", r_custompixelAspect->string );
 		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
 		{
-			for ( i = 0; i < numVidModes; i++ )
+			for ( i = 0; i < 12; i++ )
 			{
 				if ( r_width->integer == vidModes[ i ].width &&
 				     r_height->integer == vidModes[ i ].height &&
@@ -281,10 +274,10 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 					break;
 				}
 			}
-			if ( i == numVidModes )
+			if ( i == 12 )
 				Cvar_Set( "r_mode", "-1" );
 		}
-		else if ( r_mode->integer >= 0 && r_mode->integer < numVidModes )
+		else if ( r_mode->modified && r_mode->integer >= 0 )
 		{
 			Cvar_SetValue( "r_width", vidModes[ r_mode->integer ].width );
 			Cvar_SetValue( "r_height", vidModes[ r_mode->integer ].height );
@@ -293,9 +286,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		r_width->modified = qfalse;
 		r_height->modified = qfalse;
 		r_pixelAspect->modified = qfalse;
-		r_customwidth->modified = qfalse;
-		r_customheight->modified = qfalse;
-		r_custompixelAspect->modified = qfalse;
+		r_mode->modified = qfalse;
 		glConfig.vidWidth = r_width->integer;
 		glConfig.vidHeight = r_height->integer;
 		glConfig.windowAspect = r_width->value /
