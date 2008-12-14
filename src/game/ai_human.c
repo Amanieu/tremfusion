@@ -628,7 +628,7 @@ void HBotCheckRespawn(bot_state_t* bs){
 void HBotUpdateInventory(bot_state_t* bs){
   weapon_t i;
   
-  //Bot_Print(BPMSG, "\nUpdating Inventory");
+  Bot_Print(BPMSG, "Updating Inventory\n");
   // why exclude WP_HBUILD ?
   bs->inventory[BI_WEAPON] = WP_NONE;
   for(i= WP_MACHINEGUN; i <= WP_LUCIFER_CANNON; i++){
@@ -637,6 +637,8 @@ void HBotUpdateInventory(bot_state_t* bs){
       break;
     }
   }
+  if(bs->inventory[BI_WEAPON] == WP_NONE)
+    Bot_Print(BPMSG, "I still don't have a weapon.\n");
   // ammo and clips
   //	BG_UnpackAmmoArray( bs->inventory[BI_WEAPON], bs->cur_ps.ammo, bs->cur_ps.powerups, &ammo, &clips );		// get maximum with BG_FindAmmoForWeapon
   bs->inventory[BI_AMMO] = bs->ent->client->ps.ammo;

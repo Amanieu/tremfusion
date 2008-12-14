@@ -273,6 +273,7 @@ gotnewcl:
 	// save the address
 	Netchan_Setup (NS_SERVER, &newcl->netchan , from, qport);
 	// init the netchan queue
+	Com_Printf ("Initializing netchan_end_queue for '%s'", newcl->name);
 	newcl->netchan_end_queue = &newcl->netchan_start_queue;
 
 	// save the userinfo

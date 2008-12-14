@@ -633,7 +633,7 @@ void SV_SendClientSnapshot( client_t *client ) {
 	
 	// bots need to have their snapshots build, but
 	// the query them directly without needing to be sent
-	if ( client->gentity && client->gentity->r.svFlags & SVF_BOT ) {
+	if ( (client->gentity && client->gentity->r.svFlags & SVF_BOT) || client->netchan.remoteAddress.type == NA_BOT ) {
 		return;
 	}
 	
@@ -688,7 +688,7 @@ void SV_SendClientMessages( void ) {
 		if ( svs.time < c->nextSnapshotTime ) {
 			continue;		// not time yet
 		}
-
+		
 		// send additional message fragments if the last message
 		// was too large to send at once
 		if ( c->netchan.unsentFragments ) {
