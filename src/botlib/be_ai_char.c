@@ -87,7 +87,7 @@ bot_character_t *BotCharacterFromHandle(int handle)
 {
 	if (handle <= 0 || handle > MAX_CLIENTS)
 	{
-		botimport.Print(PRT_FATAL, "character handle %d out of range\n", handle);
+		botimport.Print(PRT_FATAL, "character handle %d out of range in BotCharacterFromHandle\n", handle);
 		return NULL;
 	} //end if
 	if (!botcharacters[handle])
@@ -149,7 +149,7 @@ void BotFreeCharacter2(int handle)
 {
 	if (handle <= 0 || handle > MAX_CLIENTS)
 	{
-		botimport.Print(PRT_FATAL, "character handle %d out of range\n", handle);
+		botimport.Print(PRT_FATAL, "character handle %d out of range in BotFreeCharacter2\n", handle);
 		return;
 	} //end if
 	if (!botcharacters[handle])
