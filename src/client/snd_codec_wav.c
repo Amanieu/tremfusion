@@ -275,6 +275,18 @@ void S_WAV_CodecCloseStream(snd_stream_t *stream)
 
 /*
 =================
+S_WAV_CodecLoopStream
+=================
+*/
+void S_WAV_CodecLoopStream(snd_stream_t *stream)
+{
+	FS_Seek(stream->file, 0, FS_SEEK_SET);
+	stream->pos = 0;
+	S_ReadRIFFHeader(stream->file, &stream->info);
+}
+
+/*
+=================
 S_WAV_CodecReadStream
 =================
 */
