@@ -6109,7 +6109,7 @@ void Item_OwnerDraw_Paint( itemDef_t *item )
           item->textalignx, item->textaligny,
           item->window.ownerDraw, item->window.ownerDrawFlags,
           item->alignment, item->textalignment, item->textvalignment,
-          item->special, item->textscale, color,
+          item->special, item->textscale, color, item->window.backColor,
           item->window.background, item->textStyle );
     }
   }

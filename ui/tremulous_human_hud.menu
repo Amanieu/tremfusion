@@ -112,7 +112,8 @@
       aspectBias ALIGN_LEFT
       visible MENU_TRUE
       decoration
-      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.8
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/bolt.tga"
       ownerdraw CG_PLAYER_STAMINA_BOLT
     }
@@ -137,7 +138,8 @@
       aspectBias ALIGN_LEFT
       visible MENU_TRUE
       decoration
-      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.8
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/stamina1.tga"
       ownerdraw CG_PLAYER_STAMINA_1
     }
@@ -150,7 +152,8 @@
       aspectBias ALIGN_LEFT
       visible MENU_TRUE
       decoration
-      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.8
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/stamina2.tga"
       ownerdraw CG_PLAYER_STAMINA_2
     }
@@ -163,7 +166,8 @@
       aspectBias ALIGN_LEFT
       visible MENU_TRUE
       decoration
-      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.8
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/stamina3.tga"
       ownerdraw CG_PLAYER_STAMINA_3
     }
@@ -176,7 +180,8 @@
       aspectBias ALIGN_LEFT
       visible MENU_TRUE
       decoration
-      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.8
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/stamina4.tga"
       ownerdraw CG_PLAYER_STAMINA_4
     }
@@ -191,6 +196,7 @@
       visible MENU_TRUE
       decoration
       forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
+      backColor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.2
       background "ui/assets/human/ring.tga"
       ownerdraw CG_PLAYER_CLIPS_RING
     }
@@ -255,6 +261,18 @@
       forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B .5
       ownerdraw CG_PLAYER_AMMO_VALUE
     }
+    itemDef
+    {
+      name "ammostack"
+      rect 575 300 15 95
+      aspectBias ALIGN_RIGHT
+      visible MENU_TRUE
+      decoration
+      textvalign VALIGN_BOTTOM
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B .5
+      backcolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0
+      ownerdraw CG_PLAYER_AMMO_STACK
+    }
 
     //CLIPS
     itemDef
@@ -266,6 +284,18 @@
       decoration
       forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B .5
       ownerdraw CG_PLAYER_CLIPS_VALUE
+    }
+    itemDef
+    {
+      name "clipsstack"
+      rect 595 300 15 95
+      aspectBias ALIGN_RIGHT
+      visible MENU_TRUE
+      decoration
+      textvalign VALIGN_BOTTOM
+      forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B .5
+      backcolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0
+      ownerdraw CG_PLAYER_CLIPS_STACK
     }
 
     //BUILD TIMER
@@ -323,7 +353,7 @@
     {
       name "charge"
       rect 510 384 56 8
-      aspectBias ALIGN_CENTER
+      aspectBias ALIGN_RIGHT
       visible MENU_TRUE
       decoration
       forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.5
@@ -336,7 +366,7 @@
     {
       name "chargebg"
       rect 506 380 64 16
-      aspectBias ALIGN_CENTER
+      aspectBias ALIGN_RIGHT
       visible MENU_TRUE
       decoration
       forecolor COMMON_HUD_R COMMON_HUD_G COMMON_HUD_B 0.25

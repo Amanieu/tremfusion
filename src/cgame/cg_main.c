@@ -119,6 +119,7 @@ vmCvar_t  cg_drawChargeBar;
 vmCvar_t  cg_drawCrosshair;
 vmCvar_t  cg_drawCrosshairNames;
 vmCvar_t  cg_crosshairSize;
+vmCvar_t  cg_drawAmmoStack;
 vmCvar_t  cg_draw2D;
 vmCvar_t  cg_drawStatus;
 vmCvar_t  cg_animSpeed;
@@ -144,8 +145,13 @@ vmCvar_t  cg_tracerWidth;
 vmCvar_t  cg_tracerLength;
 vmCvar_t  cg_autoswitch;
 vmCvar_t  cg_thirdPerson;
-vmCvar_t  cg_thirdPersonShoulderView;
+vmCvar_t  cg_thirdPersonShoulderViewMode;
+vmCvar_t  cg_thirdPersonPitchFollow;
 vmCvar_t  cg_thirdPersonRange;
+vmCvar_t  cg_shoulderViewOverride;
+vmCvar_t  cg_shoulderViewUp;
+vmCvar_t  cg_shoulderViewRight;
+vmCvar_t  cg_shoulderViewForward;
 vmCvar_t  cg_stereoSeparation;
 vmCvar_t  cg_lagometer;
 vmCvar_t  cg_synchronousClients;
@@ -170,8 +176,6 @@ vmCvar_t  cg_noTaunt;
 vmCvar_t  cg_drawSurfNormal;
 vmCvar_t  cg_drawBBOX;
 vmCvar_t  cg_wwSmoothTime;
-vmCvar_t  cg_wwFollow;
-vmCvar_t  cg_wwToggle;
 vmCvar_t  cg_flySpeed;
 vmCvar_t  cg_depthSortParticles;
 vmCvar_t  cg_bounceParticles;
@@ -247,6 +251,7 @@ static cvarTable_t cvarTable[ ] =
   { &cg_drawCrosshair, "cg_drawCrosshair", "1", CVAR_ARCHIVE },
   { &cg_drawCrosshairNames, "cg_drawCrosshairNames", "1", CVAR_ARCHIVE },
   { &cg_crosshairSize, "cg_crosshairSize", "1", CVAR_ARCHIVE },
+  { &cg_drawAmmoStack, "cg_drawAmmoStack", "1", CVAR_ARCHIVE },
   { &cg_brassTime, "cg_brassTime", "2500", CVAR_ARCHIVE },
   { &cg_addMarks, "cg_marks", "1", CVAR_ARCHIVE },
   { &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
@@ -272,8 +277,13 @@ static cvarTable_t cvarTable[ ] =
   { &cg_tracerWidth, "cg_tracerwidth", "1", CVAR_CHEAT },
   { &cg_tracerLength, "cg_tracerlength", "100", CVAR_CHEAT },
   { &cg_thirdPersonRange, "cg_thirdPersonRange", "75", CVAR_ARCHIVE },
-  { &cg_thirdPersonShoulderView, "cg_thirdPersonShoulderView", "0", CVAR_ARCHIVE },
   { &cg_thirdPerson, "cg_thirdPerson", "0", CVAR_CHEAT },
+  { &cg_thirdPersonPitchFollow, "cg_thirdPersonPitchFollow", "0", 0 },
+  { &cg_thirdPersonShoulderViewMode, "cg_thirdPersonShoulderViewMode", "1", CVAR_ARCHIVE },
+  { &cg_shoulderViewOverride, "cg_shoulderViewOverride", "0", 0 },
+  { &cg_shoulderViewUp, "cg_shoulderViewUp", "0", 0 },
+  { &cg_shoulderViewRight, "cg_shoulderViewRight", "0", 0 },
+  { &cg_shoulderViewForward, "cg_shoulderViewForward", "0", 0 },
   { &cg_stats, "cg_stats", "0", 0 },
   { &cg_drawFriend, "cg_drawFriend", "1", CVAR_ARCHIVE },
   { &cg_teamChatsOnly, "cg_teamChatsOnly", "0", CVAR_ARCHIVE },
@@ -283,8 +293,9 @@ static cvarTable_t cvarTable[ ] =
   { &cg_drawSurfNormal, "cg_drawSurfNormal", "0", CVAR_CHEAT },
   { &cg_drawBBOX, "cg_drawBBOX", "0", CVAR_CHEAT },
   { &cg_wwSmoothTime, "cg_wwSmoothTime", "300", CVAR_ARCHIVE },
-  { &cg_wwFollow, "cg_wwFollow", "1", CVAR_ARCHIVE|CVAR_USERINFO },
-  { &cg_wwToggle, "cg_wwToggle", "1", CVAR_ARCHIVE|CVAR_USERINFO },
+  { NULL, "cg_wwFollow", "1", CVAR_ARCHIVE|CVAR_USERINFO },
+  { NULL, "cg_wwToggle", "1", CVAR_ARCHIVE|CVAR_USERINFO },
+  { NULL, "cg_flySpeed", "600", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_flySpeed, "cg_flySpeed", "500", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_stickySpec, "cg_stickySpec", "1", CVAR_ARCHIVE|CVAR_USERINFO },
   { &cg_alwaysSprint, "cg_alwaysSprint", "0", CVAR_ARCHIVE|CVAR_USERINFO },
@@ -481,7 +492,8 @@ void CG_UpdateCvars( void )
   cvarTable_t *cv;
 
   for( i = 0, cv = cvarTable; i < cvarTableSize; i++, cv++ )
-    trap_Cvar_Update( cv->vmCvar );
+    if( cv->vmCvar )
+      trap_Cvar_Update( cv->vmCvar );
 
   // check for modications here
 

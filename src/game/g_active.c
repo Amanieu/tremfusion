@@ -40,7 +40,7 @@ void P_DamageFeedback( gentity_t *player )
   vec3_t    angles;
 
   client = player->client;
-  if( client->ps.pm_type == PM_DEAD )
+  if( !PM_Live( client->ps.pm_type ) )
     return;
 
   // total points of damage shot at the player this frame
@@ -361,7 +361,6 @@ void  G_TouchTriggers( gentity_t *ent )
 
     // ignore most entities if a spectator
     if( ( ent->client->sess.spectatorState != SPECTATOR_NOT ) ||
-        ( ent->client->ps.stats[ STAT_STATE ] & SS_INFESTING ) ||
         ( ent->client->ps.stats[ STAT_STATE ] & SS_HOVELING ) )
     {
       if( hit->s.eType != ET_TELEPORT_TRIGGER &&
@@ -460,12 +459,15 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
     if( client->sess.spectatorState == SPECTATOR_LOCKED ||
         client->sess.spectatorState == SPECTATOR_FOLLOW )
       client->ps.pm_type = PM_FREEZE;
+    else if( client->noclip )
+      client->ps.pm_type = PM_NOCLIP;
     else
       client->ps.pm_type = PM_SPECTATOR;
     if( queued )
       client->ps.pm_flags |= PMF_QUEUED;
 
     client->ps.speed = client->pers.flySpeed;
+
     client->ps.stats[ STAT_STAMINA ] = 0;
     client->ps.stats[ STAT_MISC ] = 0;
     client->ps.stats[ STAT_BUILDABLE ] = 0;
@@ -1383,8 +1385,7 @@ void ClientThink_real( gentity_t *ent )
     client->ps.pm_type = PM_NOCLIP;
   else if( client->ps.stats[ STAT_HEALTH ] <= 0 )
     client->ps.pm_type = PM_DEAD;
-  else if( client->ps.stats[ STAT_STATE ] & SS_INFESTING ||
-           client->ps.stats[ STAT_STATE ] & SS_HOVELING )
+  else if( client->ps.stats[ STAT_STATE ] & SS_HOVELING )
     client->ps.pm_type = PM_FREEZE;
   else if( client->ps.stats[ STAT_STATE ] & SS_BLOBLOCKED ||
            client->ps.stats[ STAT_STATE ] & SS_GRABBED )
@@ -1477,7 +1478,8 @@ void ClientThink_real( gentity_t *ent )
   if( client->ps.pm_type == PM_NOCLIP )
     client->ps.speed = client->pers.flySpeed;
   else
-    client->ps.speed = g_speed.value * BG_Class( client->ps.stats[ STAT_CLASS ] )->speed;
+    client->ps.speed = g_speed.value *
+        BG_Class( client->ps.stats[ STAT_CLASS ] )->speed;
 
   if( client->lastCreepSlowTime + CREEP_TIMEOUT < level.time )
     client->ps.stats[ STAT_STATE ] &= ~SS_CREEPSLOWED;
@@ -1518,8 +1520,7 @@ void ClientThink_real( gentity_t *ent )
   if( pm.ps->pm_type == PM_DEAD )
     pm.tracemask = MASK_DEADSOLID;
 
-  if( pm.ps->stats[ STAT_STATE ] & SS_INFESTING ||
-      pm.ps->stats[ STAT_STATE ] & SS_HOVELING )
+  if( pm.ps->stats[ STAT_STATE ] & SS_HOVELING )
     pm.tracemask = MASK_DEADSOLID;
   else
     pm.tracemask = MASK_PLAYERSOLID;

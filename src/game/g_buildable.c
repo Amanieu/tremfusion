@@ -306,7 +306,7 @@ G_FindOvermind
 Attempt to find an overmind for self
 ================
 */
-static qboolean G_FindOvermind( gentity_t *self )
+qboolean G_FindOvermind( gentity_t *self )
 {
   int       i;
   gentity_t *ent;
@@ -1387,7 +1387,7 @@ void ABooster_Touch( gentity_t *self, gentity_t *other, trace_t *trace )
   if( !client )
     return;
 
-  if( client && client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+  if( client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
     return;
 
   client->ps.stats[ STAT_STATE ] |= SS_BOOSTED;

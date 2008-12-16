@@ -247,12 +247,14 @@ static void BloodSpurt( gentity_t *attacker, gentity_t *victim, trace_t *tr )
 
   if( !attacker->client )
     return;
+  if( victim->health <= 0 )
+    return;
   tent = G_TempEntity( tr->endpos, EV_MISSILE_HIT );
   tent->s.otherEntityNum = victim->s.number;
   tent->s.eventParm = DirToByte( tr->plane.normal );
   tent->s.weapon = attacker->s.weapon;
   tent->s.generic1 = attacker->s.generic1; // weaponMode
-  }
+}
 
 /*
 ===============
@@ -268,6 +270,8 @@ static void WideBloodSpurt( gentity_t *attacker, gentity_t *victim, trace_t *tr 
   float mag, radius;
 
   if( !attacker->client )
+    return;
+  if( victim->health <= 0 )
     return;
 
   if( tr )
@@ -980,6 +984,9 @@ qboolean CheckVenomAttack( gentity_t *ent )
 
   if( !traceEnt->takedamage )
     return qfalse;
+
+  if( traceEnt->health <= 0 )
+      return qfalse;
 
   if( !traceEnt->client && !traceEnt->s.eType == ET_BUILDABLE )
     return qfalse;

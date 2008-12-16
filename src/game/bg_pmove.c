@@ -94,7 +94,7 @@ PM_StartTorsoAnim
 */
 void PM_StartTorsoAnim( int anim )
 {
-  if( pm->ps->pm_type >= PM_DEAD )
+  if( PM_Paralyzed( pm->ps->pm_type ) )
     return;
 
   pm->ps->torsoAnim = ( ( pm->ps->torsoAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
@@ -109,7 +109,7 @@ PM_StartWeaponAnim
 /* FIXME: need to backport weaponAnim
 static void PM_StartWeaponAnim( int anim )
 {
-  if( pm->ps->pm_type >= PM_DEAD )
+  if( PM_Paralyzed( pm->ps->pm_type ) )
     return;
 
   pm->ps->weaponAnim = ( ( pm->ps->weaponAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
@@ -125,7 +125,7 @@ PM_StartLegsAnim
 */
 static void PM_StartLegsAnim( int anim )
 {
-  if( pm->ps->pm_type >= PM_DEAD )
+  if( PM_Paralyzed( pm->ps->pm_type ) )
     return;
 
   //legsTimer is clamped too tightly for nonsegmented models
@@ -1609,8 +1609,6 @@ static void PM_NoclipMove( void )
   float   wishspeed;
   float   scale;
 
-  pm->ps->viewheight = DEFAULT_VIEWHEIGHT;
-
   // friction
 
   speed = VectorLength( pm->ps->velocity );
@@ -1761,12 +1759,12 @@ static void PM_CrashLand( void )
 
     if( delta > AVG_FALL_DISTANCE )
     {
-      PM_AddEvent( EV_FALL_FAR );
+      if( PM_Live( pm->ps->pm_type ) )
+        PM_AddEvent( EV_FALL_FAR );
     }
     else if( delta > MIN_FALL_DISTANCE )
     {
-      // this is a pain grunt, so don't play it if dead
-      if( pm->ps->stats[STAT_HEALTH] > 0 )
+      if( PM_Live( pm->ps->pm_type ) )
         PM_AddEvent( EV_FALL_MEDIUM );
     }
     else
@@ -2096,7 +2094,7 @@ static void PM_GroundClimbTrace( void )
         {
           CrossProduct( surfNormal, trace.plane.normal, pm->ps->grapplePoint );
           VectorNormalize( pm->ps->grapplePoint );
-          pm->ps->stats[ STAT_STATE ] |= SS_WALLCLIMBINGCEILING;
+          pm->ps->eFlags |= EF_WALLCLIMBCEILING;
         }
 
         //transition from ceiling to wall
@@ -2120,7 +2118,7 @@ static void PM_GroundClimbTrace( void )
       {
         //so we know what surface we're stuck to
         VectorCopy( trace.plane.normal, pm->ps->grapplePoint );
-        pm->ps->stats[ STAT_STATE ] &= ~SS_WALLCLIMBINGCEILING;
+        pm->ps->eFlags &= ~EF_WALLCLIMBCEILING;
       }
 
       //IMPORTANT: break out of the for loop if we've hit something
@@ -2143,7 +2141,7 @@ static void PM_GroundClimbTrace( void )
     pm->ps->eFlags &= ~EF_WALLCLIMB;
 
     //just transided from ceiling to floor... apply delta correction
-    if( pm->ps->stats[ STAT_STATE ] & SS_WALLCLIMBINGCEILING )
+    if( pm->ps->eFlags & EF_WALLCLIMBCEILING )
     {
       vec3_t  forward, rotated, angles;
 
@@ -2155,7 +2153,7 @@ static void PM_GroundClimbTrace( void )
       pm->ps->delta_angles[ YAW ] -= ANGLE2SHORT( angles[ YAW ] - pm->ps->viewangles[ YAW ] );
     }
 
-    pm->ps->stats[ STAT_STATE ] &= ~SS_WALLCLIMBINGCEILING;
+    pm->ps->eFlags &= ~EF_WALLCLIMBCEILING;
 
     //we get very bizarre effects if we don't do this :0
     VectorCopy( refNormal, pm->ps->grapplePoint );
@@ -2228,7 +2226,7 @@ static void PM_GroundTrace( void )
     }
 
     //just transided from ceiling to floor... apply delta correction
-    if( pm->ps->stats[ STAT_STATE ] & SS_WALLCLIMBINGCEILING )
+    if( pm->ps->eFlags & EF_WALLCLIMBCEILING )
     {
       vec3_t  forward, rotated, angles;
 
@@ -2242,8 +2240,7 @@ static void PM_GroundTrace( void )
   }
 
   pm->ps->stats[ STAT_STATE ] &= ~SS_WALLCLIMBING;
-  pm->ps->stats[ STAT_STATE ] &= ~SS_WALLCLIMBINGCEILING;
-  pm->ps->eFlags &= ~EF_WALLCLIMB;
+  pm->ps->eFlags &= ~( EF_WALLCLIMB | EF_WALLCLIMBCEILING );
 
   point[ 0 ] = pm->ps->origin[ 0 ];
   point[ 1 ] = pm->ps->origin[ 1 ];
@@ -2420,23 +2417,29 @@ static void PM_SetWaterLevel( void )
 
 /*
 ==============
+PM_SetViewheight
+==============
+*/
+static void PM_SetViewheight( void )
+{
+  pm->ps->viewheight = ( pm->ps->pm_flags & PMF_DUCKED )
+      ? BG_ClassConfig( pm->ps->stats[ STAT_CLASS ] )->crouchViewheight
+      : BG_ClassConfig( pm->ps->stats[ STAT_CLASS ] )->viewheight;
+}
+
+/*
+==============
 PM_CheckDuck
 
-Sets mins, maxs, and pm->ps->viewheight
+Sets mins and maxs, and calls PM_SetViewheight
 ==============
 */
 static void PM_CheckDuck (void)
 {
   trace_t trace;
   vec3_t PCmins, PCmaxs, PCcmaxs;
-  int PCvh, PCcvh;
 
   BG_ClassBoundingBox( pm->ps->stats[ STAT_CLASS ], PCmins, PCmaxs, PCcmaxs, NULL, NULL );
-  PCvh = BG_ClassConfig( pm->ps->stats[ STAT_CLASS ] )->viewheight;
-  PCcvh = BG_ClassConfig( pm->ps->stats[ STAT_CLASS ] )->crouchViewheight;
-
-  if( pm->ps->persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
-    PCcvh = PCvh;
 
   pm->mins[ 0 ] = PCmins[ 0 ];
   pm->mins[ 1 ] = PCmins[ 1 ];
@@ -2453,10 +2456,9 @@ static void PM_CheckDuck (void)
     return;
   }
 
-  // If the standing and crouching viewheights are the same the class can't crouch
-  if( ( pm->cmd.upmove < 0 ) && ( PCvh != PCcvh ) &&
-      pm->ps->pm_type != PM_JETPACK &&
-      !BG_InventoryContainsUpgrade( UP_BATTLESUIT, pm->ps->stats ) )
+  // If the standing and crouching bboxes are the same the class can't crouch
+  if( ( pm->cmd.upmove < 0 ) && !VectorCompare( PCmaxs, PCcmaxs ) &&
+      pm->ps->pm_type != PM_JETPACK )
   {
     // duck
     pm->ps->pm_flags |= PMF_DUCKED;
@@ -2475,15 +2477,11 @@ static void PM_CheckDuck (void)
   }
 
   if( pm->ps->pm_flags & PMF_DUCKED )
-  {
     pm->maxs[ 2 ] = PCcmaxs[ 2 ];
-    pm->ps->viewheight = PCcvh;
-  }
   else
-  {
     pm->maxs[ 2 ] = PCmaxs[ 2 ];
-    pm->ps->viewheight = PCvh;
-  }
+
+  PM_SetViewheight( );
 }
 
 
@@ -2838,13 +2836,13 @@ static void PM_Weapon( void )
 {
   int           addTime = 200; //default addTime - should never be used
   int           maxClips;
-  qboolean      attack1 = qfalse;
-  qboolean      attack2 = qfalse;
-  qboolean      attack3 = qfalse;
+  qboolean      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
+  qboolean      attack2 = pm->cmd.buttons & BUTTON_ATTACK2;
+  qboolean      attack3 = pm->cmd.buttons & BUTTON_USE_HOLDABLE;
 
   // Ignore weapons in some cases
   if( pm->ps->persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT || 
-      ( pm->ps->stats[ STAT_STATE ] & ( SS_INFESTING | SS_HOVELING ) ) )
+      pm->ps->stats[ STAT_STATE ] & SS_HOVELING )
     return;
 
   // check for dead player
@@ -3054,11 +3052,9 @@ static void PM_Weapon( void )
   // check for out of ammo
   if( !pm->ps->ammo && !pm->ps->clips && !BG_Weapon( pm->ps->weapon )->infiniteAmmo )
   {
-    if( ( pm->cmd.buttons & BUTTON_ATTACK ) ||
-        ( BG_Weapon( pm->ps->weapon )->hasAltMode &&
-          ( pm->cmd.buttons & BUTTON_ATTACK2 ) ) ||
-        ( BG_Weapon( pm->ps->weapon )->hasThirdMode &&
-          ( pm->cmd.buttons & BUTTON_USE_HOLDABLE ) ) )
+    if( attack1 ||
+        ( BG_Weapon( pm->ps->weapon )->hasAltMode && attack2 ) ||
+        ( BG_Weapon( pm->ps->weapon )->hasThirdMode && attack3 ) )
     {
       PM_AddEvent( EV_NOAMMO );
       pm->ps->weaponTime += 500;
@@ -3116,18 +3112,13 @@ static void PM_Weapon( void )
     case WP_ALEVEL3:
     case WP_ALEVEL3_UPG:
       //pouncing has primary secondary AND autohit procedures
-      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
-      attack2 = pm->cmd.buttons & BUTTON_ATTACK2;
-      attack3 = pm->cmd.buttons & BUTTON_USE_HOLDABLE;
-
       // pounce is autohit
       if( !attack1 && !attack2 && !attack3 )
         return;
       break;
 
     case WP_LUCIFER_CANNON:
-      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
-      attack2 = pm->cmd.buttons & BUTTON_ATTACK2;
+      attack3 = qfalse;
 
       // Prevent firing of the Lucifer Cannon after an overcharge
       if( pm->ps->weaponstate == WEAPON_NEEDS_RESET )
@@ -3180,7 +3171,7 @@ static void PM_Weapon( void )
       break;
 
     case WP_MASS_DRIVER:
-      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
+      attack2 = attack3 = qfalse;
       // attack2 is handled on the client for zooming (cg_view.c)
 
       if( !attack1 )
@@ -3192,11 +3183,6 @@ static void PM_Weapon( void )
       break;
 
     default:
-      //by default primary and secondary attacks are allowed
-      attack1 = pm->cmd.buttons & BUTTON_ATTACK;
-      attack2 = pm->cmd.buttons & BUTTON_ATTACK2;
-      attack3 = pm->cmd.buttons & BUTTON_USE_HOLDABLE;
-
       if( !attack1 && !attack2 && !attack3 )
       {
         pm->ps->weaponTime = 0;
@@ -3370,6 +3356,9 @@ PM_Animate
 */
 static void PM_Animate( void )
 {
+  if( PM_Paralyzed( pm->ps->pm_type ) )
+    return;
+
   if( pm->cmd.buttons & BUTTON_GESTURE )
   {
     if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
@@ -3455,7 +3444,7 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
   vec3_t  axis[ 3 ], rotaxis[ 3 ];
   vec3_t  tempang;
 
-  if( ps->pm_type == PM_INTERMISSION || ps->pm_type == PM_SPINTERMISSION )
+  if( ps->pm_type == PM_INTERMISSION )
     return;   // no view changes at all
 
   if( ps->pm_type != PM_SPECTATOR && ps->stats[ STAT_HEALTH ] <= 0 )
@@ -3488,7 +3477,7 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
 
   if( !( ps->stats[ STAT_STATE ] & SS_WALLCLIMBING ) ||
       !BG_RotateAxis( ps->grapplePoint, axis, rotaxis, qfalse,
-                      ps->stats[ STAT_STATE ] & SS_WALLCLIMBINGCEILING ) )
+                      ps->eFlags & EF_WALLCLIMBCEILING ) )
     AxisCopy( axis, rotaxis );
 
   //convert the new axis back to angles
@@ -3643,7 +3632,7 @@ void PmoveSingle( pmove_t *pmove )
   else if( pm->cmd.forwardmove > 0 || ( pm->cmd.forwardmove == 0 && pm->cmd.rightmove ) )
     pm->ps->pm_flags &= ~PMF_BACKWARDS_RUN;
 
-  if( pm->ps->pm_type >= PM_DEAD )
+  if( PM_Paralyzed( pm->ps->pm_type ) )
   {
     pm->cmd.forwardmove = 0;
     pm->cmd.rightmove = 0;
@@ -3664,6 +3653,8 @@ void PmoveSingle( pmove_t *pmove )
   {
     PM_UpdateViewAngles( pm->ps, &pm->cmd );
     PM_NoclipMove( );
+    PM_SetViewheight( );
+    PM_Weapon( );
     PM_DropTimers( );
     return;
   }
@@ -3671,7 +3662,7 @@ void PmoveSingle( pmove_t *pmove )
   if( pm->ps->pm_type == PM_FREEZE)
     return;   // no movement at all
 
-  if( pm->ps->pm_type == PM_INTERMISSION || pm->ps->pm_type == PM_SPINTERMISSION )
+  if( pm->ps->pm_type == PM_INTERMISSION )
     return;   // no movement at all
 
   // set watertype, and waterlevel

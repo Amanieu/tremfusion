@@ -2483,7 +2483,7 @@ void CG_Bleed( vec3_t origin, vec3_t normal, int entityNum )
   }
 }
 
-centity_t *CG_GetLocation( centity_t *cent )
+centity_t *CG_GetPlayerLocation( void )
 {
   centity_t   *eloc, *best;
   float       bestlen, len;
@@ -2492,7 +2492,7 @@ centity_t *CG_GetLocation( centity_t *cent )
   best = NULL;
   bestlen = 3.0f * 8192.0f * 8192.0f;
 
-  VectorCopy( cent->lerpOrigin, origin );
+  VectorCopy( cg.predictedPlayerState.origin, origin );
 
   for( eloc = cg.locationHead; eloc; eloc = eloc->nextLocation )
   {

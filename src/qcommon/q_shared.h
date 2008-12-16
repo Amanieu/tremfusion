@@ -480,15 +480,15 @@ typedef struct {
 #define VectorSet(v, x, y, z)	((v)[0]=(x), (v)[1]=(y), (v)[2]=(z))
 #define Vector4Copy(a,b)		((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
 #define Vector4Add(a,b,c)    ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2],(c)[3]=(a)[3]+(b)[3])
+#define Vector4Lerp( f, s, e, r ) ((r)[0]=(s)[0]+(f)*((e)[0]-(s)[0]),\
+  (r)[1]=(s)[1]+(f)*((e)[1]-(s)[1]),\
+  (r)[2]=(s)[2]+(f)*((e)[2]-(s)[2]),\
+  (r)[3]=(s)[3]+(f)*((e)[3]-(s)[3]))
 
-// DO NOT USE: Snaps differently depending on whether number is positive or 
-// negative! -0.5 and 0.5 both snapped to zero!
-//#define	SnapVector(v) {v[0]=((int)(v[0]));v[1]=((int)(v[1]));v[2]=((int)(v[2]));}
-
-// Snaps the vector to the floor value always, ignoring any weirdness from
-// snapping negative versus positive numbers
-#define Floor(fl) ( (fl) >= 0.f ? (int)(fl) : -(int)(-(fl)) )
-#define SnapVector(v) {(v)[0]=Floor((v)[0]);(v)[1]=Floor((v)[1]);(v)[2]=Floor((v)[2]);}
+// always snap downwards
+#define Floor(fl) ( (fl) >= 0 ? (int)(fl) : -(int)(-(fl)) )
+#define SnapVector(v) ( (v)[0] = Floor( (v)[0] ), (v)[1] = Floor( (v)[1] ), \
+			(v)[2]=Floor((v)[2]))
 
 // just in case you do't want to use the macros
 vec_t _DotProduct( const vec3_t v1, const vec3_t v2 );
@@ -1138,8 +1138,8 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			misc[MAX_MISC];	// misc data
-	int			ammo;
-	int			clips;
+	int			ammo;			// ammo held
+	int			clips;			// clips held
 
 	int			ammo_extra[14]; // compatibility
 
