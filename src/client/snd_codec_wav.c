@@ -189,6 +189,7 @@ snd_codec_t wav_codec =
 	S_WAV_CodecOpenStream,
 	S_WAV_CodecReadStream,
 	S_WAV_CodecCloseStream,
+	S_WAV_CodecLoopStream,
 	NULL
 };
 
