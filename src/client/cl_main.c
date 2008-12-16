@@ -1102,9 +1102,6 @@ void CL_PlayDemo_f( void ) {
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
 
-	if( *cl_demoConfig->string )
-		Cbuf_AddText ( va( "exec %s\n", cl_demoConfig->string ) );
-
 	// read demo messages until connected
 	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED ) {
 		CL_ReadDemoMessage();
