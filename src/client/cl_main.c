@@ -2685,7 +2685,7 @@ void CL_CheckTeamChange(void)
 	char *t;
 	int team;
 
-	if( cls.state != CA_ACTIVE ) return;
+	if( cls.state != CA_ACTIVE || clc.demoplaying ) return;
 
 	t = Info_ValueForKey( &cl.gameState.stringData[
 		cl.gameState.stringOffsets[ CS_PLAYERS + clc.clientNum ] ],
