@@ -378,7 +378,7 @@ ifeq ($(PLATFORM),linux)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-ldl -lm
@@ -550,7 +550,7 @@ ifeq ($(PLATFORM),darwin)
 
   SHLIBEXT=dylib
   SHLIBCFLAGS=-fPIC -fno-common
-  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS)
+  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) --no-allow-shlib-undefined
 
   NOTSHLIBCFLAGS=-mdynamic-no-pic
 
@@ -619,7 +619,7 @@ ifeq ($(PLATFORM),mingw32)
 
   SHLIBEXT=dll
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS)--no-allow-shlib-undefined
 
   BINEXT=.exe
 
@@ -742,7 +742,7 @@ ifeq ($(PLATFORM),freebsd)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   # don't need -ldl (FreeBSD)
@@ -802,7 +802,7 @@ ifeq ($(PLATFORM),openbsd)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-lm
@@ -834,7 +834,7 @@ ifeq ($(PLATFORM),netbsd)
   LIBS=-lm
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
   THREAD_LIBS=-lpthread
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
@@ -868,7 +868,7 @@ ifeq ($(PLATFORM),irix64)
 
   SHLIBEXT=so
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared
+  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
 
   LIBS=-ldl -lm -lgen
   # FIXME: The X libraries probably aren't necessary?
@@ -933,7 +933,7 @@ ifeq ($(PLATFORM),sunos)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-lsocket -lnsl -ldl -lm
@@ -951,7 +951,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared
+  SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin
