@@ -93,6 +93,8 @@ Use grey instead of black
 */
 static inline void CON_SetColor(WINDOW *win, int color)
 {
+	if (com_ansiColor && !com_ansiColor->integer)
+		color = 7;
 	if (color == 0)
 		wattrset(win, COLOR_PAIR(color + 1) | A_BOLD);
 	else
@@ -390,6 +392,11 @@ char *CON_Input(void)
 
 	if (!curses_on)
 		return CON_Input_tty();
+
+	if (com_ansiColor->modified) {
+		CON_Resize();
+		com_ansiColor->modified = qfalse;
+	}
 
 	while (1) {
 		chr = getch();
