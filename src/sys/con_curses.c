@@ -75,10 +75,10 @@ static int lastline = 1;
 #define SCRLBAR_UP ACS_UARROW
 #define SCRLBAR_DOWN ACS_DARROW
 #else
-#define SCRLBAR_CURSOR '0'
+#define SCRLBAR_CURSOR '#'
 #define SCRLBAR_LINE ACS_VLINE
-#define SCRLBAR_UP '@'
-#define SCRLBAR_DOWN '@'
+#define SCRLBAR_UP ACS_HLINE
+#define SCRLBAR_DOWN ACS_HLINE
 #endif
 
 #define LOG_LINES (LINES - 4)
