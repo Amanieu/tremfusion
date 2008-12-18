@@ -154,11 +154,11 @@ asm_instruction( powerpc_iname_t sname, const int argc, const long int *argv )
 	name = opcode->name;
 
 	if ( ! opcode ) {
-		printf( "Can't find opcode %d\n", sname );
+		Com_Printf( "Can't find opcode %d\n", sname );
 		return ASM_ERROR_OPC;
 	}
 	if ( ( opcode->flags & PPC_DEST_ARCH ) != PPC_DEST_ARCH ) {
-		printf( "opcode %s not defined for this arch\n", name );
+		Com_Printf( "opcode %s not defined for this arch\n", name );
 		return ASM_ERROR_OPC;
 	}
 
@@ -171,7 +171,7 @@ asm_instruction( powerpc_iname_t sname, const int argc, const long int *argv )
 
 		if ( ! (operand->flags & PPC_OPERAND_FAKE) ) {
 			if ( argj >= argc ) {
-				printf( "Not enough arguments for %s, got %d\n", name, argc );
+				Com_Printf( "Not enough arguments for %s, got %d\n", name, argc );
 				return ASM_ERROR_OPC;
 			}
 
@@ -182,7 +182,7 @@ asm_instruction( powerpc_iname_t sname, const int argc, const long int *argv )
 			errmsg = NULL;
 			ret = operand->insert( ret, op, PPC_DEST_ARCH, &errmsg );
 			if ( errmsg ) {
-				printf( "%s: error while inserting operand %d (0x%.2lx): %s\n",
+				Com_Printf( "%s: error while inserting operand %d (0x%.2lx): %s\n",
 					name, argi, op, errmsg );
 			}
 		} else {
@@ -194,16 +194,16 @@ asm_instruction( powerpc_iname_t sname, const int argc, const long int *argv )
 				bitm_full >>= 1;
 
 				if ( ( opu & ~bitm_full ) != 0 && ( opu | bitm_full ) != -1 )
-					printf( "%s: signed operand nr.%d to wide. op: %.8lx, mask: %.8lx\n",
+					Com_Printf( "%s: signed operand nr.%d to wide. op: %.8lx, mask: %.8lx\n",
 						name, argi, opu, bitm );
 			} else {
 				if ( ( opu & ~bitm_full ) != 0 )
-					printf( "%s: unsigned operand nr.%d to wide. op: %.8lx, mask: %.8lx\n",
+					Com_Printf( "%s: unsigned operand nr.%d to wide. op: %.8lx, mask: %.8lx\n",
 						name, argi, opu, bitm );
 			}
 			if ( (bitm & 1) == 0 ) {
 				if ( opu & 0xf & ~bitm )
-					printf( "%s: operand nr.%d not aligned correctly. op: %.8lx, mask: %.8lx\n",
+					Com_Printf( "%s: operand nr.%d not aligned correctly. op: %.8lx, mask: %.8lx\n",
 						name, argi, opu, bitm );
 			}
 
@@ -212,7 +212,7 @@ asm_instruction( powerpc_iname_t sname, const int argc, const long int *argv )
 		argi++;
 	}
 	if ( argc > argj ) {
-		printf( "Too many arguments for %s, got %d\n", name, argc );
+		Com_Printf( "Too many arguments for %s, got %d\n", name, argc );
 		return ASM_ERROR_OPC;
 	}
 

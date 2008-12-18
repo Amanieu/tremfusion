@@ -2152,7 +2152,7 @@ VM_CallCompiled( vm_t *vm, int *args )
 	time_diff = stop_time.tms_utime - start_time.tms_utime;
 	time_total_vm += time_diff - time_outside_vm;
 	if ( time_diff > 100 ) {
-		printf( "App clock: %ld, vm total: %ld, vm this: %ld, vm real: %ld, vm out: %ld\n"
+		Com_Printf( "App clock: %ld, vm total: %ld, vm this: %ld, vm real: %ld, vm out: %ld\n"
 			"Inside VM %f%% of app time\n",
 			stop_time.tms_utime,
 			time_total_vm,
