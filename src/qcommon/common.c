@@ -2950,6 +2950,7 @@ static char shortestMatch[MAX_TOKEN_CHARS];
 static int	matchCount;
 // field we are working on, passed to Field_AutoComplete(&g_consoleCommand for instance)
 static field_t *completionField;
+static const char *completionPrompt;
 
 /*
 ===============
@@ -3053,7 +3054,7 @@ static qboolean Field_Complete( void )
 		return qtrue;
 	}
 
-	Com_Printf( "]%s\n", completionField->buffer );
+	Com_Printf( "%s^7%s\n", completionPrompt, completionField->buffer );
 
 	return qfalse;
 }
@@ -3208,9 +3209,10 @@ Field_AutoComplete
 Perform Tab expansion
 ===============
 */
-void Field_AutoComplete( field_t *field )
+void Field_AutoComplete( field_t *field, const char *prompt )
 {
 	completionField = field;
+	completionPrompt = prompt;
 
 	Field_CompleteCommand( completionField->buffer, qtrue, qtrue );
 }

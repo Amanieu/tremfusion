@@ -122,6 +122,8 @@ cvar_t  *cl_consoleFont;
 cvar_t  *cl_consoleFontSize;
 cvar_t  *cl_consoleFontKerning;
 
+cvar_t  *cl_consolePrompt;
+
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -2980,9 +2982,6 @@ void CL_InitRenderer( void ) {
 
 	cls.whiteShader = re.RegisterShader( "white" );
 	cls.consoleShader = re.RegisterShader( "console" );
-
-	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
-	g_consoleField.widthInChars = g_console_field_width;
 }
 
 /*
@@ -3376,6 +3375,8 @@ void CL_Init( void ) {
 	cl_consoleFont = Cvar_Get ("cl_consoleFont", "", CVAR_ARCHIVE | CVAR_LATCH);
 	cl_consoleFontSize = Cvar_Get ("cl_consoleFontSize", "16", CVAR_ARCHIVE | CVAR_LATCH);
 	cl_consoleFontKerning = Cvar_Get ("cl_consoleFontKerning", "0", CVAR_ARCHIVE);
+
+	cl_consolePrompt = Cvar_Get ("cl_consolePrompt", "^3-> ", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

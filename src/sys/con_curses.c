@@ -435,11 +435,11 @@ char *CON_Input(void)
 			wnoutrefresh(inputwin);
 			CON_UpdateCursor();
 			//doupdate();
-			Com_Printf("]%s\n", text);
+			Com_Printf(PROMPT "^7%s\n", text);
 			return text;
 		case '\t':
 		case KEY_STAB:
-			Field_AutoComplete(&input_field);
+			Field_AutoComplete(&input_field, PROMPT);
 			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case '\f':

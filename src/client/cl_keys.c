@@ -307,7 +307,7 @@ Handles horizontal scrolling and cursor blinking
 x, y, and width are in pixels
 ===================
 */
-void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, qboolean showCursor,
+void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean showCursor,
 		qboolean noColorEscape ) {
 	int		len;
 	int		drawLen;
@@ -370,7 +370,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 		i = drawLen - strlen( str );
 
 		if ( size == SMALLCHAR_WIDTH ) {
-            float xlocation = x + SCR_ConsoleFontStringWidth( str, edit->cursor) ;
+            float xlocation = x + SCR_ConsoleFontStringWidth( str + prestep, edit->cursor - prestep) ;
             SCR_DrawConsoleFontChar( xlocation , y, cursorChar );
 		} else {
 			str[0] = cursorChar;
@@ -381,14 +381,14 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 	}
 }
 
-void Field_Draw( field_t *edit, int x, int y, int width, qboolean showCursor, qboolean noColorEscape ) 
+void Field_Draw( field_t *edit, int x, int y, qboolean showCursor, qboolean noColorEscape ) 
 {
-	Field_VariableSizeDraw( edit, x, y, width, SMALLCHAR_WIDTH, showCursor, noColorEscape );
+	Field_VariableSizeDraw( edit, x, y, SMALLCHAR_WIDTH, showCursor, noColorEscape );
 }
 
-void Field_BigDraw( field_t *edit, int x, int y, int width, qboolean showCursor, qboolean noColorEscape ) 
+void Field_BigDraw( field_t *edit, int x, int y, qboolean showCursor, qboolean noColorEscape ) 
 {
-	Field_VariableSizeDraw( edit, x, y, width, BIGCHAR_WIDTH, showCursor, noColorEscape );
+	Field_VariableSizeDraw( edit, x, y, BIGCHAR_WIDTH, showCursor, noColorEscape );
 }
 
 /*
@@ -592,7 +592,7 @@ void Console_Key (int key) {
 			g_consoleField.cursor++;
 		}
 
-		Com_Printf ( "]%s\n", g_consoleField.buffer );
+		Com_Printf ( "%s^7%s\n", cl_consolePrompt->string, g_consoleField.buffer );
 
 		// leading slash is an explicit command
 		if ( g_consoleField.buffer[0] == '\\' || g_consoleField.buffer[0] == '/' ) {
@@ -623,7 +623,7 @@ void Console_Key (int key) {
 	// command completion
 
 	if (key == K_TAB) {
-		Field_AutoComplete(&g_consoleField);
+		Field_AutoComplete(&g_consoleField, cl_consolePrompt->string);
 		return;
 	}
 
