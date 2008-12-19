@@ -753,6 +753,25 @@ void Cmd_Delay_f (void)
 	Q_strncpyz(delayed_cmd[i].text, Cmd_ArgsFrom(2), MAX_CMD_LINE);
 }
 
+/*
+===============
+Cmd_Random_f
+
+Give a random integer
+===============
+*/
+void Cmd_Random_f( void ) {
+	int 	v1;
+	int 	v2;
+
+	if (Cmd_Argc() == 3) {
+		v1 = atoi(Cmd_Argv(2));
+		v2 = atoi(Cmd_Argv(3));
+		Cvar_SetValueLatched(Cmd_Argv(1), (int)(rand() / (float)RAND_MAX * (MAX(v1, v2) - MIN(v1, v2)) + MIN(v1, v2)));
+	} else {
+		Com_Printf("random <variableToSet> <value1> <value2>\n");
+	}
+}
 
 /*
 =============================================================================
@@ -1736,5 +1755,6 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("clearaliases", Cmd_ClearAliases_f);
 	Cmd_AddCommand ("delay", Cmd_Delay_f);
 	Cmd_SetCommandCompletionFunc( "delay", Cmd_CompleteDelay );
+	Cmd_AddCommand ("random", Cmd_Random_f);
 }
 
