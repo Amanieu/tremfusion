@@ -199,10 +199,6 @@ void G_ChangeTeam( gentity_t *ent, team_t newTeam )
     G_LogPrintf( "team: %i %i %i: %s" S_COLOR_WHITE " joined the %ss\n",
       ent->s.number, newTeam, oldTeam, ent->client->pers.netname,
       BG_TeamName( newTeam ) );
-
-  // log team changes to demo
-  G_DemoCommand( DC_CLIENT_SET, va( "%d \\team\\%d", (int)(ent - g_entities),
-                 ent->client->pers.teamSelection ) );
 }
 
 /*

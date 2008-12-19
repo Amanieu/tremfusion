@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // Headers for demo messages
 typedef enum {
 	demo_endFrame,
-	demo_configString,
 	demo_serverCommand,
 	demo_gameCommand,
 	demo_entityState,
@@ -94,24 +93,6 @@ void SV_DemoWriteGameCommand(int cmd, const char *str)
 	MSG_WriteByte(&msg, demo_gameCommand);
 	MSG_WriteByte(&msg, cmd);
 	MSG_WriteString(&msg, str);
-	SV_DemoWriteMessage(&msg);
-}
-
-/*
-====================
-SV_DemoWriteConfigString
-
-Write a client configstring to the demo file
-====================
-*/
-void SV_DemoWriteConfigString(int client)
-{
-	msg_t msg;
-
-	MSG_Init(&msg, buf, sizeof(buf));
-	MSG_WriteByte(&msg, demo_configString);
-	MSG_WriteBits(&msg, client, CLIENTNUM_BITS);
-	MSG_WriteString(&msg, sv.configstrings[CS_PLAYERS + client]);
 	SV_DemoWriteMessage(&msg);
 }
 
@@ -236,10 +217,6 @@ exit_loop:
 				// Set the server time
 				sv.time = MSG_ReadLong(&msg);
 				return;
-			case demo_configString:
-				num = MSG_ReadBits(&msg, CLIENTNUM_BITS);
-				SV_SetConfigstring(CS_PLAYERS + num, MSG_ReadString(&msg), qtrue);
-				break;
 			case demo_serverCommand:
 				Cmd_SaveCmdContext();
 				Cmd_TokenizeString(MSG_ReadString(&msg));
@@ -306,7 +283,6 @@ sv.demo* have already been set and the demo file opened, start writing gamestate
 void SV_DemoStartRecord(void)
 {
 	msg_t msg;
-	int i;
 
 	MSG_Init(&msg, buf, sizeof(buf));
 
@@ -316,14 +292,6 @@ void SV_DemoStartRecord(void)
 	MSG_WriteString(&msg, sv_mapname->string);
 	// Write number of clients (sv_maxclients < MAX_CLIENTS or else we can't playback)
 	MSG_WriteBits(&msg, sv_maxclients->integer, CLIENTNUM_BITS);
-	SV_DemoWriteMessage(&msg);
-
-	// Write client configstrings
-	for (i = 0; i < sv_maxclients->integer; i++)
-	{
-		if (svs.clients[i].state == CS_ACTIVE && sv.configstrings[CS_PLAYERS + i])
-			SV_DemoWriteConfigString(i);
-	}
 	SV_DemoWriteMessage(&msg);
 
 	// Write entities and players
@@ -445,8 +413,6 @@ void SV_DemoStartPlayback(void)
 	Com_Memset(sv.demoEntities, 0, sizeof(sv.demoEntities));
 	Com_Memset(sv.demoPlayerStates, 0, sizeof(sv.demoPlayerStates));
 	Cvar_SetValue("sv_democlients", clients);
-	for (i = 0; i < sv_democlients->integer; i++)
-		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
 	SV_DemoReadFrame();
 	Com_Printf("Playing demo %s.\n", sv.demoName);
 	sv.demoState = DS_PLAYBACK;
@@ -462,11 +428,6 @@ Close the demo file and restart the map
 */
 void SV_DemoStopPlayback(void)
 {
-	// Clear client configstrings
-	int i;
-	for (i = 0; i < sv_democlients->integer; i++)
-		SV_SetConfigstring(CS_PLAYERS + i, NULL, qtrue);
-
 	FS_FCloseFile(sv.demoFile);
 	sv.demoState = DS_NONE;
 	Cvar_SetValue("sv_demoState", DS_NONE);

@@ -2805,8 +2805,6 @@ qboolean G_admin_rename( gentity_t *ent, int skiparg )
           oldname,
           newname,
           ( ent ) ? ent->client->pers.netname : "console" ) );
-  // log renames to demo
-  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", (int)(victim - g_entities), newname ) );
   return qtrue;
 }
 
