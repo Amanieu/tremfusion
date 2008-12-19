@@ -1678,7 +1678,9 @@ void CL_Connect_f( void ) {
 
 	Com_DPrintf( "%s resolved to %s\n", cls.servername, serverString);
 
-	if( cl_guidServerUniq->integer )
+	if( cl_guidServerUniq->integer == 2 )
+		CL_UpdateGUID( NET_AdrToString(clc.serverAddress), strlen( NET_AdrToString(clc.serverAddress) ) );
+	else if ( cl_guidServerUniq->integer )
 		CL_UpdateGUID( serverString, strlen( serverString ) );
 	else
 		CL_UpdateGUID( NULL, 0 );
