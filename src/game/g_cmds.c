@@ -2983,8 +2983,6 @@ commands_t cmds[ ] = {
   { "destroy", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_Destroy_f },
   { "test", CMD_CHEAT, Cmd_Test_f },
   { "damage", CMD_CHEAT|CMD_LIVING, Cmd_Damage_f },
-
-  { "kill", CMD_TEAM|CMD_LIVING, Cmd_Kill_f },
   { "where", 0, Cmd_Where_f },
 
   // game commands
