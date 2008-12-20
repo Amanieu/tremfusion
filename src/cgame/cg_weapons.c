@@ -1224,7 +1224,6 @@ void CG_AddViewWeapon( playerState_t *ps )
   cent = &cg.predictedPlayerEntity; // &cg_entities[cg.snap->ps.clientNum];
 
   if( ( ps->persistant[PERS_SPECSTATE] != SPECTATOR_NOT ) ||
-      ( ps->stats[ STAT_STATE ] & SS_INFESTING ) ||
       ( ps->stats[ STAT_STATE ] & SS_HOVELING ) )
     return;
 
@@ -1850,7 +1849,16 @@ void CG_MissileHitPlayer( weapon_t weaponNum, weaponMode_t weaponMode,
     weaponMode = WPM_PRIMARY;
 
   if( weapon->wim[ weaponMode ].alwaysImpact )
-    CG_MissileHitWall( weaponNum, weaponMode, 0, origin, dir, IMPACTSOUND_FLESH, charge );
+  {
+    //note to self: this is why i shouldn't code while sleepy
+    int sound = IMPACTSOUND_DEFAULT;
+    if( cg_entities[ entityNum ].currentState.eType == ET_PLAYER ||
+        ( cg_entities[ entityNum ].currentState.eType == ET_BUILDABLE &&
+          BG_Buildable( cg_entities[ entityNum ].currentState.modelindex )->team == TEAM_ALIENS ) )
+        sound = IMPACTSOUND_FLESH;
+          
+    CG_MissileHitWall( weaponNum, weaponMode, 0, origin, dir, sound, charge );
+  }
 }
 
 /*

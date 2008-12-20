@@ -436,7 +436,12 @@ void Con_CheckResize (void)
 	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	short	tbuf[CON_TEXTSIZE];
 
-	width = g_console_field_width;
+	if (cls.glconfig.vidWidth) {
+		g_consoleField.widthInChars = cls.glconfig.vidWidth / SCR_ConsoleFontCharWidth('W') - Q_PrintStrlen(cl_consolePrompt->string) - 1;
+		width = cls.glconfig.vidWidth / SCR_ConsoleFontCharWidth('W') - 2;
+	} else {
+		width = 0;
+	}
 
 	if (width == con.linewidth)
 		return;
@@ -697,6 +702,7 @@ Draw the editline after a ] prompt
 */
 void Con_DrawInput (void) {
 	int		y;
+	char	prompt[ MAX_STRING_CHARS ];
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 		return;
@@ -706,10 +712,12 @@ void Con_DrawInput (void) {
 
 	re.SetColor( con.color );
 
-	SCR_DrawConsoleFontChar( con.xadjust + cl_conXOffset->integer, y, ']' );
+	Q_strncpyz( prompt, cl_consolePrompt->string, sizeof( prompt ) );
+	Q_CleanStr( prompt );
 
-	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontCharWidth(']'), y,
-		SCREEN_WIDTH - 3 * SCR_ConsoleFontCharWidth(' '), qtrue, qtrue );
+	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, cl_consolePrompt->string, colorWhite, qfalse, qfalse );
+
+	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue );
 }
 
 /*
@@ -797,7 +805,7 @@ void Con_DrawSolidConsole( float frac ) {
 	// draw arrows to show the buffer is backscrolled
 	    re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
         for (x=0 ; x<con.linewidth ; x+=4)
-            SCR_DrawConsoleFontChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, y, '^' );
+            SCR_DrawConsoleFontChar( con.xadjust + (x+1)*SCR_ConsoleFontCharWidth('^'), y, '^' );
         y -= SCR_ConsoleFontCharHeight();
         rows--;
 	}
@@ -897,8 +905,7 @@ void Con_DrawConsole( void ) {
 			skip = 5;
 		}
 
-		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232,
-				SCREEN_WIDTH - ( skip + 1 ) * BIGCHAR_WIDTH, qtrue, qtrue );
+		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232, qtrue, qtrue );
 	}
 }
 

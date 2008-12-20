@@ -206,7 +206,7 @@ static	int	neighbors[8][2] = {
 				count++;
 			}
 			if ( count == 0 ) {
-//printf("bad normal\n");
+//Com_Printf("bad normal\n");
 				count = 1;
 			}
 			VectorNormalize2( sum, dv->normal );

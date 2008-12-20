@@ -1101,6 +1101,8 @@ typedef struct
   vec3_t        kick_angles;                        // weapon kicks
   vec3_t        kick_origin;
 
+  qboolean      chaseFollow;               
+
   // temp working variables for player view
   float         bobfracsin;
   int           bobcycle;
@@ -1467,6 +1469,7 @@ extern  vmCvar_t    cg_drawChargeBar;
 extern  vmCvar_t    cg_drawCrosshair;
 extern  vmCvar_t    cg_drawCrosshairNames;
 extern  vmCvar_t    cg_crosshairSize;
+extern  vmCvar_t    cg_drawAmmoStack;
 extern  vmCvar_t    cg_draw2D;
 extern  vmCvar_t    cg_drawStatus;
 extern  vmCvar_t    cg_animSpeed;
@@ -1492,8 +1495,13 @@ extern  vmCvar_t    cg_tracerWidth;
 extern  vmCvar_t    cg_tracerLength;
 extern  vmCvar_t    cg_autoswitch;
 extern  vmCvar_t    cg_thirdPerson;
+extern  vmCvar_t    cg_thirdPersonShoulderViewMode;
+extern  vmCvar_t    cg_thirdPersonPitchFollow;
 extern  vmCvar_t    cg_thirdPersonRange;
-extern  vmCvar_t    cg_thirdPersonAngle;
+extern  vmCvar_t    cg_shoulderViewOverride;
+extern  vmCvar_t    cg_shoulderViewUp;
+extern  vmCvar_t    cg_shoulderViewRight;
+extern  vmCvar_t    cg_shoulderViewForward;
 extern  vmCvar_t    cg_stereoSeparation;
 extern  vmCvar_t    cg_lagometer;
 extern  vmCvar_t    cg_synchronousClients;
@@ -1516,8 +1524,6 @@ extern  vmCvar_t    cg_noTaunt;
 extern  vmCvar_t    cg_drawSurfNormal;
 extern  vmCvar_t    cg_drawBBOX;
 extern  vmCvar_t    cg_wwSmoothTime;
-extern  vmCvar_t    cg_wwFollow;
-extern  vmCvar_t    cg_wwToggle;
 extern  vmCvar_t    cg_flySpeed;
 extern  vmCvar_t    cg_depthSortParticles;
 extern  vmCvar_t    cg_bounceParticles;
@@ -1606,6 +1612,9 @@ void        CG_TestModelNextSkin_f( void );
 void        CG_TestModelPrevSkin_f( void );
 void        CG_AddBufferedSound( sfxHandle_t sfx );
 void        CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback );
+void        CG_OffsetFirstPersonView( void );
+void        CG_OffsetThirdPersonView( void );
+void        CG_OffsetShoulderView( void );
 
 
 //
@@ -1647,9 +1656,9 @@ void        CG_CenterPrint( const char *str, int y, int charWidth );
 void        CG_DrawActive( stereoFrame_t stereoView );
 void        CG_OwnerDraw( float x, float y, float w, float h, float text_x,
                           float text_y, int ownerDraw, int ownerDrawFlags,
-                          int align, int textalign, int textvalign, float special,
-                          float scale, vec4_t color,
-                          qhandle_t shader, int textStyle );
+                          int align, int textalign, int textvalign,
+                          float special, float scale, vec4_t foreColor,
+                          vec4_t backColor, qhandle_t shader, int textStyle );
 float       CG_GetValue(int ownerDraw);
 void        CG_RunMenuScript(char **args);
 void        CG_SetPrintString( int type, const char *p );
@@ -1673,7 +1682,7 @@ void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
-centity_t   *CG_GetLocation( centity_t *cent );
+centity_t   *CG_GetPlayerLocation( void );
 
 //
 // cg_buildable.c

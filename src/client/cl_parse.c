@@ -562,6 +562,9 @@ void CL_ParseGamestate( msg_t *msg ) {
 	// reinitialize the filesystem if the game directory has changed
 	FS_ConditionalRestart( clc.checksumFeed );
 
+	if(clc.demoplaying && cl_demoConfig->string[0] )
+		Cbuf_AddText ( va( "exec %s\n", cl_demoConfig->string ) );
+
 	// This used to call CL_StartHunkUsers, but now we enter the download state before loading the
 	// cgame
 	CL_InitDownloads();

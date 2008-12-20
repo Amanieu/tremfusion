@@ -257,91 +257,310 @@ static void CG_CalcVrect( void )
 
 //==============================================================================
 
-
 /*
 ===============
 CG_OffsetThirdPersonView
 
 ===============
 */
-#define FOCUS_DISTANCE  512
-static void CG_OffsetThirdPersonView( void )
+void CG_OffsetThirdPersonView( void )
 {
+  int i;
   vec3_t        forward, right, up;
   vec3_t        view;
-  vec3_t        focusAngles;
   trace_t       trace;
   static vec3_t mins = { -8, -8, -8 };
   static vec3_t maxs = { 8, 8, 8 };
   vec3_t        focusPoint;
-  float         focusDist;
-  float         forwardScale, sideScale;
   vec3_t        surfNormal;
+  int           cmdNum;
+  usercmd_t     cmd, oldCmd;
+  float         range;
+  vec3_t        mouseInputAngles;
+  vec3_t        rotationAngles;
+  vec3_t        axis[ 3 ], rotaxis[ 3 ];
+  float         deltaPitch;
+  static float  pitch;
 
-  BG_GetClientNormal( &cg.predictedPlayerState, surfNormal );
-
-  VectorMA( cg.refdef.vieworg, cg.predictedPlayerState.viewheight, surfNormal, cg.refdef.vieworg );
-
-  VectorCopy( cg.refdefViewAngles, focusAngles );
-
-  // if dead, look at killer
-  if( cg.predictedPlayerState.stats[ STAT_HEALTH ] <= 0 )
+  // If cg_thirdpersonShoulderViewMode == 2, do shoulder view instead
+  // If cg_thirdpersonShoulderViewMode == 1, do shoulder view when chasing
+  //   a wallwalker because it's really erratic to watch
+  if( ( cg_thirdPersonShoulderViewMode.integer == 2 ) ||
+      ( ( cg_thirdPersonShoulderViewMode.integer == 1 ) &&
+        ( cg.snap->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING ) &&
+        ( cg.snap->ps.stats[ STAT_HEALTH ] > 0 ) ) )
   {
-    focusAngles[ YAW ] = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
-    cg.refdefViewAngles[ YAW ] = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+    CG_OffsetShoulderView( );
+    return;
   }
 
-  //if ( focusAngles[PITCH] > 45 ) {
-  //  focusAngles[PITCH] = 45;    // don't go too far overhead
-  //}
-  AngleVectors( focusAngles, forward, NULL, NULL );
+  BG_GetClientNormal( &cg.predictedPlayerState, surfNormal );
+  // Set the view origin to the class's view height
+  VectorMA( cg.refdef.vieworg, cg.predictedPlayerState.viewheight, surfNormal, cg.refdef.vieworg );
 
-  VectorMA( cg.refdef.vieworg, FOCUS_DISTANCE, forward, focusPoint );
+  // Set the focus point where the camera will look (at the player's vieworg)
+  VectorCopy( cg.refdef.vieworg, focusPoint );
 
+  // If player is dead, we want the player to be between us and the killer
+  // so pretend that the player was looking at the killer, then place cam behind them.
+  // FIXME: This still fails to see killer when killer is above/below or killer moves 
+  // out of view (relative to the dead player).
+  if( cg.predictedPlayerState.stats[ STAT_HEALTH ] <= 0 )
+    cg.refdefViewAngles[ YAW ] = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+
+  // get and rangecheck cg_thirdPersonRange
+  range = cg_thirdPersonRange.value;
+  if( range > 150.0f ) range = 150.0f;
+  if( range < 30.0f ) range = 30.0f;
+
+  // Calculate the angle of the camera's position around the player.
+  // Unless in demo, PLAYING in third person, or in dead-third-person cam, allow the player 
+  // to control camera position offsets using the mouse position.
+  if( cg.demoPlayback || 
+    ( ( cg.snap->ps.pm_flags & PMF_FOLLOW ) && 
+      ( cg.predictedPlayerState.stats[ STAT_HEALTH ] > 0 ) ) )
+  {
+    // Collect our input values from the mouse.
+    cmdNum = trap_GetCurrentCmdNumber();
+    trap_GetUserCmd( cmdNum, &cmd );
+    trap_GetUserCmd( cmdNum - 1, &oldCmd );
+
+    // Prevent pitch from wrapping and clamp it within a [-75, 90] range.
+    // Cgame has no access to ps.delta_angles[] here, so we need to reproduce
+    // it ourselves.
+    deltaPitch = SHORT2ANGLE( cmd.angles[ PITCH ] - oldCmd.angles[ PITCH ] );
+    if( fabs(deltaPitch) < 200.0f )
+    {
+      pitch += deltaPitch;
+      AngleNormalize180( pitch );
+    }
+
+    mouseInputAngles[ PITCH ] = pitch;
+    mouseInputAngles[ YAW ] = -1.0 * SHORT2ANGLE( cmd.angles[ YAW ] ); // yaw is inverted
+    mouseInputAngles[ ROLL ] = 0.0;
+
+    for( i = 0; i < 3; i++ )
+      AngleNormalize180( mouseInputAngles[ i ] );
+
+    // Set the rotation angles to be the view angles offset by the mouse input
+    // Ignore the original pitch though; it's too jerky otherwise
+    if( !cg_thirdPersonPitchFollow.integer ) 
+      cg.refdefViewAngles[ PITCH ] = 0.0;
+
+    for( i = 0; i < 3; i++ )
+    {
+      rotationAngles[ i ] = cg.refdefViewAngles[ i ] + mouseInputAngles[ i ];
+      AngleNormalize180( rotationAngles[ i ] );
+    }
+
+    // Don't let pitch go too high/too low or the camera flips around and
+    // that's really annoying.
+    // However, when we're not on the floor or ceiling (wallwalk) pitch 
+    // may not be pitch, so just let it go.
+    if( surfNormal[ 2 ] > 0.5 || surfNormal[ 2 ] < -0.5 ) 
+    {
+      if( rotationAngles[ PITCH ] > 85 )
+        rotationAngles[ PITCH ] = 85;
+      else if( rotationAngles[ PITCH ] < -85 )
+        rotationAngles[ PITCH ] = -85;
+    }
+
+    // Perform the rotations specified by rotationAngles.
+    AnglesToAxis( rotationAngles, axis );
+    if( !( cg.snap->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING ) ||
+        !BG_RotateAxis( cg.snap->ps.grapplePoint, axis, rotaxis, qfalse,
+                        cg.snap->ps.eFlags & EF_WALLCLIMBCEILING ) )
+      AxisCopy( axis, rotaxis );
+
+    // Convert the new axis back to angles.
+    AxisToAngles( rotaxis, rotationAngles );
+
+    for( i = 0; i < 3; i++ )
+      AngleNormalize180( rotationAngles[ i ] );
+  }
+  else 
+  {
+    // If we're playing the game in third person, the viewangles already
+    // take care of our mouselook, so just use them.
+    for( i = 0; i < 3; i++ )
+      rotationAngles[ i ] = cg.refdefViewAngles[ i ];
+  }
+
+  // Move the camera range distance back.
+  AngleVectors( rotationAngles, forward, right, up );
   VectorCopy( cg.refdef.vieworg, view );
+  VectorMA( view, -range, forward, view );
 
-  VectorMA( view, 12, surfNormal, view );
-
-  //cg.refdefViewAngles[PITCH] *= 0.5;
-
-  AngleVectors( cg.refdefViewAngles, forward, right, up );
-
-  forwardScale = cos( cg_thirdPersonAngle.value / 180 * M_PI );
-  sideScale = sin( cg_thirdPersonAngle.value / 180 * M_PI );
-  VectorMA( view, -cg_thirdPersonRange.value * forwardScale, forward, view );
-  VectorMA( view, -cg_thirdPersonRange.value * sideScale, right, view );
-
-  // trace a ray from the origin to the viewpoint to make sure the view isn't
-  // in a solid block.  Use an 8 by 8 block to prevent the view from near clipping anything
-
+  // Ensure that the current camera position isn't out of bounds and that there
+  // is nothing between the camera and the player.
   if( !cg_cameraMode.integer )
   {
+    // Trace a ray from the origin to the viewpoint to make sure the view isn't
+    // in a solid block.  Use an 8 by 8 block to prevent the view from near clipping anything
     CG_Trace( &trace, cg.refdef.vieworg, mins, maxs, view, cg.predictedPlayerState.clientNum, MASK_SOLID );
 
     if( trace.fraction != 1.0 )
     {
       VectorCopy( trace.endpos, view );
       view[ 2 ] += ( 1.0 - trace.fraction ) * 32;
-      // try another trace to this position, because a tunnel may have the ceiling
-      // close enogh that this is poking out
+      // Try another trace to this position, because a tunnel may have the ceiling
+      // close enogh that this is poking out.
 
       CG_Trace( &trace, cg.refdef.vieworg, mins, maxs, view, cg.predictedPlayerState.clientNum, MASK_SOLID );
       VectorCopy( trace.endpos, view );
     }
   }
 
+  // Set the camera position to what we calculated.
   VectorCopy( view, cg.refdef.vieworg );
 
-  // select pitch to look at focus point from vieword
+  // The above checks may have moved the camera such that the existing viewangles
+  // may not still face the player. Recalculate them to do so.
   VectorSubtract( focusPoint, cg.refdef.vieworg, focusPoint );
-  focusDist = sqrt( focusPoint[ 0 ] * focusPoint[ 0 ] + focusPoint[ 1 ] * focusPoint[ 1 ] );
-  if ( focusDist < 1 ) {
-    focusDist = 1;  // should never happen
-  }
-  cg.refdefViewAngles[ PITCH ] = -180 / M_PI * atan2( focusPoint[ 2 ], focusDist );
-  cg.refdefViewAngles[ YAW ] -= cg_thirdPersonAngle.value;
+  vectoangles( focusPoint, cg.refdefViewAngles );
 }
 
+
+/*
+===============
+CG_OffsetShoulderView
+
+===============
+*/
+void CG_OffsetShoulderView( void )
+{
+  int i;
+  int           cmdNum;
+  usercmd_t     cmd, oldCmd;
+  vec3_t        rotationAngles;
+  vec3_t        axis[ 3 ], rotaxis[ 3 ];
+  float         deltaMousePitch;
+  static float  mousePitch;
+  vec3_t        forward, right, up;
+  float         classFwdOffset = 0, classUpOffset = 0, classRightOffset = 0;
+    
+  AngleVectors( cg.refdefViewAngles, forward, right, up );
+
+  // Set a nice view by offsetting from vieworigin to get to the "shoulder"
+  // for each class.
+  // FIXME: These need to not be hard-coded so hackishly
+  switch( cg.snap->ps.stats[ STAT_CLASS ] )
+  {
+    case PCL_ALIEN_BUILDER0:
+    case PCL_ALIEN_BUILDER0_UPG:
+      classFwdOffset = -8;
+      classRightOffset = 15;
+      classUpOffset = 13;
+      break;
+    case PCL_ALIEN_LEVEL0:
+      classFwdOffset = -5;
+      classRightOffset = 0;
+      classUpOffset = 17; // +10 for dev from svn
+      break;
+    case PCL_ALIEN_LEVEL1:
+    case PCL_ALIEN_LEVEL1_UPG:
+      classFwdOffset = -10;
+      classRightOffset = 0;
+      classUpOffset = 18;
+      break;
+    case PCL_ALIEN_LEVEL2: 
+    case PCL_ALIEN_LEVEL2_UPG: 
+      classFwdOffset = 0;
+      classRightOffset = 12;
+      classUpOffset = 5;
+      break;
+    case PCL_ALIEN_LEVEL3:
+      classFwdOffset = -10;
+      classRightOffset = 15;
+      classUpOffset = 8;
+      break;
+    case PCL_ALIEN_LEVEL3_UPG:
+      classFwdOffset = -10;
+      classRightOffset = 17;
+      classUpOffset = 12;
+      break;
+    case PCL_ALIEN_LEVEL4:
+      classFwdOffset = -20;
+      classRightOffset = -25;
+      classUpOffset = 30; // -40 for dev from svn
+      break;
+    case PCL_HUMAN:
+      classFwdOffset = -10;
+      classRightOffset = 15;
+      classUpOffset = 0;
+      break;
+    case PCL_HUMAN_BSUIT:
+      classFwdOffset = -30;
+      classRightOffset = 25;
+      classUpOffset = -2; // +6 for dev from svn
+      break;
+  }
+  // The override is temporary so that people can help find good offset positions for me.
+  // It will not remain in final code.
+  if( !cg_shoulderViewOverride.integer )
+  {
+    VectorMA( cg.refdef.vieworg, classFwdOffset, forward, cg.refdef.vieworg );
+    VectorMA( cg.refdef.vieworg, classUpOffset, up, cg.refdef.vieworg );
+    VectorMA( cg.refdef.vieworg, classRightOffset, right, cg.refdef.vieworg );
+  }
+  else
+  {
+    VectorMA( cg.refdef.vieworg, cg_shoulderViewForward.value, forward, cg.refdef.vieworg );
+    VectorMA( cg.refdef.vieworg, cg_shoulderViewUp.value, up, cg.refdef.vieworg );
+    VectorMA( cg.refdef.vieworg, cg_shoulderViewRight.value, right, cg.refdef.vieworg );
+  }
+
+  // If someone is playing like this, the rest is already taken care of
+  // so just get the firstperson effects and leave.
+  if( !cg.demoPlayback && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) )
+  {
+    CG_OffsetFirstPersonView();
+    return;
+  }
+
+  // Get mouse input for camera rotation. 
+  cmdNum = trap_GetCurrentCmdNumber();
+  trap_GetUserCmd( cmdNum, &cmd );
+  trap_GetUserCmd( cmdNum - 1, &oldCmd );
+
+  // Prevent pitch from wrapping and clamp it within a [30, -50] range.
+  // Cgame has no access to ps.delta_angles[] here, so we need to reproduce
+  // it ourselves here.
+  deltaMousePitch = SHORT2ANGLE( cmd.angles[ PITCH ] - oldCmd.angles[ PITCH ] );
+  if( fabs(deltaMousePitch) < 200.0f )
+    mousePitch += deltaMousePitch;
+
+  // Handle pitch.
+  rotationAngles[ PITCH ] = mousePitch;
+  // Ignore following pitch; it's too jerky otherwise.
+  if( cg_thirdPersonPitchFollow.integer ) 
+    mousePitch += cg.refdefViewAngles[ PITCH ];
+  AngleNormalize180( rotationAngles[ PITCH ] );
+  if( rotationAngles [ PITCH ] < -90 ) rotationAngles [ PITCH ] = -90;
+  if( rotationAngles [ PITCH ] > 90 ) rotationAngles [ PITCH ] = 90;
+
+  // Yaw and Roll are much easier.
+  rotationAngles[ YAW ] = SHORT2ANGLE( cmd.angles[ YAW ] ) + cg.refdefViewAngles[ YAW ];
+  rotationAngles[ ROLL ] = 0;
+
+  // Perform the rotations.
+  AnglesToAxis( rotationAngles, axis );
+  if( !( cg.snap->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING ) ||
+      !BG_RotateAxis( cg.snap->ps.grapplePoint, axis, rotaxis, qfalse,
+                      cg.snap->ps.eFlags & EF_WALLCLIMBCEILING ) )
+    AxisCopy( axis, rotaxis );
+  AxisToAngles( rotaxis, rotationAngles );
+
+  for( i = 0; i < 3; i++ )
+    AngleNormalize180( rotationAngles[ i ] );
+
+  // Actually set the viewangles.
+  for( i = 0; i < 3; i++ )
+    cg.refdefViewAngles[ i ] = rotationAngles[ i ];
+
+  // Now run the first person stuff so we get various effects added.
+  CG_OffsetFirstPersonView( );
+}
 
 // this causes a compiler bug on mac MrC compiler
 static void CG_StepOffset( void )
@@ -378,7 +597,7 @@ CG_OffsetFirstPersonView
 
 ===============
 */
-static void CG_OffsetFirstPersonView( void )
+void CG_OffsetFirstPersonView( void )
 {
   float         *origin;
   float         *angles;
@@ -684,15 +903,35 @@ static int CG_CalcFov( void )
   int       inwater;
   int       attribFov;
   usercmd_t cmd;
+  usercmd_t oldcmd;
   int       cmdNum;
 
   cmdNum = trap_GetCurrentCmdNumber( );
   trap_GetUserCmd( cmdNum, &cmd );
+  trap_GetUserCmd( cmdNum - 1, &oldcmd );
+
+  // switch follow modes if necessary: cycle between free -> follow -> third-person follow
+  if( cmd.buttons & BUTTON_USE_HOLDABLE && !( oldcmd.buttons & BUTTON_USE_HOLDABLE ) )
+  {
+    if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) 
+    {
+      if( !cg.chaseFollow )
+        cg.chaseFollow = qtrue;
+      else
+      {
+        cg.chaseFollow = qfalse;
+        trap_SendClientCommand( "follow\n" );
+      }
+    }
+    else if ( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
+      trap_SendClientCommand( "follow\n" );
+  }
 
   if( cg.predictedPlayerState.pm_type == PM_INTERMISSION ||
-      ( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT ) )
+      ( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT ) || 
+      ( cg.renderingThirdPerson ) )
   {
-    // if in intermission, use a fixed value
+    // if in intermission or third person, use a fixed value
     fov_x = 90;
   }
   else
@@ -1233,7 +1472,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
   CG_PredictPlayerState( );
 
   // decide on third person view
-  cg.renderingThirdPerson = cg_thirdPerson.integer || ( cg.snap->ps.stats[ STAT_HEALTH ] <= 0 );
+  cg.renderingThirdPerson = ( cg_thirdPerson.integer || ( cg.snap->ps.stats[ STAT_HEALTH ] <= 0 ) || 
+                            ( cg.chaseFollow && cg.snap->ps.pm_flags & PMF_FOLLOW) );
 
   // build cg.refdef
   inwater = CG_CalcViewValues( );

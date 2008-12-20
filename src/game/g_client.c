@@ -1067,8 +1067,6 @@ void ClientUserinfoChanged( int clientNum )
       {
         client->pers.nameChangeTime = level.time;
         client->pers.nameChanges++;
-        // log renames to demo
-        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s", clientNum, client->pers.netname ) );
       }
     }
   }
@@ -1181,6 +1179,9 @@ void ClientUserinfoChanged( int clientNum )
     client->pers.voice );
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, userinfo );
+
+  // log to demo
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, userinfo ) );
 
   /*G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );*/
 }
@@ -1348,8 +1349,8 @@ void ClientBegin( int clientNum )
   G_LogPrintf( "ClientBegin: %i\n", clientNum );
 
   // log to demo
-  G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", clientNum,
-                 client->pers.netname, client->pers.teamSelection ) );
+  trap_GetConfigstring( CS_PLAYERS + clientNum, userinfo, sizeof(userinfo) );
+  G_DemoCommand( DC_CLIENT_SET, va( "%d %s", clientNum, userinfo ) );
 
   // count current clients and rank for scoreboard
   CalculateRanks( );

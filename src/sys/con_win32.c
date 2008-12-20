@@ -49,24 +49,6 @@ static HANDLE qconsole_hin;
 
 /*
 ==================
-CON_CtrlHandler
-
-The Windows Console doesn't use signals for terminating the application
-with Ctrl-C, logging off, window closing, etc.  Instead it uses a special
-handler routine.  Fortunately, the values for Ctrl signals don't seem to
-overlap with true signal codes that Windows provides, so calling
-Sys_SigHandler() with those numbers should be safe for generating unique
-shutdown messages.
-==================
-*/
-static BOOL WINAPI CON_CtrlHandler( DWORD sig )
-{
-	Sys_SigHandler( sig );
-	return TRUE;
-}
-
-/*
-==================
 CON_Clear_f
 ==================
 */
@@ -153,9 +135,6 @@ void CON_Init( void )
 {
 	CONSOLE_CURSOR_INFO curs;
 	CONSOLE_SCREEN_BUFFER_INFO info;
-
-	// handle Ctrl-C or other console termination
-	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
 
 	qconsole_hin = GetStdHandle( STD_INPUT_HANDLE );
 	if( qconsole_hin == INVALID_HANDLE_VALUE )
@@ -246,7 +225,7 @@ char *CON_Input( void )
 
 			Q_strncpyz( f.buffer, qconsole_line,
 				sizeof( f.buffer ) );
-			Field_AutoComplete( &f );
+			Field_AutoComplete( &f, "]" );
 			Q_strncpyz( qconsole_line, f.buffer,
 				sizeof( qconsole_line ) );
 			qconsole_linelen = strlen( qconsole_line );

@@ -2525,21 +2525,23 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	// create the default shading commands
 	//
 	if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
-		// dynamic colors at vertexes
-		stages[0].bundle[0].image[0] = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		stages[0].stateBits = GLS_DEFAULT;
+		if ( r_specularLighting->integer >= 1 ) { // extra pass for specular lighting
+			// dynamic colors at vertexes
+			stages[0].bundle[0].image[0] = image;
+			stages[0].active = qtrue;
+			stages[0].stateBits = GLS_DEFAULT;
 
-		if ( r_specularLighting->value == 1 ) { // extra pass for specular lighting
-			stages[1].bundle[0].image[0] = image;
+			stages[1].bundle[0].image[0] = tr.whiteImage;
 			stages[1].active = qtrue;
-			stages[1].rgbGen = CGEN_CONST;
-			stages[1].constantColor[0] = r_specularLightingExponent->value * 255;
-			stages[1].constantColor[1] = r_specularLightingExponent->value * 255;
-			stages[1].constantColor[2] = r_specularLightingExponent->value * 255;
+			stages[1].rgbGen = CGEN_LIGHTING_DIFFUSE;
 			stages[1].alphaGen = AGEN_LIGHTING_SPECULAR;
-			stages[1].stateBits |= GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE;
+			stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_SRC_ALPHA;
+		} else {
+			// dynamic colors at vertexes
+			stages[0].bundle[0].image[0] = image;
+			stages[0].active = qtrue;
+			stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
+			stages[0].stateBits = GLS_DEFAULT;
 		}
 	} else if ( shader.lightmapIndex == LIGHTMAP_BY_VERTEX ) {
 		// explicit colors at vertexes
@@ -2569,7 +2571,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		stages[1].rgbGen = CGEN_IDENTITY;
 		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
 	} else {
-		if ( r_specularLighting->value == 1 ) {
+		if ( r_specularLighting->integer >= 1 ) {
 			// three pass lightmap with specular
 			stages[0].bundle[0].image[0] = image;
 			stages[0].active = qtrue;
@@ -2663,21 +2665,23 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 	// create the default shading commands
 	//
 	if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
-		// dynamic colors at vertexes
-		stages[0].bundle[0].image[0] = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		stages[0].stateBits = GLS_DEFAULT;
+		if ( r_specularLighting->integer >= 1 ) { // extra pass for specular lighting
+			// dynamic colors at vertexes
+			stages[0].bundle[0].image[0] = image;
+			stages[0].active = qtrue;
+			stages[0].stateBits = GLS_DEFAULT;
 
-		if ( r_specularLighting->value == 1 ) { // extra pass for specular lighting
-			stages[1].bundle[0].image[0] = image;
+			stages[1].bundle[0].image[0] = tr.whiteImage;
 			stages[1].active = qtrue;
-			stages[1].rgbGen = CGEN_CONST;
-			stages[1].constantColor[0] = r_specularLightingExponent->value * 255;
-			stages[1].constantColor[1] = r_specularLightingExponent->value * 255;
-			stages[1].constantColor[2] = r_specularLightingExponent->value * 255;
+			stages[1].rgbGen = CGEN_LIGHTING_DIFFUSE;
 			stages[1].alphaGen = AGEN_LIGHTING_SPECULAR;
-			stages[1].stateBits |= GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE;
+			stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_SRC_ALPHA;
+		} else {
+			// dynamic colors at vertexes
+			stages[0].bundle[0].image[0] = image;
+			stages[0].active = qtrue;
+			stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
+			stages[0].stateBits = GLS_DEFAULT;
 		}
 	} else if ( shader.lightmapIndex == LIGHTMAP_BY_VERTEX ) {
 		// explicit colors at vertexes
@@ -2707,7 +2711,7 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 		stages[1].rgbGen = CGEN_IDENTITY;
 		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
 	} else {
-		if ( r_specularLighting->value == 1 ) {
+		if ( r_specularLighting->integer >= 1 ) {
 			// three pass lightmap with specular
 			stages[0].bundle[0].image[0] = image;
 			stages[0].active = qtrue;

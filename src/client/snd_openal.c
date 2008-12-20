@@ -1586,22 +1586,7 @@ void S_AL_MusicProcess(ALuint b)
 	// Run out data to read, start at the beginning again
 	if(l == 0)
 	{
-		S_CodecCloseStream(curstream);
-
-		// the intro stream just finished playing so we don't need to reopen
-		// the music stream.
-		if(intro_stream)
-			intro_stream = NULL;
-		else
-			mus_stream = S_CodecOpenStream(s_backgroundLoop);
-		
-		curstream = mus_stream;
-
-		if(!curstream)
-		{
-			S_AL_StopBackgroundTrack();
-			return;
-		}
+		S_CodecLoopStream(curstream);
 
 		l = S_CodecReadStream(curstream, MUSIC_BUFFER_SIZE, decode_buffer);
 	}

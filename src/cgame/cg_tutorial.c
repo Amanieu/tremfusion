@@ -221,7 +221,8 @@ static void CG_AlienBuilderText( char *text, playerState_t *ps )
     }
   }
 
-  if( ps->stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0_UPG )
+  if( ps->stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0 ||
+      ps->stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0_UPG )
   {
     if( ( ps->stats[ STAT_BUILDABLE ] & ~SB_VALID_TOGGLEBIT ) == BA_NONE )
     {
@@ -371,16 +372,6 @@ static void CG_HumanCkitText( char *text, playerState_t *ps )
     Q_strcat( text, MAX_TUTORIAL_TEXT,
         va( "Press %s to build a structure\n",
           CG_KeyNameForCommand( "+attack" ) ) );
-
-    if( CG_BuildableInRange( ps, &health ) )
-    {
-      if( health < 1.0f )
-      {
-        Q_strcat( text, MAX_TUTORIAL_TEXT,
-            va( "Hold %s to repair this structure\n",
-              CG_KeyNameForCommand( "+button5" ) ) );
-      }
-    }
   }
 
   if( ( es = CG_BuildableInRange( ps, NULL ) ) )
@@ -574,9 +565,14 @@ static void CG_SpectatorText( char *text, playerState_t *ps )
 
   if( ps->pm_flags & PMF_FOLLOW )
   {
-    Q_strcat( text, MAX_TUTORIAL_TEXT,
-        va( "Press %s to stop following\n",
-            CG_KeyNameForCommand( "+button2" ) ) );
+    if( !cg.chaseFollow )
+      Q_strcat( text, MAX_TUTORIAL_TEXT,
+                va( "Press %s to switch to chase-cam spectator mode\n",
+                    CG_KeyNameForCommand( "+button2" ) ) );
+    else
+      Q_strcat( text, MAX_TUTORIAL_TEXT,
+                va( "Press %s to return to free spectator mode\n",
+                    CG_KeyNameForCommand( "+button2" ) ) );
 
     Q_strcat( text, MAX_TUTORIAL_TEXT,
           va( "Press %s or ",

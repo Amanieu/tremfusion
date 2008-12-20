@@ -100,7 +100,9 @@
 #define CG_PLAYER_HEALTH_CROSS            1
 #define CG_PLAYER_AMMO_VALUE              2
 #define CG_PLAYER_CLIPS_VALUE             3
-#define CG_PLAYER_BUILD_TIMER             4
+#define CG_PLAYER_AMMO_STACK              4
+#define CG_PLAYER_CLIPS_STACK             5
+#define CG_PLAYER_BUILD_TIMER             6
 #define CG_PLAYER_CREDITS_VALUE           7
 #define CG_PLAYER_CREDITS_VALUE_NOPAD     9
 #define CG_PLAYER_STAMINA                 11

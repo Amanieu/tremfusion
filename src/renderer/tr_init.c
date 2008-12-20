@@ -938,11 +938,14 @@ void R_Register( void )
 	r_width = ri.Cvar_Get( "r_width", "800", CVAR_ARCHIVE | CVAR_LATCH );
 	r_height = ri.Cvar_Get( "r_height", "600", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_mode = ri.Cvar_Get( "r_mode", "4", CVAR_ARCHIVE | CVAR_LATCH );
-	Cvar_CheckRange( r_mode, -1, 11, qtrue );
-	r_customwidth = ri.Cvar_Get( "r_customwidth", "800", CVAR_ARCHIVE | CVAR_LATCH );
-	r_customheight = ri.Cvar_Get( "r_customheight", "600", CVAR_ARCHIVE | CVAR_LATCH );
-	r_custompixelAspect = ri.Cvar_Get( "r_custompixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
+
+	// legacy variables
+	r_mode = ri.Cvar_Get( "r_mode", "4", 0 );
+	ri.Cvar_CheckRange( r_mode, -1, 11, qtrue );
+	r_customwidth = ri.Cvar_Get( "r_customwidth", r_width->string, 0 );
+	r_customheight = ri.Cvar_Get( "r_customheight", r_height->string, 0 );
+	r_custompixelAspect = ri.Cvar_Get( "r_custompixelAspect", r_pixelAspect->string, 0 );
+
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
@@ -986,7 +989,7 @@ void R_Register( void )
 			GENERIC_HW_R_TEXTUREMODE_DEFAULT, CVAR_ARCHIVE );
 	r_swapInterval = ri.Cvar_Get( "r_swapInterval", "0",
 					CVAR_ARCHIVE | CVAR_LATCH );
-	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE );
+	r_gamma = ri.Cvar_Get( "r_gamma", "1.5", CVAR_ARCHIVE );
 	r_facePlaneCull = ri.Cvar_Get ("r_facePlaneCull", "1", CVAR_ARCHIVE );
 
 	r_railWidth = ri.Cvar_Get( "r_railWidth", "16", CVAR_ARCHIVE );
@@ -1053,7 +1056,7 @@ void R_Register( void )
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 	
 	// for cell shading algorithm selection
-	r_celshadalgo = ri.Cvar_Get ("r_celshadalgo", "0", CVAR_LATCH);
+	r_celshadalgo = ri.Cvar_Get ("r_celshadalgo", "0", CVAR_LATCH | CVAR_ARCHIVE);
 	// cel outline option
 	r_celoutline = ri.Cvar_Get("r_celoutline","0", CVAR_ARCHIVE);
 

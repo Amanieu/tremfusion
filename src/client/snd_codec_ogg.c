@@ -45,6 +45,7 @@ snd_codec_t ogg_codec =
 	S_OGG_CodecOpenStream,
 	S_OGG_CodecReadStream,
 	S_OGG_CodecCloseStream,
+	S_OGG_CodecLoopStream,
 	NULL
 };
 
@@ -348,6 +349,23 @@ void S_OGG_CodecCloseStream(snd_stream_t *stream)
 
 	// close the stream
 	S_CodecUtilClose(&stream);
+}
+
+/*
+=================
+S_OGG_CodecLoopStream
+=================
+*/
+void S_OGG_CodecLoopStream(snd_stream_t *stream)
+{
+	// check if input is valid
+	if(!stream)
+	{
+		return;
+	}
+	
+	// go back to the start of the stream
+	ov_raw_seek((OggVorbis_File *) stream->ptr, 0);
 }
 
 /*

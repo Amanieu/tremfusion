@@ -429,6 +429,8 @@ extern  cvar_t  *cl_consoleFont;
 extern  cvar_t  *cl_consoleFontSize;
 extern  cvar_t  *cl_consoleFontKerning;
 
+extern  cvar_t  *cl_consolePrompt;
+
 #ifdef USE_MUMBLE
 extern	cvar_t	*cl_useMumble;
 extern	cvar_t	*cl_mumbleScale;

@@ -453,6 +453,12 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 #endif
 		vm->dataMask = dataLength - 1;
 	} else {
+#ifdef _WIN32
+		DWORD _unused = 0;
+		VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
+#else
+		mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
+#endif
 		// clear the data
 		Com_Memset( vm->dataBase, 0, dataLength );
 	}

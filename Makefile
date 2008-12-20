@@ -240,7 +240,7 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
 endif
 
 # version info
-VERSION_NUMBER=0.0.3
+VERSION_NUMBER=0.9
 
 ifeq ($(USE_SCM_VERSION),1)
   ifeq ($(wildcard .svn),.svn)
@@ -303,7 +303,7 @@ ifeq ($(PLATFORM),linux)
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe
 
   ifneq ($(USE_TTY_CLIENT),1)
-    BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
+    BASE_CFLAGS += -DUSE_ICON
   else
     BASE_CFLAGS += -DUSE_TTY_CLIENT
   endif
@@ -387,7 +387,7 @@ ifeq ($(PLATFORM),linux)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-ldl -lm
@@ -520,16 +520,22 @@ ifeq ($(PLATFORM),darwin)
 
   BASE_CFLAGS += -D_THREAD_SAFE=1
 
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(SDLHDIR)/include
+  ifneq ($(USE_TTY_CLIENT),1)
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(SDLHDIR)/include
+    endif
+  else
+    BASE_CFLAGS += -DUSE_TTY_CLIENT
   endif
 
-  # We copy sdlmain before ranlib'ing it so that subversion doesn't think
-  #  the file has been modified by each build.
-  LIBSDLMAIN=$(B)/libSDLmain.a
-  LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
-  CLIENT_LIBS += -framework Cocoa -framework IOKit -framework OpenGL \
-    $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
+  ifneq ($(USE_TTY_CLIENT),1)
+    # We copy sdlmain before ranlib'ing it so that subversion doesn't think
+    #  the file has been modified by each build.
+    LIBSDLMAIN=$(B)/libSDLmain.a
+    LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
+    CLIENT_LIBS += -framework Cocoa -framework IOKit -framework OpenGL \
+      $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
+  endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -556,7 +562,7 @@ ifeq ($(PLATFORM),darwin)
 
   SHLIBEXT=dylib
   SHLIBCFLAGS=-fPIC -fno-common
-  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS)
+  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) --no-allow-shlib-undefined
 
   NOTSHLIBCFLAGS=-mdynamic-no-pic
 
@@ -577,7 +583,12 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
+  ifneq ($(USE_TTY_CLIENT),1)
+    BASE_CFLAGS += -DUSE_ICON
+  else
+    BASE_CFLAGS += -DUSE_TTY_CLIENT
+  endif
 
   # In the absence of wspiapi.h, require Windows XP or later
   ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
@@ -620,13 +631,15 @@ ifeq ($(PLATFORM),mingw32)
 
   SHLIBEXT=dll
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS)--no-allow-shlib-undefined
 
   BINEXT=.exe
 
   LIBS = -lws2_32 -lwinmm
-  CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
-  CLIENT_LDFLAGS = -mwindows
+  ifneq ($(USE_TTY_CLIENT),1)
+    CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
+    CLIENT_LDFLAGS = -mwindows
+  endif  
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -673,17 +686,19 @@ ifeq ($(PLATFORM),mingw32)
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
-  # libmingw32 must be linked before libSDLmain
-  CLIENT_LIBS += -lmingw32
-  ifeq ($(USE_LOCAL_HEADERS),1)
-    BASE_CFLAGS += -I$(SDLHDIR)/include
-    CLIENT_LIBS += $(LIBSDIR)/win32/libSDLmain.a \
-                      $(LIBSDIR)/win32/libSDL.a
-  else
-    BASE_CFLAGS += $(SDL_CFLAGS)
-    CLIENT_LIBS += $(SDL_LIBS)
-  endif
-  CLIENT_LIBS += -ldxguid -ldinput8
+  ifneq ($(USE_TTY_CLIENT),1)
+    # libmingw32 must be linked before libSDLmain
+    CLIENT_LIBS += -lmingw32
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(SDLHDIR)/include
+      CLIENT_LIBS += $(LIBSDIR)/win32/libSDLmain.a \
+                        $(LIBSDIR)/win32/libSDL.a
+    else
+      BASE_CFLAGS += $(SDL_CFLAGS)
+      CLIENT_LIBS += $(SDL_LIBS)
+    endif
+    CLIENT_LIBS += -ldxguid -ldinput8
+  endif  
 
 else # ifeq mingw32
 
@@ -739,7 +754,7 @@ ifeq ($(PLATFORM),freebsd)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   # don't need -ldl (FreeBSD)
@@ -799,7 +814,7 @@ ifeq ($(PLATFORM),openbsd)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-lm
@@ -831,7 +846,7 @@ ifeq ($(PLATFORM),netbsd)
   LIBS=-lm
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
   THREAD_LIBS=-lpthread
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
@@ -865,7 +880,7 @@ ifeq ($(PLATFORM),irix64)
 
   SHLIBEXT=so
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared
+  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
 
   LIBS=-ldl -lm -lgen
   # FIXME: The X libraries probably aren't necessary?
@@ -930,7 +945,7 @@ ifeq ($(PLATFORM),sunos)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
+  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   THREAD_LIBS=-lpthread
   LIBS=-lsocket -lnsl -ldl -lm
@@ -948,7 +963,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared
+  SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin

@@ -179,7 +179,10 @@ int G_ClientNumbersFromString( char *s, int *plist, int max )
   char n2[ MAX_NAME_LENGTH ] = {""};
   char s2[ MAX_NAME_LENGTH ] = {""};
 
-  // if a number is provided, it might be a slot #
+  if( max == 0 )
+    return 0;
+
+  // if a number is provided, it is a clientnum
   for( i = 0; s[ i ] && isdigit( s[ i ] ); i++ );
   if( !s[ i ] )
   {
@@ -201,7 +204,7 @@ int G_ClientNumbersFromString( char *s, int *plist, int max )
   G_SanitiseString( s, s2, sizeof( s2 ) );
   if( strlen( s2 ) < 1 )
     return 0;
-  for( i = 0; i < level.maxclients && found <= max; i++ )
+  for( i = 0; i < level.maxclients && found < max; i++ )
   {
     p = &level.clients[ i ];
     if( p->pers.connected == CON_DISCONNECTED )
@@ -494,9 +497,6 @@ Cmd_Kill_f
 */
 void Cmd_Kill_f( gentity_t *ent )
 {
-  if( ent->client->ps.stats[ STAT_STATE ] & SS_INFESTING )
-    return;
-
   if( ent->client->ps.stats[ STAT_STATE ] & SS_HOVELING )
   {
     trap_SendServerCommand( ent-g_entities, "print \"Leave the hovel first (use your destroy key)\n\"" );
@@ -578,7 +578,7 @@ void Cmd_Team_f( gentity_t *ent )
       {
         trap_SendServerCommand( ent-g_entities,
           "print \"Alien team has been ^1LOCKED\n\"" );
-        return; 
+        return;
       }
       if( level.humanTeamLocked )
         force = qtrue;
@@ -597,7 +597,7 @@ void Cmd_Team_f( gentity_t *ent )
       {
         trap_SendServerCommand( ent-g_entities,
           "print \"Human team has been ^1LOCKED\n\"" );
-        return; 
+        return;
       }
       if( level.alienTeamLocked )
         force = qtrue;
@@ -785,7 +785,7 @@ static void Cmd_Say_f( gentity_t *ent )
 
   // support parsing /a out of say text for the same reason
   if( !Q_stricmpn( args, "say /a ", 7 ) ||
-      !Q_stricmpn( args, "say_team /a ", 12 ) ) 
+      !Q_stricmpn( args, "say_team /a ", 12 ) )
   {
     Cmd_AdminMessage_f( ent );
     return;
@@ -1622,7 +1622,6 @@ void Cmd_Class_f( gentity_t *ent )
     return;
 
   if( ent->client->pers.teamSelection == TEAM_ALIENS &&
-      !( ent->client->ps.stats[ STAT_STATE ] & SS_INFESTING ) &&
       !( ent->client->ps.stats[ STAT_STATE ] & SS_HOVELING ) )
   {
     if( newClass == PCL_NONE )
@@ -1636,8 +1635,7 @@ void Cmd_Class_f( gentity_t *ent )
     {
       int cost;
     
-      if( ( ent->client->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING ) ||
-          ( ent->client->ps.stats[ STAT_STATE ] & SS_WALLCLIMBINGCEILING ) )
+      if( ent->client->ps.eFlags & EF_WALLCLIMB )
       {
         G_TriggerMenu( clientNum, MN_A_EVOLVEWALLWALK );
         return;
@@ -1755,91 +1753,84 @@ void Cmd_Destroy_f( gentity_t *ent )
   if( ent->client->ps.stats[ STAT_STATE ] & SS_HOVELING )
     G_Damage( ent->client->hovel, ent, ent, forward, ent->s.origin, 10000, 0, MOD_SUICIDE );
 
-  if( !( ent->client->ps.stats[ STAT_STATE ] & SS_INFESTING ) )
+  AngleVectors( ent->client->ps.viewangles, forward, NULL, NULL );
+  VectorMA( ent->client->ps.origin, 100, forward, end );
+
+  trap_Trace( &tr, ent->client->ps.origin, NULL, NULL, end, ent->s.number, MASK_PLAYERSOLID );
+  traceEnt = &g_entities[ tr.entityNum ];
+
+  if( tr.fraction < 1.0f &&
+      ( traceEnt->s.eType == ET_BUILDABLE ) &&
+      ( traceEnt->buildableTeam == ent->client->pers.teamSelection ) &&
+      ( ent->client->ps.weapon == WP_ABUILD ||
+        ent->client->ps.weapon == WP_ABUILD2 ||
+        ent->client->ps.weapon == WP_HBUILD ) )
   {
-    AngleVectors( ent->client->ps.viewangles, forward, NULL, NULL );
-    VectorMA( ent->client->ps.origin, 100, forward, end );
-
-    trap_Trace( &tr, ent->client->ps.origin, NULL, NULL, end, ent->s.number, MASK_PLAYERSOLID );
-    traceEnt = &g_entities[ tr.entityNum ];
-
-    if( tr.fraction < 1.0f &&
-        ( traceEnt->s.eType == ET_BUILDABLE ) &&
-        ( traceEnt->buildableTeam == ent->client->pers.teamSelection ) &&
-        ( ent->client->ps.weapon == WP_ABUILD ||
-          ent->client->ps.weapon == WP_ABUILD2 ||
-          ent->client->ps.weapon == WP_HBUILD ) )
+    // Always let the builder prevent the explosion 
+    if( traceEnt->health <= 0 )
     {
-      // Always let the builder prevent the explosion 
-      if( traceEnt->health <= 0 )
-      {
-        G_FreeEntity( traceEnt );
-        return;
-      }
+      G_FreeEntity( traceEnt );
+      return;
+    }
 
-      // Cancel deconstruction
-      if( g_markDeconstruct.integer && traceEnt->deconstruct )
-      {
-        traceEnt->deconstruct = qfalse;
-        return;
-      }
+    // Cancel deconstruction
+    if( g_markDeconstruct.integer && traceEnt->deconstruct )
+    {
+      traceEnt->deconstruct = qfalse;
+      return;
+    }
 
-      // Prevent destruction of the last spawn
-      if( !g_markDeconstruct.integer && !g_cheats.integer )
+    // Prevent destruction of the last spawn
+    if( !g_markDeconstruct.integer && !g_cheats.integer )
+    {
+      if( ent->client->pers.teamSelection == TEAM_ALIENS &&
+          traceEnt->s.modelindex == BA_A_SPAWN )
       {
-        if( ent->client->pers.teamSelection == TEAM_ALIENS &&
-            traceEnt->s.modelindex == BA_A_SPAWN )
+        if( level.numAlienSpawns <= 1 )
         {
-          if( level.numAlienSpawns <= 1 )
-          {
-            G_TriggerMenu( ent->client->ps.clientNum, MN_B_LASTSPAWN );
-            return;
-          }
-        }
-        else if( ent->client->pers.teamSelection == TEAM_HUMANS &&
-                 traceEnt->s.modelindex == BA_H_SPAWN )
-        {
-          if( level.numHumanSpawns <= 1 )
-          {
-            G_TriggerMenu( ent->client->ps.clientNum, MN_B_LASTSPAWN );
-            return;
-          }
+          G_TriggerMenu( ent->client->ps.clientNum, MN_B_LASTSPAWN );
+          return;
         }
       }
-
-      // Don't allow destruction of hovel with granger inside
-      if( traceEnt->s.modelindex == BA_A_HOVEL && traceEnt->active )
-        return;
-
-      // Don't allow destruction of buildables that cannot be rebuilt
-      if( G_TimeTilSuddenDeath( ) <= 0 )
+      else if( ent->client->pers.teamSelection == TEAM_HUMANS &&
+               traceEnt->s.modelindex == BA_H_SPAWN )
       {
-        return;
-      }
-
-      if( !g_markDeconstruct.integer && ent->client->ps.stats[ STAT_MISC ] > 0 )
-      {
-        G_AddEvent( ent, EV_BUILD_DELAY, ent->client->ps.clientNum );
-        return;
-      }
-
-      if( g_markDeconstruct.integer )
-      {
-        if( !deconstruct )
-            G_Damage( traceEnt, ent, ent, forward, tr.endpos, 10000, 0, MOD_DECONSTRUCT );
-        else
+        if( level.numHumanSpawns <= 1 )
         {
-          traceEnt->deconstruct     = qtrue; // Mark buildable for deconstruction
-          traceEnt->deconstructTime = level.time;
+          G_TriggerMenu( ent->client->ps.clientNum, MN_B_LASTSPAWN );
+          return;
         }
+      }
+    }
+
+    // Don't allow destruction of hovel with granger inside
+    if( traceEnt->s.modelindex == BA_A_HOVEL && traceEnt->active )
+      return;
+
+    // Don't allow destruction of buildables that cannot be rebuilt
+    if( G_TimeTilSuddenDeath( ) <= 0 )
+      return;
+
+    if( !g_markDeconstruct.integer && ent->client->ps.stats[ STAT_MISC ] > 0 )
+    {
+      G_AddEvent( ent, EV_BUILD_DELAY, ent->client->ps.clientNum );
+      return;
+    }
+
+    if( traceEnt->health > 0 )
+    {
+      if( !deconstruct )
+        G_Damage( traceEnt, ent, ent, forward, tr.endpos,
+                  traceEnt->health, 0, MOD_SUICIDE );
+      else if( g_markDeconstruct.integer )
+      {
+        traceEnt->deconstruct     = qtrue; // Mark buildable for deconstruction
+        traceEnt->deconstructTime = level.time;
       }
       else
       {
         G_LogDestruction( traceEnt, ent, MOD_DECONSTRUCT );
-
-        G_Damage( traceEnt, ent, ent, forward, tr.endpos, ent->health, 0, MOD_DECONSTRUCT );
-        if( deconstruct )
-          G_FreeEntity( traceEnt );
+        G_FreeEntity( traceEnt );
 
         if( !g_cheats.integer )
           ent->client->ps.stats[ STAT_MISC ] +=
@@ -2340,7 +2331,6 @@ void Cmd_Build_f( gentity_t *ent )
 
   if( buildable != BA_NONE &&
       ( ( 1 << ent->client->ps.weapon ) & BG_Buildable( buildable )->buildWeapon ) &&
-      !( ent->client->ps.stats[ STAT_STATE ] & SS_INFESTING ) &&
       !( ent->client->ps.stats[ STAT_STATE ] & SS_HOVELING ) &&
       BG_BuildableIsAllowed( buildable ) &&
       ( ( team == TEAM_ALIENS && BG_BuildableAllowedInStage( buildable, g_alienStage.integer ) ) ||
@@ -2411,12 +2401,23 @@ Cmd_Reload_f
 void Cmd_Reload_f( gentity_t *ent )
 {
   playerState_t *ps = &ent->client->ps;
+  int ammo;
 
   // weapon doesn't ever need reloading
   if( BG_Weapon( ps->weapon )->infiniteAmmo )
     return;
+
+  if( ps->clips <= 0 )
+    return;
+
+  if( BG_Weapon( ps->weapon )->usesEnergy &&
+      BG_InventoryContainsUpgrade( UP_BATTPACK, ps->stats ) )
+    ammo = BG_Weapon( ps->weapon )->maxAmmo * BATTPACK_MODIFIER;
+  else
+    ammo = BG_Weapon( ps->weapon )->maxAmmo;
+
   // don't reload when full
-  if( ps->ammo == BG_Weapon( ps->weapon )->maxAmmo )
+  if( ps->ammo >= ammo )
     return;
 
   // the animation, ammo refilling etc. is handled by PM_Weapon
@@ -2482,9 +2483,8 @@ void G_StopFollowing( gentity_t *ent )
   ent->client->sess.spectatorClient = -1;
   ent->client->ps.pm_flags &= ~PMF_FOLLOW;
   ent->client->ps.stats[ STAT_STATE ] &= ~SS_WALLCLIMBING;
-  ent->client->ps.stats[ STAT_STATE ] &= ~SS_WALLCLIMBINGCEILING;
+  ent->client->ps.eFlags &= ~( EF_WALLCLIMB | EF_WALLCLIMBCEILING );
   ent->client->ps.stats[ STAT_VIEWLOCK ] = 0;
-  ent->client->ps.eFlags &= ~EF_WALLCLIMB;
   ent->client->ps.viewangles[ PITCH ] = 0.0f;
   ent->client->ps.clientNum = ent - g_entities;
 
@@ -2511,10 +2511,9 @@ void G_FollowLockView( gentity_t *ent )
   ent->client->ps.pm_flags &= ~PMF_FOLLOW;
   ent->client->ps.stats[ STAT_TEAM ] = ent->client->pers.teamSelection;
   ent->client->ps.stats[ STAT_STATE ] &= ~SS_WALLCLIMBING;
-  ent->client->ps.stats[ STAT_STATE ] &= ~SS_WALLCLIMBINGCEILING;
-  ent->client->ps.stats[ STAT_VIEWLOCK ] = 0;
-  ent->client->ps.eFlags &= ~EF_WALLCLIMB;
+  ent->client->ps.eFlags &= ~( EF_WALLCLIMB | EF_WALLCLIMBCEILING );
   ent->client->ps.eFlags ^= EF_TELEPORT_BIT;
+  ent->client->ps.stats[ STAT_VIEWLOCK ] = 0;
   ent->client->ps.viewangles[ PITCH ] = 0.0f;
 
   // Put the view at the team spectator lock position
@@ -2789,7 +2788,7 @@ void Cmd_PTRCRestore_f( gentity_t *ent )
   else
   {
     trap_SendServerCommand( ent - g_entities,
-      va( "print \"\"%d\" is not a valid PTR code\n\"", code ) );
+      va( "print \"'%d' is not a valid PTR code\n\"", code ) );
   }
 }
 
@@ -2978,13 +2977,13 @@ commands_t cmds[ ] = {
   { "give", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_Give_f },
   { "god", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_God_f },
   { "notarget", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_Notarget_f },
-  { "noclip", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_Noclip_f },
-  { "spec_noclip", CMD_SPEC, Cmd_Noclip_f },
   { "levelshot", CMD_CHEAT, Cmd_LevelShot_f },
-  { "setviewpos", CMD_CHEAT, Cmd_SetViewpos_f },
+  { "setviewpos", CMD_CHEAT_TEAM, Cmd_SetViewpos_f },
+  { "noclip", CMD_CHEAT_TEAM, Cmd_Noclip_f },
   { "destroy", CMD_CHEAT|CMD_TEAM|CMD_LIVING, Cmd_Destroy_f },
   { "test", CMD_CHEAT, Cmd_Test_f },
   { "damage", CMD_CHEAT|CMD_LIVING, Cmd_Damage_f },
+  { "where", 0, Cmd_Where_f },
 
   // game commands
   { "ptrcverify", 0, Cmd_PTRCVerify_f },
@@ -2994,7 +2993,6 @@ commands_t cmds[ ] = {
   { "follownext", 0, Cmd_FollowCycle_f },
   { "followprev", 0, Cmd_FollowCycle_f },
 
-  { "where", CMD_TEAM, Cmd_Where_f },
   { "teamvote", CMD_TEAM, Cmd_TeamVote_f },
   { "class", CMD_TEAM, Cmd_Class_f },
   { "kill", CMD_TEAM|CMD_LIVING, Cmd_Kill_f },
@@ -3061,6 +3059,13 @@ void ClientCommand( int clientNum )
       ent->client->pers.teamSelection == TEAM_NONE )
   {
     G_TriggerMenu( clientNum, MN_CMD_TEAM );
+    return;
+  }
+
+  if( cmds[ i ].cmdFlags & CMD_CHEAT_TEAM && !g_cheats.integer &&
+      ent->client->pers.teamSelection != TEAM_NONE )
+  {
+    G_TriggerMenu( clientNum, MN_CMD_CHEAT_TEAM );
     return;
   }
 
@@ -3361,7 +3366,7 @@ void Cmd_AdminMessage_f( gentity_t *ent )
                  ent->client->pers.netname );
   }
 
-  // Skip say/say_team if this was used from one of those 
+  // Skip say/say_team if this was used from one of those
   G_SayArgv( 0, cmd, sizeof( cmd ) );
   if( !Q_stricmp( cmd, "say" ) || !Q_stricmp( cmd, "say_team" ) )
   {

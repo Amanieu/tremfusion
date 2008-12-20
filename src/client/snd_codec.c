@@ -183,6 +183,11 @@ void S_CodecCloseStream(snd_stream_t *stream)
 	stream->codec->close(stream);
 }
 
+void S_CodecLoopStream(snd_stream_t *stream)
+{
+	stream->codec->loop(stream);
+}
+
 int S_CodecReadStream(snd_stream_t *stream, int bytes, void *buffer)
 {
 	return stream->codec->read(stream, bytes, buffer);

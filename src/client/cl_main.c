@@ -122,6 +122,8 @@ cvar_t  *cl_consoleFont;
 cvar_t  *cl_consoleFontSize;
 cvar_t  *cl_consoleFontKerning;
 
+cvar_t  *cl_consolePrompt;
+
 
 clientActive_t		cl;
 clientConnection_t	clc;
@@ -298,6 +300,105 @@ void CL_Voip_f( void )
 	}
 }
 
+/*
+============
+CL_VoipParseTargets
+
+Sets clc.voipTarget[123] according to cl_voipSendTarget
+Generally we don't want who's listening to change during a transmission,
+so this is only called when the first key is pressed
+============
+*/
+void CL_VoipParseTargets( void )
+{
+	char buffer[32];
+	const char *target = cl_voipSendTarget->string;
+
+	if( Q_stricmp( target, "attacker" ) == 0 )
+	{
+		int player = VM_Call( cgvm, CG_LAST_ATTACKER );
+		if( player < 0 )
+			Q_strncpyz( buffer, "none", sizeof( buffer ) );
+		else
+			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+		target = buffer;
+	}
+	else if( Q_stricmp( target, "crosshair" ) == 0 )
+	{
+		int player = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+		if( player < 0 )
+			Q_strncpyz( buffer, "none", sizeof( buffer ) );
+		else
+			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+		target = buffer;
+	}
+
+	if( !target[0] || Q_stricmp( target, "all" ) == 0 )
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = INT_MAX;
+	else if( Q_stricmp( target, "none" ) == 0 )
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+	else if( Q_stricmp( target, "team" ) == 0 )
+	{
+		char *t = Info_ValueForKey( cl.gameState.stringData +
+			cl.gameState.stringOffsets[CS_PLAYERS + clc.clientNum],
+			"t" );
+		int i, myteam;
+		if( t[0] )
+			myteam = atoi( t );
+		else
+		{
+			myteam = -1;
+			Com_Printf( S_COLOR_RED "Couldn't retrieve client team "
+				"information\n" );
+		}
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+		for( i = 0; i < MAX_CLIENTS; i++ )
+		{
+			if( i == clc.clientNum )
+				continue;
+			t = Info_ValueForKey( cl.gameState.stringData +
+				cl.gameState.stringOffsets[CS_PLAYERS +
+					clc.clientNum], "t" );
+			if( !t[0] )
+				continue;
+			if( myteam == atoi( t ) )
+			{
+				if( i <= 30 )
+					clc.voipTarget1 |= 1 << i;
+				else if( ( i - 31 ) <= 30 )
+					clc.voipTarget2 |= 1 << ( i - 31 );
+				else if( ( i - 62 ) <= 30 )
+					clc.voipTarget3 |= 1 << ( i - 62 );
+			}
+		}
+	}
+	else
+	{
+		char *end;
+		int val;
+		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+		while( 1 )
+		{
+			while( *target && !isdigit(*target ) )
+				target++;
+			if( !*target )
+				break;
+			val = strtol( target, &end, 10 );
+			assert( target != end );
+			if( val < 0 || val >= MAX_CLIENTS )
+				Com_Printf( S_COLOR_YELLOW "WARNING: VoIP "
+					"target %d is not a valid client "
+					"number\n", val );
+			else if( val <= 31 )
+				clc.voipTarget1 |= 1 << val;
+			else if( ( val -= 32 ) <= 31 )
+				clc.voipTarget2 |= 1 << val;
+			else if( ( val -= 32 ) <= 31 )
+				clc.voipTarget3 |= 1 << val;
+			target = end;
+		}
+	}
+}
 
 static
 void CL_VoipNewGeneration(void)
@@ -382,6 +483,7 @@ void CL_CaptureVoip(void)
 		S_MasterGain(cl_voipGainDuringCapture->value);
 		S_StartCapture();
 		CL_VoipNewGeneration();
+		CL_VoipParseTargets();
 	}
 
 	if ((cl_voipSend->integer) || (finalFrame)) { // user wants to capture audio?
@@ -1002,9 +1104,6 @@ void CL_PlayDemo_f( void ) {
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
 
-	if( *cl_demoConfig->string )
-		Cbuf_AddText ( va( "exec %s\n", cl_demoConfig->string ) );
-
 	// read demo messages until connected
 	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED ) {
 		CL_ReadDemoMessage();
@@ -1579,7 +1678,9 @@ void CL_Connect_f( void ) {
 
 	Com_DPrintf( "%s resolved to %s\n", cls.servername, serverString);
 
-	if( cl_guidServerUniq->integer )
+	if( cl_guidServerUniq->integer == 2 )
+		CL_UpdateGUID( NET_AdrToString(clc.serverAddress), strlen( NET_AdrToString(clc.serverAddress) ) );
+	else if ( cl_guidServerUniq->integer )
 		CL_UpdateGUID( serverString, strlen( serverString ) );
 	else
 		CL_UpdateGUID( NULL, 0 );
@@ -2469,7 +2570,7 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 		while( clc.serverMessage[ strlen( clc.serverMessage ) - 1 ] == '\n' )
 			clc.serverMessage[ strlen( clc.serverMessage ) - 1 ] = '\0';
 
-		Com_Printf( "%s", s );
+		Com_Printf( "%s\n", s );
 		return;
 	}
 
@@ -2585,7 +2686,7 @@ void CL_CheckTeamChange(void)
 	char *t;
 	int team;
 
-	if( cls.state != CA_ACTIVE ) return;
+	if( cls.state != CA_ACTIVE || clc.demoplaying ) return;
 
 	t = Info_ValueForKey( &cl.gameState.stringData[
 		cl.gameState.stringOffsets[ CS_PLAYERS + clc.clientNum ] ],
@@ -2883,9 +2984,6 @@ void CL_InitRenderer( void ) {
 
 	cls.whiteShader = re.RegisterShader( "white" );
 	cls.consoleShader = re.RegisterShader( "console" );
-
-	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
-	g_consoleField.widthInChars = g_console_field_width;
 }
 
 /*
@@ -3279,6 +3377,8 @@ void CL_Init( void ) {
 	cl_consoleFont = Cvar_Get ("cl_consoleFont", "", CVAR_ARCHIVE | CVAR_LATCH);
 	cl_consoleFontSize = Cvar_Get ("cl_consoleFontSize", "16", CVAR_ARCHIVE | CVAR_LATCH);
 	cl_consoleFontKerning = Cvar_Get ("cl_consoleFontKerning", "0", CVAR_ARCHIVE);
+
+	cl_consolePrompt = Cvar_Get ("cl_consolePrompt", "^3-> ", CVAR_ARCHIVE);
 
 	// userinfo
 	Cvar_Get ("name", Sys_GetCurrentUser( ), CVAR_USERINFO | CVAR_ARCHIVE );

@@ -68,8 +68,57 @@ static char *insert = logbuf;
 static int scrollline = 0;
 static int lastline = 1;
 
+// The special characters look good on the win32 console but suck on other consoles
+#ifdef _WIN32
+#define SCRLBAR_CURSOR ACS_BLOCK
+#define SCRLBAR_LINE ACS_VLINE
+#define SCRLBAR_UP ACS_UARROW
+#define SCRLBAR_DOWN ACS_DARROW
+#else
+#define SCRLBAR_CURSOR '#'
+#define SCRLBAR_LINE ACS_VLINE
+#define SCRLBAR_UP ACS_HLINE
+#define SCRLBAR_DOWN ACS_HLINE
+#endif
+
 #define LOG_LINES (LINES - 4)
 #define LOG_COLS (COLS - 3)
+
+/*
+==================
+CON_SetColor
+
+Use grey instead of black
+==================
+*/
+static inline void CON_SetColor(WINDOW *win, int color)
+{
+	if (com_ansiColor && !com_ansiColor->integer)
+		color = 7;
+	if (color == 0)
+		wattrset(win, COLOR_PAIR(color + 1) | A_BOLD);
+	else
+		wattrset(win, COLOR_PAIR(color + 1) | A_NORMAL);
+}
+
+/*
+==================
+CON_UpdateCursor
+
+Update the cursor position
+==================
+*/
+static inline void CON_UpdateCursor(void)
+{
+// pdcurses uses a different mechanism to move the cursor than ncurses
+#ifdef _WIN32
+	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
+	wnoutrefresh(stdscr);
+#else
+	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
+	wnoutrefresh(inputwin);
+#endif
+}
 
 /*
 ==================
@@ -85,22 +134,12 @@ static void CON_DrawScrollBar(void)
 	else
 		scroll = scrollline * (LOG_LINES - 1) / (lastline - LOG_LINES);
 
-	wclear(scrollwin);
-	mvwaddch(scrollwin, scroll, 0, ACS_BLOCK);
+	wbkgdset(scrollwin, SCRLBAR_LINE | COLOR_PAIR(6));
+	werase(scrollwin);
+	wbkgdset(scrollwin, ' ');
+	CON_SetColor(scrollwin, 1);
+	mvwaddch(scrollwin, scroll, 0, SCRLBAR_CURSOR);
 	wnoutrefresh(scrollwin);
-}
-
-/*
-==================
-CON_SetColor
-==================
-*/
-static inline void CON_SetColor(WINDOW *win, int color)
-{
-	if (color == 0)
-		wattrset(win, COLOR_PAIR(color + 1) | A_BOLD);
-	else
-		wattrset(win, COLOR_PAIR(color + 1) | A_NORMAL);
 }
 
 /*
@@ -176,11 +215,16 @@ static void CON_Resize(void)
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
-	keypad(stdscr, FALSE);
-	endwin();
+	if (winsz.ws_col < 4 || winsz.ws_row < 5)
+		return;
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
-	clear();
+	delwin(logwin);
+	delwin(borderwin);
+	delwin(inputwin);
+	delwin(scrollwin);
+	erase();
+	wnoutrefresh(stdscr);
 	CON_Init();
 #endif
 }
@@ -199,12 +243,12 @@ void CON_Clear_f(void)
 
 	// Clear the log and the window
 	memset(logbuf, 0, sizeof(logbuf));
-	wclear(logwin);
-	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+	werase(logwin);
+	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Move the cursor back to the input field
-	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
-	refresh();
+	CON_UpdateCursor();
+	doupdate();
 }
 
 /*
@@ -256,28 +300,28 @@ void CON_Init(void)
 		}
 		endwin();
 		delscreen(test);
-	}
-	initscr();
-	cbreak();
-	noecho();
-	nonl();
-	intrflush(stdscr, FALSE);
-	nodelay(stdscr, TRUE);
-	keypad(stdscr, TRUE);
-	refresh();
+		initscr();
+		cbreak();
+		noecho();
+		nonl();
+		intrflush(stdscr, FALSE);
+		nodelay(stdscr, TRUE);
+		keypad(stdscr, TRUE);
+		wnoutrefresh(stdscr);
 
-	// Set up colors
-	if (has_colors()) {
-		use_default_colors();
-		start_color();
-		init_pair(1, COLOR_BLACK, -1);
-		init_pair(2, COLOR_RED, -1);
-		init_pair(3, COLOR_GREEN, -1);
-		init_pair(4, COLOR_YELLOW, -1);
-		init_pair(5, COLOR_BLUE, -1);
-		init_pair(6, COLOR_CYAN, -1);
-		init_pair(7, COLOR_MAGENTA, -1);
-		init_pair(8, -1, -1);
+		// Set up colors
+		if (has_colors()) {
+			use_default_colors();
+			start_color();
+			init_pair(1, COLOR_BLACK, -1);
+			init_pair(2, COLOR_RED, -1);
+			init_pair(3, COLOR_GREEN, -1);
+			init_pair(4, COLOR_YELLOW, -1);
+			init_pair(5, COLOR_BLUE, -1);
+			init_pair(6, COLOR_CYAN, -1);
+			init_pair(7, COLOR_MAGENTA, -1);
+			init_pair(8, -1, -1);
+		}
 	}
 
 	// Create the border
@@ -302,12 +346,10 @@ void CON_Init(void)
 
 	// Create the scroll bar
 	scrollwin = newwin(LOG_LINES, 1, 2, COLS - 1);
-	wbkgd(scrollwin, ACS_VLINE | COLOR_PAIR(6));
 	CON_DrawScrollBar();
-	CON_SetColor(scrollwin, 1);
-	CON_SetColor(stdscr, 2);
-	mvaddch(1, COLS - 1, ACS_UARROW);
-	mvaddch(LINES - 2, COLS - 1, ACS_DARROW);
+	CON_SetColor(stdscr, 3);
+	mvaddch(1, COLS - 1, SCRLBAR_UP);
+	mvaddch(LINES - 2, COLS - 1, SCRLBAR_DOWN);
 
 	// Create the input field
 	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT), LINES - 1, Q_PrintStrlen(PROMPT));
@@ -317,8 +359,9 @@ void CON_Init(void)
 			input_field.scroll = input_field.cursor;
 		else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 			input_field.scroll = input_field.cursor - input_field.widthInChars + 1;
-		CON_ColorPrint(inputwin, input_field.buffer, qfalse);
+		CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
 	}
+	CON_UpdateCursor();
 	wnoutrefresh(inputwin);
 
 	// Display the title and input prompt
@@ -326,8 +369,8 @@ void CON_Init(void)
 	CON_ColorPrint(stdscr, TITLE, qtrue);
 	move(LINES - 1, 0);
 	CON_ColorPrint(stdscr, PROMPT, qtrue);
-	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
-	refresh();
+	wnoutrefresh(stdscr);
+	doupdate();
 
 #ifndef _WIN32
 	// Catch window resizes
@@ -350,6 +393,11 @@ char *CON_Input(void)
 	if (!curses_on)
 		return CON_Input_tty();
 
+	if (com_ansiColor->modified) {
+		CON_Resize();
+		com_ansiColor->modified = qfalse;
+	}
+
 	while (1) {
 		chr = getch();
 		num_chars++;
@@ -358,7 +406,7 @@ char *CON_Input(void)
 		switch (chr) {
 		case ERR:
 			if (num_chars > 1) {
-				wclear(inputwin);
+				werase(inputwin);
 				if (input_field.cursor < input_field.scroll) {
 					input_field.scroll = input_field.cursor - INPUT_SCROLL;
 					if (input_field.scroll < 0)
@@ -366,9 +414,13 @@ char *CON_Input(void)
 				} else if (input_field.cursor >= input_field.scroll + input_field.widthInChars)
 					input_field.scroll = input_field.cursor - input_field.widthInChars + INPUT_SCROLL;
 				CON_ColorPrint(inputwin, input_field.buffer + input_field.scroll, qfalse);
-				wrefresh(inputwin);
-				move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
-				refresh();
+#ifdef _WIN32
+				wrefresh(inputwin); // If this is not done the cursor moves strangely
+#else
+				wnoutrefresh(inputwin);
+#endif
+				CON_UpdateCursor();
+				doupdate();
 			}
 			return NULL;
 		case '\n':
@@ -379,15 +431,15 @@ char *CON_Input(void)
 			Hist_Add(input_field.buffer);
 			strcpy(text, input_field.buffer);
 			Field_Clear(&input_field);
-			wclear(inputwin);
-			wrefresh(inputwin);
-			move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
-			refresh();
-			Com_Printf("]%s\n", text);
+			werase(inputwin);
+			wnoutrefresh(inputwin);
+			CON_UpdateCursor();
+			//doupdate();
+			Com_Printf(PROMPT "^7%s\n", text);
 			return text;
 		case '\t':
 		case KEY_STAB:
-			Field_AutoComplete(&input_field);
+			Field_AutoComplete(&input_field, PROMPT);
 			input_field.cursor = strlen(input_field.buffer);
 			continue;
 		case '\f':
@@ -420,7 +472,7 @@ char *CON_Input(void)
 				scrollline += LOG_SCROLL;
 				if (scrollline + LOG_LINES > lastline)
 					scrollline = lastline - LOG_LINES;
-				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+				pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 				CON_DrawScrollBar();
 			}
 			continue;
@@ -429,7 +481,7 @@ char *CON_Input(void)
 				scrollline -= LOG_SCROLL;
 				if (scrollline < 0)
 					scrollline = 0;
-				prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+				pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 				CON_DrawScrollBar();
 			}
 			continue;
@@ -485,7 +537,7 @@ void CON_Print(const char *msg)
 		if (scrollline < 0)
 			scrollline = 0;
 	}
-	prefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
+	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Add the message to the log buffer
 	if (insert + strlen(msg) >= logbuf + sizeof(logbuf)) {
@@ -500,6 +552,6 @@ void CON_Print(const char *msg)
 	CON_DrawScrollBar();
 
 	// Move the cursor back to the input field
-	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
-	refresh();
+	CON_UpdateCursor();
+	doupdate();
 }

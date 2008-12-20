@@ -42,6 +42,24 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 static char homePathOld[ MAX_OSPATH ] = { 0 };
 
 /*
+==================
+CON_CtrlHandler
+
+The Windows Console doesn't use signals for terminating the application
+with Ctrl-C, logging off, window closing, etc.  Instead it uses a special
+handler routine.  Fortunately, the values for Ctrl signals don't seem to
+overlap with true signal codes that Windows provides, so calling
+Sys_SigHandler() with those numbers should be safe for generating unique
+shutdown messages.
+==================
+*/
+static BOOL WINAPI CON_CtrlHandler( DWORD sig )
+{
+	Sys_SigHandler( sig );
+	return TRUE;
+}
+
+/*
 ================
 Sys_DefaultHomePath
 ================
@@ -68,21 +86,30 @@ char *Sys_DefaultHomePath( char **path2 )
 			return NULL;
 		}
 
+#if USE_OLD_HOMEPATH
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
+#else
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_PERSONAL,
+						NULL, 0, szPath ) ) )
+#endif
 		{
-			Com_Printf("Unable to detect CSIDL_APPDATA\n");
+#if USE_OLD_HOMEPATH
+			Com_Printf("Unable to find CSIDL_APPDATA\n");
+#else
+			Com_Printf("Unable to find CSIDL_PERSONAL\n");
+#endif
 			FreeLibrary(shfolder);
 			return NULL;
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
 #else
-		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
+		Q_strcat( homePath, sizeof( homePath ), "\\My Games\\Tremfusion" );
 #endif
 
-#ifdef USE_OLD_HOMEPATH
+#if USE_OLD_HOMEPATH
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
@@ -648,9 +675,12 @@ void Sys_PlatformInit( void )
 	}
 	else
 		SDL_VIDEODRIVER_externallySet = qfalse;
+#endif
 
 	// Display a console
 	AllocConsole();
 	SetConsoleTitle("Tremfusion Console");
-#endif
+
+	// Handle Ctrl-C or other console termination
+	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
 }

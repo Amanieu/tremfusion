@@ -48,7 +48,7 @@ static FILE* fout;
 #define CRAP_INVALID_ARGS crap("invalid arguments %s, %s", argtype2str(arg1.type),argtype2str(arg2.type));
 
 #ifdef DEBUG
-#define debug(fmt, args...) printf(fmt, ##args)
+#define debug(fmt, args...) Com_DPrintf(fmt, ##args)
 #else
 #define debug(fmt, args...)
 #endif
@@ -273,11 +273,11 @@ static void labelhash_free(void)
 		}
 		t+=n;
 		if(!n) ++z;
-		//else printf("%u\n", n);
+		//else Com_Printf("%u\n", n);
 		min = MIN(min, n);
 		max = MAX(max, n);
 	}
-	printf("total %u, hsize %lu, zero %u, min %u, max %u\n", t, sizeof(labelhash)/sizeof(labelhash[0]), z, min, max);
+	Com_DPrintf("total %u, hsize %lu, zero %u, min %u, max %u\n", t, sizeof(labelhash)/sizeof(labelhash[0]), z, min, max);
 	memset(labelhash, 0, sizeof(labelhash));
 }
 

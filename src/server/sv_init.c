@@ -104,17 +104,13 @@ SV_SetConfigstring
 
 ===============
 */
-void SV_SetConfigstring (int index, const char *val, qboolean force) {
+void SV_SetConfigstring (int index, const char *val) {
 	int		len, i;
 	client_t	*client;
 
 	if ( index < 0 || index >= MAX_CONFIGSTRINGS ) {
 		Com_Error (ERR_DROP, "SV_SetConfigstring: bad index %i\n", index);
 	}
-
-	// Don't allow the game to overwrite demo player configstrings
-	if ( !force && sv.demoState == DS_PLAYBACK && index >= CS_PLAYERS && index < CS_PLAYERS + sv_democlients->integer )
-		return;
 
 	if ( !val ) {
 		val = "";
@@ -128,10 +124,6 @@ void SV_SetConfigstring (int index, const char *val, qboolean force) {
 	// change the string in sv
 	Z_Free( sv.configstrings[index] );
 	sv.configstrings[index] = CopyString( val );
-
-	// save client strings to demo
-	if ( index >= CS_PLAYERS && index < CS_PLAYERS + sv_maxclients->integer && sv.demoState == DS_RECORDING )
-		SV_DemoWriteConfigString( index - CS_PLAYERS );
 
 	// send it to all the clients if we aren't
 	// spawning a new server
@@ -551,9 +543,9 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	// save systeminfo and serverinfo strings
 	Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
 	cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
-	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo, qtrue );
+	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo );
 
-	SV_SetConfigstring( CS_SERVERINFO, Cvar_InfoString( CVAR_SERVERINFO ), qtrue );
+	SV_SetConfigstring( CS_SERVERINFO, Cvar_InfoString( CVAR_SERVERINFO ) );
 	cvar_modifiedFlags &= ~CVAR_SERVERINFO;
 
 	// any media configstring setting now should issue a warning
@@ -616,7 +608,7 @@ void SV_Init (void) {
 	Cvar_CheckRange( sv_voip, 0, 1, qtrue );
 #endif
 	Cvar_Get ("sv_paks", "", CVAR_SYSTEMINFO | CVAR_ROM );
-	Cvar_Get ("sv_pakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
+	Cvar_Get ("sv_pakNames", "", CVAR_SERVER_CREATED | CVAR_ROM );
 	Cvar_Get ("sv_referencedPaks", "", CVAR_SYSTEMINFO | CVAR_ROM );
 	Cvar_Get ("sv_referencedPakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
 

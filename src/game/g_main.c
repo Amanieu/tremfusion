@@ -679,6 +679,8 @@ G_ShutdownGame
 */
 void G_ShutdownGame( int restart )
 {
+  int i, clients;
+
   // in case of a map_restart
   G_ClearVotes( );
 
@@ -700,6 +702,11 @@ void G_ShutdownGame( int restart )
   level.restarted = qfalse;
   level.surrenderTeam = TEAM_NONE;
   trap_SetConfigstring( CS_WINNER, "" );
+
+  // clear all demo clients
+  clients = trap_Cvar_VariableIntegerValue( "sv_democlients" );
+  for( i = 0; i < clients; i++ )
+    trap_SetConfigstring( CS_PLAYERS + i, NULL );
 }
 
 
@@ -808,6 +815,7 @@ int G_PopSpawnQueue( spawnQueue_t *sq )
   {
     sq->clients[ sq->front ] = -1;
     sq->front = QUEUE_PLUS1( sq->front );
+    G_StopFollowing( g_entities + clientNum );
     g_entities[ clientNum ].client->ps.pm_flags &= ~PMF_QUEUED;
 
     return clientNum;
@@ -1172,16 +1180,18 @@ void G_CalculateBuildPoints( void )
     if( humanPlayerCountMod < 0.1f )
       humanPlayerCountMod = 0.1f;
 
-    if( g_alienStage.integer < g_alienMaxStage.integer ||
-        g_humanStage.integer > S1 )
+    if( g_alienStage.integer < g_alienMaxStage.integer )
       alienNextStageThreshold = (int)( ceil( (float)g_alienStageThreshold.integer * (g_alienStage.integer + 1) * alienPlayerCountMod ) );
+    else if( g_humanStage.integer > S1 )
+      alienNextStageThreshold = (int)( ceil( (float)level.alienStagedownCredits + g_alienStageThreshold.integer * alienPlayerCountMod ) );
     else
       alienNextStageThreshold = -1;
 
 
-    if( g_humanStage.integer < g_humanMaxStage.integer ||
-         g_alienStage.integer > S1 )
-    humanNextStageThreshold = (int)( ceil( (float)g_humanStageThreshold.integer * (g_humanStage.integer + 1) * humanPlayerCountMod ) );
+    if( g_humanStage.integer < g_humanMaxStage.integer )
+      humanNextStageThreshold = (int)( ceil( (float)g_humanStageThreshold.integer * (g_humanStage.integer + 1) * humanPlayerCountMod ) );
+    else if( g_alienStage.integer > S1 )
+      humanNextStageThreshold = (int)( ceil( (float)level.humanStagedownCredits + g_humanStageThreshold.integer * humanPlayerCountMod ) );
     else
       humanNextStageThreshold = -1;
 
@@ -1228,6 +1238,12 @@ void G_CalculateStages( void )
     lastAlienStageModCount = g_alienMaxReachedStage.modificationCount;
     if( g_humanStage.integer == S3 )
       level.humanStagedownCredits = g_humanCredits.integer;
+    G_LogPrintf( "stagedownlog: aliens s2, humans s%d; %d %d %d %d\n", 
+                 g_humanStage.integer + 1,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits );
   }
 
   if( g_alienCredits.integer >=
@@ -1239,6 +1255,12 @@ void G_CalculateStages( void )
     lastAlienStageModCount = g_alienMaxReachedStage.modificationCount;
     if( g_humanStage.integer > S1 )
       level.alienStagedownCredits = g_alienCredits.integer;
+    G_LogPrintf( "stagedownlog: aliens s3, humans s%d; %d %d %d %d\n", 
+                 g_humanStage.integer + 1,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits );
   }
 
   if( g_humanCredits.integer >=
@@ -1251,7 +1273,14 @@ void G_CalculateStages( void )
     lastHumanStageModCount = g_humanMaxReachedStage.modificationCount;
     if( g_alienStage.integer == S3 )
       level.alienStagedownCredits = g_alienCredits.integer;
+        G_LogPrintf( "stagedownlog: humans s2, aliens s%d; %d %d %d %d\n", 
+                 g_alienStage.integer + 1,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits );
   }
+
 
 
   if( g_humanCredits.integer >=
@@ -1263,14 +1292,27 @@ void G_CalculateStages( void )
     lastHumanStageModCount = g_humanMaxReachedStage.modificationCount;
     if( g_alienStage.integer > S1 )
       level.humanStagedownCredits = g_humanCredits.integer;
-    //trap_Cvar_Update( g_humanStage );
+    G_LogPrintf( "stagedownlog: humans s3, aliens s%d; %d %d %d %d\n", 
+                 g_alienStage.integer + 1,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits );
   }
   if( g_alienStage.integer > S1 &&
       g_humanStage.integer == S3 &&
       g_humanCredits.integer - level.humanStagedownCredits >= 
       (int) ceil( g_humanStageThreshold.integer * humanPlayerCountMod ) )
   {
-    
+    G_LogPrintf( "stagedownlog: aliens staging down\n"
+                 "stagedownlog: before: %d %d %d %d %d %d\n",
+                 g_humanStage.integer,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienStage.integer,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits);
+                 
     if( g_alienStage.integer == S3 )
       level.alienStage3Time = level.startTime;
     if( g_alienStage.integer == S2 )
@@ -1279,13 +1321,31 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_alienStage", va( "%d", g_alienStage.integer - 1 ) );
     trap_Cvar_Set( "g_alienCredits", va( "%d", (int)ceil(g_alienCredits.integer - g_alienStageThreshold.integer * alienPlayerCountMod) ) );
     trap_Cvar_Set( "g_humanCredits", va( "%d", (int)ceil(g_humanCredits.integer - g_humanStageThreshold.integer * humanPlayerCountMod) ) );
-    //stageDown = qtrue;
+    G_LogPrintf( "stagedownlog: after: %d %d %d %d %d %d\n",
+                 trap_Cvar_VariableIntegerValue( "g_humanStage" ),
+                 trap_Cvar_VariableIntegerValue( "g_humanCredits" ),
+                 level.humanStagedownCredits,
+                 trap_Cvar_VariableIntegerValue( "g_alienStage" ),
+                 trap_Cvar_VariableIntegerValue( "g_alienCredits" ),
+                 level.alienStagedownCredits);
+    trap_Cvar_Update( &g_humanCredits );
+    trap_Cvar_Update( &g_alienCredits );
+    trap_Cvar_Update( &g_humanStage );
+
   }
   if( g_humanStage.integer > S1 &&
       g_alienStage.integer == S3 &&
       g_alienCredits.integer - level.alienStagedownCredits >= 
       (int) ceil( g_alienStageThreshold.integer * alienPlayerCountMod ) )
   {
+    G_LogPrintf( "stagedownlog: humans staging down\n"
+                 "stagedownlog: before: %d %d %d %d %d %d\n",
+                 g_humanStage.integer,
+                 g_humanCredits.integer,
+                 level.humanStagedownCredits,
+                 g_alienStage.integer,
+                 g_alienCredits.integer,
+                 level.alienStagedownCredits);
 
     if( g_humanStage.integer == S3 )
       level.humanStage3Time = level.startTime;
@@ -1295,6 +1355,16 @@ void G_CalculateStages( void )
     trap_Cvar_Set( "g_humanStage", va( "%d", g_humanStage.integer - 1 ) );    
     trap_Cvar_Set( "g_humanCredits", va( "%d", (int)ceil(g_humanCredits.integer - g_humanStageThreshold.integer * humanPlayerCountMod) ) );
     trap_Cvar_Set( "g_alienCredits", va( "%d", (int)ceil(g_alienCredits.integer - g_alienStageThreshold.integer * alienPlayerCountMod) ) );
+    G_LogPrintf( "stagedownlog: after: %d %d %d %d %d %d\n",
+                 trap_Cvar_VariableIntegerValue( "g_humanStage" ),
+                 trap_Cvar_VariableIntegerValue( "g_humanCredits" ),
+                 level.humanStagedownCredits,
+                 trap_Cvar_VariableIntegerValue( "g_alienStage" ),
+                 trap_Cvar_VariableIntegerValue( "g_alienCredits" ),
+                 level.alienStagedownCredits);
+    trap_Cvar_Update( &g_humanCredits );
+    trap_Cvar_Update( &g_alienCredits );
+    trap_Cvar_Update( &g_humanStage );
   }
   
   if( g_alienMaxReachedStage.modificationCount > lastAlienStageModCount )
@@ -1477,21 +1547,24 @@ Mark a client as a demo client and load info into it
 void G_DemoSetClient( void )
 {
   char buffer[ MAX_INFO_STRING ];
+  int clientNum;
   gclient_t *client;
   char *s;
 
   trap_Argv( 0, buffer, sizeof( buffer ) );
-  client = level.clients + atoi( buffer );
+  clientNum = atoi( buffer );
+  client = level.clients + clientNum;
   client->pers.demoClient = qtrue;
 
   trap_Argv( 1, buffer, sizeof( buffer ) );
-  s = Info_ValueForKey( buffer, "name" );
+  s = Info_ValueForKey( buffer, "n" );
   if( *s )
     Q_strncpyz( client->pers.netname, s, sizeof( client->pers.netname ) );
-  s = Info_ValueForKey( buffer, "team" );
+  s = Info_ValueForKey( buffer, "t" );
   if( *s )
     client->pers.teamSelection = atoi( s );
   client->sess.spectatorState = SPECTATOR_NOT;
+  trap_SetConfigstring( CS_PLAYERS + clientNum, buffer );
 }
 
 /*
@@ -1504,11 +1577,12 @@ Unmark a client as a demo client
 void G_DemoRemoveClient( void )
 {
   char buffer[ 3 ];
-  gclient_t *client;
+  int clientNum;
 
   trap_Argv( 0, buffer, sizeof( buffer ) );
-  client = level.clients + atoi( buffer );
-  client->pers.demoClient = qfalse;
+  clientNum = atoi( buffer );
+  level.clients[clientNum].pers.demoClient = qfalse;
+  trap_SetConfigstring( CS_PLAYERS + clientNum, NULL );
 }
 
 /*
@@ -1707,7 +1781,6 @@ void ExitLevel( void )
     if( level.clients[ i ].pers.connected == CON_CONNECTED )
       level.clients[ i ].pers.connected = CON_CONNECTING;
   }
-
 }
 
 /*
@@ -2394,31 +2467,41 @@ void CheckDemo( void )
   int i;
 
   // Don't do anything if no change
-  if ( g_demoState.integer == level.demoState )
+  if( g_demoState.integer == level.demoState )
     return;
   level.demoState = g_demoState.integer;
 
   // log all connected clients
-  if ( g_demoState.integer == DS_RECORDING )
+  if( g_demoState.integer == DS_RECORDING )
   {
-    for ( i = 0; i < level.maxclients; i++ )
+    for( i = 0; i < level.maxclients; i++ )
     {
-      if ( level.clients[ i ].pers.connected == CON_CONNECTED )
-        G_DemoCommand( DC_CLIENT_SET, va( "%d \\name\\%s\\team\\%d", i,
-                       level.clients[ i ].pers.netname,
-                       level.clients[ i ].pers.teamSelection ) );
+      if( level.clients[ i ].pers.connected != CON_DISCONNECTED )
+      {
+        char userinfo[ MAX_INFO_STRING ];
+        trap_GetConfigstring( CS_PLAYERS + i, userinfo, sizeof(userinfo) );
+        G_DemoCommand( DC_CLIENT_SET, va( "%d %s", i, userinfo ) );
+      }
     }
   }
 
   // empty teams and display a message
-  else if ( g_demoState.integer == DS_PLAYBACK )
+  else if( g_demoState.integer == DS_PLAYBACK )
   {
     trap_SendServerCommand( -1, "print \"A demo has been started on the server.\n\"" );
-    for ( i = 0; i < level.maxclients; i++ )
+    for( i = 0; i < level.maxclients; i++ )
     {
-      if ( level.clients[ i ].pers.teamSelection != TEAM_NONE )
+      if( level.clients[ i ].pers.teamSelection != TEAM_NONE )
         G_ChangeTeam( g_entities + i, TEAM_NONE );
     }
+  }
+
+  // clear all demo clients
+  if( g_demoState.integer == DS_NONE || g_demoState.integer == DS_PLAYBACK )
+  {
+    int clients = trap_Cvar_VariableIntegerValue( "sv_democlients" );
+    for( i = 0; i < clients; i++ )
+      trap_SetConfigstring( CS_PLAYERS + i, NULL );
   }
 }
 

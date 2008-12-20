@@ -309,10 +309,10 @@ typedef struct
   qboolean            teamInfo;           // send team overlay updates?
   float               flySpeed;           // for spectator/noclip moves
 
-  class_t             classSelection;     // player class (copied to ent->client->ps.stats[ STAT_PCLASS ] once spawned)
+  class_t             classSelection;     // player class (copied to ent->client->ps.stats[ STAT_CLASS ] once spawned)
   float               evolveHealthFraction;
   weapon_t            humanItemSelection; // humans have a starting item
-  team_t              teamSelection;      // player team (copied to ps.stats[ STAT_PTEAM ])
+  team_t              teamSelection;      // player team (copied to ps.stats[ STAT_TEAM ])
 
   int                 teamChangeTime;     // level.time of last team change
   qboolean            joinedATeam;        // used to tell when a PTR code is valid
@@ -648,14 +648,15 @@ typedef struct
   demoState_t       demoState;
 } level_locals_t;
 
-#define CMD_CHEAT         0x01
-#define CMD_MESSAGE       0x02 // sends message to others (skip when muted)
-#define CMD_TEAM          0x04 // must be on a team
-#define CMD_SPEC          0x08 // must be in spectator mode
-#define CMD_ALIEN         0x10
-#define CMD_HUMAN         0x20
-#define CMD_LIVING        0x40
-#define CMD_INTERMISSION  0x80 // valid during intermission
+#define CMD_CHEAT         0x0001
+#define CMD_CHEAT_TEAM    0x0002 // is a cheat when used on a team
+#define CMD_MESSAGE       0x0004 // sends message to others (skip when muted)
+#define CMD_TEAM          0x0008 // must be on a team
+#define CMD_SPEC          0x0010 // must be a spectator
+#define CMD_ALIEN         0x0020
+#define CMD_HUMAN         0x0040
+#define CMD_LIVING        0x0080
+#define CMD_INTERMISSION  0x0100 // valid during intermission
 
 typedef struct
 {
@@ -741,6 +742,7 @@ buildable_t       G_IsPowered( vec3_t origin );
 qboolean          G_IsDCCBuilt( void );
 int               G_FindDCC( gentity_t *self );
 qboolean          G_IsOvermindBuilt( void );
+qboolean          G_FindOvermind( gentity_t *self );
 qboolean          G_FindCreep( gentity_t *self );
 
 void              G_BuildableThink( gentity_t *ent, int msec );
@@ -893,6 +895,7 @@ void      SnapVectorTowards( vec3_t v, vec3_t to );
 qboolean  CheckVenomAttack( gentity_t *ent );
 void      CheckGrabAttack( gentity_t *ent );
 qboolean  CheckPounceAttack( gentity_t *ent );
+void      CheckCkitRepair( gentity_t *ent );
 void      G_ChargeAttack( gentity_t *ent, gentity_t *victim );
 void      G_CrushAttack( gentity_t *ent, gentity_t *victim );
 void      G_UpdateZaps( gentity_t *ent );
