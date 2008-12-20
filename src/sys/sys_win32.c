@@ -86,10 +86,19 @@ char *Sys_DefaultHomePath( char **path2 )
 			return NULL;
 		}
 
+#if USE_OLD_HOMEPATH
 		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
+#else
+		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_PERSONAL,
+						NULL, 0, szPath ) ) )
+#endif
 		{
-			Com_Printf("Unable to detect CSIDL_APPDATA\n");
+#if USE_OLD_HOMEPATH
+			Com_Printf("Unable to find CSIDL_APPDATA\n");
+#else
+			Com_Printf("Unable to find CSIDL_PERSONAL\n");
+#endif
 			FreeLibrary(shfolder);
 			return NULL;
 		}
@@ -97,7 +106,7 @@ char *Sys_DefaultHomePath( char **path2 )
 #if USE_OLD_HOMEPATH
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
 #else
-		Q_strcat( homePath, sizeof( homePath ), "\\Tremfusion" );
+		Q_strcat( homePath, sizeof( homePath ), "\\My Games\\Tremfusion" );
 #endif
 
 #if USE_OLD_HOMEPATH
