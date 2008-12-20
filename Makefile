@@ -340,11 +340,11 @@ ifeq ($(PLATFORM),linux)
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
   endif
-  
+
   ifeq ($(USE_PYTHON),1)
     BASE_CFLAGS += -DUSE_PYTHON -I/usr/include/python2.5
   endif
-  
+
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -424,10 +424,11 @@ ifeq ($(PLATFORM),linux)
   ifeq ($(USE_FREETYPE),1)
     CLIENT_LIBS += $(shell freetype-config --libs)
   endif
-  
+
   ifeq ($(USE_PYTHON),1)
     LIBS += -lpython2.5
   endif
+
   ifeq ($(ARCH),x86)
     # linux32 make ...
     BASE_CFLAGS += -m32
@@ -1929,7 +1930,7 @@ $(B)/client/%.o: $(NDIR)/%.c
 
 $(B)/client/%.o: $(PYTHONDIR)/%.c
 	$(DO_CC)
-	
+
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
 
@@ -1950,7 +1951,7 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 
 $(B)/ded/%.o: $(NDIR)/%.c
 	$(DO_DED_CC)
-	
+
 $(B)/ded/%.o: $(PYTHONDIR)/%.c
 	$(DO_DED_CC)
 
