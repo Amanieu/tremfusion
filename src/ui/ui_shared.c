@@ -1886,6 +1886,19 @@ void Script_playLooped( itemDef_t *item, char **args )
   }
 }
 
+void Script_ScreenChange( itemDef_t *item, char **args )
+{
+  const char *string;
+  int modifier;
+
+  if( String_Parse( args, &string ) && Int_Parse( args, &modifier ) ){
+    if( string[0] == '-' ) //Hack to Com_ParseExt not reading "-6" but "-" instead
+      modifier = - modifier;
+
+    DC->setCVar( "ui_screen", va( "%i", (int) (DC->getCVarValue( "ui_screen" ) + modifier)) );
+  }
+}
+
 static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
                                   int *length, qhandle_t *h, int *width )
 {
@@ -2547,7 +2560,8 @@ commandDef_t commandList[] =
     {"exec", &Script_Exec},           // group/name
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit}                      // group/name
+    {"orbit", &Script_Orbit},                      // group/name
+    {"screenchange", &Script_ScreenChange}        // modifier
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -5655,6 +5669,28 @@ void AdjustFrom640( float *x, float *y, float *w, float *h )
   *h *= DC->yscale;
 }
 
+void Item_Screen_Paint( itemDef_t *item )
+{
+  int a,b,c,d;
+  int shotNumber;
+
+  shotNumber = (int)DC->getCVarValue( "ui_screen" ) + item->modifier;
+
+  if ( shotNumber < 0 || shotNumber > 9999 )
+    return;
+
+  a = shotNumber / 1000;
+  shotNumber -= a*1000;
+  b = shotNumber / 100;
+  shotNumber -= b*100;
+  c = shotNumber / 10;
+  shotNumber -= c*10;
+  d = shotNumber;
+
+  DC->drawHandlePic( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h,
+      	             DC->registerShaderNoMip( va("screenshots/shot%i%i%i%i.jpg", a, b, c, d) ) );
+}
+
 void Item_Model_Paint( itemDef_t *item )
 {
   float x, y, w, h;
@@ -6353,6 +6389,10 @@ void Item_Paint( itemDef_t *item )
 
     case ITEM_TYPE_SLIDER:
       Item_Slider_Paint( item );
+      break;
+
+    case ITEM_TYPE_SCREEN:
+      Item_Screen_Paint( item );
       break;
 
     default:
@@ -7357,6 +7397,14 @@ qboolean ItemParse_special( itemDef_t *item, int handle )
   return qtrue;
 }
 
+qboolean ItemParse_modifier( itemDef_t *item, int handle )
+{
+  if( !PC_Int_Parse( handle, &item->modifier ) )
+    return qfalse;
+
+  return qtrue;
+}
+
 qboolean ItemParse_cvarTest( itemDef_t *item, int handle )
 {
   if( !PC_String_Parse( handle, &item->cvarTest ) )
@@ -7704,6 +7752,7 @@ keywordHash_t itemParseKeywords[] = {
   {"onTextEntry", ItemParse_onTextEntry, NULL},
   {"action", ItemParse_action, NULL},
   {"special", ItemParse_special, NULL},
+  {"modifier", ItemParse_modifier, NULL},
   {"cvar", ItemParse_cvar, NULL},
   {"maxChars", ItemParse_maxChars, NULL},
   {"maxPaintChars", ItemParse_maxPaintChars, NULL},

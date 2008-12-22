@@ -284,9 +284,10 @@ typedef struct itemDef_s
   sfxHandle_t focusSound;
   int numColors;                 // number of color ranges
   colorRangeDef_t colorRanges[MAX_COLOR_RANGES];
-  float special;                 // used for feeder id's etc.. diff per type
+  float special;                 // float used for feeder id's etc.. diff per type
+  int modifier;                 // int used for feeder id's etc.. diff per type
   int cursorPos;                 // cursor position in characters
-  void *typeData;                 // type specific data ptr's
+  void *typeData;                // type specific data ptr's
 }
 itemDef_t;
 
