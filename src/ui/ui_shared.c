@@ -1896,6 +1896,11 @@ void Script_ScreenChange( itemDef_t *item, char **args )
       modifier = - modifier;
 
     DC->setCVar( "ui_screen", va( "%i", (int) (DC->getCVarValue( "ui_screen" ) + modifier)) );
+    
+    //we don't want it to go below 0
+    if( DC->getCVarValue( "ui_screen" ) < 0 )
+      DC->setCVar( "ui_screen", "0" );
+
   }
 }
 
