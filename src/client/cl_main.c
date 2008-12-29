@@ -892,7 +892,7 @@ void CL_DemoCompleted( void )
 	if( cl_timedemo && cl_timedemo->integer )
 	{
 		int	time;
-		
+
 		time = Sys_Milliseconds() - clc.timeDemoStart;
 		if( time > 0 )
 		{
@@ -1043,7 +1043,6 @@ static void CL_CompleteDemoName( char *args, int argNum )
 CL_PlayDemo_f
 
 demo <demoname>
-
 ====================
 */
 void CL_PlayDemo_f( void ) {
@@ -1057,15 +1056,9 @@ void CL_PlayDemo_f( void ) {
 		return;
 	}
 
-	// make sure a local server is killed
-	// 2 means don't force disconnect of local client
-	Cvar_Set( "sv_killserver", "2" );
-
-	CL_Disconnect( qtrue );
-
 	// open the demo file
 	arg = Cmd_Argv(1);
-	
+
 	// check for an extension .dm_?? (?? is protocol)
 	ext_test = arg + strlen(arg) - 6;
 	if ((strlen(arg) > 6) && (ext_test[0] == '.') && ((ext_test[1] == 'd') || (ext_test[1] == 'D')) && ((ext_test[2] == 'm') || (ext_test[2] == 'M')) && (ext_test[3] == '_'))
@@ -1091,12 +1084,18 @@ void CL_PlayDemo_f( void ) {
 	} else {
 		CL_WalkDemoExt( arg, name, &clc.demofile );
 	}
-	
+
 	if (!clc.demofile) {
 		Com_Error( ERR_DROP, "couldn't open %s", name);
 		return;
 	}
 	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
+
+	// make sure a local server is killed
+	// 2 means don't force disconnect of local client
+	Cvar_Set( "sv_killserver", "2" );
+
+	CL_Disconnect( qtrue );
 
 	Con_Close();
 
@@ -2303,9 +2302,7 @@ void CL_DisconnectPacket( netadr_t from ) {
 	}
 
 	// drop the connection
-	Com_Printf( "Server disconnected for unknown reason\n" );
-	Cvar_Set("com_errorMessage", "Server disconnected for unknown reason\n" );
-	CL_Disconnect( qtrue );
+	Com_Error( ERR_DROP, "Server disconnected for unknown reason\n" );
 }
 
 
@@ -2664,8 +2661,7 @@ void CL_CheckTimeout( void ) {
 		&& cls.state >= CA_CONNECTED && cls.state != CA_CINEMATIC
 	    && cls.realtime - clc.lastPacketTime > cl_timeout->value*1000) {
 		if (++cl.timeoutcount > 5) {	// timeoutcount saves debugger
-			Com_Printf ("\nServer connection timed out.\n");
-			CL_Disconnect( qtrue );
+			Com_Error (ERR_DROP, "Server connection timed out.\n");
 			return;
 		}
 	} else {

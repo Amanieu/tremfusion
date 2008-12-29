@@ -3307,6 +3307,8 @@ void FS_Restart( int checksumFeed ) {
 		}
 
 		Cbuf_AddText ("exec autoexec.cfg\n");
+
+		Cbuf_Execute ();
 	}
 
 	Q_strncpyz(lastValidBase, fs_basepath->string, sizeof(lastValidBase));
