@@ -134,7 +134,10 @@ static void CON_DrawScrollBar(void)
 	else
 		scroll = scrollline * (LOG_LINES - 1) / (lastline - LOG_LINES);
 
-	wbkgdset(scrollwin, SCRLBAR_LINE | COLOR_PAIR(6));
+	if (com_ansiColor && !com_ansiColor->integer)
+		wbkgdset(scrollwin, SCRLBAR_LINE);
+	else
+		wbkgdset(scrollwin, SCRLBAR_LINE | COLOR_PAIR(6));
 	werase(scrollwin);
 	wbkgdset(scrollwin, ' ');
 	CON_SetColor(scrollwin, 1);
