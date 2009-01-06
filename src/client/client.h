@@ -554,7 +554,7 @@ qboolean CL_UpdateVisiblePings_f( int source );
 void Con_DrawCharacter (int cx, int line, int num);
 
 void Con_CheckResize (void);
-void Con_Init (void);
+void TREM_CON_Init (void);
 void Con_Clear_f (void);
 void Con_ToggleConsole_f (void);
 void Con_DrawNotify (void);

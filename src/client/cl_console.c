@@ -501,10 +501,10 @@ void Cmd_CompleteTxtName( char *args, int argNum ) {
 
 /*
 ================
-Con_Init
+TREM_CON_Init
 ================
 */
-void Con_Init (void) {
+void TREM_CON_Init (void) {
 	cl_autoNamelog = Cvar_Get ("cl_autoNamelog", "0", CVAR_ARCHIVE);
 	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);

@@ -35,8 +35,8 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-qboolean	NET_StringToAdr (char *s, netadr_t *a)
-{	
+qboolean   Sys_StringToAdr ( const char *s, netadr_t *a, netadrtype_t family)
+{
 	if (!strcmp (s, "localhost")) {
 		memset (a, 0, sizeof(*a));
 		a->type = NA_LOOPBACK;
@@ -51,7 +51,7 @@ qboolean	NET_StringToAdr (char *s, netadr_t *a)
 Sys_SendPacket
 ==================
 */
-void Sys_SendPacket( int length, void *data, netadr_t to ) {
+void  Sys_SendPacket( int length, const void *data, netadr_t to ) {
 }
 
 /*
@@ -64,3 +64,31 @@ Never called by the game logic, just the system event queing
 qboolean	Sys_GetPacket ( netadr_t *net_from, msg_t *net_message ) {
 	return qfalse;
 }
+
+qboolean  NET_CompareAdr (netadr_t a, netadr_t b) {
+}
+qboolean  NET_CompareBaseAdr (netadr_t a, netadr_t b){
+}
+qboolean  NET_IsLocalAddress (netadr_t adr) {
+}
+const char *NET_AdrToString (netadr_t a) {
+  return "loopback";
+}
+const char *NET_AdrToStringwPort (netadr_t a) {
+  return "loopback";
+}
+void    NET_JoinMulticast6(void) {
+}
+void    NET_LeaveMulticast6(void) {
+}
+
+qboolean Sys_IsLANAddress( netadr_t adr ) {
+  return qfalse;
+}
+
+void NET_Sleep( int msec ) {
+}
+
+void NET_Init( void ) {
+}
+

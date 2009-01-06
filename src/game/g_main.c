@@ -280,7 +280,11 @@ This is the only way control passes into the module.
 This must be the very first function compiled into the .q3vm file
 ================
 */
+#ifdef EMBED_QVMS
+intptr_t Game_VmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
+#else
 intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
+#endif
                               int arg5, int arg6, int arg7, int arg8, int arg9,
                               int arg10, int arg11 )
 {
@@ -706,6 +710,7 @@ void G_ShutdownGame( int restart )
 
 //===================================================================
 
+#ifndef EMBED_QVMS
 void QDECL Com_Error( int level, const char *error, ... )
 {
   va_list argptr;
@@ -729,7 +734,7 @@ void QDECL Com_Printf( const char *msg, ... )
 
   G_Printf( "%s", text );
 }
-
+#endif
 /*
 ========================================================================
 

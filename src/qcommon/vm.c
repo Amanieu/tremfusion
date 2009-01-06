@@ -62,7 +62,9 @@ vm_t	vmTable[MAX_VM];
 void VM_VmInfo_f( void );
 void VM_VmProfile_f( void );
 
-
+intptr_t Game_VmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
+                              int arg5, int arg6, int arg7, int arg8, int arg9,
+                              int arg10, int arg11 );
 
 #if 0 // 64bit!
 // converts a VM pointer to a C pointer and
@@ -83,7 +85,11 @@ VM_Init
 */
 void VM_Init( void ) {
 	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
+#ifdef EMBED_QVMS
+	Cvar_Get( "vm_game", "3", CVAR_ARCHIVE );  // !@# SHIP WITH SET TO 3
+#else
 	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 0
+#endif
 	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
 
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
@@ -345,7 +351,7 @@ Dlls will call this directly
 
   For speed, we just grab 15 arguments, and don't worry about exactly
    how many the syscall actually needs; the extra is thrown away.
- 
+
 ============
 */
 intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
@@ -354,14 +360,14 @@ intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
   intptr_t args[16];
   int i;
   va_list ap;
-  
+
   args[0] = arg;
-  
+
   va_start(ap, arg);
   for (i = 1; i < sizeof (args) / sizeof (args[i]); i++)
     args[i] = va_arg(ap, intptr_t);
   va_end(ap);
-  
+
   return currentVM->systemCall( args );
 #else // original id code
 	return currentVM->systemCall( &arg );
@@ -447,18 +453,24 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		if(!vm->dataBase)
 			Com_Error(ERR_DROP, "VM_LoadQVM: VirtualAlloc failed");
 #else
+#ifdef WII
+		vm->dataBase = Hunk_Alloc( dataLength, h_high );;
+		if(!vm->dataBase)
+		      Com_Error(ERR_DROP, "VM_LoadQVM: SYS_AllocArena2MemLo failed to allocate %d", dataLength);
+#else
 		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
 		if(vm->dataBase == (void*)-1)
 			Com_Error(ERR_DROP, "VM_LoadQVM: can't mmap memory");
 #endif
+#endif
 		vm->dataMask = dataLength - 1;
 	} else {
-#ifdef _WIN32
-		DWORD _unused = 0;
-		VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
-#else
-		mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
-#endif
+//#ifdef _WIN32
+//		DWORD _unused = 0;
+//		VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
+//#else
+//		mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
+//#endif
 		// clear the data
 		Com_Memset( vm->dataBase, 0, dataLength );
 	}
@@ -475,13 +487,13 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
 	// Fail silently
 	if ( vm->dataBase[0] == 1 ) {
-#ifdef _WIN32
-		DWORD _unused = 0;
-		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
-#else
-		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
-			mprotect( vm->dataBase, 4096, PROT_NONE );
-#endif
+//#ifdef _WIN32
+//		DWORD _unused = 0;
+//		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
+//#else
+//		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
+//			mprotect( vm->dataBase, 4096, PROT_NONE );
+//#endif
 	}
 
 	if( header.h->vmMagic == VM_MAGIC_VER2 ) {
@@ -521,8 +533,8 @@ vm_t *VM_Restart( vm_t *vm ) {
 	if ( vm->dllHandle ) {
 		char	name[MAX_QPATH];
 		intptr_t	(*systemCall)( intptr_t *parms );
-		
-		systemCall = vm->systemCall;	
+
+		systemCall = vm->systemCall;
 		Q_strncpyz( name, vm->name, sizeof( name ) );
 
 		VM_Free( vm );
@@ -556,7 +568,7 @@ it will attempt to load as a system dll
 
 #define	STACK_SIZE	0x20000
 
-vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
+vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 				vmInterpret_t interpret ) {
 	vm_t		*vm;
 	vmHeader_t	*header;
@@ -567,7 +579,10 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	}
 
 	remaining = Hunk_MemoryRemaining();
-
+	Com_Printf("VM_Create(%s, %p, %d) hunk memory remaining = %d\n", 
+	           module, systemCalls, interpret, remaining);
+	Sys_Hold();
+	
 	// see if we already have the VM
 	for ( i = 0 ; i < MAX_VM ; i++ ) {
 		if (!Q_stricmp(vmTable[i].name, module)) {
@@ -591,7 +606,24 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 
 	Q_strncpyz( vm->name, module, sizeof( vm->name ) );
 	vm->systemCall = systemCalls;
-
+#ifdef EMBED_QVMS
+	if ( interpret == VMI_EMBED ) {
+	  // Fake being a system dll
+	  Com_DPrintf( "Using embedded %s.\n", vm->name );
+	  vm->dllHandle = (void*)1; //Sys_LoadDll( module, vm->fqpath , &vm->entryPoint, VM_DllSyscall );
+	  if(!Q_stricmp(module, "game")) {
+	    vm->entryPoint = &Game_VmMain;
+	    Game_dllEntry(VM_DllSyscall);
+	  }
+#ifndef DEDICATED
+	  if(!Q_stricmp(module, "ui"))
+	    vm->entryPoint = &UI_VmMain;
+	  if(!Q_stricmp(module, "cgame"))
+	    vm->entryPoint = &CGame_VmMain;
+#endif
+	  return vm;
+	}
+#endif
 	if ( interpret == VMI_NATIVE ) {
 		// try to load as a system dll
 		Com_DPrintf( "Loading dll file %s.\n", vm->name );
@@ -656,7 +688,6 @@ VM_Free
 ==============
 */
 void VM_Free( vm_t *vm ) {
-
 	if(!vm) {
 		return;
 	}
@@ -681,7 +712,11 @@ void VM_Free( vm_t *vm ) {
 #ifdef _WIN32
 		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
 #else
+#ifdef WII
+		free( vm->dataBase );
+#else
 		munmap( vm->dataBase, vm->dataMask + 1 );
+#endif
 #endif
 	}
 #if 0	// now automatically freed by hunk

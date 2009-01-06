@@ -136,6 +136,9 @@ void Sys_Exit( int ex )
 #if !DEDICATED && !USE_TTY_CLIENT
 	SDL_Quit( );
 #endif
+	
+	printf("Sys_Exit called\n");
+	Sys_Hold();
 
 #ifdef NDEBUG
 	exit( ex );
@@ -334,6 +337,7 @@ Sys_UnloadDll
 */
 void Sys_UnloadDll( void *dllHandle )
 {
+#ifndef WII
 	if( !dllHandle )
 	{
 		Com_Printf("Sys_UnloadDll(NULL)\n");
@@ -341,6 +345,7 @@ void Sys_UnloadDll( void *dllHandle )
 	}
 
 	Sys_UnloadLibrary(dllHandle);
+#endif
 }
 
 /*
@@ -350,6 +355,7 @@ Sys_TryLibraryLoad
 */
 static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname, char* fqpath )
 {
+#if !defined(GEKKO)
 	void* libHandle;
 	char* fn;
 
@@ -369,6 +375,7 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 	Q_strncpyz ( fqpath , fn , MAX_QPATH ) ;
 
 	return libHandle;
+#endif
 }
 
 /*
@@ -385,6 +392,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	intptr_t (**entryPoint)(int, ...),
 	intptr_t (*systemcalls)(intptr_t, ...) )
 {
+#if !defined(GEKKO)
 	void  *libHandle;
 	void  (*dllEntry)( intptr_t (*syscallptr)(intptr_t, ...) );
 	char  fname[MAX_OSPATH];
@@ -436,6 +444,9 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	dllEntry( systemcalls );
 
 	return libHandle;
+#else
+	return NULL;
+#endif
 }
 
 /*
@@ -487,6 +498,7 @@ void Sys_SigHandler( int signal )
 	{
 		signalcaught = qtrue;
 		fprintf( stderr, "Received signal %d, exiting...\n", signal );
+		Sys_Hold();
 #ifndef DEDICATED
 		CL_Shutdown();
 #endif
@@ -545,14 +557,16 @@ int main( int argc, char **argv )
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
-	CON_Init( );
+	TREM_CON_Init( );
 	Com_Init( commandLine );
 	NET_Init( );
 
+#ifndef __GAMECUBE__
 	signal( SIGILL, Sys_SigHandler );
 	signal( SIGFPE, Sys_SigHandler );
 	signal( SIGSEGV, Sys_SigHandler );
 	signal( SIGTERM, Sys_SigHandler );
+#endif
 
 	while( 1 )
 	{
@@ -565,6 +579,7 @@ int main( int argc, char **argv )
 
 		IN_Frame( );
 		Com_Frame( );
+		Sys_Frame();
 	}
 
 	return 0;

@@ -3261,7 +3261,7 @@ CL_Init
 void CL_Init( void ) {
 	Com_Printf( "----- Client Initialization -----\n" );
 
-	Con_Init ();
+	TREM_CON_Init ();
 
 	CL_ClearState ();
 

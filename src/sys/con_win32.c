@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /* fallbacks for con_curses.c */
 #ifdef USE_CURSES
-#define CON_Init CON_Init_tty
+#define TREM_CON_Init TREM_CON_Init_tty
 #define CON_Shutdown CON_Shutdown_tty
 #define CON_Print CON_Print_tty
 #define CON_Input CON_Input_tty
@@ -146,10 +146,10 @@ void CON_Shutdown( void )
 
 /*
 ==================
-CON_Init
+TREM_CON_Init
 ==================
 */
-void CON_Init( void )
+void TREM_CON_Init( void )
 {
 	CONSOLE_CURSOR_INFO curs;
 	CONSOLE_SCREEN_BUFFER_INFO info;

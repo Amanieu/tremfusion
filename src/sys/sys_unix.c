@@ -571,3 +571,13 @@ void Sys_PlatformInit( void )
 	signal( SIGIOT, Sys_SigHandler );
 	signal( SIGBUS, Sys_SigHandler );
 }
+
+void Sys_Hold( void )
+{
+}
+
+void Sys_Frame( void )
+{
+}
+
+

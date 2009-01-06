@@ -249,7 +249,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	static int	lastErrorTime;
 	static int	errorCount;
 	int			currentTime;
-
+	
 	Cvar_Set( "com_errorCode", va( "%i", code ) );
 
 	// when we are running automated scripts, make sure we
@@ -1376,7 +1376,11 @@ Com_InitZoneMemory
 */
 void Com_InitSmallZoneMemory( void ) {
 	s_smallZoneTotal = 512 * 1024;
+#if defined(WII)
+	smallzone = SYS_AllocArena2MemLo( s_smallZoneTotal, 1 );
+#else
 	smallzone = calloc( s_smallZoneTotal, 1 );
+#endif
 	if ( !smallzone ) {
 		Com_Error( ERR_FATAL, "Small zone data failed to allocate %1.1f megs", (float)s_smallZoneTotal / (1024*1024) );
 	}
@@ -1400,8 +1404,11 @@ void Com_InitZoneMemory( void ) {
 	} else {
 		s_zoneTotal = cv->integer * 1024 * 1024;
 	}
-
+#if defined(WII)
+	mainzone = SYS_AllocArena2MemLo( s_zoneTotal, 1 );
+#else
 	mainzone = calloc( s_zoneTotal, 1 );
+#endif
 	if ( !mainzone ) {
 		Com_Error( ERR_FATAL, "Zone data failed to allocate %i megs", s_zoneTotal / (1024*1024) );
 	}
@@ -1524,8 +1531,12 @@ void Com_InitHunkMemory( void ) {
 	} else {
 		s_hunkTotal = cv->integer * 1024 * 1024;
 	}
-
+#if defined(WII)
+	s_hunkTotal = 1024 * 1024 * 20;
+	s_hunkData = SYS_AllocArena2MemLo( s_hunkTotal + 31, 1 );
+#else
 	s_hunkData = calloc( s_hunkTotal + 31, 1 );
+#endif
 	if ( !s_hunkData ) {
 		Com_Error( ERR_FATAL, "Hunk data failed to allocate %i megs", s_hunkTotal / (1024*1024) );
 	}
@@ -2714,7 +2725,8 @@ void Com_Frame( void ) {
 
 
 	if ( setjmp (abortframe) ) {
-		return;			// an ERR_DROP was thrown
+		Com_Printf("an ERR_DROP was thrown\n");
+	  return;			// an ERR_DROP was thrown
 	}
 
 	timeBeforeFirstEvents =0;

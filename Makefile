@@ -189,6 +189,10 @@ ifndef USE_SSE
   USE_SSE=0
 endif
 
+ifndef EMBED_QVMS
+  EMBED_QVMS=0
+endif
+
 #############################################################################
 
 BD=$(BUILD_DIR)/debug-$(PLATFORM)-$(ARCH)
@@ -429,6 +433,142 @@ ifeq ($(PLATFORM),linux)
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
+
+#############################################################################
+# SETUP AND BUILD -- WII
+#############################################################################
+
+ifeq ($(PLATFORM),wii)
+
+  ifeq ($(strip $(DEVKITPPC)),)
+    $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
+  endif
+
+  include $(DEVKITPPC)/wii_rules
+  
+  USE_MUMBLE       = 0
+  USE_VOIP         = 0
+  BUILD_CLIENT     = 0
+  BUILD_CLIENT_SMP = 0
+  BUILD_GAME_SO    = 0
+  BUILD_GAME_QVM   = 0
+  EMBED_QVMS = 0
+  
+  LIB=lib
+
+  BASE_CFLAGS = -MMD -MP -MF -Wall -fno-strict-aliasing -Wimplicit -pipe \
+                 $(MACHDEP) $(INCLUDE) -D__GAMECUBE__ -D__ppc__ \
+                -DSHOW_DEBUG -DEMBEDDED_FONTS -DNOTHREADLIB -DWII=1
+                
+  BASE_CFLAGS += -I$(LIBOGC_INC) 
+  BASE_CFLAGS += -I$(DEVKITPRO)/libfat/include
+  BASE_CFLAGS += -I$(DEVKITPRO)/libwiikeyboard/include
+	BASE_CFLAGS += -L$(LIBOGC_LIB)
+	BASE_CFLAGS += -L$(DEVKITPRO)/libfat/lib/wii
+	BASE_CFLAGS += -L$(DEVKITPRO)/libwiikeyboard/lib/wii
+#  BASE_CFLAGS += -D__GX__ -D_SDL 
+
+
+#  ifneq ($(USE_TTY_CLIENT),1)
+#    BASE_CFLAGS += -DUSE_ICON $(shell sdl-config --cflags)
+#  else
+#    BASE_CFLAGS += -DUSE_TTY_CLIENT
+#  endif
+#  BASE_CFLAGS += $(shell sdl-config --cflags)
+
+#  ifeq ($(USE_OPENAL),1)
+#    BASE_CFLAGS += -DUSE_OPENAL
+#    ifeq ($(USE_OPENAL_DLOPEN),1)
+#      BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
+#    endif
+#  endif
+
+#  ifeq ($(USE_FREETYPE),1)
+#    BASE_CFLAGS += -DBUILD_FREETYPE
+#    ifeq ($(USE_LOCAL_HEADERS),1)
+#      BASE_CFLAGS += -I$(FTDIR)
+#    else
+#      BASE_CFLAGS += $(shell freetype-config --cflags)
+#    endif
+#  endif
+
+#  ifeq ($(USE_CURL),1)
+#    BASE_CFLAGS += -DUSE_CURL
+#    ifeq ($(USE_CURL_DLOPEN),1)
+#      BASE_CFLAGS += -DUSE_CURL_DLOPEN
+#    endif
+#  endif
+
+#  ifeq ($(USE_CODEC_VORBIS),1)
+#    BASE_CFLAGS += -DUSE_CODEC_VORBIS
+#    ifeq ($(USE_LOCAL_HEADERS),1)
+#      BASE_CFLAGS += -I$(OGGDIR)
+#    else
+#      BASE_CFLAGS += $(OGG_CFLAGS)
+#    endif
+#  endif
+
+  OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
+
+  BASE_CFLAGS += -maltivec
+  HAVE_VM_COMPILED=false
+
+  ifneq ($(HAVE_VM_COMPILED),true)
+    BASE_CFLAGS += -DNO_VM_COMPILED
+  endif
+
+  SHLIBEXT=so
+  SHLIBCFLAGS=-fPIC
+  SHLIBLDFLAGS=-shared $(LDFLAGS)
+
+  BINEXT=.elf
+  ARCH= ppc
+
+  THREAD_LIBS=-lpthread
+  LIBS= -lwiiuse -lbte -lfat -logc -lm -lwiikeyboard
+
+#  ifneq ($(USE_TTY_CLIENT),1)
+#    CLIENT_LIBS += $(shell sdl-config --libs) -lGL
+#  endif
+
+
+#  ifeq ($(USE_OPENAL),1)
+#    ifneq ($(USE_OPENAL_DLOPEN),1)
+#      CLIENT_LIBS += -lopenal
+#    endif
+#  endif
+
+#  ifeq ($(USE_CURL),1)
+#    ifneq ($(USE_CURL_DLOPEN),1)
+#      CLIENT_LIBS += -lcurl
+#    endif
+#  endif
+#
+#  ifeq ($(USE_CODEC_VORBIS),1)
+#    CLIENT_LIBS += $(OGG_LIBS)
+#  endif
+#
+#  ifeq ($(USE_MUMBLE),1)
+#    CLIENT_LIBS += -lrt
+#  endif
+#
+#  ifeq ($(USE_FREETYPE),1)
+#    CLIENT_LIBS += $(shell freetype-config --libs)
+#  endif
+
+  ifeq ($(ARCH),x86)
+    # linux32 make ...
+    BASE_CFLAGS += -m32
+  else
+  ifeq ($(ARCH),ppc64)
+    BASE_CFLAGS += -m64
+  endif
+  endif
+
+  DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
+  RELEASE_CFLAGS=$(BASE_CFLAGS) -g -DNDEBUG $(OPTIMIZE)
+
+else # ifeq Wii
 
 #############################################################################
 # SETUP AND BUILD -- MAC OS X
@@ -954,6 +1094,7 @@ else # ifeq sunos
   SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
 
 endif #Linux
+endif #Wii
 endif #darwin
 endif #mingw32
 endif #FreeBSD
@@ -1016,6 +1157,10 @@ endif
 
 ifeq ($(USE_LOCAL_HEADERS),1)
   BASE_CFLAGS += -DUSE_LOCAL_HEADERS
+endif
+
+ifeq ($(EMBED_QVMS),1)
+  BASE_CFLAGS += -DEMBED_QVMS
 endif
 
 ifeq ($(GENERATE_DEPENDENCIES),1)
@@ -1659,7 +1804,6 @@ Q3DOBJ = \
   $(B)/ded/md4.o \
   $(B)/ded/msg.o \
   $(B)/ded/net_chan.o \
-  $(B)/ded/net_ip.o \
   $(B)/ded/huffman.o \
   $(B)/ded/parse.o \
   \
@@ -1699,6 +1843,38 @@ ifeq ($(USE_CURSES),1)
   Q3DOBJ += $(B)/ded/con_curses.o
 endif
 
+ifeq ($(EMBED_QVMS),1)
+Q3DOBJ += \
+  $(B)/ded/g_main.o \
+  $(B)/ded/bg_misc.o \
+  $(B)/ded/bg_pmove.o \
+  $(B)/ded/bg_slidemove.o \
+  $(B)/ded/bg_lib.o \
+  $(B)/ded/bg_alloc.o \
+  $(B)/ded/bg_voice.o \
+  $(B)/ded/g_active.o \
+  $(B)/ded/g_client.o \
+  $(B)/ded/g_cmds.o \
+  $(B)/ded/g_combat.o \
+  $(B)/ded/g_physics.o \
+  $(B)/ded/g_buildable.o \
+  $(B)/ded/g_misc.o \
+  $(B)/ded/g_missile.o \
+  $(B)/ded/g_mover.o \
+  $(B)/ded/g_session.o \
+  $(B)/ded/g_spawn.o \
+  $(B)/ded/g_svcmds.o \
+  $(B)/ded/g_target.o \
+  $(B)/ded/g_team.o \
+  $(B)/ded/g_trigger.o \
+  $(B)/ded/g_utils.o \
+  $(B)/ded/g_maprotation.o \
+  $(B)/ded/g_ptr.o \
+  $(B)/ded/g_weapon.o \
+  $(B)/ded/g_admin.o \
+  $(B)/ded/g_syscalls.o
+endif
+
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
     Q3DOBJ += $(B)/ded/vm_x86.o
@@ -1714,15 +1890,29 @@ ifeq ($(HAVE_VM_COMPILED),true)
   endif
 endif
 
+ifeq ($(PLATFORM),wii)
+  Q3DOBJ += \
+    $(B)/ded/net_wii.o
+else
+  Q3DOBJ += \
+    $(B)/ded/net_ip.o
+endif
+
 ifeq ($(PLATFORM),mingw32)
   Q3DOBJ += \
     $(B)/ded/win_resource.o \
     $(B)/ded/sys_win32.o \
     $(B)/ded/con_win32.o
 else
+ifeq ($(PLATFORM),wii)
+  Q3DOBJ += \
+    $(B)/ded/sys_wii.o \
+    $(B)/ded/con_wii.o
+else
   Q3DOBJ += \
     $(B)/ded/sys_unix.o \
     $(B)/ded/con_tty.o
+endif
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
@@ -1924,7 +2114,10 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 
 $(B)/ded/%.o: $(NDIR)/%.c
 	$(DO_DED_CC)
-
+	
+$(B)/ded/%.o: $(GDIR)/%.c
+	$(DO_DED_CC)
+	
 # Extra dependencies to ensure the SVN version is incorporated
 ifeq ($(USE_SVN),1)
   $(B)/client/cl_console.o : .svn/entries

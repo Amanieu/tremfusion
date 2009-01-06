@@ -1556,7 +1556,6 @@ A complete command line has been parsed, so try to execute it
 */
 void	Cmd_ExecuteString( const char *text ) {	
 	cmd_function_t	*cmdFunc, **prev;
-
 	// execute the command line
 	Cmd_TokenizeStringParseCvar( text );		
 	if ( !Cmd_Argc() ) {

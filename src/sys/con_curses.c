@@ -51,7 +51,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Functions from the tty console for fallback
 void CON_Shutdown_tty(void);
-void CON_Init_tty(void);
+void TREM_CON_Init_tty(void);
 char *CON_Input_tty(void);
 void CON_Print_tty(const char *message);
 void CON_Clear_tty(void);
@@ -223,7 +223,7 @@ static void CON_Resize(void)
 	delwin(scrollwin);
 	erase();
 	wnoutrefresh(stdscr);
-	CON_Init();
+	TREM_CON_Init();
 #endif
 }
 
@@ -272,12 +272,12 @@ void CON_Shutdown(void)
 
 /*
 ==================
-CON_Init
+TREM_CON_Init
 
 Initialize the console in curses mode, fall back to tty mode on failure
 ==================
 */
-void CON_Init(void)
+void TREM_CON_Init(void)
 {
 	int col;
 
@@ -293,7 +293,7 @@ void CON_Init(void)
 		SCREEN *test = newterm(NULL, stdout, stdin);
 		if (!test) {
 			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
-			CON_Init_tty();
+			TREM_CON_Init_tty();
 			return;
 		}
 		endwin();

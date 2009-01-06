@@ -33,13 +33,32 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /* fallbacks for con_curses.c */
 #ifdef USE_CURSES
-#define CON_Init CON_Init_tty
+#define TREM_CON_Init TREM_CON_Init_tty
 #define CON_Shutdown CON_Shutdown_tty
 #define CON_Print CON_Print_tty
 #define CON_Input CON_Input_tty
 #define CON_Clear_f CON_Clear_tty
 #endif
 
+#ifdef WII
+#define VINTR 0
+#define VQUIT 1
+#define VERASE 2
+#define VKILL 3
+#define VEOF 4
+#define VTIME 5
+#define VMIN 6
+#define VSWTC 7
+#define VSTART 8
+#define VSTOP 9
+#define VSUSP 10
+#define VEOL 11
+#define VREPRINT 12
+#define VDISCARD 13
+#define VWERASE 14
+#define VLNEXT 15
+#define VEOL2 16
+#endif
 /*
 =============================================================
 tty console routines
@@ -193,12 +212,12 @@ void CON_Clear_f( void )
 
 /*
 ==================
-CON_Init
+TREM_CON_Init
 
 Initialize the console input (tty mode if possible)
 ==================
 */
-void CON_Init( void )
+void TREM_CON_Init( void )
 {
 	struct termios tc;
 
@@ -229,7 +248,7 @@ void CON_Init( void )
 	characters  EOF,  EOL,  EOL2, ERASE, KILL, REPRINT,
 	STATUS, and WERASE, and buffers by lines.
 	ISIG: when any of the characters  INTR,  QUIT,  SUSP,  or
-	DSUSP are received, generate the corresponding sig­
+	DSUSP are received, generate the corresponding sigï¿½
 	nal
 	*/
 	tc.c_lflag &= ~(ECHO | ICANON);

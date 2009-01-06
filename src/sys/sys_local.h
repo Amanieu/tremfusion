@@ -36,7 +36,7 @@ void IN_Restart( void );
 
 // Console
 void CON_Shutdown( void );
-void CON_Init( void );
+void TREM_CON_Init( void );
 char *CON_Input( void );
 void CON_Print( const char *message );
 

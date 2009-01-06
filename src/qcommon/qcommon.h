@@ -308,7 +308,8 @@ typedef struct vm_s vm_t;
 typedef enum {
 	VMI_NATIVE,
 	VMI_BYTECODE,
-	VMI_COMPILED
+	VMI_COMPILED,
+	VMI_EMBED,
 } vmInterpret_t;
 
 typedef enum {

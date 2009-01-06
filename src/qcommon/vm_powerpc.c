@@ -1834,9 +1834,12 @@ PPC_ComputeCode( vm_t *vm )
 
 	// get the memory for the generated code, smarter ppcs need the
 	// mem to be marked as executable (whill change later)
+#ifdef WII
+	unsigned char *dataAndCode = calloc(1, codeLength);
+#else
 	unsigned char *dataAndCode = mmap( NULL, codeLength,
 		PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0 );
-
+#endif
 	if ( ! dataAndCode )
 		DIE( "Not enough memory" );
 
@@ -1990,8 +1993,10 @@ static void
 VM_Destroy_Compiled( vm_t *self )
 {
 	if ( self->codeBase ) {
+#ifndef WII
 		if ( munmap( self->codeBase, self->codeLength ) )
 			Com_Printf( S_COLOR_RED "Memory unmap failed, possible memory leak\n" );
+#endif
 	}
 	self->codeBase = NULL;
 }
@@ -2002,12 +2007,20 @@ VM_Compile( vm_t *vm, vmHeader_t *header )
 	long int pc = 0;
 	unsigned long int i_count;
 	char* code;
+#ifdef WII
+	long long ticksstart;
+#else
 	struct timeval tvstart = {0, 0};
+#endif
 	source_instruction_t *i_first /* dummy */, *i_last = NULL, *i_now;
 
 	vm->compiled = qfalse;
 
+#ifdef WII
+	ticksstart = gettime();
+#else
 	gettimeofday(&tvstart, NULL);
+#endif
 
 	PPC_MakeFastMask( vm->dataMask );
 
@@ -2083,26 +2096,41 @@ VM_Compile( vm_t *vm, vmHeader_t *header )
 #endif
 
 	/* mark memory as executable and not writeable */
+#ifndef WII //FIXME: HOLY SHIT! LOOK AT THAT GAPING SECURITY HOLE! HITLER AND HIS ARMY COULD WALK RIGHT THROUGH THAT AND NOT EVEN HAVE TO CROWD TOGETHER TO GET THROUGH
 	if ( mprotect( vm->codeBase, vm->codeLength, PROT_READ|PROT_EXEC ) ) {
 
 		// it has failed, make sure memory is unmapped before throwing the error
 		VM_Destroy_Compiled( vm );
 		DIE( "mprotect failed" );
 	}
+#endif
 
 	vm->destroy = VM_Destroy_Compiled;
 	vm->compiled = qtrue;
 
 	{
+#ifdef WII
+	  long long ticksdone;
+	  int dur;
+#else
 		struct timeval tvdone = {0, 0};
 		struct timeval dur = {0, 0};
+#endif
 		Com_Printf( "VM file %s compiled to %i bytes of code (%p - %p)\n",
 			vm->name, vm->codeLength, vm->codeBase, vm->codeBase+vm->codeLength );
 
+
+#ifdef WII
+		ticksdone = gettime();
+		dur = diff_msec(ticksstart, ticksdone);
+		Com_Printf( "compilation took %d milli-seconds\n", dur );
+#else
 		gettimeofday(&tvdone, NULL);
 		timersub(&tvdone, &tvstart, &dur);
 		Com_Printf( "compilation took %lu.%06lu seconds\n",
 			(long unsigned int)dur.tv_sec, (long unsigned int)dur.tv_usec );
+#endif
+		Sys_Hold();
 	}
 }
 
@@ -2124,6 +2152,8 @@ VM_CallCompiled( vm_t *vm, int *args )
 
 	programStack -= 48;
 	argPointer = (int *)&image[ programStack + 8 ];
+	Com_Printf("VM_CallCompiled: memcpy(%p, %p, %d)\n", argPointer, args, 4 * 9);
+	Sys_Hold();
 	memcpy( argPointer, args, 4 * 9 );
 	argPointer[ -1 ] = 0;
 	argPointer[ -2 ] = -1;
