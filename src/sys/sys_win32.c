@@ -677,9 +677,8 @@ void Sys_PlatformInit( void )
 		SDL_VIDEODRIVER_externallySet = qfalse;
 #endif
 
-	// Display a console
-	AllocConsole();
-	SetConsoleTitle("Tremfusion Console");
+	// Set the console title
+	SetConsoleTitle( "Tremfusion Console" );
 
 	// Handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
