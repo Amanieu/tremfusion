@@ -151,6 +151,7 @@ struct vm_s {
 
 	byte		*dataBase;
 	int			dataMask;
+	qboolean	mmaped;
 
 	int			stackBottom;		// if programStack < stackBottom, error
 

@@ -442,23 +442,32 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	if( alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
+		vm->mmaped = qtrue;
 #ifdef _WIN32
 		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
-		if(!vm->dataBase)
-			Com_Error(ERR_DROP, "VM_LoadQVM: VirtualAlloc failed");
+		if(!vm->dataBase) {
+			Com_DPrintf("VM_LoadQVM: VirtualAlloc failed");
+			vm->mmaped = qfalse;
+			vm->dataBase = Hunk_Alloc( dataLength, h_high );
+		}
 #else
 		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
-		if(vm->dataBase == (void*)-1)
-			Com_Error(ERR_DROP, "VM_LoadQVM: can't mmap memory");
+		if(vm->dataBase == (void*)-1) {
+			Com_DPrintf("VM_LoadQVM: can't mmap memory");
+			vm->mmaped = qfalse;
+			vm->dataBase = Hunk_Alloc( dataLength, h_high );
+		}
 #endif
 		vm->dataMask = dataLength - 1;
 	} else {
+		if ( vm->mmaped ) {
 #ifdef _WIN32
-		DWORD _unused = 0;
-		VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
+			DWORD _unused = 0;
+			VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
 #else
-		mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
+			mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
 #endif
+		}
 		// clear the data
 		Com_Memset( vm->dataBase, 0, dataLength );
 	}
@@ -474,12 +483,12 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
 	// Fail silently
-	if ( vm->dataBase[0] == 1 ) {
+	if ( vm->dataBase[0] == 1 && vm->mmaped ) {
 #ifdef _WIN32
 		DWORD _unused = 0;
 		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
 #else
-		if ( sysconf( _SC_PAGESIZE ) <= 4096 )
+		if ( 4096 % sysconf( _SC_PAGESIZE ) == 0 )
 			mprotect( vm->dataBase, 4096, PROT_NONE );
 #endif
 	}
@@ -532,7 +541,7 @@ vm_t *VM_Restart( vm_t *vm ) {
 	}
 
 	// load the image
-	Com_Printf( "VM_Restart()\n" );
+	Com_DPrintf( "VM_Restart()\n" );
 
 	if( !( header = VM_LoadQVM( vm, qfalse ) ) ) {
 		Com_Error( ERR_DROP, "VM_Restart failed.\n" );
@@ -677,21 +686,13 @@ void VM_Free( vm_t *vm ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
 	}
-	if ( vm->dataBase ) {
+	if ( vm->dataBase && vm->mmaped ) {
 #ifdef _WIN32
 		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
 #else
 		munmap( vm->dataBase, vm->dataMask + 1 );
 #endif
 	}
-#if 0	// now automatically freed by hunk
-	if ( vm->codeBase ) {
-		Z_Free( vm->codeBase );
-	}
-	if ( vm->instructionPointers ) {
-		Z_Free( vm->instructionPointers );
-	}
-#endif
 	Com_Memset( vm, 0, sizeof( *vm ) );
 
 	currentVM = NULL;
