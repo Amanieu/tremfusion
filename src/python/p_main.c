@@ -158,8 +158,10 @@ void P_script_f( void )
 void P_Init(void)
 {
         Com_Printf("----- P_Init -----\n");
-        // Initialize python
+        /* Initialize python */
         Py_Initialize();
+        /* Make python threads work at all */
+        PyEval_InitThreads( );
 
         // Create a module for tremfusion stuff
         tremfusion_module = Py_InitModule("tremfusion", tremfusion_methods);

@@ -2872,6 +2872,9 @@ void Com_Frame( void ) {
 		c_patch_traces = 0;
 		c_pointcontents = 0;
 	}
+#if USE_PYTHON
+	PyRun_SimpleString( "time.sleep(0.001)\n" );
+#endif
 
 	// old net chan encryption key
 	key = lastTime * 0x87243987;
