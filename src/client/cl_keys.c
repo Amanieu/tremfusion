@@ -752,7 +752,7 @@ void Message_Key( int key ) {
 			if ( !strncmp( buffer, "say ", 4 ) )
 				Hist_Add( chatField.buffer );
 			else
-				Hist_Add( buffer );
+				Hist_Add( va( "/%s", buffer ) );
 
 			if ( !prompt.active )
 				CL_AddReliableCommand( buffer );
