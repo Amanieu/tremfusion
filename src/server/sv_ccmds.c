@@ -178,6 +178,10 @@ static void SV_Map_f( void ) {
 	// to be updated on sending the next heartbeat
 	for( i = 0; i < MAX_MASTER_SERVERS; i++ )
 		sv_master[ i ]->modified  = qtrue;
+	
+#ifdef USE_PYTHON
+  P_Event_Newmap();
+#endif
 }
 
 /*
@@ -313,6 +317,9 @@ static void SV_MapRestart_f( void ) {
 			now.tm_sec,
 			Cvar_VariableString( "mapname" ) ) );
 	}
+#ifdef USE_PYTHON
+	P_Event_Maprestart();
+#endif
 }
 
 //===============================================================
