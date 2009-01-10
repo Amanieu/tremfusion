@@ -682,8 +682,6 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return FloatAsInt( floor( VMF(1) ) );
 	case CG_CEIL:
 		return FloatAsInt( ceil( VMF(1) ) );
-	case CG_ACOS:
-		return FloatAsInt( Q_acos( VMF(1) ) );
 
 	case CG_S_STOPBACKGROUNDTRACK:
 		S_StopBackgroundTrack();
@@ -765,8 +763,8 @@ void CL_InitCGame( void ) {
 
 	// load the dll or bytecode
 	if ( cl_connectedToPureServer != 0 ) {
-		// if sv_pure is set we only allow qvms to be loaded
-		interpret = VMI_COMPILED;
+		// if sv_pure is set we only allow qvms or vx32 to be loaded
+		interpret = VMI_VX32;
 	}
 	else {
 		interpret = Cvar_VariableValue( "vm_cgame" );

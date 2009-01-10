@@ -1124,10 +1124,10 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 						}
 					}
 
-					if (!(pak->referenced & FS_CGAME_REF) && strstr(filename, "cgame.qvm")) {
+					if (!(pak->referenced & FS_CGAME_REF) && (strstr(filename, "cgame.qvm") || strstr(filename, "cgame.vx32"))) {
 						pak->referenced |= FS_CGAME_REF;
 					}
-					if (!(pak->referenced & FS_UI_REF) && strstr(filename, "ui.qvm")) {
+					if (!(pak->referenced & FS_UI_REF) && (strstr(filename, "ui.qvm") || strstr(filename, "ui.vx32"))) {
 						pak->referenced |= FS_UI_REF;
 					}
 

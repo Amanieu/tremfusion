@@ -82,9 +82,9 @@ VM_Init
 ==============
 */
 void VM_Init( void ) {
-	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_cgame", "3", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 3
 	Cvar_Get( "vm_game", "0", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 0
-	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
+	Cvar_Get( "vm_ui", "3", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 3
 
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
 	Cmd_AddCommand ("vminfo", VM_VmInfo_f );
@@ -540,6 +540,20 @@ vm_t *VM_Restart( vm_t *vm ) {
 		return vm;
 	}
 
+	// Same for VX32 binaries
+	if ( vm->vx32Handle ) {
+		char	name[MAX_QPATH];
+		intptr_t	(*systemCall)( intptr_t *parms );
+		
+		systemCall = vm->systemCall;	
+		Q_strncpyz( name, vm->name, sizeof( name ) );
+
+		VM_Free( vm );
+
+		vm = VM_Create( name, systemCall, VMI_VX32 );
+		return vm;
+	}
+
 	// load the image
 	Com_DPrintf( "VM_Restart()\n" );
 
@@ -604,12 +618,23 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	if ( interpret == VMI_NATIVE ) {
 		// try to load as a system dll
 		Com_DPrintf( "Loading dll file %s.\n", vm->name );
-		vm->dllHandle = Sys_LoadDll( module, vm->fqpath , &vm->entryPoint, VM_DllSyscall );
+		vm->dllHandle = Sys_LoadDll( module, &vm->entryPoint, VM_DllSyscall );
 		if ( vm->dllHandle ) {
 			return vm;
 		}
 
-		Com_Printf( "Failed to load dll, looking for qvm.\n" );
+		Com_Printf( "Failed to load dll, looking for vx32 binary.\n" );
+		interpret = VMI_VX32;
+	}
+
+	if ( interpret == VMI_VX32 ) {
+		// try to load as a vx32 binary
+		VM_LoadVX32( vm );
+		if ( vm->vx32Handle ) {
+			return vm;
+		}
+
+		Com_Printf( "Failed to load vx32, looking for qvm.\n" );
 		interpret = VMI_COMPILED;
 	}
 
@@ -684,9 +709,9 @@ void VM_Free( vm_t *vm ) {
 
 	if ( vm->dllHandle ) {
 		Sys_UnloadDll( vm->dllHandle );
-		Com_Memset( vm, 0, sizeof( *vm ) );
-	}
-	if ( vm->dataBase && vm->mmaped ) {
+	} else if ( vm->vx32Handle ) {
+		vxproc_free( vm->vx32Handle );
+	} else if ( vm->dataBase && vm->mmaped ) {
 #ifdef _WIN32
 		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
 #else
@@ -715,35 +740,24 @@ void VM_Forced_Unload_Done(void) {
 }
 
 void *VM_ArgPtr( intptr_t intValue ) {
-	if ( !intValue ) {
-		return NULL;
-	}
-	// currentVM is missing on reconnect
-	if ( currentVM==NULL )
-	  return NULL;
-
-	if ( currentVM->entryPoint ) {
-		return (void *)(currentVM->dataBase + intValue);
-	}
-	else {
-		return (void *)(currentVM->dataBase + (intValue & currentVM->dataMask));
-	}
+	return VM_ExplicitArgPtr( currentVM, intValue );
 }
 
 void *VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue ) {
-	if ( !intValue ) {
+	if ( !intValue || !vm ) {
 		return NULL;
 	}
 
-	// currentVM is missing on reconnect here as well?
-	if ( currentVM==NULL )
-	  return NULL;
-
-	//
 	if ( vm->entryPoint ) {
-		return (void *)(vm->dataBase + intValue);
-	}
-	else {
+		return (void *)intValue;
+#ifdef USE_VX32
+	} else if ( vm->vx32Handle ) {
+		if ( !vxmem_checkperm( vm->vx32Handle->mem, intValue, sizeof(int), VXPERM_READ, NULL ) )
+			return NULL;
+		else
+			return (void *)(vm->vx32mmap->base + intValue);
+#endif
+	} else {
 		return (void *)(vm->dataBase + (intValue & vm->dataMask));
 	}
 }
@@ -807,6 +821,10 @@ intptr_t	QDECL VM_Call( vm_t *vm, int callnum, ... ) {
 		r = vm->entryPoint( callnum,  args[0],  args[1],  args[2], args[3],
                             args[4],  args[5],  args[6], args[7],
                             args[8],  args[9]);
+#ifdef USE_VX32
+	} else if ( vm->vx32Handle ) {
+		r = VM_CallVX32( vm, (int*)&callnum );
+#endif
 	} else {
 #if id386 // i386 calling convention doesn't need conversion
 #ifndef NO_VM_COMPILED

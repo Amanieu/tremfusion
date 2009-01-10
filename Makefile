@@ -216,6 +216,7 @@ ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
 FTDIR=$(MOUNT_DIR)/freetype2
 PDCDIR=$(MOUNT_DIR)/pdcurses
+VX32DIR=$(MOUNT_DIR)/libvx32
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -292,6 +293,24 @@ ifeq ($(PLATFORM),linux)
     LIB=lib64
   endif
   endif
+  endif
+  endif
+
+  ifeq ($(ARCH),x86)
+    ifndef BUILD_GAME_VX32
+      BUILD_GAME_VX32 = 1
+    endif
+    ifndef USE_VX32
+      USE_VX32 = 1
+    endif
+  else
+  ifeq ($(ARCH),x86_64)
+    ifndef BUILD_GAME_VX32
+      BUILD_GAME_VX32 = 1
+    endif
+    ifndef USE_VX32
+      USE_VX32 = 1
+    endif
   endif
   endif
 
@@ -425,8 +444,18 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
+  ifeq ($(USE_VX32),1)
+    BASE_CFLAGS += -DUSE_VX32
+  endif
+
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
+
+  VX32_CC = $(CC)
+  VX32_CFLAGS = -nostdinc -D__VX32__ -march=i586 -mregparm=3 -mfpmath=387 -mno-sse -mno-sse2 $(shell $(VX32_CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+  VX32_LDFLAGS = -nostdlib -static -static-libgcc
+  VX32_LIBS = -lgcc
+  VX32_OBJS = linux.o linux-asm.o
 
 else # ifeq Linux
 
@@ -438,6 +467,12 @@ ifeq ($(PLATFORM),darwin)
   HAVE_VM_COMPILED=true
   CLIENT_LIBS=
   OPTIMIZE=-O3
+
+  ifeq ($(ARCH),x86)
+    ifndef USE_VX32
+      USE_VX32 = 1
+    endif
+  endif
   
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
@@ -544,6 +579,10 @@ ifeq ($(PLATFORM),darwin)
     BASE_CFLAGS += -DNO_VM_COMPILED
   endif
 
+  ifeq ($(USE_VX32),1)
+    BASE_CFLAGS += -DUSE_VX32
+  endif
+
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
 
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
@@ -555,6 +594,8 @@ ifeq ($(PLATFORM),darwin)
   NOTSHLIBCFLAGS=-mdynamic-no-pic
 
   TOOLS_CFLAGS += -DMACOS_X
+
+  VX32_OBJS = darwin.o darwin-asm.o
 
 else # ifeq darwin
 
@@ -702,6 +743,14 @@ ifeq ($(PLATFORM),freebsd)
     ARCH=x86
   endif #alpha test
 
+  ifeq ($(ARCH),x86)
+    ifndef BUILD_GAME_VX32
+      BUILD_GAME_VX32 = 1
+    endif
+    ifndef USE_VX32
+      USE_VX32 = 1
+    endif
+  endif
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
     -DUSE_ICON $(shell sdl-config --cflags)
@@ -720,6 +769,10 @@ ifeq ($(PLATFORM),freebsd)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+  endif
+
+  ifeq ($(USE_VX32),1)
+    BASE_CFLAGS += -DUSE_VX32
   endif
 
   ifeq ($(ARCH),axp)
@@ -759,6 +812,12 @@ ifeq ($(PLATFORM),freebsd)
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LIBS += $(OGG_LIBS)
   endif
+
+  VX32_CC = $(CC)
+  VX32_CFLAGS = -nostdinc -D__VX32__ -march=i586 -mregparm=3 -mfpmath=387 -mno-sse -mno-sse2 $(shell $(VX32_CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+  VX32_LDFLAGS = -nostdlib -static -static-libgcc
+  VX32_LIBS = -lgcc
+  VX32_OBJS = freebsd.o
 
 else # ifeq freebsd
 
@@ -982,6 +1041,13 @@ ifneq ($(BUILD_GAME_SO),0)
     $(B)/base/ui$(ARCH).$(SHLIBEXT)
 endif
 
+ifneq ($(BUILD_GAME_VX32),0)
+  TARGETS += \
+    $(B)/base/vm/cgame.vx32 \
+    $(B)/base/vm/game.vx32 \
+    $(B)/base/vm/ui.vx32
+endif
+
 ifneq ($(BUILD_GAME_QVM),0)
   ifneq ($(CROSS_COMPILING),1)
     TARGETS += \
@@ -1045,6 +1111,11 @@ $(echo_cmd) "SMP_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
 endef
 
+define DO_LIBVX32_CC
+$(echo_cmd) "CC $<"
+$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -std=gnu99 -o $@ -c $<
+endef
+
 ifeq ($(GENERATE_DEPENDENCIES),1)
   DO_QVM_DEP=cat $(@:%.o=%.d) | sed -e 's/\.o/\.asm/g' >> $(@:%.o=%.d)
 endif
@@ -1071,6 +1142,31 @@ define DO_UI_CC
 $(echo_cmd) "UI_CC $<"
 $(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 $(Q)$(DO_QVM_DEP)
+endef
+
+define DO_VX32_SHLIB_CC
+$(echo_cmd) "VX32_SHLIB_CC $<"
+$(Q)$(VX32_CC) $(CFLAGS) $(VX32_CFLAGS) -o $@ -c $<
+endef
+
+define DO_VX32_GAME_CC
+$(echo_cmd) "VX32_GAME_CC $<"
+$(Q)$(VX32_CC) -DGAME $(CFLAGS) $(VX32_CFLAGS) -o $@ -c $<
+endef
+
+define DO_VX32_CGAME_CC
+$(echo_cmd) "VX32_CGAME_CC $<"
+$(Q)$(VX32_CC) -DCGAME $(CFLAGS) $(VX32_CFLAGS) -o $@ -c $<
+endef
+
+define DO_VX32_UI_CC
+$(echo_cmd) "VX32_UI_CC $<"
+$(Q)$(VX32_CC) -DUI $(CFLAGS) $(VX32_CFLAGS) -o $@ -c $<
+endef
+
+define DO_VX32_AS
+$(echo_cmd) "VX32_AS $<"
+$(Q)$(VX32_CC) $(CFLAGS) $(VX32_CFLAGS) -x assembler-with-cpp -o $@ -c $<
 endef
 
 define DO_AS
@@ -1556,6 +1652,26 @@ ifeq ($(HAVE_VM_COMPILED),true)
   endif
 endif
 
+ifeq ($(USE_VX32),1)
+Q3OBJ += \
+  $(B)/client/vm_vx32.o \
+  $(B)/client/chunk.o \
+  $(B)/client/elf.o \
+  $(B)/client/emu.o \
+  $(B)/client/mem.o \
+  $(B)/client/proc.o \
+  $(B)/client/rts.o \
+  $(B)/client/sig.o \
+  $(B)/client/x86dis.o \
+  $(addprefix $(B)/client/, $(VX32_OBJS))
+  ifeq ($(ARCH),x86)
+    Q3OBJ += $(B)/client/run32.o
+  endif
+  ifeq ($(ARCH),x86_64)
+    Q3OBJ += $(B)/client/run64.o
+  endif
+endif
+
 ifeq ($(PLATFORM),mingw32)
   Q3OBJ += \
     $(B)/client/win_resource.o \
@@ -1714,6 +1830,26 @@ ifeq ($(HAVE_VM_COMPILED),true)
   endif
 endif
 
+ifeq ($(USE_VX32),1)
+Q3DOBJ += \
+  $(B)/ded/vm_vx32.o \
+  $(B)/ded/chunk.o \
+  $(B)/ded/elf.o \
+  $(B)/ded/emu.o \
+  $(B)/ded/mem.o \
+  $(B)/ded/proc.o \
+  $(B)/ded/rts.o \
+  $(B)/ded/sig.o \
+  $(B)/ded/x86dis.o \
+  $(addprefix $(B)/ded/, $(VX32_OBJS))
+  ifeq ($(ARCH),x86)
+    Q3DOBJ += $(B)/ded/run32.o
+  endif
+  ifeq ($(ARCH),x86_64)
+    Q3DOBJ += $(B)/ded/run64.o
+  endif
+endif
+
 ifeq ($(PLATFORM),mingw32)
   Q3DOBJ += \
     $(B)/ded/win_resource.o \
@@ -1772,10 +1908,16 @@ CGOBJ_ = \
 
 CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
 CGVMOBJ = $(CGOBJ_:%.o=%.asm)
+CGVXOBJ = $(CGOBJ:%.o=%.vxo) \
+  $(B)/base/qcommon/crt0.vxo
 
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+
+$(B)/base/vm/cgame.vx32: $(CGVXOBJ)
+	$(echo_cmd) "VX32_LD $@"
+	$(Q)$(VX32_CC) $(CFLAGS) $(VX32_LDFLAGS) -o $@ $(CGVXOBJ) $(VX32_LIBS)
 
 $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1821,10 +1963,16 @@ GOBJ_ = \
 
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
+GVXOBJ = $(GOBJ:%.o=%.vxo) \
+  $(B)/base/qcommon/crt0.vxo
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
+
+$(B)/base/vm/game.vx32: $(GVXOBJ)
+	$(echo_cmd) "VX32_LD $@"
+	$(Q)$(VX32_CC) $(CFLAGS) $(VX32_LDFLAGS) -o $@ $(GVXOBJ) $(VX32_LIBS)
 
 $(B)/base/vm/game.qvm: $(GVMOBJ) $(GDIR)/g_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1849,10 +1997,16 @@ UIOBJ_ = \
 
 UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
 UIVMOBJ = $(UIOBJ_:%.o=%.asm)
+UIVXOBJ = $(UIOBJ:%.o=%.vxo) \
+  $(B)/base/qcommon/crt0.vxo
 
 $(B)/base/ui$(ARCH).$(SHLIBEXT): $(UIOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
+
+$(B)/base/vm/ui.vx32: $(UIVXOBJ)
+	$(echo_cmd) "VX32_LD $@"
+	$(Q)$(VX32_CC) $(CFLAGS) $(VX32_LDFLAGS) -o $@ $(UIVXOBJ) $(VX32_LIBS)
 
 $(B)/base/vm/ui.qvm: $(UIVMOBJ) $(UIDIR)/ui_syscalls.asm $(Q3ASM)
 	$(echo_cmd) "Q3ASM $@"
@@ -1903,6 +2057,12 @@ $(B)/client/%.o: $(SYSDIR)/%.rc
 $(B)/client/%.o: $(NDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(VX32DIR)/%.c
+	$(DO_LIBVX32_CC)
+
+$(B)/client/%.o: $(VX32DIR)/%.S
+	$(DO_AS)
+
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
 	$(DO_AS)
@@ -1924,6 +2084,12 @@ $(B)/ded/%.o: $(SYSDIR)/%.rc
 
 $(B)/ded/%.o: $(NDIR)/%.c
 	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(VX32DIR)/%.c
+	$(DO_LIBVX32_CC)
+
+$(B)/ded/%.o: $(VX32DIR)/%.S
+	$(DO_AS)
 
 # Extra dependencies to ensure the SVN version is incorporated
 ifeq ($(USE_SVN),1)
@@ -1954,6 +2120,12 @@ $(B)/base/cgame/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/cgame/%.o: $(CGDIR)/%.c
 	$(DO_CGAME_CC)
 
+$(B)/base/cgame/bg_%.vxo: $(GDIR)/bg_%.c
+	$(DO_VX32_CGAME_CC)
+
+$(B)/base/cgame/%.vxo: $(CGDIR)/%.c
+	$(DO_VX32_CGAME_CC)
+
 $(B)/base/cgame/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_CGAME_Q3LCC)
 
@@ -1963,6 +2135,9 @@ $(B)/base/cgame/%.asm: $(CGDIR)/%.c $(Q3LCC)
 
 $(B)/base/game/%.o: $(GDIR)/%.c
 	$(DO_GAME_CC)
+
+$(B)/base/game/%.vxo: $(GDIR)/%.c
+	$(DO_VX32_GAME_CC)
 
 $(B)/base/game/%.asm: $(GDIR)/%.c $(Q3LCC)
 	$(DO_GAME_Q3LCC)
@@ -1974,6 +2149,12 @@ $(B)/base/ui/bg_%.o: $(GDIR)/bg_%.c
 $(B)/base/ui/%.o: $(UIDIR)/%.c
 	$(DO_UI_CC)
 
+$(B)/base/ui/bg_%.vxo: $(GDIR)/bg_%.c
+	$(DO_VX32_UI_CC)
+
+$(B)/base/ui/%.vxo: $(UIDIR)/%.c
+	$(DO_VX32_UI_CC)
+
 $(B)/base/ui/bg_%.asm: $(GDIR)/bg_%.c $(Q3LCC)
 	$(DO_UI_Q3LCC)
 
@@ -1983,6 +2164,12 @@ $(B)/base/ui/%.asm: $(UIDIR)/%.c $(Q3LCC)
 
 $(B)/base/qcommon/%.o: $(CMDIR)/%.c
 	$(DO_SHLIB_CC)
+
+$(B)/base/qcommon/%.vxo: $(CMDIR)/%.c
+	$(DO_VX32_SHLIB_CC)
+
+$(B)/base/qcommon/%.vxo: $(ASMDIR)/%.s
+	$(DO_VX32_AS)
 
 $(B)/base/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 	$(DO_Q3LCC)
@@ -1994,6 +2181,7 @@ $(B)/base/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 
 OBJ = $(Q3OBJ) $(Q3POBJ) $(Q3POBJ_SMP) $(Q3DOBJ) \
   $(GOBJ) $(CGOBJ) $(UIOBJ) \
+  $(GVXOBJ) $(CGVXOBJ) $(UIVXOBJ) \
   $(GVMOBJ) $(CGVMOBJ) $(UIVMOBJ)
 TOOLSOBJ = $(LBURGOBJ) $(Q3CPPOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
 

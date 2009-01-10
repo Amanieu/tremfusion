@@ -77,6 +77,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // for windows fastcall option
 #define QDECL
 
+#ifndef __VX32__
+
 //================================================================= WIN32 ===
 
 #ifdef _WIN32
@@ -272,6 +274,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ARCH_STRING "bytecode"
 
 #define DLL_EXT ".qvm"
+
+#endif
+
+//================================================================== VX32 ===
+
+#else
+
+#define OS_STRING "vx32"
+#define ID_INLINE inline
+#define PATH_SEP '/'
+
+#define ARCH_STRING "x86"
+
+#define Q3_LITTLE_ENDIAN
+
+#define DLL_EXT ".vx32"
 
 #endif
 

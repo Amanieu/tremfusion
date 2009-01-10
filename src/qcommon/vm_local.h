@@ -22,6 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "q_shared.h"
 #include "qcommon.h"
+#ifdef USE_VX32
+#include "../libvx32/vx32.h"
+#endif
 
 typedef enum {
 	OP_UNDEF, 
@@ -139,6 +142,11 @@ struct vm_s {
 	intptr_t			(QDECL *entryPoint)( int callNum, ... );
 	void (*destroy)(vm_t* self);
 
+	// for vx32 modules
+	vxproc		*vx32Handle;
+	int			entryEIP;
+	vxmmap		*vx32mmap;
+
 	// for interpreted modules
 	qboolean	currentlyInterpreting;
 
@@ -162,8 +170,6 @@ struct vm_s {
 	int			breakFunction;		// increment breakCount on function entry to this
 	int			breakCount;
 
-	char		fqpath[MAX_QPATH+1] ;
-
 	byte		*jumpTableTargets;
 	int			numJumpTableTargets;
 };
@@ -174,6 +180,11 @@ extern	int		vm_debugLevel;
 
 void VM_Compile( vm_t *vm, vmHeader_t *header );
 int	VM_CallCompiled( vm_t *vm, int *args );
+
+#ifdef USE_VX32
+void VM_LoadVX32( vm_t *vm );
+int VM_CallVX32( vm_t *vm, int *args );
+#endif
 
 void VM_PrepareInterpreter( vm_t *vm, vmHeader_t *header );
 int	VM_CallInterpreted( vm_t *vm, int *args );

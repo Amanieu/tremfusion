@@ -348,12 +348,10 @@ void Sys_UnloadDll( void *dllHandle )
 Sys_TryLibraryLoad
 =================
 */
-static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname, char* fqpath )
+static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname)
 {
 	void* libHandle;
 	char* fn;
-
-	*fqpath = 0;
 
 	fn = FS_BuildOSPath( base, gamedir, fname );
 	Com_DPrintf( "Sys_LoadDll(%s)... \n", fn );
@@ -366,7 +364,6 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 	}
 
 	Com_Printf ( "Sys_LoadDll(%s): succeeded ...\n", fn );
-	Q_strncpyz ( fqpath , fn , MAX_QPATH ) ;
 
 	return libHandle;
 }
@@ -381,7 +378,7 @@ Used to load a development dll instead of a virtual machine
 #3 look in fs_basepath
 =================
 */
-void *Sys_LoadDll( const char *name, char *fqpath ,
+void *Sys_LoadDll( const char *name,
 	intptr_t (**entryPoint)(int, ...),
 	intptr_t (*systemcalls)(intptr_t, ...) )
 {
@@ -405,16 +402,16 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	extrapath = Cvar_VariableString( "fs_extrapath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
-	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
+	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname);
 
 	if(!libHandle && *homepath)
-		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname);
 
 	if(!libHandle && *extrapath)
-		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname);
 
 	if(!libHandle && *basepath)
-		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname);
 
 	if(!libHandle) {
 		Com_Printf ( "Sys_LoadDll(%s) failed to load library\n", name );

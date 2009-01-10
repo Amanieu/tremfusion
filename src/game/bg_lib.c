@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // compiled for the virtual machine
 
 
-#ifdef Q3_VM
+#if defined(Q3_VM) || defined(__VX32__)
 
 #include "../qcommon/q_shared.h"
 
@@ -348,12 +348,7 @@ void *memmove( void *dest, const void *src, size_t count )
 }
 
 
-#if 0
-
-double floor( double x ) {
-  return (int)(x + 0x40000000) - 0x40000000;
-}
-
+#ifdef __VX32__
 void *memset( void *dest, int c, size_t count ) {
   while ( count-- ) {
     ((char *)dest)[count] = c;
@@ -599,7 +594,7 @@ void create_acostable( void ) {
 */
 
 
-float acostable[] = {
+/*float acostable[] = {
 3.14159265,3.07908248,3.05317551,3.03328655,3.01651113,3.00172442,2.98834964,2.97604422,
 2.96458497,2.95381690,2.94362719,2.93393068,2.92466119,2.91576615,2.90720289,2.89893629,
 2.89093699,2.88318015,2.87564455,2.86831188,2.86116621,2.85419358,2.84738169,2.84071962,
@@ -739,7 +734,7 @@ double acos( double x ) {
     x = 1;
   index = (float) (1.0 + x) * 511.9;
   return acostable[index];
-}
+}*/
 
 
 double atan2( double y, double x ) {
@@ -769,6 +764,8 @@ double atan2( double y, double x ) {
       temp = x;
       x = -y;
       y = temp;
+    } else {
+      base = 0; // shut up a warning
     }
   }
 
@@ -1042,7 +1039,7 @@ static float __scalbnf( float x, int n )
 pow
 ==================
 */
-float pow( float x, float y )
+double pow( double x, double y )
 {
   float z, ax, z_h, z_l, p_h, p_l;
   float y1, subt1, t1, t2, subr, r, s, t, u, v, w;
@@ -1297,6 +1294,77 @@ float pow( float x, float y )
 
   return s * z;
 }
+
+#ifdef __VX32__
+float ceilf( float x )
+{
+	int i0,j0;
+	unsigned int i;
+
+	GET_FLOAT_WORD(i0,x);
+	j0 = ((i0>>23)&0xff)-0x7f;
+	if(j0<23) {
+	    if(j0<0) { 	/* raise inexact if x != 0 */
+		if(huge+x>(float)0.0) {/* return 0*sign(x) if |x|<1 */
+		    if(i0<0) {i0=0x80000000;}
+		    else if(i0!=0) { i0=0x3f800000;}
+		}
+	    } else {
+		i = (0x007fffff)>>j0;
+		if((i0&i)==0) return x; /* x is integral */
+		if(huge+x>(float)0.0) {	/* raise inexact flag */
+		    if(i0>0) i0 += (0x00800000)>>j0;
+		    i0 &= (~i);
+		}
+	    }
+	} else {
+	    if(j0==0x80) return x+x;	/* inf or NaN */
+	    else return x;		/* x is integral */
+	}
+	SET_FLOAT_WORD(x,i0);
+	return x;
+}
+
+float floorf( float x )
+{
+	int i0,j0;
+	unsigned int i;
+	GET_FLOAT_WORD(i0,x);
+	j0 = ((i0>>23)&0xff)-0x7f;
+	if(j0<23) {
+	    if(j0<0) { 	/* raise inexact if x != 0 */
+		if(huge+x>(float)0.0) {/* return 0*sign(x) if |x|<1 */
+		    if(i0>=0) {i0=0;}
+		    else if((i0&0x7fffffff)!=0)
+			{ i0=0xbf800000;}
+		}
+	    } else {
+		i = (0x007fffff)>>j0;
+		if((i0&i)==0) return x; /* x is integral */
+		if(huge+x>(float)0.0) {	/* raise inexact flag */
+		    if(i0<0) i0 += (0x00800000)>>j0;
+		    i0 &= (~i);
+		}
+	    }
+	} else {
+	    if(j0==0x80) return x+x;	/* inf or NaN */
+	    else return x;		/* x is integral */
+	}
+	SET_FLOAT_WORD(x,i0);
+	return x;
+}
+#endif
+
+#ifdef __VX32__
+float sinf( float x ) {return sin(x);}
+float cosf( float x ) {return cos(x);}
+void sincos( double x, double *s, double *c ) {*s = sin(x); *c = cos(x);}
+void sincosf( float x, float *s, float *c ) {*s = sin(x); *c = cos(x);}
+float sqrtf( float x ) {return sqrt(x);}
+double floor( double x ) {return floorf(x);}
+double ceil( double x ) {return ceilf(x);}
+long int lrintf( float x ) {return rint(x);}
+#endif
 
 
 
@@ -2197,7 +2265,7 @@ static LDOUBLE abs_val (LDOUBLE value)
   return result;
 }
 
-static LDOUBLE pow10 (int exp)
+static LDOUBLE pow10_ (int exp)
 {
   LDOUBLE result = 1;
 
@@ -2210,7 +2278,7 @@ static LDOUBLE pow10 (int exp)
   return result;
 }
 
-static long round (LDOUBLE value)
+static long round_ (LDOUBLE value)
 {
   long intpart;
 
@@ -2272,12 +2340,12 @@ static int fmtfp (char *buffer, size_t *currlen, size_t maxlen,
   /* We "cheat" by converting the fractional part to integer by
    * multiplying by a factor of 10
    */
-  fracpart = round ((pow10 (max)) * (ufvalue - intpart));
+  fracpart = round_ ((pow10_ (max)) * (ufvalue - intpart));
 
-  if (fracpart >= pow10 (max))
+  if (fracpart >= pow10_ (max))
   {
     intpart++;
-    fracpart -= pow10 (max);
+    fracpart -= pow10_ (max);
   }
 
 #ifdef DEBUG_SNPRINTF

@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // compiled for the virtual machine
 
 // This file is NOT included on native builds
-#if !defined( BG_LIB_H ) && defined( Q3_VM )
+#if !defined( BG_LIB_H ) && ( defined( Q3_VM ) || defined( __VX32__ ) )
 #define BG_LIB_H
 
 #ifndef NULL
@@ -112,6 +112,7 @@ int     atoi( const char *string );
 int     _atoi( const char **stringPtr );
 
 int     sscanf( const char *buffer, const char *fmt, ... );
+int     Q_vsnprintf(char *str, size_t length, const char *fmt, va_list args);
 
 // Memory functions
 void    *memmove( void *dest, const void *src, size_t count );
@@ -129,7 +130,7 @@ double  tan( double x );
 int     abs( int n );
 double  fabs( double x );
 double  acos( double x );
-float   pow( float x, float y );
+double  pow( double x, double y );
 double  rint( double v );
 
 #endif // BG_LIB_H

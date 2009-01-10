@@ -770,7 +770,7 @@ char* Q_strrchr( const char* string, int c )
 
 qboolean Q_isanumber( const char *s )
 {
-#ifdef Q3_VM
+#if defined(Q3_VM) || defined(__VX32__)
 	//FIXME: implement
 	return qfalse;
 #else

@@ -26,13 +26,26 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // this file is only included when building a dll
 // g_syscalls.asm is included instead when building a qvm
 
-static intptr_t (QDECL *syscall)( intptr_t arg, ... ) = (intptr_t (QDECL *)( intptr_t, ...))-1;
+#ifdef __VX32__
+static inline intptr_t syscall(intptr_t arg, ...)
+{
+  intptr_t ret;
 
+  asm volatile("syscall\n"
+    : "=a" (ret)
+    : "a" (&arg)
+    : "cc", "memory");
 
-void dllEntry( intptr_t (QDECL *syscallptr)( intptr_t arg,... ) )
+  return ret;
+}
+#else
+static intptr_t ( QDECL *syscall )( intptr_t arg, ... ) = ( intptr_t ( QDECL * )( intptr_t, ... ) ) - 1;
+
+void dllEntry( intptr_t ( QDECL *syscallptr )( intptr_t arg, ... ) )
 {
   syscall = syscallptr;
 }
+#endif
 
 int PASSFLOAT( float x )
 {
