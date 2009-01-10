@@ -116,13 +116,9 @@ int VM_CallVX32(vm_t *vm, int *args)
 	p = vm->vx32Handle;
 	saved_regs = *p->cpu;
 
-	// Since we are using regparm=3, put the first 3 args in registers and put
-	// the rest on the stack
-	p->cpu->reg[EAX] = args[0];
-	p->cpu->reg[EDX] = args[1];
-	p->cpu->reg[ECX] = args[2];
-	p->cpu->reg[ESP] -= sizeof(int) * 7;
-	if (vxmem_write(p->mem, args + 3, p->cpu->reg[ESP], sizeof(int) * 7) < 0)
+	// Put the args on the stack
+	p->cpu->reg[ESP] -= sizeof(int) * 10;
+	if (vxmem_write(p->mem, args, p->cpu->reg[ESP], sizeof(int) * 10) < 0)
 		Com_Error(ERR_FATAL, "vx32 stack overflow");
 
 	// Set the entry point EIP

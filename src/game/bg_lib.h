@@ -111,7 +111,7 @@ double  _atof( const char **stringPtr );
 int     atoi( const char *string );
 int     _atoi( const char **stringPtr );
 
-int     sscanf( const char *buffer, const char *fmt, ... );
+int     sscanf( const char *buffer, const char *fmt, ... ) QDECL;
 int     Q_vsnprintf(char *str, size_t length, const char *fmt, va_list args);
 
 // Memory functions

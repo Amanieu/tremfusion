@@ -75,6 +75,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #endif
 
+#include "q_platform.h"
+
 /**********************************************************************
   VM Considerations
 
@@ -137,7 +139,6 @@ typedef int intptr_t;
 #endif
 
 
-#include "q_platform.h"
 
 //=============================================================
 
