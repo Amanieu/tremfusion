@@ -452,7 +452,8 @@ ifeq ($(PLATFORM),linux)
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
   VX32_CC = $(CC)
-  VX32_CFLAGS = -nostdinc -D__VX32__ -march=i586 -mregparm=3 -mfpmath=387 -mno-sse -mno-sse2 $(shell $(VX32_CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+  VX32_CFLAGS = -nostdinc -D__VX32__ -march=i586 -mregparm=3 -mfpmath=387 \
+    -mno-sse -mno-sse2 -fno-stack-protector
   VX32_LDFLAGS = -nostdlib -static -static-libgcc
   VX32_LIBS = -lgcc
   VX32_OBJS = linux.o linux-asm.o

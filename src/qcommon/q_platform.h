@@ -281,6 +281,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #else
 
+#undef QDECL
+#define QDECL __attribute__((noinline))
+
 #define OS_STRING "vx32"
 #define ID_INLINE inline
 #define PATH_SEP '/'

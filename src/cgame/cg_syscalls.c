@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "cg_local.h"
 
 #ifdef __VX32__
-static inline intptr_t syscall(intptr_t arg, ...)
+static intptr_t QDECL syscall(intptr_t arg, ...)
 {
   intptr_t ret;
 
