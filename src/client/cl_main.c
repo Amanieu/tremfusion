@@ -1050,6 +1050,7 @@ void CL_PlayDemo_f( void ) {
 	char		*arg, *ext_test;
 	int			protocol, i;
 	char		retry[MAX_OSPATH];
+	fileHandle_t	demofile;
 
 	if (Cmd_Argc() != 2) {
 		Com_Printf ("playdemo <demoname>\n");
@@ -1074,22 +1075,21 @@ void CL_PlayDemo_f( void ) {
 		if (demo_protocols[i])
 		{
 			Com_sprintf (name, sizeof(name), "demos/%s", arg);
-			FS_FOpenFileRead( name, &clc.demofile, qtrue );
+			FS_FOpenFileRead( name, &demofile, qtrue );
 		} else {
 			Com_Printf("Protocol %d not supported for demos\n", protocol);
 			Q_strncpyz(retry, arg, sizeof(retry));
 			retry[strlen(retry)-6] = 0;
-			CL_WalkDemoExt( retry, name, &clc.demofile );
+			CL_WalkDemoExt( retry, name, &demofile );
 		}
 	} else {
-		CL_WalkDemoExt( arg, name, &clc.demofile );
+		CL_WalkDemoExt( arg, name, &demofile );
 	}
 
-	if (!clc.demofile) {
+	if (!demofile) {
 		Com_Error( ERR_DROP, "couldn't open %s", name);
 		return;
 	}
-	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
 
 	// make sure a local server is killed
 	// 2 means don't force disconnect of local client
@@ -1099,7 +1099,9 @@ void CL_PlayDemo_f( void ) {
 
 	Con_Close();
 
+	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
 	cls.state = CA_CONNECTED;
+	clc.demofile = demofile;
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
 
