@@ -409,25 +409,6 @@ qboolean G_FindOvermind( gentity_t *self )
 
 /*
 ================
-G_IsOvermindBuilt
-
-Simple wrapper to G_FindOvermind to check if a location has an overmind
-================
-*/
-qboolean G_IsOvermindBuilt( void )
-{
-  gentity_t dummy;
-
-  memset( &dummy, 0, sizeof( gentity_t ) );
-
-  dummy.overmindNode = NULL;
-  dummy.buildableTeam = TEAM_ALIENS;
-
-  return G_FindOvermind( &dummy );
-}
-
-/*
-================
 G_FindCreep
 
 attempt to find creep for self, return qtrue if successful
@@ -554,17 +535,6 @@ static void nullDieFunction( gentity_t *self, gentity_t *inflictor, gentity_t *a
 {
 }
 
-/*
-================
-freeBuildable
-================
-*/
-static void freeBuildable( gentity_t *self )
-{
-  G_FreeEntity( self );
-}
-
-
 //==================================================================================
 
 
@@ -573,7 +543,7 @@ static void freeBuildable( gentity_t *self )
 ================
 AGeneric_CreepRecede
 
-Called when an alien spawn dies
+Called when an alien buildable dies
 ================
 */
 void AGeneric_CreepRecede( gentity_t *self )
@@ -582,6 +552,7 @@ void AGeneric_CreepRecede( gentity_t *self )
   if( !( self->s.eFlags & EF_DEAD ) )
   {
     self->s.eFlags |= EF_DEAD;
+    G_QueueBuildPoints( self );
     G_AddEvent( self, EV_BUILD_DESTROY, 0 );
 
     if( self->spawned )
@@ -689,7 +660,7 @@ A generic think function for Alien buildables
 */
 void AGeneric_Think( gentity_t *self )
 {
-  self->powered = G_IsOvermindBuilt( );
+  self->powered = level.overmindPresent;
   self->nextthink = level.time + BG_Buildable( self->s.modelindex )->nextthink;
   AGeneric_CreepCheck( self );
 }
@@ -990,7 +961,7 @@ void ABarricade_Shrink( gentity_t *self, qboolean shrink )
 ================
 ABarricade_Die
 
-Called when an alien spawn dies
+Called when an alien barricade dies
 ================
 */
 void ABarricade_Die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod )
@@ -1059,7 +1030,7 @@ void AAcidTube_Think( gentity_t *self )
   int       i, num;
   gentity_t *enemy;
 
-  self->powered = G_IsOvermindBuilt( );
+  self->powered = level.overmindPresent;
   self->nextthink = level.time + BG_Buildable( self->s.modelindex )->nextthink;
 
   VectorAdd( self->s.origin, range, maxs );
@@ -1150,7 +1121,7 @@ Think function for Alien Hive
 */
 void AHive_Think( gentity_t *self )
 {
-  self->powered = G_IsOvermindBuilt( );
+  self->powered = level.overmindPresent;
   self->nextthink = level.time + BG_Buildable( self->s.modelindex )->nextthink;
 
   AGeneric_CreepCheck( self );
@@ -1185,7 +1156,7 @@ pain function for Alien Hive
 */
 void AHive_Pain( gentity_t *self, gentity_t *attacker, int damage )
 {
-  if( self->health <= 0 || !G_IsOvermindBuilt( ) )
+  if( self->health <= 0 || !level.overmindPresent )
     return;
   if( !self->active )
     AHive_CheckTarget( self, attacker );
@@ -1374,7 +1345,7 @@ Think for alien hovel
 */
 void AHovel_Think( gentity_t *self )
 {
-  self->powered = G_IsOvermindBuilt( );
+  self->powered = level.overmindPresent;
   self->nextthink = level.time + 200;
 
   AGeneric_CreepCheck( self );
@@ -1607,7 +1578,7 @@ void ATrapper_Think( gentity_t *self )
   int range =     BG_Buildable( self->s.modelindex )->turretRange;
   int firespeed = BG_Buildable( self->s.modelindex )->turretFireSpeed;
 
-  self->powered = G_IsOvermindBuilt( );
+  self->powered = level.overmindPresent;
   self->nextthink = level.time + BG_Buildable( self->s.modelindex )->nextthink;
 
   AGeneric_CreepCheck( self );
@@ -2278,11 +2249,7 @@ void HSpawn_Disappear( gentity_t *self )
   self->s.eFlags |= EF_NODRAW; //don't draw the model once its destroyed
   self->timestamp = level.time;
 
-  self->think = freeBuildable;
-  self->nextthink = level.time + 100;
-
-  self->r.contents = 0;    //stop collisions...
-  trap_LinkEntity( self ); //...requires a relink
+  G_FreeEntity( self );
 }
 
 
@@ -2302,19 +2269,18 @@ void HSpawn_Blast( gentity_t *self )
   dir[ 0 ] = dir[ 1 ] = 0;
   dir[ 2 ] = 1;
 
-  self->s.eFlags |= EF_NODRAW; //don't draw the model once its destroyed
-  G_AddEvent( self, EV_HUMAN_BUILDABLE_EXPLOSION, DirToByte( dir ) );
   self->timestamp = level.time;
 
   //do some radius damage
   G_RadiusDamage( self->s.pos.trBase, self, self->splashDamage,
     self->splashRadius, self, self->splashMethodOfDeath );
 
-  self->think = freeBuildable;
-  self->nextthink = level.time + 100;
-
-  self->r.contents = 0;    //stop collisions...
-  trap_LinkEntity( self ); //...requires a relink
+  // begin freeing build points
+  G_QueueBuildPoints( self );
+  // turn into an explosion
+  self->s.eType = ET_EVENTS + EV_HUMAN_BUILDABLE_EXPLOSION;
+  self->freeAfterEvent = qtrue;
+  G_AddEvent( self, EV_HUMAN_BUILDABLE_EXPLOSION, DirToByte( dir ) );
 }
 
 
@@ -2399,6 +2365,35 @@ void HSpawn_Think( gentity_t *self )
 
 //==================================================================================
 
+/*
+============
+G_QueueBuildPoints
+============
+*/
+void G_QueueBuildPoints( gentity_t *self )
+{
+  G_Printf( "G_QueueBuildPoints( %s )\n", BG_TeamName( self->buildableTeam ) );
+  switch( self->buildableTeam )
+  {
+    default:
+    case TEAM_NONE:
+      return;
+
+    case TEAM_ALIENS:
+      if( !level.alienBuildPointQueue )
+        level.alienNextQueueTime = level.time + g_alienBuildQueueTime.integer;
+      level.alienBuildPointQueue +=
+          BG_Buildable( self->s.modelindex )->buildPoints;
+      break;
+
+    case TEAM_HUMANS:
+      if( !level.humanBuildPointQueue )
+        level.humanNextQueueTime = level.time + g_humanBuildQueueTime.integer;
+      level.humanBuildPointQueue +=
+          BG_Buildable( self->s.modelindex )->buildPoints;
+      break;
+  }
+}
 
 /*
 ============
@@ -3020,10 +3015,8 @@ itemBuildError_t G_CanBuild( gentity_t *ent, buildable_t buildable, int distance
     // Check there is an Overmind
     if( buildable != BA_A_OVERMIND )
     {
-        tempent = G_FindBuildable( BA_A_OVERMIND );
-
-        if( tempent == NULL || !tempent->spawned || tempent->health <= 0 )
-          reason = IBE_NOOVERMIND;
+      if( !level.overmindPresent )
+        reason = IBE_NOOVERMIND;
     }
 
     //check there is creep near by for building on
@@ -3090,7 +3083,7 @@ itemBuildError_t G_CanBuild( gentity_t *ent, buildable_t buildable, int distance
   if( BG_Buildable( buildable )->uniqueTest )
   {
     tempent = G_FindBuildable( buildable );
-    if( tempent && !tempent->deconstruct )
+    if( tempent && !tempent->deconstruct && !( tempent->s.eFlags & EF_DEAD ) )
     {
       switch( buildable )
       {

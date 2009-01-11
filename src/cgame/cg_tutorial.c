@@ -353,7 +353,6 @@ static void CG_HumanCkitText( char *text, playerState_t *ps )
 {
   buildable_t   buildable = ps->stats[ STAT_BUILDABLE ] & ~SB_VALID_TOGGLEBIT;
   entityState_t *es;
-  float         health;
 
   if( buildable > BA_NONE )
   {
