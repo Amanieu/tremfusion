@@ -402,6 +402,8 @@ static void CG_DrawPlayerStamina( int ownerDraw, rectDef_t *rect,
     case CG_PLAYER_STAMINA_4:
       progress = ( stamina + MAX_STAMINA ) / MAX_STAMINA;
       break;
+    default:
+      return;
   }
 
   if( progress > 1.0f )
@@ -697,6 +699,8 @@ static void CG_DrawStack( rectDef_t *rect, vec4_t color, float fill,
 
     if( fmax > 1 )
       nudge = ( 1 - fill ) / ( fmax - 1 );
+    else
+      return;
     for( i = 0; i < ival; i++ )
     {
       float start;

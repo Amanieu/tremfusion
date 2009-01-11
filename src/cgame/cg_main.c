@@ -1778,6 +1778,7 @@ void CG_LoadHudMenu( void )
   cgDC.stopCinematic        = &CG_StopCinematic;
   cgDC.drawCinematic        = &CG_DrawCinematic;
   cgDC.runCinematicFrame    = &CG_RunCinematicFrame;
+  cgDC.getFileList          = &trap_FS_GetFileList;
   cgDC.hudloading           = qtrue;
   Init_Display( &cgDC );
 

@@ -96,6 +96,8 @@ vmCvar_t  ui_serverStatusTimeOut;
 vmCvar_t  ui_textWrapCache;
 vmCvar_t  ui_developer;
 vmCvar_t  ui_screen;
+vmCvar_t  ui_screens;
+vmCvar_t  ui_screenname;
 
 vmCvar_t  ui_winner;
 
@@ -123,8 +125,10 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_serverStatusTimeOut, "ui_serverStatusTimeOut", "7000", CVAR_ARCHIVE},
   { &ui_textWrapCache, "ui_textWrapCache", "1", CVAR_ARCHIVE },
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
-  { &ui_developer, "ui_screen", "0", CVAR_ARCHIVE },
   { &ui_emoticons, "cg_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
+  { &ui_screen, "ui_screen", "0", CVAR_ROM },
+  { &ui_screens, "ui_screens", "0", CVAR_ROM },
+  { &ui_screenname, "ui_screenname", "", CVAR_ROM },
 };
 
 static int    cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -4017,6 +4021,7 @@ void UI_Init( qboolean inGameLoad )
   uiInfo.uiDC.stopCinematic = &UI_StopCinematic;
   uiInfo.uiDC.drawCinematic = &UI_DrawCinematic;
   uiInfo.uiDC.runCinematicFrame = &UI_RunCinematicFrame;
+  uiInfo.uiDC.getFileList = &trap_FS_GetFileList;
 
   Init_Display( &uiInfo.uiDC );
 

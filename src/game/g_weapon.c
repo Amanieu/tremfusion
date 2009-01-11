@@ -858,7 +858,8 @@ void CheckCkitRepair( gentity_t* ent )
   gentity_t   *traceEnt;
   int         bHealth;
 
-  if( ent->client->ps.weaponTime )
+  if( ent->client->ps.weaponTime > 0 ||
+      ent->client->ps.stats[ STAT_MISC ] > 0 )
 	return;
 
   // Construction kit repair
@@ -872,12 +873,6 @@ void CheckCkitRepair( gentity_t* ent )
   if( tr.fraction < 1.0 && traceEnt->spawned && traceEnt->health > 0 &&
       traceEnt->s.eType == ET_BUILDABLE && traceEnt->buildableTeam == TEAM_HUMANS )
   {
-    if( ent->client->ps.stats[ STAT_MISC ] > 0 )
-    {
-      G_AddEvent( ent, EV_BUILD_DELAY, ent->client->ps.clientNum );
-      return;
-    }
-    
     bHealth = BG_Buildable( traceEnt->s.modelindex )->health;
     if( traceEnt->health < bHealth )
     {
@@ -1298,7 +1293,7 @@ qboolean CheckPounceAttack( gentity_t *ent )
 {
   trace_t   tr;
   gentity_t *traceEnt;
-  int damage, timeMax, payload;
+  int damage, timeMax, pounceRange, payload;
 
   if( ent->client->pmext.pouncePayload <= 0 )
     return qfalse;
@@ -1316,7 +1311,9 @@ qboolean CheckPounceAttack( gentity_t *ent )
   CalcMuzzlePoint( ent, forward, right, up, muzzle );
 
   // Trace from muzzle to see what we hit
-  G_WideTrace( &tr, ent, LEVEL3_POUNCE_RANGE, LEVEL3_POUNCE_WIDTH,
+  pounceRange = ent->client->ps.weapon == WP_ALEVEL3 ? LEVEL3_POUNCE_RANGE :
+                                                       LEVEL3_POUNCE_UPG_RANGE;
+  G_WideTrace( &tr, ent, pounceRange, LEVEL3_POUNCE_WIDTH,
                LEVEL3_POUNCE_WIDTH, &traceEnt );
   if( traceEnt == NULL )
     return qfalse;

@@ -2194,8 +2194,9 @@ clean: clean-debug clean-release
 clean-debug:
 	@$(MAKE) clean2 B=$(BD)
 
+# Don't clean the release targets, they could be symlinked to and still be in use
 clean-release:
-	@$(MAKE) clean2 B=$(BR)
+	@$(MAKE) clean2 B=$(BR) TARGETS=
 
 clean2:
 	@echo "CLEAN $(B)"
@@ -2217,7 +2218,7 @@ toolsclean2:
 	@rm -f $(TOOLSOBJ_D_FILES)
 	@rm -f $(LBURG) $(DAGCHECK_C) $(Q3RCC) $(Q3CPP) $(Q3LCC) $(Q3ASM)
 
-distclean: clean toolsclean
+distclean:
 	@rm -rf $(BUILD_DIR)
 
 dist:

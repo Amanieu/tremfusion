@@ -76,6 +76,9 @@ int openMenuCount = 0;
 #define DOUBLE_CLICK_DELAY 300
 static int lastListBoxClickTime = 0;
 
+static char screenshots[ 1024 ][ MAX_QPATH ];
+static int current_screen = 0, maxscreens = 0;
+
 void Item_RunScript( itemDef_t *item, const char *s );
 void Item_SetupKeywordHash( void );
 void Menu_SetupKeywordHash( void );
@@ -1889,19 +1892,53 @@ void Script_playLooped( itemDef_t *item, char **args )
 void Script_ScreenChange( itemDef_t *item, char **args )
 {
   const char *string;
-  int modifier;
+  int i;
+  char buffer[ 8192 ];
 
-  if( String_Parse( args, &string ) && Int_Parse( args, &modifier ) ){
-    if( string[0] == '-' ) //Hack to Com_ParseExt not reading "-6" but "-" instead
-      modifier = - modifier;
-
-    DC->setCVar( "ui_screen", va( "%i", (int) (DC->getCVarValue( "ui_screen" ) + modifier)) );
-    
-    //we don't want it to go below 0
-    if( DC->getCVarValue( "ui_screen" ) < 0 )
-      DC->setCVar( "ui_screen", "0" );
-
+  // Reload the screenshots list
+  maxscreens = DC->getFileList( "screenshots", ".jpg", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  string = buffer;
+  for (i = 0; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
   }
+
+  // Also load TGAs
+  maxscreens += DC->getFileList( "screenshots", ".tga", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  DC->setCVar( "ui_screens", va( "%i", maxscreens ) );
+  string = buffer;
+  for (; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
+  }
+
+  // Sort the list
+  qsort(screenshots, 1024, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
+
+  // Get the modifier & find the screen index
+  if( !String_Parse( args, &string ) )
+    string = "+0";
+  if( string[0] == '+' )
+    current_screen += atoi( string + 1 );
+  else if( string[0] == '-' )
+    current_screen -= atoi( string + 1 );
+  else
+    current_screen = atoi( string );
+
+  // We don't want it to go below 0 or above the max number of screens
+  if( current_screen >= maxscreens )
+    current_screen =  maxscreens - 1;
+  else if( current_screen < 0 )
+    current_screen = 0;
+
+  DC->setCVar( "ui_screen", va( "%i", current_screen ) );
+  DC->setCVar( "ui_screenname", screenshots[ current_screen ] );
 }
 
 static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
@@ -5676,24 +5713,15 @@ void AdjustFrom640( float *x, float *y, float *w, float *h )
 
 void Item_Screen_Paint( itemDef_t *item )
 {
-  int a,b,c,d;
   int shotNumber;
 
-  shotNumber = (int)DC->getCVarValue( "ui_screen" ) + item->modifier;
+  shotNumber = current_screen + item->modifier;
 
-  if ( shotNumber < 0 || shotNumber > 9999 )
+  if ( shotNumber < 0 || shotNumber >= maxscreens )
     return;
 
-  a = shotNumber / 1000;
-  shotNumber -= a*1000;
-  b = shotNumber / 100;
-  shotNumber -= b*100;
-  c = shotNumber / 10;
-  shotNumber -= c*10;
-  d = shotNumber;
-
   DC->drawHandlePic( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h,
-      	             DC->registerShaderNoMip( va("screenshots/shot%i%i%i%i.jpg", a, b, c, d) ) );
+      	             DC->registerShaderNoMip( va( "screenshots/%s", screenshots[ shotNumber ] ) ) );
 }
 
 void Item_Model_Paint( itemDef_t *item )

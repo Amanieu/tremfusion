@@ -1362,6 +1362,11 @@ void Cmd_CallTeamVote_f( gentity_t *ent )
   }
   else if( !Q_stricmp( arg1, "admitdefeat" ) )
   {
+    if( team == level.surrenderTeam )
+    {
+      trap_SendServerCommand( ent-g_entities, "print \"You have already surrendered\n\"");
+      return;
+    }
     Com_sprintf( level.teamVoteString[ cs_offset ],
       sizeof( level.teamVoteString[ cs_offset ] ), "admitdefeat %i", team );
     Com_sprintf( level.teamVoteDisplayString[ cs_offset ],
@@ -1769,6 +1774,7 @@ void Cmd_Destroy_f( gentity_t *ent )
     // Always let the builder prevent the explosion 
     if( traceEnt->health <= 0 )
     {
+      G_QueueBuildPoints( traceEnt );
       G_FreeEntity( traceEnt );
       return;
     }
