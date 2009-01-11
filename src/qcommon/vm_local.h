@@ -142,10 +142,12 @@ struct vm_s {
 	intptr_t			(QDECL *entryPoint)( int callNum, ... );
 	void (*destroy)(vm_t* self);
 
+#ifdef USE_VX32
 	// for vx32 modules
 	vxproc		*vx32Handle;
 	int			entryEIP;
 	vxmmap		*vx32mmap;
+#endif
 
 	// for interpreted modules
 	qboolean	currentlyInterpreting;

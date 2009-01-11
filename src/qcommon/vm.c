@@ -540,6 +540,7 @@ vm_t *VM_Restart( vm_t *vm ) {
 		return vm;
 	}
 
+#ifdef USE_VX32
 	// Same for VX32 binaries
 	if ( vm->vx32Handle ) {
 		char	name[MAX_QPATH];
@@ -553,6 +554,7 @@ vm_t *VM_Restart( vm_t *vm ) {
 		vm = VM_Create( name, systemCall, VMI_VX32 );
 		return vm;
 	}
+#endif
 
 	// load the image
 	Com_DPrintf( "VM_Restart()\n" );
@@ -627,6 +629,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 		interpret = VMI_VX32;
 	}
 
+#ifdef USE_VX32
 	if ( interpret == VMI_VX32 ) {
 		// try to load as a vx32 binary
 		VM_LoadVX32( vm );
@@ -637,6 +640,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 		Com_Printf( "Failed to load vx32, looking for qvm.\n" );
 		interpret = VMI_COMPILED;
 	}
+#endif
 
 	// load the image
 	if( !( header = VM_LoadQVM( vm, qtrue ) ) ) {
@@ -709,9 +713,15 @@ void VM_Free( vm_t *vm ) {
 
 	if ( vm->dllHandle ) {
 		Sys_UnloadDll( vm->dllHandle );
-	} else if ( vm->vx32Handle ) {
+	}
+
+#ifdef USE_VX32
+	else if ( vm->vx32Handle ) {
 		vxproc_free( vm->vx32Handle );
-	} else if ( vm->dataBase && vm->mmaped ) {
+	}
+#endif
+
+	else if ( vm->dataBase && vm->mmaped ) {
 #ifdef _WIN32
 		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
 #else
