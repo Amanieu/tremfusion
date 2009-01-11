@@ -313,7 +313,7 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 
 	if( down && keysym->unicode && !( keysym->unicode & 0xFF00 ) )
 	{
-		unsigned char ch = (char)keysym->unicode & 0xFF;
+		unsigned char ch = (unsigned char)keysym->unicode & 0xFF;
 
 		switch( ch )
 		{
@@ -391,6 +391,9 @@ static void IN_GobbleMotionEvents( void )
 {
 	SDL_Event dummy[ 1 ];
 
+	if ( !uivm || VM_Call( uivm, UI_MOUSE_POSITION ) == -1 )
+		return;
+
 	// Gobble any mouse motion events
 	SDL_PumpEvents( );
 	while( SDL_PeepEvents( dummy, 1, SDL_GETEVENT,
@@ -423,6 +426,21 @@ static void IN_GetUIMousePosition( int *x, int *y )
 	{
 		*x = glConfig.vidWidth / 2;
 		*y = glConfig.vidHeight / 2;
+	}
+}
+
+/*
+===============
+IN_SetUIMousePosition
+===============
+*/
+static void IN_SetUIMousePosition( int x, int y )
+{
+	if( uivm )
+	{
+		x = x * 640 / glConfig.vidWidth;
+		y = y * 480 / glConfig.vidHeight;
+		VM_Call( uivm, UI_SET_MOUSE_POSITION, x, y );
 	}
 }
 
@@ -504,24 +522,6 @@ static void IN_ActivateMouse( void )
 
 /*
 ===============
-IN_SetUIMousePosition
-===============
-*/
-static void IN_SetUIMousePosition( int x, int y )
-{
-	if( uivm )
-	{
-		x = x * 640 / glConfig.vidWidth;
-		y = y * 480 / glConfig.vidHeight;
-		if( VM_Call( uivm, UI_SET_MOUSE_POSITION, x, y ) == -1 )
-			IN_ActivateMouse( );
-	}
-	else
-		IN_ActivateMouse( );
-}
-
-/*
-===============
 IN_DeactivateMouse
 ===============
 */
@@ -535,7 +535,8 @@ void IN_DeactivateMouse( void )
 	if( !r_fullscreen->integer )
 	{
 		if( ( Key_GetCatcher( ) == KEYCATCH_UI ) &&
-				( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) ) == (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) )
+				( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) ) == (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) &&
+				uivm && VM_Call( uivm, UI_MOUSE_POSITION ) != -1 )
 			SDL_ShowCursor( 0 );
 		else
 			SDL_ShowCursor( 1 );
@@ -988,7 +989,8 @@ void IN_Frame( void )
 
 	// If not DISCONNECTED (main menu) or ACTIVE (in game), we're loading
 	loading = !!( cls.state != CA_DISCONNECTED && cls.state != CA_ACTIVE );
-	cursorShowing = ( Key_GetCatcher( ) == KEYCATCH_UI );
+	cursorShowing = ( Key_GetCatcher( ) == KEYCATCH_UI && uivm &&
+	                  VM_Call( uivm, UI_MOUSE_POSITION ) != -1 );
 
 	if( !r_fullscreen->integer && ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) )
 	{
