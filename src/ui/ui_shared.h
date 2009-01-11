@@ -418,6 +418,7 @@ typedef struct
   void ( *stopCinematic )( int handle );
   void ( *drawCinematic )( int handle, float x, float y, float w, float h );
   void ( *runCinematicFrame )( int handle );
+  int ( *getFileList )( const char *path, const char *extension, char *listbuf, int bufsize );
 
   float      yscale;
   float      xscale;
