@@ -3143,7 +3143,7 @@ video [filename]
 */
 void CL_Video_f( void )
 {
-#ifndef USE_CLIENT_TTY
+#ifndef BUILD_TTY_CLIENT
   char  filename[ MAX_OSPATH ];
   int   i, last;
 
