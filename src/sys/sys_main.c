@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 #	include <SDL.h>
 #	include <SDL_cpuinfo.h>
 #endif
@@ -133,7 +133,7 @@ void Sys_Exit( int ex )
 {
 	CON_Shutdown( );
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	SDL_Quit( );
 #endif
 
@@ -166,7 +166,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 {
 	cpuFeatures_t features = 0;
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	if( SDL_HasRDTSC( ) )    features |= CF_RDTSC;
 	if( SDL_HasMMX( ) )      features |= CF_MMX;
 	if( SDL_HasMMXExt( ) )   features |= CF_MMX_EXT;
@@ -506,7 +506,7 @@ int main( int argc, char **argv )
 	int   i;
 	char  commandLine[ MAX_STRING_CHARS ] = { 0 };
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	// SDL version check
 
 	// Compile time
@@ -556,11 +556,15 @@ int main( int argc, char **argv )
 
 	while( 1 )
 	{
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 		int appState = SDL_GetAppState( );
 
 		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
 		Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
+#else
+		// For minimal cpu usage in tty client
+		Cvar_SetValue( "com_unfocused",	"1" );
+		Cvar_SetValue( "com_minimized", "1" );
 #endif
 
 		IN_Frame( );
