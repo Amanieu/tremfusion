@@ -99,6 +99,7 @@ void GLimp_Shutdown( void )
 	Com_Memset( &glState, 0, sizeof( glState ) );
 
 #ifdef MACOS_X
+	extern qboolean fullscreen_minimized;
 	if( fullscreen_minimized )
 		Cvar_Set( "r_fullscreen", "1" );
 #endif
