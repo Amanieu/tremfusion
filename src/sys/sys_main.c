@@ -559,12 +559,12 @@ int main( int argc, char **argv )
 #if !DEDICATED && !BUILD_TTY_CLIENT
 		int appState = SDL_GetAppState( );
 
-		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
+		Cvar_SetValue( "com_unfocused", !( appState & SDL_APPINPUTFOCUS ) );
 		Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
 #else
 		// For minimal cpu usage in tty client
-		Cvar_SetValue( "com_unfocused",	"1" );
-		Cvar_SetValue( "com_minimized", "1" );
+		Cvar_Set( "com_unfocused", "1" );
+		Cvar_Set( "com_minimized", "1" );
 #endif
 
 		IN_Frame( );
