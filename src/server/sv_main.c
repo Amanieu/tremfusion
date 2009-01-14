@@ -428,7 +428,6 @@ void SVC_Info( netadr_t from ) {
 		va("%i", sv_maxclients->integer - sv_privateClients->integer - sv_democlients->integer ) );
 	Info_SetValueForKey( infostring, "pure", sv_restricted->string );
 	Info_SetValueForKey( infostring, "unlagged", Cvar_VariableString( "g_unlagged" ) );
-	Info_SetValueForKey( infostring, "gamename", GAMENAME_FOR_MASTER );
 
 #ifdef USE_VOIP
 	if (sv_voip->integer) {

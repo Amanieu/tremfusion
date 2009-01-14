@@ -217,6 +217,7 @@ endif
 VERSION_NUMBER=0.9
 
 ifeq ($(USE_SCM_VERSION),1)
+  # For svn
   ifeq ($(wildcard .svn),.svn)
     SVN_REV=$(shell LANG=C svnversion .)
     ifneq ($(SVN_REV),)
@@ -227,13 +228,14 @@ ifeq ($(USE_SCM_VERSION),1)
 
   # For git-svn
   ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
-    GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+    GIT_REV=$(shell LANG=C git svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
     ifneq ($(GIT_REV),)
       VERSION=$(VERSION_NUMBER)_R$(GIT_REV)
       USE_GIT=1
     endif
   endif
 
+  # For hg
   ifeq ($(wildcard .hg),.hg)
     HG_REV=$(shell LANG=C hg id -n)
     ifneq ($(HG_REV),)
