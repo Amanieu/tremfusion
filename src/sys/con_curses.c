@@ -539,8 +539,8 @@ void CON_Print(const char *msg)
 		scrollline = lastline - LOG_LINES;
 		if (scrollline < 0)
 			scrollline = 0;
+		pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 	}
-	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Add the message to the log buffer
 	if (insert + strlen(msg) >= logbuf + sizeof(logbuf)) {
