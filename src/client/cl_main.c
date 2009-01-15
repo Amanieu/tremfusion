@@ -3410,7 +3410,7 @@ void CL_Init( void ) {
 #endif
 	cl_downloadPrompt = Cvar_Get ("cl_downloadPrompt", "0", CVAR_TEMP);
 	Cvar_Get("cl_downloadPromptText", "", CVAR_TEMP);
-	cl_showdlPrompt = Cvar_Get("cl_showdlPrompt", "1", CVAR_ARCHIVE);
+	cl_showdlPrompt = Cvar_Get("cl_showdlPrompt", "0", CVAR_ARCHIVE);
 
 	cl_clantag = Cvar_Get ("cl_clantag", "", CVAR_ARCHIVE);
 
