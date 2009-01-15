@@ -4470,6 +4470,15 @@ void UI_DrawConnectScreen( qboolean overlay )
     case CA_CONNECTED:
       {
         char downloadName[MAX_INFO_VALUE];
+        int prompt = trap_Cvar_VariableValue( "cl_downloadPrompt" );
+  
+        if( prompt & DLP_SHOW )
+        {
+          Com_Printf( "Opening download prompt...\n" );
+          trap_Key_SetCatcher( KEYCATCH_UI );
+          Menus_ActivateByName( "download_popmenu" );
+          trap_Cvar_Set( "cl_downloadPrompt", "0" );
+        }
 
         trap_Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof( downloadName ) );
 
