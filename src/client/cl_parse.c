@@ -421,7 +421,7 @@ void CL_SystemInfoChanged( void ) {
 			baseGameSet = qtrue;
 		}
 
-		if (!Q_stricmp(key, "sv_pure") || !Q_stricmp(key, "sv_restrict"))
+		if (!Q_stricmp(key, "sv_pure"))
 			cl_connectedToPureServer = atoi(value);
 
 		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
@@ -447,7 +447,6 @@ void CL_SystemInfoChanged( void ) {
 	}
 	if ( clc.demoplaying ) {
 		Cvar_Set( "sv_pure", "0" );
-		Cvar_Set( "sv_restricted", "0" );
 		Cvar_Set( "sv_cheats", "1" );
 		cl_connectedToPureServer = qfalse;
 	}
