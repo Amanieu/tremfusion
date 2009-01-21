@@ -1207,6 +1207,27 @@ char *Cmd_EscapeString(const char *in)
 
 /*
 ============
+Cmd_SkipQuotes
+
+Recursively copy over " and ' quotes
+============
+*/
+void Cmd_SkipQuotes( char **text, char **textOut, char startquote )
+{
+	const char otherquote = ( startquote == '"' ? '\'' : '"' );
+	while ( **text ) {
+		if ( **text == startquote )
+			return;
+		**textOut = **text;
+		(*text)++;
+		(*textOut)++;
+		if ( (*text)[-1] == otherquote )
+			Cmd_SkipQuotes( text, textOut, otherquote );
+	}
+}
+
+/*
+============
 Cmd_TokenizeString
 
 Parses the given string into command line tokens.
@@ -1359,13 +1380,24 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 
 		// handle quoted strings
     // NOTE TTimo this doesn't handle \" escaping
-		if ( !ignoreQuotes && *text == '"' ) {
+		if ( !ignoreQuotes && !parseCvar && *text == '"' ) {
 			cmd.argv[cmd.argc] = textOut;
 			cmd.argc++;
 			text++;
 			while ( *text && *text != '"' ) {
 				*textOut++ = *text++;
 			}
+			*textOut++ = 0;
+			if ( !*text ) {
+				return;		// all tokens parsed
+			}
+			text++;
+			continue;
+		} else if ( parseCvar && ( *text == '"' || *text == '\'' ) ) {
+			cmd.argv[cmd.argc] = textOut;
+			cmd.argc++;
+			text++;
+			Cmd_SkipQuotes( &text, &textOut, *text );
 			*textOut++ = 0;
 			if ( !*text ) {
 				return;		// all tokens parsed
