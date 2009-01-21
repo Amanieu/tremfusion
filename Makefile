@@ -36,11 +36,6 @@ ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
 endif
 
-# SDL 1.2 is only thread-safe on Macs
-ifneq ($(PLATFORM),darwin)
-  BUILD_CLIENT_SMP = 0
-endif
-
 #############################################################################
 #
 # If you require a different configuration from the defaults below, create a
