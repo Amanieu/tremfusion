@@ -85,6 +85,27 @@ static void CG_GetBindings( void )
 }
 
 /*
+=================
+CG_FixBindings
+
+Fix people who have "boost" bound instead of "+button6"
+Could also extend this function for future bind changes
+=================
+*/
+static void CG_FixBindings( void )
+{
+  int i;
+  char buffer[ MAX_STRING_CHARS ];
+
+  for( i = 0; i < K_LAST_KEY; i++ )
+  {
+    trap_Key_GetBindingBuf( i, buffer, sizeof( buffer ) );
+    if( !Q_stricmp( buffer, "boost" ) )
+      trap_Key_SetBinding( i, "+button6" );
+  }
+}
+
+/*
 ===============
 CG_KeyNameForCommand
 ===============
@@ -600,6 +621,7 @@ const char *CG_TutorialText( void )
   playerState_t *ps;
   static char   text[ MAX_TUTORIAL_TEXT ];
 
+  CG_FixBindings( );
   CG_GetBindings( );
 
   text[ 0 ] = '\0';
