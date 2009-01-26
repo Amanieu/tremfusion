@@ -810,7 +810,7 @@ void CL_InitCGame( void ) {
 	Con_ClearNotify ();
 	CL_WriteClientLog( va("`~=-----------------=~`\n MAP: %s \n`~=-----------------=~`\n", mapname ) );
 #ifdef USE_PYTHON
-	P_Event_Newmap();
+	P_Event_Newmap(mapname);
 #endif
 }
 

@@ -175,6 +175,7 @@ void P_Init(void)
 
         P_Cvar_Init();
         P_Event_Init();
+        P_Configstring_Init();
         
         Cmd_AddCommand("script", P_script_f);
         Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);

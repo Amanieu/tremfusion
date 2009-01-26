@@ -23,10 +23,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static PyObject *callback_dict;
 
-static void call_callbacks(const char *eventname)
+static void call_callbacks(const char *eventname,  PyObject *args)
 {
   PyObject *callback_list;
-  PyObject *callback, *args, *res;
+  PyObject *callback, *res;
   int i, j;
   Com_Printf("Calling callbacks for: %s\n", eventname);
   callback_list = PyDict_GetItemString(callback_dict, eventname);
@@ -35,7 +35,6 @@ static void call_callbacks(const char *eventname)
     return;
   }
   j = PyList_GET_SIZE(callback_list);
-  args = PyTuple_New(0);
   for(i=0; i<j; i++) {
     callback = PyList_GET_ITEM(callback_list, i);
     if (!PyCallable_Check(callback)) {
@@ -59,14 +58,14 @@ static void call_callbacks(const char *eventname)
   Py_XDECREF(args);
 }
 
-void P_Event_Newmap(void)
+void P_Event_Newmap(const char *map)
 {
-  call_callbacks("new_map");
+  call_callbacks("new_map", Py_BuildValue("(s)", map));
 }
 
 void P_Event_Maprestart(void)
 {
-  call_callbacks("map_restart");
+  call_callbacks("map_restart", Py_BuildValue("()"));
 }
 
 static PyObject *connect(PyObject *self, PyObject *args)
@@ -96,7 +95,7 @@ static PyObject *connect(PyObject *self, PyObject *args)
 
 void P_test_event_f(void)
 {
-  call_callbacks(Cmd_Argv(1));
+//  call_callbacks(Cmd_Argv(1));
 }
 
 static PyMethodDef P_event_methods[] =
@@ -112,9 +111,9 @@ void P_Event_Init(void)
   PyDict_SetItemString(callback_dict, "new_map", PyList_New(0));
   PyDict_SetItemString(callback_dict, "map_restart", PyList_New(0));
   
-#ifndef NDEBUG
-  Cmd_AddCommand("testevent", P_test_event_f);
-#endif
+//#ifndef NDEBUG
+//  Cmd_AddCommand("testevent", P_test_event_f);
+//#endif
   
   Py_InitModule("tremfusion.event", P_event_methods);
 }

@@ -67,5 +67,5 @@ static PyMethodDef P_cvar_methods[] =
 
 void P_Cvar_Init(void)
 {
-        Py_InitModule("tremfusion.cvar", P_cvar_methods);
+  Py_InitModule("cvar", P_cvar_methods);
 }

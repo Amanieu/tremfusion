@@ -18,19 +18,39 @@ You should have received a copy of the GNU General Public License
 along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
-*/
+ */
 
+#include "p_local.h"
+#ifndef DEDICATED
+#include "../client/client.h"
+#endif
 
-#include <Python.h>
+static PyObject *CS_Get(PyObject *self, PyObject *args)
+{
+  int number, ofs;
+  if (!PyArg_ParseTuple(args, "i", &number) )
+    return NULL;
+#ifndef DEDICATED
+  ofs = cl.gameState.stringOffsets[ number ];
+  if ( !ofs ) {
+    Py_RETURN_NONE;
+  }
+  return Py_BuildValue("s", cl.gameState.stringData + ofs);
+#endif
+}
 
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
+static PyMethodDef P_configstrings_methods[] =
+  {
+    {"get", CS_Get, METH_VARARGS,  "get configstring string"},
+    {NULL}      /* sentinel */
+  };
 
-//
-// p_cvar.c
-//
-void P_Cvar_Init(void);
-void P_Event_Init(void);
-void P_Configstring_Init(void);
-
-#define ADD_MODULE_CONSTANT(m, x) PyModule_AddIntConstant(m, #x, x)
+void P_Configstring_Init(void)
+{
+  PyObject *mod;
+  mod = Py_InitModule("configstring", P_configstrings_methods); 
+  ADD_MODULE_CONSTANT(mod, MAX_CONFIGSTRINGS);
+  ADD_MODULE_CONSTANT(mod, CS_SERVERINFO);
+  ADD_MODULE_CONSTANT(mod, CS_SYSTEMINFO);
+  ADD_MODULE_CONSTANT(mod, RESERVED_CONFIGSTRINGS);
+}
