@@ -1797,7 +1797,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				facet->borderNoAdjust[3] = noAdjust[EN_LEFT];
 				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, -1 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 			} else {
@@ -1817,7 +1817,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				}
  				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 0 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 
@@ -1842,7 +1842,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				}
 				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 1 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 			}

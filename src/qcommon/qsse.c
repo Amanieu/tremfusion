@@ -46,18 +46,18 @@ v4f v4fFour;
 v4f v4fTwoTwentyThree;  // = 2^23
 
 static v4f loadInts(int a, int b, int c, int d) {
-	int x[4] ALIGNED(16);
+	floatint_t x[4] ALIGNED(16);
 	
-	x[0] = a;
-	x[1] = b;
-	x[2] = c;
-	x[3] = d;
-	return _mm_load_ps( (float *)x );
+	x[0].i = a;
+	x[1].i = b;
+	x[2].i = c;
+	x[3].i = d;
+	return _mm_load_ps( &(x[0].f) );
 }
 
 void InitSSEMode(void) {
 	/* round down, denormals are zero and flush to zero */
-	_mm_setcsr((_mm_getcsr() & ~_MM_ROUND_MASK) | 0x8040 | _MM_ROUND_DOWN);
+	_mm_setcsr((_mm_getcsr() & ~_MM_ROUND_MASK) | 0x8040 | _MM_ROUND_NEAREST);
 	v4fZero = _mm_setzero_ps();
 	v4fZeroDotOne = _mm_set1_ps( 0.1f );
 	v4fZeroDotTwoFive = _mm_set1_ps( 0.25f );
@@ -81,129 +81,149 @@ void InitSSEMode(void) {
 #if id386_sse >= 2
 void CopyArrayAndAddConstant_sse2(unsigned *dst, unsigned *src, int add, int count)
 {
-	int            i;
-	v4i            addVec, Mask1, Mask2, dataVec, nextVec;
+	v4i            addVec, mask, dataVec, nextVec;
 	
 	addVec = s4iInit(add);
 	
 	/* make dst is 8-byte aligned */
-	i = 0;
-	if ( i < count && 0x7 & (int)&(dst[i]) ) {
-		dst[i] = src[i] + add;
-		i++;
+	if ( ((int)dst & 0x04) && count > 0 ) {
+		*dst++ = *src++ + add;
+		count--;
 	}
 	
 	/* make dst is 16-byte aligned */
-	if( i < count - 1 && 0xf & (int)&(dst[i]) ) {
-		dst[i] = src[i] + add;
-		dst[i+1] = src[i+1] + add;
-		i += 2;
+	if ( ((int)dst & 0x08) && count > 1 ) {
+		*dst++ = *src++ + add;
+		*dst++ = *src++ + add;
+		count -= 2;
 	}
 	
 	/* fast SSE2 loop */
-	switch (0xf & (int)&(src[i])){
+	switch ( 0x0c & (int)src ){
 	case 0x0:
-		for ( ; i < count - 3; i += 4) {
-			dataVec = v4iLoadA( (int *)&(src[i]) );
+		while( count > 3 ) {
+			count -= 4;
+			dataVec = v4iLoadA( (int *)src );
+			src += 4;
 			dataVec = v4iAdd( dataVec, addVec );
-			v4iStoreA( (int *)&(dst[i]), dataVec );
+			v4iStoreA( (int *)dst, dataVec );
+			dst += 4;
 		}
 		break;
 	case 0x4:
-		dataVec = v4iLoadA( (int *)&(src[i-1]) );
-		Mask1 = v4iInit(0, -1, -1, -1);
-		Mask2 = v4iInit(-1, 0, 0, 0);
-		for ( ; i < count - 3; i += 4) {
-			nextVec = v4iLoadA( (int *)&(src[i+3]) );
-			dataVec = v4iOr( v4iAnd( dataVec, Mask1 ),
-					 v4iAnd( nextVec, Mask2 ) );
-			dataVec = _mm_shuffle_epi32(dataVec, 0x39);
+		src += 3;
+		dataVec = v4iLoadA( (int *)(src - 4) );
+		mask = v4iInit( 0, -1, -1, -1 );
+		while( count > 3 ) {
+			count -= 4;
+
+			nextVec = v4iLoadA( (int *)src );
+			src += 4;
+			dataVec = v4iOr( v4iAnd( mask, dataVec ),
+					 v4iAndNot( mask, nextVec ) );
+			dataVec = _mm_shuffle_epi32( dataVec, 0x39 );
 			dataVec = v4iAdd( dataVec, addVec );
-			v4iStoreA( (int *)&(dst[i]), dataVec );
+			v4iStoreA( (int *)dst, dataVec );
+			dst += 4;
 			
 			dataVec = nextVec;
 		}
+		src -= 3;
 		break;
 	case 0x8:
-		dataVec = v4iLoadA( (int *)&(src[i-2]) );
-		Mask1 = v4iInit(0, 0, -1, -1);
-		Mask2 = v4iInit(-1, -1, 0, 0);
-		for ( ; i < count - 3; i += 4) {
-			nextVec = v4iLoadA( (int *)&(src[i+2]) );
-			dataVec = v4iOr( v4iAnd( dataVec, Mask1 ),
-					 v4iAnd( nextVec, Mask2 ) );
-			dataVec = _mm_shuffle_epi32(dataVec, 0x4e);
+		src += 2;
+		dataVec = v4iLoadA( (int *)(src - 4) );
+		mask = v4iInit( 0, 0, -1, -1 );
+		while( count > 3 ) {
+			count -= 4;
+
+			nextVec = v4iLoadA( (int *)src );
+			src += 4;
+			dataVec = v4iOr( v4iAnd( mask, dataVec ),
+					 v4iAndNot( mask, nextVec ) );
+			dataVec = _mm_shuffle_epi32( dataVec, 0x4e );
 			dataVec = v4iAdd( dataVec, addVec );
-			v4iStoreA( (int *)&(dst[i]), dataVec );
+			v4iStoreA( (int *)dst, dataVec );
+			dst += 4;
 			
 			dataVec = nextVec;
 		}
+		src -= 2;
 		break;
 	case 0xc:
-		dataVec = v4iLoadA( (int *)&(src[i-3]) );
-		Mask1 = v4iInit(0, 0, 0, -1);
-		Mask2 = v4iInit(-1, -1, -1, 0);
-		for ( ; i < count - 3; i += 4) {
-			nextVec = v4iLoadA( (int *)&(src[i+1]) );
-			dataVec = v4iOr( v4iAnd( dataVec, Mask1 ),
-					 v4iAnd( nextVec, Mask2 ) );
-			dataVec = _mm_shuffle_epi32(dataVec, 0x93);
+		src += 1;
+		dataVec = v4iLoadA( (int *)(src - 4) );
+		mask = v4iInit( 0, 0, 0, -1 );
+		while( count > 3 ) {
+			count -= 4;
+			
+			nextVec = v4iLoadA( (int *)src );
+			src += 4;
+			dataVec = v4iOr( v4iAnd( mask, dataVec ),
+					 v4iAndNot( mask, nextVec ) );
+			dataVec = _mm_shuffle_epi32( dataVec, 0x93 );
 			dataVec = v4iAdd( dataVec, addVec );
-			v4iStoreA( (int *)&(dst[i]), dataVec );
+			v4iStoreA( (int *)dst, dataVec );
+			dst += 4;
 			
 			dataVec = nextVec;
 		}
+		src -= 1;
 		break;
     	}
 	/* copy any remaining data */
-	for ( ; i < count; i++ ) {
-		dst[i] = src[i] + add;
+	while( count-- > 0 ) {
+		*dst++ = *src++ + add;
 	}
 }
 #endif
 
 void CopyArrayAndAddConstant_sse1(unsigned *dst, unsigned *src, int add, int count)
 {
-	int            i;
-	v2i            addVec, Mask1, Mask2, dataVec, nextVec;
+	v2i            addVec, mask, dataVec, nextVec;
 	
 	addVec = s2iInit(add);
 	
 	/* make dst is 8-byte aligned */
-	i = 0;
-	if ( i < count && 0x7 & (int)&(dst[i]) ) {
-		dst[i] = src[i] + add;
-		i++;
+	if ( 0x04 & (int)dst && count > 0 ) {
+		*dst++ = *src++ + add;
+		count--;
 	}
 	
 	/* fast MMX loop */
-	switch (0x7 & (int)&(src[i])){
+	switch ( 0x04 & (int)src ){
 	case 0x0:
-		for ( ; i < count - 1; i += 2) {
-			dataVec = v2iLoadA( (int *)&(src[i]) );
+		while( count > 1 ) {
+			count -= 2;
+			dataVec = v2iLoadA( (int *)src );
+			src += 2;
 			dataVec = v2iAdd( dataVec, addVec );
-			v2iStoreA( (int *)&(dst[i]), dataVec );
+			v2iStoreA( (int *)dst, dataVec );
+			dst += 2;
 		}
 		break;
 	case 0x4:
-		dataVec = v2iLoadA( (int *)&(src[i-1]) );
-		Mask1 = v2iInit(0, -1);
-		Mask2 = v2iInit(-1, 0);
-		for ( ; i < count - 3; i += 4) {
-			nextVec = v2iLoadA( (int *)&(src[i+3]) );
-			dataVec = v2iOr( v2iAnd( dataVec, Mask1 ),
-					 v2iAnd( nextVec, Mask2 ) );
+		src += 1;
+		dataVec = v2iLoadA( (int *)(src - 2) );
+		mask = v2iInit( 0, -1 );
+		while( count > 1 ) {
+			nextVec = v2iLoadA( (int *)src );
+			src += 2;
+			dataVec = v2iOr( v2iAnd( mask, dataVec ),
+					 v2iAndNot( mask, nextVec ) );
 			dataVec = _mm_unpacklo_pi32( _mm_unpackhi_pi32( dataVec, dataVec), dataVec );
 			dataVec = v2iAdd( dataVec, addVec );
-			v2iStoreA( (int *)&(dst[i]), dataVec );
+			v2iStoreA( (int *)dst, dataVec );
+			dst += 2;
 			
 			dataVec = nextVec;
 		}
+		src -= 1;
 		break;
 	}
 	/* copy any remaining data */
-	for ( ; i < count; i++ ) {
-		dst[i] = src[i] + add;
+	while( count-- > 0 ) {
+		*dst++ = *src++ + add;
 	}
 }
 

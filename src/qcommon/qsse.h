@@ -529,6 +529,11 @@ v2iAnd(v2i a, v2i b) {
 }
 
 static ID_INLINE v2i
+v2iAndNot(v2i a, v2i b) {
+	return _mm_andnot_si64(a, b);
+}
+
+static ID_INLINE v2i
 v2iXor(v2i a, v2i b) {
 	return _mm_xor_si64(a, b);
 }
@@ -577,6 +582,11 @@ v4iOr(v4i a, v4i b) {
 static ID_INLINE v4i
 v4iAnd(v4i a, v4i b) {
 	return _mm_and_si128(a, b);
+}
+
+static ID_INLINE v4i
+v4iAndNot(v4i a, v4i b) {
+	return _mm_andnot_si128(a, b);
 }
 
 static ID_INLINE v4i
@@ -778,7 +788,7 @@ void InitSSEMode(void);
 
 static ID_INLINE v4f
 v4fRound(v4f vec) {
-	return v4fAdd(v4fSub(v4fSub(v4fAdd(v4fAdd(vec, v4fZeroDotFive),
+	return v4fAdd(v4fSub(v4fSub(v4fAdd(vec,
 					   v4fTwoTwentyThree),
 				    v4fTwoTwentyThree),
 			     v4fTwoTwentyThree),
@@ -858,6 +868,18 @@ v4fVectorCompareEpsilon(v4f v1, v4f v2, s4f epsilon )
 		return 0;
 
 	return 1;
+}
+
+static ID_INLINE int
+v4fBoxOnPlaneSide(v4f mins, v4f maxs, v4f plane) {
+	v4f mask = v4fLt( plane, v4fZero );
+	v4f corner0 = v4fOr( v4fAnd( mask, mins ), v4fAndNot( mask, maxs ) );
+	v4f corner1 = v4fOr( v4fAnd( mask, maxs ), v4fAndNot( mask, mins ) );
+	
+	v4f dist1 = v4fNeg( v4fPlaneDist( corner0, plane ) );
+	v4f dist2 =         v4fPlaneDist( corner1, plane );
+	
+	return v4fSignBits( v4fMix( dist1, dist2, 0,1,1,1 ) ) & 0x03;
 }
 
 static ID_INLINE v4f

@@ -26,6 +26,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "client.h"
 #include "libmumblelink.h"
 
+#if id386_sse >= 1
+#include "../qcommon/qsse.h"
+clipHandle_t CM_TempBoxModel_sse( v4f mins, v4f maxs, int capsule );
+#endif
+
 extern qboolean loadCamera(const char *name);
 extern void startCamera(int time);
 extern qboolean getCameraInfo(int time, vec3_t *origin, vec3_t *angles);
@@ -485,9 +490,21 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_CM_INLINEMODEL:
 		return CM_InlineModel( args[1] );
 	case CG_CM_TEMPBOXMODEL:
+#if id386_sse >= 1
+		if ( com_sse->integer >= 1 ) {
+			return CM_TempBoxModel_sse( vec3Load(VMA(1)), vec3Load(VMA(2)), /*int capsule*/ qfalse );
+		}
+#else
 		return CM_TempBoxModel( VMA(1), VMA(2), /*int capsule*/ qfalse );
+#endif
 	case CG_CM_TEMPCAPSULEMODEL:
+#if id386_sse >= 1
+		if ( com_sse->integer >= 1 ) {
+			return CM_TempBoxModel_sse( vec3Load(VMA(1)), vec3Load(VMA(2)), /*int capsule*/ qtrue );
+		}
+#else
 		return CM_TempBoxModel( VMA(1), VMA(2), /*int capsule*/ qtrue );
+#endif
 	case CG_CM_POINTCONTENTS:
 		return CM_PointContents( VMA(1), args[2] );
 	case CG_CM_TRANSFORMEDPOINTCONTENTS:

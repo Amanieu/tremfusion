@@ -587,7 +587,7 @@ static void CMod_CreateBrushSideWindings_sse( void )
 
 		// Allocate a temporary buffer of the maximal size
 		edgeBuffer = Z_Malloc( sizeof( cbrushedge_t ) * numEdges + 15 );
-		tempEdges = (cbrushedge_t *)(((unsigned int)edgeBuffer + 15) & -16);
+		tempEdges = (cbrushedge_t *)(((size_t)edgeBuffer + 15) & -16);
 		brush->numEdges = 0;
 
 		// compose the points into edges

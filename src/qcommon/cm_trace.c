@@ -630,7 +630,7 @@ static void CM_TestBoundingBoxInCapsule_sse( traceWork_t *tw, clipHandle_t model
 	VectorSet( tw->sphere.offset, 0, 0, tw->sphere.halfheight - tw->sphere.radius );
 
 	// replace the capsule with the bounding box
-	h = CM_TempBoxModel(tw->size[0], tw->size[1], qfalse);
+	h = CM_TempBoxModel_sse(vec3aLoad(tw->size[0]), vec3aLoad(tw->size[1]), qfalse);
 	// calculate collision
 	cmod = CM_ClipHandleToModel( h );
 	CM_TestInLeaf_sse( tw, &cmod->leaf );
@@ -2217,7 +2217,7 @@ static void CM_TraceBoundingBoxThroughCapsule_sse( traceWork_t *tw, clipHandle_t
 	VectorSet( tw->sphere.offset, 0, 0, tw->sphere.halfheight - tw->sphere.radius );
 
 	// replace the capsule with the bounding box
-	h = CM_TempBoxModel(tw->size[0], tw->size[1], qfalse);
+	h = CM_TempBoxModel_sse(vec3aLoad(tw->size[0]), vec3aLoad(tw->size[1]), qfalse);
 	// calculate collision
 	cmod = CM_ClipHandleToModel( h );
 	CM_TraceThroughLeaf_sse( tw, &cmod->leaf );
