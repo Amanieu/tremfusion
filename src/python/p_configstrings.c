@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
- */
+*/
 
 #include "p_local.h"
 #ifndef DEDICATED
@@ -48,7 +48,7 @@ static PyMethodDef P_configstrings_methods[] =
 void P_Configstring_Init(void)
 {
   PyObject *mod;
-  mod = Py_InitModule("configstring", P_configstrings_methods); 
+  mod = Py_InitModule("configstring", P_configstrings_methods);
   ADD_MODULE_CONSTANT(mod, MAX_CONFIGSTRINGS);
   ADD_MODULE_CONSTANT(mod, CS_SERVERINFO);
   ADD_MODULE_CONSTANT(mod, CS_SYSTEMINFO);

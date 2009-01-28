@@ -32,5 +32,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 void P_Cvar_Init(void);
 void P_Event_Init(void);
 void P_Configstring_Init(void);
+void P_Init_PlayerState(PyObject*);
 
 #define ADD_MODULE_CONSTANT(m, x) PyModule_AddIntConstant(m, #x, x)

@@ -176,7 +176,8 @@ void P_Init(void)
         P_Cvar_Init();
         P_Event_Init();
         P_Configstring_Init();
-        
+        P_Init_PlayerState(tremfusion_module);
+
         Cmd_AddCommand("script", P_script_f);
         Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);
         Com_Printf("----- finished P_Init -----\n");
