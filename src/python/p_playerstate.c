@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stddef.h>
 #ifndef DEDICATED
 #include "../client/client.h"
+#else
+#include "../server/server.h"
 #endif
 
 /*
@@ -56,6 +58,7 @@ static int PlayerState_init(PlayerState *self, PyObject *args, PyObject *kwds)
   int player;
   if(!PyArg_ParseTuple(args, "i", &player))
     return -1;
+  self->playerstate = SV_GameClientNum(player);
 #else
   self->playerstate = &cl.snap.ps;
 #endif
@@ -78,12 +81,14 @@ static int set_int(PlayerState *self, PyObject *value, int offset)
 static PyObject *get_vec3(PlayerState *self, int offset)
 {
   int i;
+  float *vec;
   PyObject *array;
 
   array = PyTuple_New(3);
+  vec = (float*)((void*)self->playerstate + offset);
 
   for(i=0; i < 3; i++) {
-    PyTuple_SET_ITEM(array, i, PyFloat_FromDouble(*(float*)((void*)self->playerstate + offset + (i*32))));
+    PyTuple_SET_ITEM(array, i, PyFloat_FromDouble(vec[i]));
   }
 
   return array;
@@ -98,18 +103,20 @@ static int set_vec3(PlayerState *self, PyObject *value, int offset)
 static PyObject *get_intarray(PlayerState *self, int closure)
 {
   int i, offset, size;
-  PyObject *array;
+  PyObject *tuple;
+  int *array;
 
   offset = (closure >> 4);
   size = (closure & 0x0f) + 1;
 
-  array = PyTuple_New(size);
+  tuple = PyTuple_New(size);
+  array = (int*)((void*)self->playerstate + offset);
 
   for(i=0; i < size; i++) {
-    PyTuple_SET_ITEM(array, i, PyInt_FromLong(*(int*)((void*)self->playerstate + offset + (i*32))));
+    PyTuple_SET_ITEM(tuple, i, PyInt_FromLong(array[i]));
   }
 
-  return array;
+  return tuple;
 }
 
 static int set_intarray(PlayerState *self, PyObject *value, void *closure)
