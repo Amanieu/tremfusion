@@ -156,7 +156,11 @@ ifndef USE_OLD_HOMEPATH
 endif
 
 ifndef USE_SSE
-  USE_SSE=0
+  ifeq ($(ARCH),x86_64)
+    USE_SSE=2
+  else
+    USE_SSE=0
+  endif
 endif
 
 #############################################################################
