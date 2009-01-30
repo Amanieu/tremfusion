@@ -313,7 +313,6 @@ ifeq ($(PLATFORM),linux)
       -fstrength-reduce
     # experimental x86_64 jit compiler! you need GNU as
     HAVE_VM_COMPILED = true
-    USE_SSE=2
   else
   ifeq ($(ARCH),x86)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
