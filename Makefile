@@ -341,6 +341,8 @@ ifeq ($(PLATFORM),linux)
   else
     ifeq ($(USE_SSE),1)
       BASE_CFLAGS += -msse -mfpmath=sse
+    else
+      BASE_CFLAGS += -U__SSE__ -U__SSE2__
     endif
   endif
 
@@ -391,8 +393,12 @@ ifeq ($(PLATFORM),linux)
     # linux32 make ...
     BASE_CFLAGS += -m32
   else
+  ifeq ($(ARCH),x86_64)
+    BASE_CFLAGS += -m64
+  else
   ifeq ($(ARCH),ppc64)
     BASE_CFLAGS += -m64
+  endif
   endif
   endif
 
