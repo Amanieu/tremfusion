@@ -1942,6 +1942,68 @@ static void UI_DrawGLInfo( rectDef_t *rect, float scale, int textalign, int text
                     textalign, textvalign, textStyle, buffer );
 }
 
+static void UI_DrawCredits( rectDef_t *rect, float scale, int textalign, int textvalign,
+                           vec4_t color, int textStyle, float text_x, float text_y )
+{
+  UI_DrawTextBlock( rect, text_x, text_y, color, scale, textalign, textvalign, textStyle,
+  "^2~~=[ ^4Tremfusion Core Development Team ^2]=~~\n\n"
+  "^1Amanieu d'Antras\n^3- Programmer: Game and engine enhancements\n\n"
+  "^1Eli Ribble \"Ender\"\n^3- Programmer: Bots, Xreal renderer porting\n\n"
+  "^1John Black \"Champion\"\n^3- Programmer: Bots, Python scripting, Wii Port\n\n"
+  "^1Maurice Doison \"Azreal07\"\n^3- Programmer: Lua scripting, Game scripting engine\n\n"
+  "^1Thomas Brethome \"Madtree\"\n^3- Programmer: Code optimisations, Renderer enhancements\n\n"
+  "^1Griffon Bowman\n^3- Programmer: NCurses Console, IRIX port\n\n"
+  "^1Pierre Fersing \"PierreF\"\n^3- Server Administration, Hosting\n\n"
+  "^1Corentin Wallez \"Kangounator\"\n^3- UI Designer\n\n"
+  "^1Jonathan Itschner \"Chessguy\"\n^3- 2D Artist\n\n"
+  "\n"
+  "^2~~=[ ^4External Contributors ^2]=~~\n\n"
+  "We thank the many people who have contributed to this project to make it what it is today:\n\n"
+  "^1Ian Weller: ^3Website design\n"
+  "^1Raoni: ^33D Modelling\n"
+  "^1CeRRa: ^3Artwork\n"
+  "^1Haptism: ^3Helped the Mac port\n"
+  "^1WireDDD: ^3Programming\n"
+  "^1f0rqu3: ^3Programming\n"
+  "^1/dev/humancontroller: ^3Programming\n"
+  "^1Troy: ^3Programming\n"
+  "^1Gewgle/Mercury: ^3Programming\n"
+  "^1SlackerLinux: ^3Programming\n"
+  "^1Critux/Snapser: ^3Programming\n"
+  "^1Evan Goers \"Odin\"/\"megatog615\": ^3Programming\n"
+  "^1Rezyn: ^3Programming\n"
+  "^1David Serverwright \"DavidSev\": ^3Programming\n"
+  "^1Ben Millwood \"benmachine\": ^3Programming\n"
+  "^1Chris Schwarz \"Lakitu7\": ^3Programming\n"
+  "^1Roman Tetelman \"kevlarman\": ^3Programming\n"
+  "\n"
+  "We would like to thank the Tremulous development team for creating a great game:\n\n"
+  "^1Asa Kravets \"Norfenstein\"\n"
+  "^1Ben Millwood \"benmachine\"\n"
+  "^1Ben Scholzen \"DASPRiD\"\n"
+  "^1Catalyc\n"
+  "^1Chris McCarthy \"Dolby\"\n"
+  "^1Chris Schwarz \"Lakitu7\"\n"
+  "^1Gordon Miller \"Godmil\"\n"
+  "^1Jan van der Weg \"Stannum\"\n"
+  "^1Khalsa\n"
+  "^1M. Kristall \"Undeference\"\n"
+  "^1Mike Mcinnerney \"Vedacon\"\n"
+  "^1Nick Jansens \"Jex\"\n"
+  "^1Paul Greveson \"Mop\"\n"
+  "^1Robin Marshall \"OverFlow\"\n"
+  "^1Tim Angus \"Timbo\"\n"
+  "^1Tony White \"tjw\"\n"
+  "^1Who-[Soup]\n"
+  "\n"
+  "We would also like to thank the ioquake3 maintainers for their great engine:\n\n"
+  "^1Ludwig Nussel\n"
+  "^1Thilo Schulz\n"
+  "^1Tim Angus\n"
+  "^1Tony J. White\n"
+  "^1Zachary J. Slater\n" );
+}
+
 // FIXME: table drive
 //
 static void UI_OwnerDraw( float x, float y, float w, float h,
@@ -2019,6 +2081,10 @@ static void UI_OwnerDraw( float x, float y, float w, float h,
 
     case UI_GLINFO:
       UI_DrawGLInfo( &rect, scale, textalign, textvalign, foreColor, textStyle, text_x, text_y );
+      break;
+
+    case UI_CREDITS:
+      UI_DrawCredits( &rect, scale, textalign, textvalign, foreColor, textStyle, text_x, text_y );
       break;
 
     default:
@@ -2687,7 +2753,6 @@ static void UI_LoadDemos( void )
       if( !Q_stricmp( demoname +  len - strlen( demoExt ), demoExt ) )
         demoname[len-strlen( demoExt )] = '\0';
 
-      Q_strupr( demoname );
       uiInfo.demoList[i] = String_Alloc( demoname );
       demoname += len + 1;
     }

@@ -943,7 +943,7 @@ void CL_DemoCompleted( void )
 		}
 	}
 
-	CL_Disconnect( qtrue );
+	Com_Error(ERR_DISCONNECT, "End of demo");
 	CL_NextDemo();
 }
 

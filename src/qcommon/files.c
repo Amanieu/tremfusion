@@ -2830,9 +2830,9 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". tremfusion-base", CVAR_ARCHIVE );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE|CVAR_VM_CREATED );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
-	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
+	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {

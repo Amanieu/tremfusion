@@ -1623,11 +1623,14 @@ void S_AL_StartBackgroundTrack( const char *intro, const char *loop )
 	int i;
 	qboolean issame;
 
-	// Stop any existing music that might be playing
-	S_AL_StopBackgroundTrack();
-
 	if((!intro || !*intro) && (!loop || !*loop))
 		return;
+
+	if(!strncmp(s_backgroundLoop, intro, sizeof(s_backgroundLoop)))
+		return;
+
+	// Stop any existing music that might be playing
+	S_AL_StopBackgroundTrack();
 
 	// Allocate a musicSource
 	S_AL_MusicSourceGet();

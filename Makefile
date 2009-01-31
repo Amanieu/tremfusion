@@ -682,6 +682,7 @@ ifeq ($(PLATFORM),freebsd)
     ifeq ($(USE_OPENAL_DLOPEN),1)
       BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
     endif
+    TTYC_CFLAGS += -UUSE_OPENAL
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -691,6 +692,12 @@ ifeq ($(PLATFORM),freebsd)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_CODEC_VORBIS
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
   endif
 
   ifeq ($(ARCH),axp)
@@ -717,7 +724,7 @@ ifeq ($(PLATFORM),freebsd)
 
   THREAD_LIBS=-lpthread
   # don't need -ldl (FreeBSD)
-  LIBS=-lm
+  LIBS+=-lm
 
   CLIENT_LIBS += $(shell sdl-config --libs) -lGL
 

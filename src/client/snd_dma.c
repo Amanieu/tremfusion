@@ -1332,6 +1332,10 @@ void S_Base_StartBackgroundTrack( const char *intro, const char *loop ){
 		return;
 	}
 
+	if ( !strncmp( s_backgroundLoop, intro, sizeof( s_backgroundLoop ) ) ) {
+		return;
+	}
+
 	if( !loop ) {
 		s_backgroundLoop[0] = 0;
 	} else {

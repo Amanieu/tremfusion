@@ -1891,8 +1891,9 @@ void Script_playLooped( itemDef_t *item, char **args )
 
 void Script_ScreenChange( itemDef_t *item, char **args )
 {
+  static int saved_index = 0;
   const char *string;
-  int i;
+  int i, modifier;
   char buffer[ 8192 ];
 
   // Reload the screenshots list
@@ -1919,23 +1920,46 @@ void Script_ScreenChange( itemDef_t *item, char **args )
   }
 
   // Sort the list
-  qsort(screenshots, 1024, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
+  qsort(screenshots, maxscreens, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
 
   // Get the modifier & find the screen index
-  if( !String_Parse( args, &string ) )
-    string = "+0";
-  if( string[0] == '+' )
-    current_screen += atoi( string + 1 );
-  else if( string[0] == '-' )
-    current_screen -= atoi( string + 1 );
-  else
-    current_screen = atoi( string );
+  if( String_Parse( args, &string ) )
+  {
+    if( string[0] == '+' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen += modifier;
+    }
+    else if( string[0] == '-' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen -= modifier;
+    }
+    else if( string[0] == '=' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen = modifier;
+    }
+    // Hack for saving the index when switching from multiview to detail view
+    else if( string[0] == '?' )
+      saved_index = current_screen;
+    else if( string[0] == '!' )
+      current_screen = saved_index;
+  }
 
   // We don't want it to go below 0 or above the max number of screens
   if( current_screen >= maxscreens )
-    current_screen =  maxscreens - 1;
+  {
+    current_screen -= modifier;
+    if( current_screen >= maxscreens )
+      current_screen = maxscreens - 1;
+  }
   else if( current_screen < 0 )
-    current_screen = 0;
+  {
+    current_screen += modifier;
+    if( current_screen < 0 )
+      current_screen = 0;
+  }
 
   DC->setCVar( "ui_screen", va( "%i", current_screen ) );
   DC->setCVar( "ui_screenname", screenshots[ current_screen ] );
@@ -4803,7 +4827,7 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 }
 
 #define MAX_WRAP_CACHE  16
-#define MAX_WRAP_LINES  32
+#define MAX_WRAP_LINES  128
 #define MAX_WRAP_TEXT   512
 
 typedef struct
@@ -4945,7 +4969,7 @@ void Item_Text_Wrapped_Paint( itemDef_t *item )
   }
   else
   {
-    char        buff[ 1024 ];
+    char        buff[ 4096 ];
     float       fontHeight    = UI_Text_EmHeight( item->textscale );
     const float lineSpacing   = fontHeight * 0.4f;
     float       lineHeight    = fontHeight + lineSpacing;
@@ -8424,8 +8448,8 @@ void Menu_PaintAll( void )
       captureFunc( captureData );
   }
 
-  for( i = 0; i < Menu_Count(); i++ )
-    Menu_Paint( &Menus[i], qfalse );
+  for( i = 0; i < openMenuCount; i++ )
+    Menu_Paint( menuStack[i], qfalse );
 
   if( DC->getCVarValue( "ui_developer" ) )
   {

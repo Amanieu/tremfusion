@@ -188,4 +188,6 @@
 
 #define CG_PLAYER_ATTACK_FEEDBACK         82
 
+#define UI_CREDITS                        83
+
 #endif
