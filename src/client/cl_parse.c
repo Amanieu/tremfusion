@@ -473,12 +473,16 @@ static void CL_ParseServerInfo(void)
 		Info_ValueForKey(serverInfo, "sv_dlURL"),
 		sizeof(clc.sv_dlURL));
 	if (!clc.sv_dlURL[0]) {
-		if (!atoi(Info_ValueForKey(systemInfo, "sv_wwwDownload")))
-			clc.sv_allowDownload |= DLF_NO_REDIRECT;
 		Q_strncpyz(clc.sv_dlURL,
 			Info_ValueForKey(systemInfo, "sv_wwwBaseURL"),
 			sizeof(clc.sv_dlURL));
 	}
+	// If we have an URL, assume we can use HTTP
+	if (clc.sv_dlURL[0] || cl_dlURLOverride->string[0]) {
+		clc.sv_allowDownload |= DLF_ENABLE;
+		clc.sv_allowDownload &= ~DLF_NO_REDIRECT;
+	}
+	Cvar_Set("ui_serverinfo_allowdl", clc.sv_allowDownload);
 }
 
 /*

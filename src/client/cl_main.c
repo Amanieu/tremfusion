@@ -2139,23 +2139,19 @@ void CL_NextDownload(void) {
 		    	             others > 1 ? "s" : "" );
 
 			// Set the pure message
-		    if( cl_connectedToPureServer )
-		    	if( !( clc.sv_allowDownload & DLF_ENABLE ) ||
-		    	    ( ( clc.sv_allowDownload & DLF_NO_UDP ) &&
-		    	      ( clc.sv_allowDownload * DLF_NO_REDIRECT ) ) )
-		    		pure_msg = "You are missing files required by the server. "
-		    		           "The server does not allow downloading. "
-		    		           "You must install these files manually:";
-		    	else
-		    		pure_msg = "You are missing files required by the server. "
-		    	               "You must download these files or disconnect:";
-		    else
-		    	pure_msg = "You are missing optional files provided by the "
-		    	           "server. You do not need them to play but can "
-		    	           "choose to download them anyway:";
+			if( !( clc.sv_allowDownload & DLF_ENABLE ) ||
+				( ( clc.sv_allowDownload & DLF_NO_UDP ) &&
+				  ( clc.sv_allowDownload & DLF_NO_REDIRECT ) ) )
+				pure_msg = "You are missing files required by the server. "
+						   "The server does not allow downloading. "
+						   "You must install these files manually:";
+			else
+				pure_msg = "You are missing files provided by the server. "
+						   "You may need to download these files in order to "
+						   "play on the server:";
 
 			Cvar_Set( "cl_downloadPromptText",
-			          va("%s\n\n%s\n%s", pure_msg, files, url_msg ) );
+			          va("%s\n\n%s\n\n%s", pure_msg, files, url_msg ) );
 			Cvar_Set( "cl_downloadPrompt", va("%d", DLP_SHOW ) );
 			return;
 		}
@@ -2227,18 +2223,9 @@ void CL_NextDownload(void) {
 #endif /* USE_CURL */
 		if(!useCURL) {
 			Com_Printf("Trying UDP download: %s; %s\n", localName, remoteName);
-			if( ( !cl_showdlPrompt->integer &&
-			      ( cl_allowDownload->integer & DLF_ENABLE ) &&
+			if( ( !( cl_allowDownload->integer & DLF_ENABLE ) ||
 			      ( cl_allowDownload->integer & DLF_NO_UDP ) ) &&
-			    prompt != DLP_UDP ) {
-			    if( cl_connectedToPureServer ) {
-					Com_Error(ERR_DROP, "Automatic downloads are "
-						"disabled on your client (cl_allowDownload is %d). "
-						"You can enable automatic downloads in the Options "
-						"menu.",
-					cl_allowDownload->integer);
-				return;	
-			}
+			    ( !cl_showdlPrompt->integer || prompt != DLP_UDP ) ) {
 				Com_Printf("WARNING: UDP downloads are disabled.\n");
 				CL_DownloadsComplete();
 				return;
@@ -3410,7 +3397,7 @@ void CL_Init( void ) {
 #endif
 	cl_downloadPrompt = Cvar_Get ("cl_downloadPrompt", "0", CVAR_TEMP);
 	Cvar_Get("cl_downloadPromptText", "", CVAR_TEMP);
-	cl_showdlPrompt = Cvar_Get("cl_showdlPrompt", "0", CVAR_ARCHIVE);
+	cl_showdlPrompt = Cvar_Get("cl_showdlPrompt", "1", CVAR_ARCHIVE);
 
 	cl_clantag = Cvar_Get ("cl_clantag", "", CVAR_ARCHIVE);
 

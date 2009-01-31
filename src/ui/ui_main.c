@@ -1963,7 +1963,7 @@ static void UI_DrawCredits( rectDef_t *rect, float scale, int textalign, int tex
   "^1Raoni: ^33D Modelling\n"
   "^1CeRRa: ^3Artwork\n"
   "^1Haptism: ^3Helped the Mac port\n"
-  "^1WireDDD: ^3Programming\n"
+  "^1Daniel Dunwody \"WireDDD\": ^3Programming\n"
   "^1f0rqu3: ^3Programming\n"
   "^1/dev/humancontroller: ^3Programming\n"
   "^1Troy: ^3Programming\n"
@@ -2938,6 +2938,12 @@ static void UI_RunMenuScript( char **args )
       Controls_GetConfig();
     else if( Q_stricmp( name, "clearError" ) == 0 )
       trap_Cvar_Set( "com_errorMessage", "" );
+    else if (Q_stricmp(name, "downloadIgnore") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
+    else if (Q_stricmp(name, "downloadCURL") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_CURL ) );
+    else if (Q_stricmp(name, "downloadUDP") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_UDP ) );
     else if( Q_stricmp( name, "RefreshServers" ) == 0 )
     {
       UI_StartServerRefresh( qtrue );
