@@ -482,7 +482,7 @@ static void CL_ParseServerInfo(void)
 		clc.sv_allowDownload |= DLF_ENABLE;
 		clc.sv_allowDownload &= ~DLF_NO_REDIRECT;
 	}
-	Cvar_Set("ui_serverinfo_allowdl", clc.sv_allowDownload);
+	Cvar_SetValue("ui_serverinfo_allowdl", clc.sv_allowDownload);
 }
 
 /*
