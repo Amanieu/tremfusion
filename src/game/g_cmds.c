@@ -621,6 +621,15 @@ void Cmd_Team_f( gentity_t *ent )
   if( oldteam == team )
     return;
 
+  if( team != TEAM_NONE && g_maxGameClients.integer &&
+    level.numPlayingClients >= g_maxGameClients.integer )
+  {
+    trap_SendServerCommand( ent-g_entities, va( "print \"The maximum number of "
+      "playing clients has been reached (g_maxGameClients = %d)\n\"",
+      g_maxGameClients.integer ) );
+    return;
+  }
+
   // guard against build timer exploit
   if( oldteam != TEAM_NONE && ent->client->sess.spectatorState == SPECTATOR_NOT &&
      ( ent->client->ps.stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0 ||
@@ -753,6 +762,50 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
   if( g_adminParseSay.integer )
   {
     G_admin_cmd_check ( ent, qtrue );
+  }
+}
+
+static void Cmd_SayArea_f( gentity_t *ent )
+{
+  int    entityList[ MAX_GENTITIES ];
+  int    num, i;
+  int    color = COLOR_BLUE;
+  const char  *prefix;
+  vec3_t range = { 1000.0f, 1000.0f, 1000.0f };
+  vec3_t mins, maxs;
+  char   *msg = ConcatArgs( 1 );
+  char   name[ 64 ];
+
+  for(i = 0; i < 3; i++ )
+    range[ i ] = g_sayAreaRange.value;
+  
+  if( g_chatTeamPrefix.integer )
+  {
+    prefix = BG_TeamName( ent->client->pers.teamSelection );
+    prefix = va( "[%c] ", toupper( *prefix ) );
+  }
+  else
+    prefix = "";
+
+  G_LogPrintf( "sayarea: %s%s^7: %s\n", prefix, ent->client->pers.netname, msg );
+  Com_sprintf( name, sizeof( name ), "%s<%s%c%c> ",
+    prefix, ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+
+  VectorAdd( ent->s.origin, range, maxs );
+  VectorSubtract( ent->s.origin, range, mins );
+
+  num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
+  for( i = 0; i < num; i++ )
+    G_SayTo( ent, &g_entities[ entityList[ i ] ], SAY_TEAM, color, name, msg );
+  
+  //Send to ADMF_SPEC_ALLCHAT candidates
+  for( i = 0; i < level.maxclients; i++ )
+  {
+    if( (&g_entities[ i ])->client->pers.teamSelection == TEAM_NONE  &&
+        G_admin_permission( &g_entities[ i ], ADMF_SPEC_ALLCHAT ) )
+    {
+      G_SayTo( ent, &g_entities[ i ], SAY_TEAM, color, name, msg );   
+    }
   }
 }
 
@@ -1021,6 +1074,8 @@ void Cmd_CallVote_f( gentity_t *ent )
     trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteString ) );
   }
 
+  level.votePassThreshold = 50;
+
   // detect clientNum for partial name match votes
   if( !Q_stricmp( arg1, "kick" ) ||
     !Q_stricmp( arg1, "mute" ) ||
@@ -1140,12 +1195,52 @@ void Cmd_CallVote_f( gentity_t *ent )
     Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
         "End match in a draw" );
   }
+  else if( !Q_stricmp( arg1, "sudden_death" ) ||
+    !Q_stricmp( arg1, "suddendeath" ) )
+  {
+    if(!g_suddenDeathVotePercent.integer)
+    {
+      trap_SendServerCommand( ent-g_entities, 
+            "print \"Sudden Death votes have been disabled\n\"" );
+      return;
+    } 
+    else if( g_suddenDeath.integer ) 
+    {
+      trap_SendServerCommand( ent - g_entities, 
+            va( "print \"callvote: Sudden Death has already begun\n\"") );
+      return;
+    }
+    else if( G_TimeTilSuddenDeath() <= g_suddenDeathVoteDelay.integer * 1000 )
+    {
+      trap_SendServerCommand( ent - g_entities, 
+            va( "print \"callvote: Sudden Death is already immenent\n\"") );
+      return;
+    }
+    else 
+    {
+      level.votePassThreshold = g_suddenDeathVotePercent.integer;
+      Com_sprintf( level.voteString, sizeof( level.voteString ), "suddendeath" );
+      Com_sprintf( level.voteDisplayString,
+          sizeof( level.voteDisplayString ), "Begin sudden death" );
+
+      if( g_suddenDeathVoteDelay.integer )
+        Q_strcat( level.voteDisplayString, sizeof( level.voteDisplayString ),
+                  va( " in %d seconds", g_suddenDeathVoteDelay.integer ) );
+
+    }
+  }
   else
   {
     trap_SendServerCommand( ent-g_entities, "print \"Invalid vote string\n\"" );
     trap_SendServerCommand( ent-g_entities, "print \"Valid vote commands are: "
-      "map, map_restart, draw, kick, mute and unmute\n" );
+      "map, map_restart, sudden_death, draw, kick, mute and unmute\n" );
     return;
+  }
+
+  if( level.votePassThreshold!=50 )
+  {
+    Q_strcat( level.voteDisplayString, sizeof( level.voteDisplayString ), 
+              va( " (Needs > %d percent)", level.votePassThreshold ) );
   }
 
   trap_SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE
@@ -2967,6 +3062,7 @@ commands_t cmds[ ] = {
   { "tell", CMD_MESSAGE, Cmd_Tell_f },
   { "callvote", CMD_MESSAGE, Cmd_CallVote_f },
   { "callteamvote", CMD_MESSAGE|CMD_TEAM, Cmd_CallTeamVote_f },
+  { "say_area", CMD_MESSAGE|CMD_TEAM, Cmd_SayArea_f },
   // can be used even during intermission
   { "say", CMD_MESSAGE|CMD_INTERMISSION, Cmd_Say_f },
   { "say_team", CMD_MESSAGE|CMD_INTERMISSION, Cmd_Say_f },

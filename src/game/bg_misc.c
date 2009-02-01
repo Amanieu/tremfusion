@@ -3398,7 +3398,9 @@ qboolean BG_PlayerCanChangeWeapon( playerState_t *ps )
   // prevent lcannon ammo conservation exploit
   if( ( ps->weapon == WP_LUCIFER_CANNON &&
       ps->stats[ STAT_MISC ] > LCANNON_CHARGE_TIME_MIN ) ||
-      ps->weaponTime > 0 || ps->weaponstate == WEAPON_FIRING )
+      //not pretty, allow players to switch weapons while ckit is repairing
+      ( ps->weapon != WP_HBUILD &&
+        ( ps->weaponTime > 0 || ps->weaponstate == WEAPON_FIRING ) ) )
     return qfalse;
 
   return qtrue;

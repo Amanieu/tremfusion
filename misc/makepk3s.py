@@ -74,6 +74,7 @@ if options.makedata:
     print "Creating pk3 file at: %s" % pk3filename
     pk3 = zipfile.ZipFile(pk3filename, "w", zipfile.ZIP_DEFLATED)
 
+    add_dir_tree(os.path.join(options.repository, "emoticons/*"), "emoticons/")
     add_dir_tree(os.path.join(options.repository, "fonts/*"), "fonts/")
     add_dir_tree(os.path.join(options.repository, "gfx/*"), "gfx/")
     add_dir_tree(os.path.join(options.repository, "models/*"), "models/")

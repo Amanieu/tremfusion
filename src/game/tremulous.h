@@ -120,7 +120,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL4_CLAW_HEIGHT          20.0f
 #define LEVEL4_CLAW_REPEAT          750
 #define LEVEL4_CLAW_K_SCALE         1.0f
-#define LEVEL4_REGEN_RANGE          200.0f
 
 #define LEVEL4_TRAMPLE_DMG             ADM(111)
 #define LEVEL4_TRAMPLE_SPEED           2.0f
@@ -230,7 +229,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define ALIEN_BHLTH_MODIFIER        1.0f
 #define ABHM(h)                     ((int)((float)h*ALIEN_BHLTH_MODIFIER))
-#define ALIEN_BVALUE_MODIFIER        15.0f
+#define ALIEN_BVALUE_MODIFIER        0.0f
 #define ABVM(h)                      ((int)((float)h*ALIEN_BVALUE_MODIFIER))
 
 #define CREEP_BASESIZE              700
@@ -295,11 +294,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HIVE_SPLASHRADIUS           200
 #define HIVE_CREEPSIZE              120
 #define HIVE_SENSE_RANGE            500.0f
-#define HIVE_RANGE                  1500.0f
-#define HIVE_REPEAT                 5000
+#define HIVE_LIFETIME               6000
+#define HIVE_REPEAT                 3000
 #define HIVE_K_SCALE                1.0f
-#define HIVE_DMG                    50
-#define HIVE_SPEED                  240.0f
+#define HIVE_DMG                    100
+#define HIVE_SPEED                  384.0f
 #define HIVE_DIR_CHANGE_PERIOD      500
 #define HIVE_VALUE                  ABVM(HIVE_BP)
 
@@ -348,6 +347,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #define ALIENSENSE_RANGE            1000.0f
+#define REGEN_BOOST_RANGE           200.0f
 
 #define ALIEN_POISON_TIME           10000
 #define ALIEN_POISON_DMG            5
@@ -355,7 +355,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define ALIEN_SPAWN_REPEAT_TIME     10000
 
-#define ALIEN_REGEN_DAMAGE_TIME     2000 //msec since damage that regen starts again
+#define ALIEN_REGEN_DAMAGE_TIME     1500 //msec since damage that regen starts again
 #define ALIEN_REGEN_NOCREEP_TIME    3000 //msec between regen off creep
 
 #define ALIEN_MAX_FRAGS             9
@@ -546,7 +546,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define HUMAN_BHLTH_MODIFIER        1.0f
 #define HBHM(h)                     ((int)((float)h*HUMAN_BHLTH_MODIFIER))
-#define HUMAN_BVALUE_MODIFIER       40.0f
+#define HUMAN_BVALUE_MODIFIER       0.0f
 #define HBVM(h)                     ((int)((float)h*(float)HUMAN_BVALUE_MODIFIER)) // remember these are measured in credits not frags (c.f. ALIEN_CREDITS_PER_FRAG)
 
 #define REACTOR_BASESIZE            1000

@@ -1182,6 +1182,7 @@ typedef enum
   ET_ANIMMAPOBJ,
   ET_MODELDOOR,
   ET_LIGHTFLARE,
+  ET_LEV2_ZAP_CHAIN,
 
   ET_EVENTS       // any of the EV_* events can be added freestanding
               // by setting eType to ET_EVENTS + eventNum

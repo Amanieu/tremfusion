@@ -1046,6 +1046,12 @@ void ClientUserinfoChanged( int clientNum )
          g_maxNameChanges.integer ) );
       revertName = qtrue;
     }
+    else if( client->pers.muted )
+    {
+      trap_SendServerCommand( ent - g_entities,
+        "print \"You cannot change your name while you are muted\n\"" );
+      revertName = qtrue;
+    }
     else if( !G_admin_name_check( ent, newname, err, sizeof( err ) ) )
     {
       trap_SendServerCommand( ent - g_entities, va( "print \"%s\n\"", err ) );
@@ -1614,6 +1620,7 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
 
   client->respawnTime = level.time;
   client->lastKillTime = level.time;
+  ent->nextRegenTime = level.time;
 
   client->inactivityTime = level.time + g_inactivity.integer * 1000;
   client->latched_buttons = 0;

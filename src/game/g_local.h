@@ -242,7 +242,7 @@ struct gentity_s
   int               suicideTime;                    // when the client will suicide
 
   int               lastDamageTime;
-  int               lastRegenTime;
+  int               nextRegenTime;
 
   qboolean          zapping;                        // adv maurader is zapping
   qboolean          wasZapping;                     // adv maurader was zapping
@@ -545,6 +545,7 @@ typedef struct
   char              voteString[MAX_STRING_CHARS];
   char              voteDisplayString[MAX_STRING_CHARS];
   int               voteTime;                     // level.time vote was called
+  int               votePassThreshold;            // need at least this percent to pass
   int               voteExecuteTime;              // time the vote is executed
   int               voteYes;
   int               voteNo;
@@ -616,6 +617,8 @@ typedef struct
 
   team_t            lastWin;
 
+  qboolean          suddenDeath;
+  int               suddenDeathBeginTime;
   timeWarning_t     suddenDeathWarning;
   timeWarning_t     timelimitWarning;
 
@@ -688,6 +691,7 @@ void      G_FollowLockView( gentity_t *ent );
 qboolean  G_FollowNewClient( gentity_t *ent, int dir );
 void      G_ToggleFollow( gentity_t *ent );
 void      G_MatchOnePlayer( int *plist, int num, char *err, int len );
+int       G_ClientNumberFromString( char *s );
 int       G_ClientNumbersFromString( char *s, int *plist, int max );
 int       G_SayArgc( void );
 qboolean  G_SayArgv( int n, char *buffer, int bufferLength );
@@ -1067,7 +1071,7 @@ typedef struct mapRotations_s
 } mapRotations_t;
 
 void      G_PrintRotations( void );
-qboolean  G_AdvanceMapRotation( void );
+void      G_AdvanceMapRotation( void );
 qboolean  G_StartMapRotation( char *name, qboolean changeMap );
 void      G_StopMapRotation( void );
 qboolean  G_MapRotationActive( void );
@@ -1101,6 +1105,7 @@ extern  vmCvar_t  g_maxNameChanges;
 
 extern  vmCvar_t  g_timelimit;
 extern  vmCvar_t  g_suddenDeathTime;
+extern  vmCvar_t  g_suddenDeath;
 extern  vmCvar_t  g_friendlyFire;
 extern  vmCvar_t  g_friendlyFireHumans;
 extern  vmCvar_t  g_friendlyFireAliens;
@@ -1122,6 +1127,8 @@ extern  vmCvar_t  g_warmup;
 extern  vmCvar_t  g_doWarmup;
 extern  vmCvar_t  g_allowVote;
 extern  vmCvar_t  g_voteLimit;
+extern  vmCvar_t  g_suddenDeathVotePercent;
+extern  vmCvar_t  g_suddenDeathVoteDelay;
 extern  vmCvar_t  g_teamAutoJoin;
 extern  vmCvar_t  g_teamForceBalance;
 extern  vmCvar_t  g_smoothClients;
@@ -1159,6 +1166,7 @@ extern  vmCvar_t  g_currentMapRotation;
 extern  vmCvar_t  g_currentMap;
 extern  vmCvar_t  g_initialMapRotation;
 extern  vmCvar_t  g_chatTeamPrefix;
+extern  vmCvar_t  g_sayAreaRange;
 
 extern  vmCvar_t  g_debugVoices;
 extern  vmCvar_t  g_voiceChats;
