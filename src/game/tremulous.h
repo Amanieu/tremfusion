@@ -363,8 +363,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ALIEN_CREDITS_PER_FRAG      400
 #define ALIEN_TK_SUICIDE_PENALTY    350
 
-// Uncomment to allow Aliens to wallwalk on any entity (buildables, players, etc)
-//#define ALIEN_WALLWALK_ENTITIES
+// Allow Aliens to wallwalk on any entity (buildables, etc) but not players
+#define ALIEN_WALLWALK_ENTITIES
 
 /*
  * HUMAN weapons
