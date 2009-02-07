@@ -180,7 +180,7 @@ static void SV_Map_f( void ) {
 		sv_master[ i ]->modified  = qtrue;
 	
 #ifdef USE_PYTHON
-  P_Event_Newmap();
+    P_Event_Newmap( mapname );
 #endif
 }
 

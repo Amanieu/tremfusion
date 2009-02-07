@@ -180,12 +180,17 @@ void P_Init(void)
 
         Cmd_AddCommand("script", P_script_f);
         Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);
+        
+        p_initilized = qtrue;
+        
         Com_Printf("----- finished P_Init -----\n");
 }
 
 void P_Shutdown(void)
 {
         Com_Printf("Shutdown python interpreter\n");
+        
+        p_initilized = qfalse;
         Py_Finalize();
         Com_Printf("Shutdown of python interpreter complete\n");
 }

@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "p_local.h"
 
+static qboolean events_initilized;
 static PyObject *callback_dict;
 
 static void call_callbacks(const char *eventname,  PyObject *args)
@@ -28,7 +29,10 @@ static void call_callbacks(const char *eventname,  PyObject *args)
   PyObject *callback_list;
   PyObject *callback, *res;
   int i, j;
-  Com_Printf("Calling callbacks for: %s\n", eventname);
+  
+  if(!p_initilized || !events_initilized) return;
+
+//  Com_Printf("Calling callbacks for: %s\n", eventname);
   callback_list = PyDict_GetItemString(callback_dict, eventname);
   if(!callback_list || !PyList_CheckExact(callback_list)) {
     Com_Printf("Bad callback_list\n");
@@ -43,7 +47,7 @@ static void call_callbacks(const char *eventname,  PyObject *args)
     }
     res = PyObject_CallObject(callback, args);
     if(!res) {
-      /* TODO: Make our own exception type so that callbacks can 
+      /* TODO: Make our own exception type so that callbacks can
        * remove themselves without printing a traceback */
       PyErr_Print();
       goto error;
@@ -66,6 +70,15 @@ void P_Event_Newmap(const char *map)
 void P_Event_Maprestart(void)
 {
   call_callbacks("map_restart", Py_BuildValue("()"));
+}
+
+static qboolean calling_print_callbacks;
+void P_Event_Print(const char *text)
+{
+  if(calling_print_callbacks) return;
+  calling_print_callbacks = qtrue;
+  call_callbacks("print", Py_BuildValue("(s)", text));
+  calling_print_callbacks = qfalse;
 }
 
 static PyObject *connect(PyObject *self, PyObject *args)
@@ -107,13 +120,13 @@ static PyMethodDef P_event_methods[] =
 void P_Event_Init(void)
 {
   callback_dict = PyDict_New();
-  
+
   PyDict_SetItemString(callback_dict, "new_map", PyList_New(0));
   PyDict_SetItemString(callback_dict, "map_restart", PyList_New(0));
-  
+  PyDict_SetItemString(callback_dict, "print", PyList_New(0));
 //#ifndef NDEBUG
 //  Cmd_AddCommand("testevent", P_test_event_f);
 //#endif
-  
+  events_initilized = qtrue;
   Py_InitModule("tremfusion.event", P_event_methods);
 }

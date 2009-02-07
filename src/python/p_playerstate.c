@@ -74,8 +74,13 @@ static PyObject *get_int(PlayerState *self, int offset)
 
 static int set_int(PlayerState *self, PyObject *value, int offset)
 {
+#ifndef DEDICATED
   PyErr_SetString(PyExc_AttributeError, "Read Only");
   return -1;
+#else
+  *(int*)((void*)self->playerstate + offset) = PyInt_AsLong(value);
+  return 0;
+#endif
 }
 
 static PyObject *get_vec3(PlayerState *self, int offset)
@@ -119,14 +124,38 @@ static PyObject *get_intarray(PlayerState *self, int closure)
   return tuple;
 }
 
-static int set_intarray(PlayerState *self, PyObject *value, void *closure)
+static int set_intarray(PlayerState *self, PyObject *value, int closure)
 {
+#ifndef DEDICATED
   PyErr_SetString(PyExc_AttributeError, "Read Only");
   return -1;
+#else
+  int i, offset, size, *array;
+  PyObject *fast;
+
+  fast = PySequence_Fast(value, "Must be tuple or list");
+  if(!fast) return -1;
+
+  offset = (closure >> 4);
+  size = (closure & 0x0f) + 1;
+  array = (int*)((void*)self->playerstate + offset);
+  if(PySequence_Fast_GET_SIZE(fast) != size) {
+    PyErr_SetString(PyExc_IndexError, "Wrong size");
+    Py_DECREF(fast);
+    return -1;
+  }
+
+  for(i=0; i < size; i++) {
+    array[i] = PyInt_AsLong(PySequence_Fast_GET_ITEM(fast, i));
+  }
+  Py_DECREF(fast);
+  return 0;
+#endif
 }
 
 /* Doc strings */
-PyDoc_STRVAR(delta_angles_doc, "add to command angles to get view direction \nchanged by spawns, rotating objects, and teleporters");
+PyDoc_STRVAR(delta_angles_doc, "add to command angles to get view direction \n"
+    "changed by spawns, rotating objects, and teleporters");
 
 /* Use macros to make the next part much cleaner */
 #define ps_offsetof(x) offsetof(playerState_t, x)

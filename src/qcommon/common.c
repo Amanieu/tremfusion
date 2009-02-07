@@ -169,7 +169,9 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 #ifndef DEDICATED
 	CL_ConsolePrint( msg );
 #endif
-
+#ifdef USE_PYTHON
+	P_Event_Print( msg );
+#endif
 	// echo to dedicated console and early console
 	Sys_Print( msg );
 

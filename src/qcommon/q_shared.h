@@ -138,6 +138,9 @@ typedef int intptr_t;
 
 
 #include "q_platform.h"
+#ifdef USE_PYTHON
+#include "../python/p_shared.h"
+#endif
 
 //=============================================================
 
