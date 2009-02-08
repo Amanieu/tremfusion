@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static char commandbuf[ 32000 ];
 static PyObject *tremfusion_module;
+static PyObject *commands_dict;
 
 char *Find_File( const char *filename )
 {
@@ -84,6 +85,20 @@ void flush( char *outputbuf )
         Q_strcat(commandbuf, sizeof(commandbuf), outputbuf );
 }
 
+PyObject* command_register(PyObject* self, PyObject* pArgs) {
+        char *command;
+        PyObject *function;
+        if (!PyArg_ParseTuple(pArgs, "sO", &command, &function))
+                return NULL;
+        if(!PyCallable_Check(function)) {
+                PyErr_SetString(PyExc_StandardError,
+                              "callback must be callable");
+                return NULL;
+        }
+        PyDict_SetItemString(commands_dict, command, function);
+        Py_RETURN_NONE;
+}
+
 PyObject* command(PyObject* self, PyObject* pArgs)
 {
         char *command;
@@ -106,6 +121,7 @@ static PyMethodDef tremfusion_methods[] =
 {
  {"p", P_Print, METH_VARARGS, "Prints using Com_Printf"},
  {"command", command, METH_VARARGS,  "call command"},
+ {"command_register", command_register, METH_VARARGS,  "register command"},
  {NULL}
 };
 
@@ -120,6 +136,39 @@ char *stdout_catcher = "import tremfusion\n"
 "sys.stdout = StdoutCatcher()\n"
 "sys.stderr = StderrCatcher()\n";
 
+static PyObject *tuple_for_args(void)
+{
+        PyObject *args;
+        int i;
+        args = PyTuple_New(Cmd_Argc() - 1);
+        for (i = 0; i < Cmd_Argc() - 1; i++)
+        {
+                PyTuple_SET_ITEM(args, i,
+                                PyString_FromString(Cmd_Argv( i + 1 )));
+        }
+        return args;
+}
+
+qboolean P_Call_Command( void )
+{
+        PyObject *args, *ret, *command_function;
+        
+        if(!p_initilized) return qfalse;
+        command_function = PyDict_GetItemString(commands_dict, Cmd_Argv(0));
+        if(!command_function) return qfalse;
+        if(!PyCallable_Check(command_function)) goto error;
+        
+        args = tuple_for_args();
+        ret = PyObject_Call(command_function, args, NULL);
+        if(!ret) goto error;
+        Py_DECREF(args);
+        return qtrue;
+error:
+        Py_XDECREF(args);
+        PyDict_DelItemString(commands_dict, Cmd_Argv(0));
+        return qfalse;
+}
+
 void Cmd_CompletePyName( char *args, int argNum ) {
         if( argNum == 2 ) {
                 Field_CompleteFilename( "python", "py", qfalse );
@@ -128,7 +177,6 @@ void Cmd_CompletePyName( char *args, int argNum ) {
 
 void P_script_f( void )
 {
-        int i;
         FILE *fp;
         char *filepath;
         PyObject *args;
@@ -140,13 +188,8 @@ void P_script_f( void )
                            Cmd_Argv(1));
                 return;
         }
-        args = PyList_New(Cmd_Argc() - 1);
-
-        for (i = 0; i < Cmd_Argc() - 1; i++)
-        {
-                PyList_SET_ITEM(args, i,
-                                PyString_FromString(Cmd_Argv( i + 1 )));
-        }
+        args = tuple_for_args();
+        
         if(PyObject_SetAttrString(tremfusion_module, "args", args))
                 PyErr_Print();
 
@@ -173,6 +216,7 @@ void P_Init(void)
         PyRun_SimpleString("print \"Python version: \" + "
                            "sys.version.replace(\"\\n\", \"\\nBuilt with: \")");
 
+        commands_dict = PyDict_New();
         P_Cvar_Init();
         P_Event_Init();
         P_Configstring_Init();
@@ -189,7 +233,7 @@ void P_Init(void)
 void P_Shutdown(void)
 {
         Com_Printf("Shutdown python interpreter\n");
-        
+        Py_CLEAR(commands_dict);
         p_initilized = qfalse;
         Py_Finalize();
         Com_Printf("Shutdown of python interpreter complete\n");
