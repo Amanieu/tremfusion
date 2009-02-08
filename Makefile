@@ -16,6 +16,10 @@ ifeq ($(COMPILE_PLATFORM),darwin)
   # Apple does some things a little differently...
   COMPILE_ARCH=$(shell uname -p | sed -e s/i.86/x86/)
 endif
+ifeq ($(COMPILE_PLATFORM),windowsnt)
+  # Sometimes msys uname returns this
+  COMPILE_PLATFORM=mingw32
+endif
 
 ifndef BUILD_CLIENT
   BUILD_CLIENT     = 1
@@ -1910,19 +1914,7 @@ $(B)/clienttty/%.o: $(SDIR)/%.c
 $(B)/clienttty/%.o: $(CMDIR)/%.c
 	$(DO_TTY_CC)
 
-$(B)/clienttty/%.o: $(JPDIR)/%.c
-	$(DO_TTY_CC)
-
-$(B)/clienttty/%.o: $(SPEEXDIR)/%.c
-	$(DO_TTY_CC)
-
 $(B)/clienttty/%.o: $(ZDIR)/%.c
-	$(DO_TTY_CC)
-
-$(B)/clienttty/%.o: $(RDIR)/%.c
-	$(DO_TTY_CC)
-
-$(B)/clienttty/%.o: $(SDLDIR)/%.c
 	$(DO_TTY_CC)
 
 $(B)/clienttty/%.o: $(SYSDIR)/%.c
@@ -1930,6 +1922,9 @@ $(B)/clienttty/%.o: $(SYSDIR)/%.c
 
 $(B)/clienttty/%.o: $(NDIR)/%.c
 	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(SYSDIR)/%.rc
+	$(DO_WINDRES)
 
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
