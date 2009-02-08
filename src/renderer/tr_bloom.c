@@ -155,12 +155,20 @@ static void R_Bloom_InitTextures( void )
 
 	data = ri.Hunk_AllocateTempMemory( bloom.screen.width * bloom.screen.height * 4 );
 	Com_Memset( data, 0, bloom.screen.width * bloom.screen.height * 4 );
-	bloom.screen.texture = R_CreateImage( "***bloom screen texture***", data, bloom.screen.width, bloom.screen.height, qfalse, qfalse, qfalse );
+	#ifdef GL_CLAMP_TO_EDGE
+		bloom.screen.texture = R_CreateImage( "***bloom screen texture***", data, bloom.screen.width, bloom.screen.height, qfalse, qfalse, GL_CLAMP_TO_EDGE );
+	#else
+		bloom.screen.texture = R_CreateImage( "***bloom screen texture***", data, bloom.screen.width, bloom.screen.height, qfalse, qfalse, GL_CLAMP );
+	#endif
 	ri.Hunk_FreeTempMemory( data );
 
 	data = ri.Hunk_AllocateTempMemory( bloom.effect.width * bloom.effect.height * 4 );
 	Com_Memset( data, 0, bloom.effect.width * bloom.effect.height * 4 );
-	bloom.effect.texture = R_CreateImage( "***bloom effect texture***", data, bloom.effect.width, bloom.effect.height, qfalse, qfalse, qfalse );
+	#ifdef GL_CLAMP_TO_EDGE
+		bloom.effect.texture = R_CreateImage( "***bloom effect texture***", data, bloom.effect.width, bloom.effect.height, qfalse, qfalse, GL_CLAMP_TO_EDGE );
+	#else
+		bloom.effect.texture = R_CreateImage( "***bloom effect texture***", data, bloom.effect.width, bloom.effect.height, qfalse, qfalse, GL_CLAMP );
+	#endif
 	ri.Hunk_FreeTempMemory( data );
 	bloom.started = qtrue;
 }
@@ -359,6 +367,7 @@ void R_BloomInit( void ) {
 	r_bloom_intensity = ri.Cvar_Get( "r_bloom_intensity", "1.3", CVAR_ARCHIVE );
 	r_bloom_darken = ri.Cvar_Get( "r_bloom_darken", "4", CVAR_ARCHIVE );
 	r_bloom_sample_size = ri.Cvar_Get( "r_bloom_sample_size", "128", CVAR_ARCHIVE|CVAR_LATCH );
+	ri.Cvar_CheckRange( r_bloom_sample_size, 0, 400, qfalse );
 	r_bloom_fast_sample = ri.Cvar_Get( "r_bloom_fast_sample", "0", CVAR_ARCHIVE|CVAR_LATCH );
 }
 
