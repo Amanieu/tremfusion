@@ -342,6 +342,8 @@ rescan:
 		// the restart to the cgame
 		Con_ClearNotify();
 		Com_Memset( cl.cmds, 0, sizeof( cl.cmds ) );
+		// reparse the string, because Con_ClearNotify may have done another Cmd_TokenizeString()
+		Cmd_TokenizeString( s );
 		return qtrue;
 	}
 
