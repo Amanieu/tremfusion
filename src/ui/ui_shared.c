@@ -4472,7 +4472,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   switch( key )
   {
     case K_F11:
-      DC->executeText( EXEC_APPEND, "screenshot\n" );
+      DC->executeText( EXEC_APPEND, "screenshotJPEG\n" );
       break;
 
     case K_KP_UPARROW:
