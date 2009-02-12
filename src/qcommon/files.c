@@ -580,36 +580,12 @@ void FS_HomeRemove( const char *homePath ) {
 ================
 FS_FileExists
 
-Tests if the file exists in the current gamedir, this DOES NOT
-search the paths.  This is to determine if opening a file to write
-(which always goes into the current gamedir) will cause any overwrites.
-NOTE TTimo: this goes with FS_FOpenFileWrite for opening the file afterwards
+Just search the paths
 ================
 */
 qboolean FS_FileExists( const char *file )
 {
-	FILE *f;
-	char *testpath;
-
-	testpath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, file );
-
-	f = fopen( testpath, "rb" );
-	if (f) {
-		fclose( f );
-		return qtrue;
-	}
-
-	if (Q_stricmp(fs_homepath->string,fs_extrapath->string)) {
-		testpath = FS_BuildOSPath( fs_extrapath->string, fs_gamedir, file );
-
-		f = fopen( testpath, "rb" );
-		if (f) {
-			fclose( f );
-			return qtrue;
-		}
-	}
-
-	return qfalse;
+	return FS_FOpenFileRead( file, NULL, qtrue );
 }
 
 /*
