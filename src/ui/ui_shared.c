@@ -4471,10 +4471,8 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   // default handling
   switch( key )
   {
-    case K_F12:
-      if( DC->getCVarValue( "developer" ) )
-        DC->executeText( EXEC_APPEND, "screenshot\n" );
-
+    case K_F11:
+      DC->executeText( EXEC_APPEND, "screenshot\n" );
       break;
 
     case K_KP_UPARROW:
