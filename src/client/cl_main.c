@@ -2183,7 +2183,7 @@ void CL_NextDownload(void) {
 		if( ( !cl_showdlPrompt->integer &&
 		      ( cl_allowDownload->integer & DLF_ENABLE ) &&
 		      !( cl_allowDownload->integer & DLF_NO_REDIRECT ) ) ||
-		    prompt == DLP_CURL ) {
+		    ( prompt & DLP_CURL ) ) {
 			char *host = NULL;
 			if(*cl_dlURLOverride->string) {
 				Com_Printf("Overriding sv_dlURL "
@@ -2225,7 +2225,7 @@ void CL_NextDownload(void) {
 			Com_Printf("Trying UDP download: %s; %s\n", localName, remoteName);
 			if( ( !( cl_allowDownload->integer & DLF_ENABLE ) ||
 			      ( cl_allowDownload->integer & DLF_NO_UDP ) ) &&
-			    ( !cl_showdlPrompt->integer || prompt != DLP_UDP ) ) {
+			    ( !cl_showdlPrompt->integer || !( prompt & DLP_UDP ) ) ) {
 				Com_Printf("WARNING: UDP downloads are disabled.\n");
 				CL_DownloadsComplete();
 				return;
