@@ -837,34 +837,6 @@ static void CG_RegisterGraphics( void )
         "ui/assets/alien/feedback/scratchr_09",
         "ui/assets/alien/feedback/scratchr_10"
   };
-   static char *alienBigAttackFeedbackShaders[ 11 ] =
-  {
-        "ui/assets/alien/feedback/scrounch_00",
-        "ui/assets/alien/feedback/scrounch_01",
-        "ui/assets/alien/feedback/scrounch_02",
-        "ui/assets/alien/feedback/scrounch_03",
-        "ui/assets/alien/feedback/scrounch_04",
-        "ui/assets/alien/feedback/scrounch_05",
-        "ui/assets/alien/feedback/scrounch_06",
-        "ui/assets/alien/feedback/scrounch_07",
-        "ui/assets/alien/feedback/scrounch_08",
-        "ui/assets/alien/feedback/scrounch_09",
-        "ui/assets/alien/feedback/scrounch_10"
-  };
-   static char *alienBigAttackFeedbackShadersFlipped[ 11 ] =
-  {
-        "ui/assets/alien/feedback/scrounchr_00",
-        "ui/assets/alien/feedback/scrounchr_01",
-        "ui/assets/alien/feedback/scrounchr_02",
-        "ui/assets/alien/feedback/scrounchr_03",
-        "ui/assets/alien/feedback/scrounchr_04",
-        "ui/assets/alien/feedback/scrounchr_05",
-        "ui/assets/alien/feedback/scrounchr_06",
-        "ui/assets/alien/feedback/scrounchr_07",
-        "ui/assets/alien/feedback/scrounchr_08",
-        "ui/assets/alien/feedback/scrounchr_09",
-        "ui/assets/alien/feedback/scrounchr_10"
-  };
    static char *alienRangedAttackFeedbackShaders[ 11 ] =
   {
         "ui/assets/alien/feedback/rangefeedback_00",
@@ -915,10 +887,6 @@ static void CG_RegisterGraphics( void )
     cgs.media.alienAttackFeedbackShaders[i] = trap_R_RegisterShader( alienAttackFeedbackShaders[i] );
   for( i = 0; i < 11; i++ )
     cgs.media.alienAttackFeedbackShadersFlipped[i] = trap_R_RegisterShader( alienAttackFeedbackShadersFlipped[i] );
-  for( i = 0; i < 11; i++ )
-    cgs.media.alienBigAttackFeedbackShaders[i] = trap_R_RegisterShader( alienBigAttackFeedbackShaders[i] );
-  for( i = 0; i < 11; i++ )
-    cgs.media.alienBigAttackFeedbackShadersFlipped[i] = trap_R_RegisterShader( alienBigAttackFeedbackShadersFlipped[i] );
   for( i = 0; i < 11; i++ )
     cgs.media.alienRangedAttackFeedbackShaders[i] = trap_R_RegisterShader( alienRangedAttackFeedbackShaders[i] );
 

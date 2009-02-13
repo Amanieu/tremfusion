@@ -1301,8 +1301,6 @@ typedef struct
 
   qhandle_t alienAttackFeedbackShaders[11];
   qhandle_t alienAttackFeedbackShadersFlipped[11];
-  qhandle_t alienBigAttackFeedbackShaders[11];
-  qhandle_t alienBigAttackFeedbackShadersFlipped[11];
   qhandle_t alienRangedAttackFeedbackShaders[11];
 
   qhandle_t   teslaZapTS;

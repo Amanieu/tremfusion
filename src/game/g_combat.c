@@ -882,9 +882,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
           mod == MOD_LEVEL1_PCLOUD     ||
           mod == MOD_LEVEL2_ZAP )
         G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
-      else if( mod == MOD_LEVEL3_CLAW ||
-               mod == MOD_LEVEL4_CLAW )
-        G_AddEvent( attacker, EV_ALIENBIG_HIT, targ->s.number );
       else
         G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
     }
@@ -1004,9 +1001,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
               mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_TEAMHIT, targ->s.number );
-          else if( mod == MOD_LEVEL3_CLAW ||
-                   mod == MOD_LEVEL4_CLAW )
-            G_AddEvent( attacker, EV_ALIENBIG_TEAMHIT, targ->s.number );
           else
             G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
           return;
@@ -1021,9 +1015,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
               mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
-          else if( mod == MOD_LEVEL3_CLAW ||
-                   mod == MOD_LEVEL4_CLAW )
-            G_AddEvent( attacker, EV_ALIENBIG_MISS, targ->s.number );
           else
             G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
         }
@@ -1043,9 +1034,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
               mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
-          else if( mod == MOD_LEVEL3_CLAW ||
-                   mod == MOD_LEVEL4_CLAW )
-            G_AddEvent( attacker, EV_ALIENBIG_MISS, targ->s.number );
           else
             G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
           return;
@@ -1059,9 +1047,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
               mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
-          else if( mod == MOD_LEVEL3_CLAW ||
-                   mod == MOD_LEVEL4_CLAW )
-            G_AddEvent( attacker, EV_ALIENBIG_HIT, targ->s.number );
           else
             G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
       }
@@ -1164,9 +1149,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
           mod == MOD_LEVEL1_PCLOUD     ||
           mod == MOD_LEVEL2_ZAP )
         G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
-      else if( mod == MOD_LEVEL3_CLAW ||
-               mod == MOD_LEVEL4_CLAW )
-        G_AddEvent( attacker, EV_ALIENBIG_HIT, targ->s.number );
       else
         G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
     }
