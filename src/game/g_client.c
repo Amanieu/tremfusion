@@ -997,6 +997,7 @@ void ClientUserinfoChanged( int clientNum )
   gentity_t *ent;
   int       health;
   char      *s;
+  char      *s2;
   char      model[ MAX_QPATH ];
   char      buffer[ MAX_QPATH ];
   char      filename[ MAX_QPATH ];
@@ -1155,8 +1156,9 @@ void ClientUserinfoChanged( int clientNum )
 
   // teamInfo
   s = Info_ValueForKey( userinfo, "teamoverlay" );
+  s2 = Info_ValueForKey( userinfo, "cg_drawTeamStatus" );
 
-  if( atoi( s ) != 0 )
+  if( atoi( s ) != 0 || atoi( s2 ) != 0)
     client->pers.teamInfo = qtrue;
   else
     client->pers.teamInfo = qfalse;

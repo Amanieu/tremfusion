@@ -1566,6 +1566,11 @@ extern  vmCvar_t    cg_debugRandom;
 extern  vmCvar_t    cg_optimizePrediction;
 extern  vmCvar_t    cg_projectileNudge;
 
+extern  vmCvar_t    cg_drawBuildableStatus;
+extern  vmCvar_t    cg_hideHealthyBuildableStatus;
+extern  vmCvar_t    cg_drawTeamStatus;
+extern  vmCvar_t    cg_hideHealthyTeamStatus;
+
 extern  vmCvar_t    cg_drawAlienFeedback;
 
 extern  vmCvar_t    cg_voice;
@@ -1684,6 +1689,7 @@ void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
+void        CG_DrawTeamStatus( void );
 centity_t   *CG_GetPlayerLocation( void );
 
 //

@@ -3512,6 +3512,7 @@ static void CG_Draw2D( void )
       ( cg.snap->ps.stats[ STAT_HEALTH ] > 0 ) )
   {
     CG_DrawBuildableStatus( );
+    CG_DrawTeamStatus( );
     if( cg_drawStatus.integer )
       Menu_Paint( menu, qtrue );
 

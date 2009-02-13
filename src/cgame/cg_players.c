@@ -2483,6 +2483,320 @@ void CG_Bleed( vec3_t origin, vec3_t normal, int entityNum )
   }
 }
 
+#define STATUS_FADE_TIME      200
+#define STATUS_MAX_VIEW_DIST  900.0f
+#define STATUS_PEEK_DIST      20
+/*
+==================
+CG_TeamStatusDisplay
+==================
+*/
+static void CG_TeamStatusDisplay( centity_t *cent )
+{
+  entityState_t   *es = &cent->currentState;
+  vec3_t          origin;
+  class_t         pclass = ( es->misc >> 8 ) & 0xFF;
+  int             health = cgs.clientinfo[ es->clientNum ].health;
+  //int             credits = cgs.clientinfo[ es->clientNum ].armor;	currently unused
+  float           healthScale = BG_Class( pclass )->health;
+  float           x, y;
+  vec4_t          color;
+  trace_t         tr;
+  float           d;
+  buildStat_t     *bs;
+  int             i, j;
+  int             entNum;
+  vec3_t          trOrigin;
+  vec3_t          right;
+  qboolean        visible = qfalse;
+  vec3_t          mins, maxs;
+  entityState_t   *hit;
+  float           transparency=0.5f;
+  if( (cent->currentState.misc & 0x00FF) == TEAM_ALIENS )
+    bs = &cgs.alienBuildStat;
+  else
+    bs = &cgs.humanBuildStat;
+
+  if( !bs->loaded )
+    return;
+  
+  d = Distance( cent->lerpOrigin, cg.refdef.vieworg );
+  if( d > STATUS_MAX_VIEW_DIST )
+    return;
+ 
+  Vector4Copy( bs->foreColor, color );
+
+  // trace for top
+  if( ( es->legsAnim & ~ANIM_TOGGLEBIT ) == LEGS_WALKCR ||
+      ( es->legsAnim & ~ANIM_TOGGLEBIT ) == LEGS_IDLECR )
+    BG_ClassBoundingBox( pclass,  mins, NULL, maxs, NULL, NULL );
+  else
+    BG_ClassBoundingBox( pclass,  mins, maxs, NULL, NULL, NULL );
+
+  VectorCopy( cent->lerpOrigin, origin );
+
+  // top point
+  origin[ 2 ] += mins[ 2 ];
+  origin[ 2 ] += ( abs( mins[ 2 ] ) + abs( maxs[ 2 ] ) );
+  //origin[ 2 ] *= 1.1f;
+
+  entNum = cg.predictedPlayerState.clientNum;
+
+  // if first try fails, step left, step right
+  for( j = 0; j < 3; j++ )
+  {
+    VectorCopy( cg.refdef.vieworg, trOrigin );
+    switch( j )
+    {
+      case 1:
+        // step right
+        AngleVectors( cg.refdefViewAngles, NULL, right, NULL );
+        VectorMA( trOrigin, STATUS_PEEK_DIST, right, trOrigin );
+        break;
+      case 2:
+        // step left
+        AngleVectors( cg.refdefViewAngles, NULL, right, NULL );
+        VectorMA( trOrigin, -STATUS_PEEK_DIST, right, trOrigin );
+        break;
+      default:
+        break;
+    }
+    // look through up to 3 players and/or transparent buildables
+    for( i = 0; i < 3; i++ )
+    {
+      CG_Trace( &tr, trOrigin, NULL, NULL, origin, entNum, MASK_SHOT );
+      if( tr.entityNum == cent->currentState.number )
+      {
+        visible = qtrue;
+        break;
+      }
+
+      if( tr.entityNum == ENTITYNUM_WORLD )
+        break;
+
+      hit  = &cg_entities[ tr.entityNum ].currentState;
+
+      if( tr.entityNum < MAX_CLIENTS || ( hit->eType == ET_BUILDABLE &&
+          ( !( es->eFlags & EF_B_SPAWNED ) ||
+            BG_Buildable( hit->modelindex )->transparentTest ) ) )
+            
+      {
+        entNum = tr.entityNum;
+        VectorCopy( tr.endpos, trOrigin );
+      }
+      else
+        break;
+    }
+  }
+  // hack to make the kit obscure view
+  if( cg_drawGun.integer && visible &&
+      cg.predictedPlayerState.stats[ STAT_TEAM ] == TEAM_HUMANS &&
+      CG_WorldToScreen( origin, &x, &y ) )
+  {
+    if( x > 450 && y > 260 )
+      visible = qfalse;
+  }
+
+  healthScale = (float)health / healthScale;
+
+  if( health > 0 && healthScale < 0.01f )
+    healthScale = 0.01f;
+  else if( healthScale < 0.0f )
+    healthScale = 0.0f;
+  else if( healthScale > 1.0f )
+    healthScale = 1.0f;
+
+  if( cg_hideHealthyTeamStatus.integer && 
+      healthScale == 1.0f )
+  {
+    visible = qfalse;
+  }
+  if( !visible && cent->buildableStatus.visible )
+  {
+    cent->buildableStatus.visible   = qfalse;
+    cent->buildableStatus.lastTime  = cg.time;
+  }
+  else if( visible && !cent->buildableStatus.visible )
+  {
+    cent->buildableStatus.visible   = qtrue;
+    cent->buildableStatus.lastTime  = cg.time;
+  }
+  color[ 3 ] = transparency;
+  // Fade up
+  if( cent->buildableStatus.visible )
+  {
+    if( cent->buildableStatus.lastTime + STATUS_FADE_TIME > cg.time )
+      color[ 3 ] = transparency*((float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME);
+  }
+
+  // Fade down
+  if( !cent->buildableStatus.visible )
+  {
+    if( cent->buildableStatus.lastTime + STATUS_FADE_TIME > cg.time )
+      color[ 3 ] = transparency*(1.0f - (float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME);
+    else
+      return;
+  }
+
+
+
+  if( CG_WorldToScreen( origin, &x, &y ) )
+  {
+    float  picH = bs->frameHeight * 0.85;
+    float  picW = bs->frameWidth * 0.3;
+    float  picX = x;
+    float  picY = y;
+    float  scale;
+    float  subH, subY;
+    vec4_t frameColor;
+
+    // this is fudged to get the width/height in the cfg to be more realistic
+    scale = ( picH / d ) * 3;
+
+
+    picH *= scale;
+    picW *= scale;
+    picX -= ( picW * 0.5f );
+    picY -= ( picH * 0.5f );
+
+    // sub-elements such as icons and number
+    subH = picH - ( picH * bs->verticalMargin );
+    subY = picY + ( picH * 0.5f ) - ( subH * 0.5f );
+
+    /*if( bs->frameShader )
+    {
+      Vector4Copy( bs->backColor, frameColor );
+      frameColor[ 3 ] = color[ 3 ];
+      trap_R_SetColor( frameColor );
+      CG_DrawPic( picX, picY, picW, picH, bs->frameShader );
+      trap_R_SetColor( NULL );
+    }*/
+
+    if( health > 0 )
+    {
+      float hX, hY, hW, hH;
+      vec4_t healthColor;
+
+      hX = picX + ( bs->healthPadding * scale );
+      hY = picY + ( bs->healthPadding * scale );
+      hH = picH - ( bs->healthPadding * 2.0f * scale );
+      hW = picW * healthScale - ( bs->healthPadding * 2.0f * scale );
+
+      if( healthScale == 1.0f )
+        Vector4Copy( bs->healthLowColor, healthColor );
+      else if( healthScale >= 0.75f )
+        Vector4Copy( bs->healthGuardedColor, healthColor );
+      else if( healthScale >= 0.50f )
+        Vector4Copy( bs->healthElevatedColor, healthColor );
+      else if( healthScale >= 0.25f )
+        Vector4Copy( bs->healthHighColor, healthColor );
+      else
+        Vector4Copy( bs->healthSevereColor, healthColor );
+
+      healthColor[ 3 ] = color[ 3 ];
+      trap_R_SetColor( healthColor );
+     
+      CG_DrawPic( hX, hY, hW, hH, cgs.media.whiteShader );
+      trap_R_SetColor( NULL );
+    }
+
+    if( bs->overlayShader )
+    {
+      float oW = bs->overlayWidth * 0.3f;
+      float oH = bs->overlayHeight * 0.85f;
+      float oX = x;
+      float oY = y;
+
+      oH *= scale;
+      oW *= scale;
+      oX -= ( oW * 0.5f );
+      oY -= ( oH * 0.5f );
+ 
+      trap_R_SetColor( frameColor );
+      CG_DrawPic( oX, oY, oW, oH, bs->overlayShader );
+      trap_R_SetColor( NULL );
+    }
+
+    trap_R_SetColor( color );
+
+    {
+      float nX;
+      int healthMax;
+      int healthPoints;
+
+      healthMax = BG_Class( pclass )->health;
+      healthPoints = (int)( healthScale * healthMax );
+      if( health > 0 && healthPoints < 1 )
+        healthPoints = 1;
+      nX = picX + ( picW * 0.5f ) - 2.0f - ( ( subH * 4 ) * 0.5f ); 
+       
+      if( healthPoints > 999 )
+        nX -= 0.0f;
+      else if( healthPoints > 99 )
+        nX -= subH * 0.5f;
+      else if( healthPoints > 9 )
+        nX -= subH * 1.0f;
+      else
+        nX -= subH * 1.5f;
+     
+      CG_DrawField( nX, subY, 4, subH, subH, healthPoints );
+    }
+    trap_R_SetColor( NULL );
+  }
+}
+
+/*
+==================
+CG_SortDistance
+==================
+*/
+static int CG_SortDistance2( const void *a, const void *b )
+{
+  centity_t    *aent, *bent;
+  float        adist, bdist;
+
+  aent = &cg_entities[ *(int *)a ];
+  bent = &cg_entities[ *(int *)b ];
+  adist = Distance( cg.refdef.vieworg, aent->lerpOrigin );
+  bdist = Distance( cg.refdef.vieworg, bent->lerpOrigin );
+  if( adist > bdist )
+    return -1;
+  else if( adist < bdist )
+    return 1;
+  else
+    return 0;
+}
+
+/*
+==================
+CG_DrawTeamStatus
+==================
+*/
+void CG_DrawTeamStatus( void )
+{
+  int             i;
+  centity_t       *cent;
+  entityState_t   *es;
+  int             buildableList[ MAX_ENTITIES_IN_SNAPSHOT ];
+  int             buildables = 0;
+
+  if( cg_drawTeamStatus.integer )
+  {
+    for( i = 0; i < cg.snap->numEntities; i++ )
+    {
+      cent  = &cg_entities[ cg.snap->entities[ i ].number ];
+      es    = &cent->currentState;
+
+      if( es->eType == ET_PLAYER &&
+          ( cent->currentState.misc & 0x00FF ) == cg.predictedPlayerState.stats[ STAT_TEAM ]  )
+        buildableList[ buildables++ ] = cg.snap->entities[ i ].number;
+    }
+    qsort( buildableList, buildables, sizeof( int ), CG_SortDistance2 );
+    for( i = 0; i < buildables; i++ )
+        CG_TeamStatusDisplay( &cg_entities[ buildableList[ i ] ] );
+  }
+}
+
 centity_t *CG_GetPlayerLocation( void )
 {
   centity_t   *eloc, *best;

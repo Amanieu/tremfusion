@@ -216,6 +216,11 @@ vmCvar_t  cg_debugRandom;
 vmCvar_t  cg_optimizePrediction;
 vmCvar_t  cg_projectileNudge;
 
+vmCvar_t  cg_drawBuildableStatus;
+vmCvar_t  cg_hideHealthyBuildableStatus;
+vmCvar_t  cg_drawTeamStatus;
+vmCvar_t  cg_hideHealthyTeamStatus;
+
 vmCvar_t  cg_suppressWAnimWarnings;
 
 vmCvar_t  cg_voice;
@@ -336,6 +341,12 @@ static cvarTable_t cvarTable[ ] =
   
   { &cg_optimizePrediction, "cg_optimizePrediction", "1", CVAR_ARCHIVE },
   { &cg_projectileNudge, "cg_projectileNudge", "1", CVAR_ARCHIVE },
+
+  { &cg_drawBuildableStatus, "cg_drawBuildableStatus", "1", CVAR_ARCHIVE },
+  { &cg_hideHealthyBuildableStatus, "cg_hideHealthyBuildableStatus", "1", CVAR_ARCHIVE },
+  { &cg_drawTeamStatus, "cg_drawTeamStatus", "1", CVAR_USERINFO | CVAR_ARCHIVE },
+  { &cg_hideHealthyTeamStatus, "cg_hideHealthyTeamStatus", "1", CVAR_ARCHIVE },
+  { NULL, "teamoverlay", "1", CVAR_USERINFO | CVAR_ARCHIVE }, //if this is 0 the server will not send tinfo and teammate health will not work
 
   // the following variables are created in other parts of the system,
   // but we also reference them here

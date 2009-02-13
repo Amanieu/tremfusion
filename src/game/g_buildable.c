@@ -336,7 +336,7 @@ int G_FindDCC( gentity_t *self )
       continue;
 
     //if entity is a dcc calculate the distance to it
-    if( ent->s.modelindex == BA_H_DCC && ent->spawned )
+    if( ent->s.modelindex == BA_H_DCC && ent->spawned && ent->powered )
     {
       VectorSubtract( self->s.origin, ent->s.origin, temp_v );
       distance = VectorLength( temp_v );

@@ -840,6 +840,7 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
   vec3_t          mins, maxs;
   entityState_t   *hit;
   int             anim;
+  float           transparency=1.0f;
 
   if( BG_Buildable( es->modelindex )->team == TEAM_ALIENS )
     bs = &cgs.alienBuildStat;
@@ -926,6 +927,24 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
       visible = qfalse;
   }
 
+  health = (unsigned char)es->generic1;
+  healthScale = (float)health / B_HEALTH_MASK;
+
+  if( healthScale < 0.0f )
+    healthScale = 0.0f;
+  else if( healthScale > 1.0f )
+    healthScale = 1.0f;
+
+  powered = es->eFlags & EF_B_POWERED;
+  marked = es->eFlags & EF_B_MARKED;
+
+  if( cg_hideHealthyBuildableStatus.integer &&
+      healthScale == 1.0f &&
+      powered &&
+      !marked )
+  {
+    visible = qfalse;
+  }
   if( !visible && cent->buildableStatus.visible )
   {
     cent->buildableStatus.visible   = qfalse;
@@ -937,29 +956,23 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
     cent->buildableStatus.lastTime  = cg.time;
   }
 
+  color[ 3 ] = transparency;
   // Fade up
   if( cent->buildableStatus.visible )
   {
     if( cent->buildableStatus.lastTime + STATUS_FADE_TIME > cg.time )
-      color[ 3 ] = (float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME;
+      color[ 3 ] = transparency*(float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME;
   }
 
   // Fade down
   if( !cent->buildableStatus.visible )
   {
     if( cent->buildableStatus.lastTime + STATUS_FADE_TIME > cg.time )
-      color[ 3 ] = 1.0f - (float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME;
+      color[ 3 ] = transparency*(1.0f - (float)( cg.time - cent->buildableStatus.lastTime ) / STATUS_FADE_TIME);
     else
       return;
   }
 
-  health = (unsigned char)es->generic1;
-  healthScale = (float)health / B_HEALTH_MASK;
-
-  if( healthScale < 0.0f )
-    healthScale = 0.0f;
-  else if( healthScale > 1.0f )
-    healthScale = 1.0f;
 
   if( CG_WorldToScreen( origin, &x, &y ) )
   {
@@ -974,8 +987,7 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
     // this is fudged to get the width/height in the cfg to be more realistic
     scale = ( picH / d ) * 3;
 
-    powered = es->eFlags & EF_B_POWERED;
-    marked = es->eFlags & EF_B_MARKED;
+
 
     picH *= scale;
     picW *= scale;
@@ -1165,7 +1177,14 @@ void CG_DrawBuildableStatus( void )
     cent  = &cg_entities[ cg.snap->entities[ i ].number ];
     es    = &cent->currentState;
 
-    if( es->eType == ET_BUILDABLE && CG_PlayerIsBuilder( es->modelindex ) )
+    if( es->eType == ET_BUILDABLE &&
+        ( CG_PlayerIsBuilder( es->modelindex ) ||
+          ( cg_drawBuildableStatus.integer &&
+             BG_Buildable( es->modelindex )->team ==
+             BG_Weapon( cg.predictedPlayerState.weapon )->team
+          )
+        )
+      )
       buildableList[ buildables++ ] = cg.snap->entities[ i ].number;
   }
 
