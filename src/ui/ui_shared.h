@@ -246,6 +246,18 @@ typedef struct modelDef_s
   float fov_x;
   float fov_y;
   int rotationSpeed;
+
+  vec3_t axis;
+
+  int   animated;
+  int   startframe;
+  int   numframes;
+  int   fps;
+
+  int   frame;
+  int   oldframe;
+  float backlerp;
+  int   frameTime;
 }
 modelDef_t;
 
