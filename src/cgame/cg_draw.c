@@ -369,36 +369,47 @@ static void CG_DrawAttackFeedback( rectDef_t *rect )
                     else
                       shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
                     break;
+                  case AFEEDBACK_BIG_HIT:
+                  case AFEEDBACK_BIG_MISS:
+                  case AFEEDBACK_BIG_TEAMHIT:
+                    if( flipAttackFeedback )
+                      shader = cgs.media.alienBigAttackFeedbackShadersFlipped[ frame - 1 ];
+                    else
+                      shader = cgs.media.alienBigAttackFeedbackShaders[ frame - 1 ];
+                    break;
                   case AFEEDBACK_RANGED_HIT:
                   case AFEEDBACK_RANGED_MISS:
                   case AFEEDBACK_RANGED_TEAMHIT:
+                    shader = cgs.media.alienRangedAttackFeedbackShaders[ frame - 1 ];
+                    break;
+                  default:
                     if( flipAttackFeedback )
                       shader = cgs.media.alienAttackFeedbackShadersFlipped[ frame - 1 ];
                     else
                       shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
                     break;
-                  default:
-                     shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
-                     break;
                   
                 }
                 cg.feedbackAnimation++;
                 if(cg.feedbackAnimation > 10)
-                        cg.feedbackAnimation = 0;
+                  cg.feedbackAnimation = 0;
 
                 switch(cg.feedbackAnimationType) {
-                	case AFEEDBACK_HIT:
-                	case AFEEDBACK_RANGED_HIT:
-                        	trap_R_SetColor( hit_color );
-                        	break;
-                	case AFEEDBACK_MISS:
+                  case AFEEDBACK_HIT:
+                  case AFEEDBACK_BIG_HIT:
+                  case AFEEDBACK_RANGED_HIT:
+                    trap_R_SetColor( hit_color );
+                    break;
+                  case AFEEDBACK_MISS:
+                  case AFEEDBACK_BIG_MISS:
                   case AFEEDBACK_RANGED_MISS:
-                        	trap_R_SetColor( miss_color );
-                        	break;
-                	case AFEEDBACK_TEAMHIT:
+                    trap_R_SetColor( miss_color );
+                    break;
+                  case AFEEDBACK_TEAMHIT:
+                  case AFEEDBACK_BIG_TEAMHIT:
                   case AFEEDBACK_RANGED_TEAMHIT:
-                        	trap_R_SetColor( teamhit_color );
-                        	break;
+                    trap_R_SetColor( teamhit_color );
+                    break;
                 }
                 CG_DrawPic( rect->x, rect->y, rect->w, rect->h, shader );
                 trap_R_SetColor( NULL );

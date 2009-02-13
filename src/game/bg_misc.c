@@ -2807,6 +2807,10 @@ char *eventnames[ ] =
   "EV_ALIEN_MISS",      // Alien feedback for missing a strike
   "EV_ALIEN_TEAMHIT",   // Alien feedback for hitting a teammate
 
+  "EV_ALIENBIG_HIT",       // Large alien attack feedback for hitting an enemy
+  "EV_ALIENBIG_MISS",      // Large alien attack feedback for missing a strike
+  "EV_ALIENBIG_TEAMHIT",   // Large alien attack feedback for hitting a teammate
+
   "EV_ALIENRANGED_HIT",       // Alien ranged attack feedback for hitting an enemy
   "EV_ALIENRANGED_MISS",      // Alien ranged attack feedback for missing a strike
   "EV_ALIENRANGED_TEAMHIT",   // Alien ranged attack feedback for hitting a teammate

@@ -356,6 +356,9 @@ typedef enum
    AFEEDBACK_HIT,
    AFEEDBACK_MISS,
    AFEEDBACK_TEAMHIT,
+   AFEEDBACK_BIG_HIT,
+   AFEEDBACK_BIG_MISS,
+   AFEEDBACK_BIG_TEAMHIT,
    AFEEDBACK_RANGED_HIT,
    AFEEDBACK_RANGED_MISS,
    AFEEDBACK_RANGED_TEAMHIT,
@@ -542,6 +545,10 @@ typedef enum
   EV_ALIEN_HIT,       // Alien attack feedback hit enemy
   EV_ALIEN_MISS,      // Alien attack feedback miss enemy
   EV_ALIEN_TEAMHIT,   // Alien attack feedback hit teammate
+
+  EV_ALIENBIG_HIT,       // Large alien attack feedback hit enemy
+  EV_ALIENBIG_MISS,      // Large alien attack feedback miss enemy
+  EV_ALIENBIG_TEAMHIT,   // Large alien attack feedback hit teammate
 
   EV_ALIENRANGED_HIT,       // Alien ranged attack feedback hit enemy
   EV_ALIENRANGED_MISS,      // Alien ranged attack feedback miss enemy
