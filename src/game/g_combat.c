@@ -876,6 +876,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     {
       if( mod == MOD_LEVEL3_BOUNCEBALL ||
           mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL4_TRAMPLE    ||
+          mod == MOD_LEVEL4_CRUSH      ||
+          mod == MOD_LEVEL3_POUNCE     ||
+          mod == MOD_LEVEL1_PCLOUD     ||
           mod == MOD_LEVEL2_ZAP )
         G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
       else
@@ -991,6 +995,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         {
           if( mod == MOD_LEVEL3_BOUNCEBALL ||
               mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_TEAMHIT, targ->s.number );
           else
@@ -1001,6 +1009,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         {
           if( mod == MOD_LEVEL3_BOUNCEBALL ||
               mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
           else
@@ -1016,6 +1028,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         if( !g_friendlyBuildableFire.integer ) {
           if( mod == MOD_LEVEL3_BOUNCEBALL ||
               mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
           else
@@ -1025,6 +1041,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         else
           if( mod == MOD_LEVEL3_BOUNCEBALL ||
               mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
               mod == MOD_LEVEL2_ZAP )
             G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
           else
@@ -1123,6 +1143,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
     {
       if( mod == MOD_LEVEL3_BOUNCEBALL ||
           mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL4_TRAMPLE    ||
+          mod == MOD_LEVEL4_CRUSH      ||
+          mod == MOD_LEVEL3_POUNCE     ||
+          mod == MOD_LEVEL1_PCLOUD     ||
           mod == MOD_LEVEL2_ZAP )
         G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
       else
