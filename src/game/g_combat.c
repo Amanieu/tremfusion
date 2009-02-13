@@ -873,8 +873,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
                        targ->moverState == ROTATOR_POS1 ) )
       targ->use( targ, inflictor, attacker );
     if( attacker->client->pers.teamSelection == TEAM_ALIENS)
-      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
-
+    {
+      if( mod == MOD_LEVEL3_BOUNCEBALL ||
+          mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL2_ZAP )
+        G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+      else
+        G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    }
     return;
   }
 
@@ -983,11 +989,23 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         if( !g_friendlyFireAliens.integer &&
              targ->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
         {
-          G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_TEAMHIT, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
           return;
         }
         else
-          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+        {
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+        }
       }
     }
 
@@ -996,11 +1014,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       if( targ->buildableTeam == attacker->client->pers.teamSelection )
       {
         if( !g_friendlyBuildableFire.integer ) {
-          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
           return;
         }
         else
-          G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
       }
 
       // base is under attack warning if DCC'd
@@ -1092,7 +1120,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   if( take )
   {
     if( attacker->client && attacker->client->pers.teamSelection == TEAM_ALIENS)
-      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    {
+      if( mod == MOD_LEVEL3_BOUNCEBALL ||
+          mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL2_ZAP )
+        G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+      else
+        G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    }
 
     targ->health = targ->health - take;
 

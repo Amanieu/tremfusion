@@ -812,6 +812,34 @@ static void CG_RegisterGraphics( void )
         "ui/assets/alien/feedback/scratch_09",
         "ui/assets/alien/feedback/scratch_10"
   };
+   static char *alienAttackFeedbackShadersFlipped[ 11 ] =
+  {
+        "ui/assets/alien/feedback/scratchr_00",
+        "ui/assets/alien/feedback/scratchr_01",
+        "ui/assets/alien/feedback/scratchr_02",
+        "ui/assets/alien/feedback/scratchr_03",
+        "ui/assets/alien/feedback/scratchr_04",
+        "ui/assets/alien/feedback/scratchr_05",
+        "ui/assets/alien/feedback/scratchr_06",
+        "ui/assets/alien/feedback/scratchr_07",
+        "ui/assets/alien/feedback/scratchr_08",
+        "ui/assets/alien/feedback/scratchr_09",
+        "ui/assets/alien/feedback/scratchr_10"
+  };
+   static char *alienRangedAttackFeedbackShaders[ 11 ] =
+  {
+        "ui/assets/alien/feedback/rangefeedback_00",
+        "ui/assets/alien/feedback/rangefeedback_01",
+        "ui/assets/alien/feedback/rangefeedback_02",
+        "ui/assets/alien/feedback/rangefeedback_03",
+        "ui/assets/alien/feedback/rangefeedback_04",
+        "ui/assets/alien/feedback/rangefeedback_05",
+        "ui/assets/alien/feedback/rangefeedback_06",
+        "ui/assets/alien/feedback/rangefeedback_07",
+        "ui/assets/alien/feedback/rangefeedback_08",
+        "ui/assets/alien/feedback/rangefeedback_09",
+        "ui/assets/alien/feedback/rangefeedback_10"
+  };
 
   // clear any references to old media
   memset( &cg.refdef, 0, sizeof( cg.refdef ) );
@@ -846,6 +874,10 @@ static void CG_RegisterGraphics( void )
     cgs.media.buildWeaponTimerPie[ i ] = trap_R_RegisterShader( buildWeaponTimerPieShaders[ i ] );
   for( i = 0; i < 11; i++ )
     cgs.media.alienAttackFeedbackShaders[i] = trap_R_RegisterShader( alienAttackFeedbackShaders[i] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienAttackFeedbackShadersFlipped[i] = trap_R_RegisterShader( alienAttackFeedbackShadersFlipped[i] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienRangedAttackFeedbackShaders[i] = trap_R_RegisterShader( alienRangedAttackFeedbackShaders[i] );
 
   // player health cross shaders
   cgs.media.healthCross               = trap_R_RegisterShader( "ui/assets/neutral/cross.tga" );

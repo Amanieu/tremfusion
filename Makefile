@@ -406,7 +406,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
-  RELEASE_CFLAGS=$(BASE_CFLAGS) -ggdb3 -O0 # -DNDEBUG $(OPTIMIZE)
+  RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
 else # ifeq Linux
 

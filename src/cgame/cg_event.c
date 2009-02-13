@@ -781,6 +781,17 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         CG_HandleAlienFeedback( cent, AFEEDBACK_TEAMHIT );
         break;
 
+    case EV_ALIENRANGED_HIT:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_HIT );
+        break;
+  	 
+    case EV_ALIENRANGED_MISS:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_MISS );
+        break;
+  	 
+    case EV_ALIENRANGED_TEAMHIT:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_TEAMHIT );
+        break;
     //=================================================================
 
     //

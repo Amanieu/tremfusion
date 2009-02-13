@@ -339,11 +339,18 @@ static void CG_DrawPlayerCreditsValue( rectDef_t *rect, vec4_t color, qboolean p
 
 static void CG_DrawAttackFeedback( rectDef_t *rect )
 {
+        static qboolean flipAttackFeedback = qfalse;
         int frame = cg.feedbackAnimation;
         qhandle_t shader;
         vec4_t hit_color = { 1, 0, 0, 0.5 };
         vec4_t miss_color = { 0.3, 0.3, 0.3, 0.5 };
         vec4_t teamhit_color = { 0.39, 0.80, 0.00, 0.5 };
+
+
+        if ( frame == 1 )
+        {
+          flipAttackFeedback = !flipAttackFeedback;
+        }
 
         //when a new feedback animation event is received, the fame number is set to 1 - so
         //if it is zero, we don't need to draw anything
@@ -352,19 +359,44 @@ static void CG_DrawAttackFeedback( rectDef_t *rect )
                 return;
         }
         else {
-                shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                switch(cg.feedbackAnimationType)
+                {
+                  case AFEEDBACK_HIT:
+                  case AFEEDBACK_MISS:
+                  case AFEEDBACK_TEAMHIT:
+                    if( flipAttackFeedback )
+                      shader = cgs.media.alienAttackFeedbackShadersFlipped[ frame - 1 ];
+                    else
+                      shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                    break;
+                  case AFEEDBACK_RANGED_HIT:
+                  case AFEEDBACK_RANGED_MISS:
+                  case AFEEDBACK_RANGED_TEAMHIT:
+                    if( flipAttackFeedback )
+                      shader = cgs.media.alienAttackFeedbackShadersFlipped[ frame - 1 ];
+                    else
+                      shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                    break;
+                  default:
+                     shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                     break;
+                  
+                }
                 cg.feedbackAnimation++;
                 if(cg.feedbackAnimation > 10)
                         cg.feedbackAnimation = 0;
 
                 switch(cg.feedbackAnimationType) {
                 	case AFEEDBACK_HIT:
+                	case AFEEDBACK_RANGED_HIT:
                         	trap_R_SetColor( hit_color );
                         	break;
                 	case AFEEDBACK_MISS:
+                  case AFEEDBACK_RANGED_MISS:
                         	trap_R_SetColor( miss_color );
                         	break;
                 	case AFEEDBACK_TEAMHIT:
+                  case AFEEDBACK_RANGED_TEAMHIT:
                         	trap_R_SetColor( teamhit_color );
                         	break;
                 }
@@ -673,7 +705,7 @@ static void CG_DrawStack( rectDef_t *rect, vec4_t color, float fill,
   float each;
   int   ival;
   float frac;
-  float nudge;
+  float nudge = 0;
   float fmax = max; // otherwise we'd be (float) casting everywhere
 
   if( val <= 0 || max <= 0 )

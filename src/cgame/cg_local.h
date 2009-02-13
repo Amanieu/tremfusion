@@ -1300,6 +1300,8 @@ typedef struct
   qhandle_t   humanBleedPS;
 
   qhandle_t alienAttackFeedbackShaders[11];
+  qhandle_t alienAttackFeedbackShadersFlipped[11];
+  qhandle_t alienRangedAttackFeedbackShaders[11];
 
   qhandle_t   teslaZapTS;
   qhandle_t   massDriverTS;
