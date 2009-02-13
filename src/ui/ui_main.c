@@ -33,6 +33,9 @@ USER INTERFACE MAIN
 
 uiInfo_t uiInfo;
 
+static char screenshots[ 1024 ][ MAX_QPATH ];
+static int current_screen = 0, maxscreens = 0;
+
 static const char *MonthAbbrev[ ] =
 {
   "Jan", "Feb", "Mar",
@@ -2004,6 +2007,19 @@ static void UI_DrawCredits( rectDef_t *rect, float scale, int textalign, int tex
   "^1Zachary J. Slater\n" );
 }
 
+static void UI_DrawScreen( rectDef_t *rect, int modifier )
+{
+  int shotNumber;
+
+  shotNumber = current_screen + modifier;
+
+  if ( shotNumber < 0 || shotNumber >= maxscreens )
+    return;
+
+  UI_DrawHandlePic( rect->x, rect->y, rect->w, rect->h,
+                    trap_R_RegisterShaderNoMip( va( "screenshots/%s", screenshots[ shotNumber ] ) ) );
+}
+
 // FIXME: table drive
 //
 static void UI_OwnerDraw( float x, float y, float w, float h,
@@ -2085,6 +2101,10 @@ static void UI_OwnerDraw( float x, float y, float w, float h,
 
     case UI_CREDITS:
       UI_DrawCredits( &rect, scale, textalign, textvalign, foreColor, textStyle, text_x, text_y );
+      break;
+
+    case UI_SCREEN:
+      UI_DrawScreen( &rect, special );
       break;
 
     default:
@@ -2902,6 +2922,82 @@ static void UI_Update( const char *name )
   }
 }
 
+void UI_ScreenChange( char **args )
+{
+  static int saved_index = 0;
+  const char *string;
+  int i, modifier;
+  char buffer[ 8192 ];
+
+  // Reload the screenshots list
+  maxscreens = trap_FS_GetFileList( "screenshots", ".jpg", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  string = buffer;
+  for (i = 0; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
+  }
+
+  // Also load TGAs
+  maxscreens += trap_FS_GetFileList( "screenshots", ".tga", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  trap_Cvar_SetValue( "ui_screens", maxscreens );
+  string = buffer;
+  for (; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
+  }
+
+  // Sort the list
+  qsort(screenshots, maxscreens, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
+
+  // Get the modifier & find the screen index
+  if( String_Parse( args, &string ) )
+  {
+    if( string[0] == '+' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen += modifier;
+    }
+    else if( string[0] == '-' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen -= modifier;
+    }
+    else if( string[0] == '=' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen = modifier;
+    }
+    // Hack for saving the index when switching from multiview to detail view
+    else if( string[0] == '?' )
+      saved_index = current_screen;
+    else if( string[0] == '!' )
+      current_screen = saved_index;
+  }
+
+  // We don't want it to go below 0 or above the max number of screens
+  if( current_screen >= maxscreens )
+  {
+    current_screen -= modifier;
+    if( current_screen >= maxscreens )
+      current_screen = maxscreens - 1;
+  }
+  else if( current_screen < 0 )
+  {
+    current_screen += modifier;
+    if( current_screen < 0 )
+      current_screen = 0;
+  }
+
+  trap_Cvar_SetValue( "ui_screen", current_screen );
+  trap_Cvar_Set( "ui_screenname", screenshots[ current_screen ] );
+}
+
 //FIXME: lookup table
 static void UI_RunMenuScript( char **args )
 {
@@ -3427,6 +3523,10 @@ static void UI_RunMenuScript( char **args )
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
       }
+    }
+    else if( Q_stricmp( name, "ScreenChange" ) == 0 )
+    {
+      UI_ScreenChange( args );
     }
     else
       Com_Printf( "unknown UI script %s\n", name );

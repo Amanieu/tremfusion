@@ -76,9 +76,6 @@ int openMenuCount = 0;
 #define DOUBLE_CLICK_DELAY 300
 static int lastListBoxClickTime = 0;
 
-static char screenshots[ 1024 ][ MAX_QPATH ];
-static int current_screen = 0, maxscreens = 0;
-
 void Item_RunScript( itemDef_t *item, const char *s );
 void Item_SetupKeywordHash( void );
 void Menu_SetupKeywordHash( void );
@@ -1890,82 +1887,6 @@ void Script_playLooped( itemDef_t *item, char **args )
   }
 }
 
-void Script_ScreenChange( itemDef_t *item, char **args )
-{
-  static int saved_index = 0;
-  const char *string;
-  int i, modifier;
-  char buffer[ 8192 ];
-
-  // Reload the screenshots list
-  maxscreens = DC->getFileList( "screenshots", ".jpg", buffer, sizeof( buffer ));
-  if ( maxscreens > 1024 )
-    maxscreens = 1024;
-  string = buffer;
-  for (i = 0; i < maxscreens; i++)
-  {
-    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
-    string += strlen( string ) + 1;
-  }
-
-  // Also load TGAs
-  maxscreens += DC->getFileList( "screenshots", ".tga", buffer, sizeof( buffer ));
-  if ( maxscreens > 1024 )
-    maxscreens = 1024;
-  DC->setCVar( "ui_screens", va( "%i", maxscreens ) );
-  string = buffer;
-  for (; i < maxscreens; i++)
-  {
-    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
-    string += strlen( string ) + 1;
-  }
-
-  // Sort the list
-  qsort(screenshots, maxscreens, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
-
-  // Get the modifier & find the screen index
-  if( String_Parse( args, &string ) )
-  {
-    if( string[0] == '+' )
-    {
-      if( Int_Parse( args, &modifier ) )
-        current_screen += modifier;
-    }
-    else if( string[0] == '-' )
-    {
-      if( Int_Parse( args, &modifier ) )
-        current_screen -= modifier;
-    }
-    else if( string[0] == '=' )
-    {
-      if( Int_Parse( args, &modifier ) )
-        current_screen = modifier;
-    }
-    // Hack for saving the index when switching from multiview to detail view
-    else if( string[0] == '?' )
-      saved_index = current_screen;
-    else if( string[0] == '!' )
-      current_screen = saved_index;
-  }
-
-  // We don't want it to go below 0 or above the max number of screens
-  if( current_screen >= maxscreens )
-  {
-    current_screen -= modifier;
-    if( current_screen >= maxscreens )
-      current_screen = maxscreens - 1;
-  }
-  else if( current_screen < 0 )
-  {
-    current_screen += modifier;
-    if( current_screen < 0 )
-      current_screen = 0;
-  }
-
-  DC->setCVar( "ui_screen", va( "%i", current_screen ) );
-  DC->setCVar( "ui_screenname", screenshots[ current_screen ] );
-}
-
 static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
                                   int *length, qhandle_t *h, int *width )
 {
@@ -2628,7 +2549,6 @@ commandDef_t commandList[] =
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
     {"orbit", &Script_Orbit},                      // group/name
-    {"screenchange", &Script_ScreenChange}        // modifier
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -5734,19 +5654,6 @@ void AdjustFrom640( float *x, float *y, float *w, float *h )
   *h *= DC->yscale;
 }
 
-void Item_Screen_Paint( itemDef_t *item )
-{
-  int shotNumber;
-
-  shotNumber = current_screen + item->modifier;
-
-  if ( shotNumber < 0 || shotNumber >= maxscreens )
-    return;
-
-  DC->drawHandlePic( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h,
-      	             DC->registerShaderNoMip( va( "screenshots/%s", screenshots[ shotNumber ] ) ) );
-}
-
 void Item_Model_Paint( itemDef_t *item )
 {
   float x, y, w, h;
@@ -6504,10 +6411,6 @@ void Item_Paint( itemDef_t *item )
 
     case ITEM_TYPE_SLIDER:
       Item_Slider_Paint( item );
-      break;
-
-    case ITEM_TYPE_SCREEN:
-      Item_Screen_Paint( item );
       break;
 
     default:
@@ -7544,14 +7447,6 @@ qboolean ItemParse_special( itemDef_t *item, int handle )
   return qtrue;
 }
 
-qboolean ItemParse_modifier( itemDef_t *item, int handle )
-{
-  if( !PC_Int_Parse( handle, &item->modifier ) )
-    return qfalse;
-
-  return qtrue;
-}
-
 qboolean ItemParse_cvarTest( itemDef_t *item, int handle )
 {
   if( !PC_String_Parse( handle, &item->cvarTest ) )
@@ -7901,7 +7796,6 @@ keywordHash_t itemParseKeywords[] = {
   {"onTextEntry", ItemParse_onTextEntry, NULL},
   {"action", ItemParse_action, NULL},
   {"special", ItemParse_special, NULL},
-  {"modifier", ItemParse_modifier, NULL},
   {"cvar", ItemParse_cvar, NULL},
   {"maxChars", ItemParse_maxChars, NULL},
   {"maxPaintChars", ItemParse_maxPaintChars, NULL},

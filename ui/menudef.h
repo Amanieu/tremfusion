@@ -15,7 +15,6 @@
 #define ITEM_TYPE_YESNO                   11    // yes no cvar setting
 #define ITEM_TYPE_MULTI                   12    // multiple list setting, enumerated
 #define ITEM_TYPE_BIND                    13    // multiple list setting, enumerated
-#define ITEM_TYPE_SCREEN                  14    // shows a screen
 
 #define ALIGN_LEFT                        0     // left alignment
 #define ALIGN_CENTER                      1     // center alignment
@@ -189,5 +188,6 @@
 #define CG_PLAYER_ATTACK_FEEDBACK         82
 
 #define UI_CREDITS                        83
+#define UI_SCREEN                         84
 
 #endif
