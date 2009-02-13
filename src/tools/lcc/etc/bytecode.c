@@ -12,8 +12,7 @@
 
 char *suffixes[] = { ".c", ".i", ".asm", ".o", ".out", 0 };
 char inputs[256] = "";
-char *cpp[] = { "q3cpp" BINEXT,
-	"-D__STDC__=1", "-D__STRICT_ANSI__", "-D__signed__=signed", "-DQ3_VM",
+char *cpp[] = { "cpp", "-undef", "-DQ3_VM",
 	"$1", "$2", "$3", 0 };
 char *include[] = { 0 };
 char *com[] = { "q3rcc" BINEXT, "-target=bytecode", "$1", "$2", "$3", 0 };
@@ -26,7 +25,7 @@ extern char *concat(char *, char *);
 ===============
 UpdatePaths
 
-Updates the paths to q3cpp and q3rcc based on
+Updates the path to q3rcc based on
 the directory that contains q3lcc
 ===============
 */
@@ -42,14 +41,12 @@ void UpdatePaths( const char *lccBinary )
 	{
 		*( p + 1 ) = '\0';
 
-		cpp[ 0 ] = concat( basepath, "q3cpp" BINEXT );
 		com[ 0 ] = concat( basepath, "q3rcc" BINEXT );
 	}
 }
 
 int option(char *arg) {
 	if (strncmp(arg, "-lccdir=", 8) == 0) {
-		cpp[0] = concat(&arg[8], "/q3cpp" BINEXT);
 		include[0] = concat("-I", concat(&arg[8], "/include"));
 		com[0] = concat(&arg[8], "/q3rcc" BINEXT);
 	} else if (strcmp(arg, "-p") == 0 || strcmp(arg, "-pg") == 0) {
