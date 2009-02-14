@@ -3068,7 +3068,7 @@ commands_t cmds[ ] = {
   { "say_team", CMD_MESSAGE|CMD_INTERMISSION, Cmd_Say_f },
   { "vsay", CMD_MESSAGE|CMD_INTERMISSION, Cmd_VSay_f },
   { "vsay_team", CMD_MESSAGE|CMD_INTERMISSION, Cmd_VSay_f },
-  { "vsay_local", CMD_MESSAGE|CMD_INTERMISSION },
+  { "vsay_local", CMD_MESSAGE|CMD_INTERMISSION, Cmd_VSay_f },
   { "m", CMD_MESSAGE|CMD_INTERMISSION, Cmd_PrivateMessage_f },
   { "mt", CMD_MESSAGE|CMD_INTERMISSION, Cmd_PrivateMessage_f },
   { "a", CMD_MESSAGE|CMD_INTERMISSION, Cmd_AdminMessage_f },
