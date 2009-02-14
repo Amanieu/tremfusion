@@ -423,6 +423,7 @@ typedef void (*completionFunc_t)( char *args, int argNum );
 
 void	Cmd_CommandCompletion( void(*callback)(const char *s) );
 void	Cmd_AliasCompletion( void(*callback)(const char *s) );
+void	Cmd_DelayCompletion( void(*callback)(const char *s) );
 // callback with each valid string
 void Cmd_SetCommandCompletionFunc( const char *command,
 	completionFunc_t complete );
@@ -737,6 +738,7 @@ void Field_CompleteKeyname( void );
 void Field_CompleteFilename( const char *dir,
 		const char *ext, qboolean stripExt );
 void Field_CompleteAlias( void );
+void Field_CompleteDelay( void );
 void Field_CompleteCommand( char *cmd,
 		qboolean doCommands, qboolean doCvars );
 

@@ -3112,6 +3112,22 @@ void Field_CompleteAlias( void )
 
 /*
 ===============
+Field_CompleteDelay
+===============
+*/
+void Field_CompleteDelay( void )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	Cmd_AliasCompletion( FindMatches );
+
+	if( !Field_Complete( ) )
+		Cmd_AliasCompletion( PrintMatches );
+}
+
+/*
+===============
 Field_CompleteCommand
 ===============
 */
