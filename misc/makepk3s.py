@@ -80,6 +80,7 @@ if options.makedata:
     add_dir_tree(os.path.join(options.repository, "models/*"), "models/")
     add_dir_tree(os.path.join(options.repository, "sound/*"), "sound/")
     add_dir_tree(os.path.join(options.repository, "ui/*"), "ui/")
+    add_dir_tree(os.path.join(options.repository, "voice/*"), "voice/")
 
     pk3.close()
     if symlink_dir:
