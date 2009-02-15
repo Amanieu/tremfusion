@@ -210,9 +210,9 @@ void CON_Init( void )
 	// Make stdin reads non-blocking
 	fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | O_NONBLOCK );
 
-	if (isatty(STDIN_FILENO)!=1)
+	if (isatty(STDIN_FILENO)!=1 || isatty(STDOUT_FILENO)!=1 || isatty(STDERR_FILENO)!=1)
 	{
-		Com_DPrintf( "stdin is not a tty, tty console mode disabled\n");
+		Com_DPrintf( "stdin/stdout/stderr are not tty, tty console mode disabled\n");
 		ttycon_on = qfalse;
 		return;
 	}
@@ -389,7 +389,7 @@ void CON_Print( const char *msg )
 {
 	CON_Hide( );
 
-	if( com_ansiColor && com_ansiColor->integer )
+	if( ttycon_on && com_ansiColor && com_ansiColor->integer )
 		Sys_AnsiColorPrint( msg );
 	else
 		fputs( msg, stderr );

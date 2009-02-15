@@ -44,6 +44,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
+static qboolean signalcaught = qfalse;
+#ifdef USE_CURSES
+static qboolean nocurses = qfalse;
+#endif
 
 /*
 =================
@@ -290,7 +294,7 @@ void Sys_Error( const char *error, ... )
 
 	Sys_ErrorDialog( string );
 
-	Sys_Exit( 1 );
+	Sys_Exit( !signalcaught );
 }
 
 /*
@@ -445,6 +449,8 @@ Sys_ParseArgs
 */
 void Sys_ParseArgs( int argc, char **argv )
 {
+	int i;
+
 	if( argc == 2 )
 	{
 		if( !strcmp( argv[1], "--version" ) ||
@@ -459,6 +465,17 @@ void Sys_ParseArgs( int argc, char **argv )
 			Sys_Exit(0);
 		}
 	}
+
+#ifdef USE_CURSES
+	for (i = 1; i < argc; i++)
+	{
+		if( !strcmp( argv[i], "+nocurses" ) )
+		{
+			nocurses = qtrue;
+			break;
+		}
+	}
+#endif
 }
 
 #ifndef DEFAULT_BASEDIR
@@ -476,8 +493,6 @@ Sys_SigHandler
 */
 void Sys_SigHandler( int signal )
 {
-	static qboolean signalcaught = qfalse;
-
 	if( signalcaught )
 	{
 		fprintf( stderr, "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n",
@@ -486,11 +501,7 @@ void Sys_SigHandler( int signal )
 	else
 	{
 		signalcaught = qtrue;
-		fprintf( stderr, "Received signal %d, exiting...\n", signal );
-#ifndef DEDICATED
-		CL_Shutdown();
-#endif
-		SV_Shutdown( "Signal caught" );
+		Com_Error( ERR_FATAL, "Caught signal %d", signal );
 	}
 
 	Sys_Exit( 0 ); // Exit with 0 to avoid recursive signals
@@ -545,7 +556,15 @@ int main( int argc, char **argv )
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
+#ifdef USE_CURSES
+	void CON_Init_tty(void);
+	if (nocurses)
+		CON_Init_tty( );
+	else
+		CON_Init( );
+#else
 	CON_Init( );
+#endif
 	Com_Init( commandLine );
 	NET_Init( );
 

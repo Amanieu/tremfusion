@@ -293,10 +293,8 @@ void CON_Init(void)
 	signal(SIGTTOU, SIG_IGN);
 #endif
 
-	// check if STDIN/STDOUT/STDERR are a TTY
-	if ( isatty(STDIN_FILENO) != 1 || isatty(STDOUT_FILENO) != 1 || isatty(STDERR_FILENO) != 1 )
-	{
-		CON_Print_tty("console is not a TTY, will not use curses mode. (falling back to TTY mode)\n");
+	// Make sure we're on a tty
+	if (isatty(STDIN_FILENO) != 1 || isatty(STDOUT_FILENO) != 1 || isatty(STDERR_FILENO) != 1) {
 		CON_Init_tty();
 		return;
 	}
