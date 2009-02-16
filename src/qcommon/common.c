@@ -186,7 +186,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 			time( &aclock );
 			newtime = localtime( &aclock );
 
-			logfile = FS_FOpenFileWrite( "qconsole.log" );
+			logfile = FS_SV_FOpenFileWrite( "qconsole.log" );
 			
 			if(logfile)
 			{
