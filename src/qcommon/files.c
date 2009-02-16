@@ -2360,7 +2360,7 @@ void FS_Path_f( void ) {
 	Com_Printf ("fs_homepath: %s\n", fs_homepath->string);
 	Com_Printf ("fs_extrapath: %s\n", fs_extrapath->string);
 	Com_Printf ("fs_basepath: %s\n", fs_basepath->string);
-	Com_Printf ("fs_game: %s\n", fs_gamedirvar->string);
+	Com_Printf ("fs_game: %s\n", fs_gamedir);
 	Com_Printf ("fs_basegame: %s\n", fs_basegame->string);
 
 	Com_Printf ("Current search path:\n");
@@ -2805,7 +2805,7 @@ static void FS_Startup( const char *gameName )
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
-	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE|CVAR_VM_CREATED );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
