@@ -259,7 +259,6 @@ void CON_Clear_f(void)
 CON_Shutdown
 
 Never exit without calling this, or your terminal will be left in a pretty bad state
-This will also spit out the whole log to the terminal, so that it can be seen even after we close
 ==================
 */
 void CON_Shutdown(void)
@@ -270,9 +269,6 @@ void CON_Shutdown(void)
 	}
 
 	endwin();
-
-	// Dump console to stderr
-	CON_Print_tty(logbuf);
 }
 
 /*
