@@ -151,64 +151,64 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ALIEN_VALUE_MODIFIER        1.2f
 #define AVM(h)                      ((int)((float)h*ALIEN_VALUE_MODIFIER))
 
-#define ABUILDER_SPEED              0.7f
+#define ABUILDER_SPEED              0.9f
 #define ABUILDER_VALUE              AVM(200)
 #define ABUILDER_HEALTH             AHM(50)
-#define ABUILDER_REGEN              2
+#define ABUILDER_REGEN              (0.04f * ABUILDER_HEALTH)
 #define ABUILDER_COST               0
 
-#define ABUILDER_UPG_SPEED          0.7f
+#define ABUILDER_UPG_SPEED          0.9f
 #define ABUILDER_UPG_VALUE          AVM(250)
 #define ABUILDER_UPG_HEALTH         AHM(75)
-#define ABUILDER_UPG_REGEN          3
+#define ABUILDER_UPG_REGEN          (0.04f * ABUILDER_UPG_HEALTH)
 #define ABUILDER_UPG_COST           0
 
 #define LEVEL0_SPEED                1.4f
 #define LEVEL0_VALUE                AVM(150)
-#define LEVEL0_HEALTH               AHM(20)
-#define LEVEL0_REGEN                1
+#define LEVEL0_HEALTH               AHM(25)
+#define LEVEL0_REGEN                (0.05f * LEVEL0_HEALTH)
 #define LEVEL0_COST                 0
 
 #define LEVEL1_SPEED                1.25f
 #define LEVEL1_VALUE                AVM(225)
 #define LEVEL1_HEALTH               AHM(60)
-#define LEVEL1_REGEN                2
+#define LEVEL1_REGEN                (0.03f * LEVEL1_HEALTH)
 #define LEVEL1_COST                 1
 
 #define LEVEL1_UPG_SPEED            1.25f
 #define LEVEL1_UPG_VALUE            AVM(275)
 #define LEVEL1_UPG_HEALTH           AHM(80)
-#define LEVEL1_UPG_REGEN            3
+#define LEVEL1_UPG_REGEN            (0.03f * LEVEL1_UPG_HEALTH)
 #define LEVEL1_UPG_COST             1
 
 #define LEVEL2_SPEED                1.2f
 #define LEVEL2_VALUE                AVM(350)
 #define LEVEL2_HEALTH               AHM(150)
-#define LEVEL2_REGEN                4
+#define LEVEL2_REGEN                (0.03f * LEVEL2_HEALTH)
 #define LEVEL2_COST                 1
 
 #define LEVEL2_UPG_SPEED            1.2f
 #define LEVEL2_UPG_VALUE            AVM(450)
 #define LEVEL2_UPG_HEALTH           AHM(175)
-#define LEVEL2_UPG_REGEN            5
+#define LEVEL2_UPG_REGEN            (0.03f * LEVEL2_UPG_HEALTH)
 #define LEVEL2_UPG_COST             1
 
 #define LEVEL3_SPEED                1.1f
 #define LEVEL3_VALUE                AVM(500)
 #define LEVEL3_HEALTH               AHM(200)
-#define LEVEL3_REGEN                6
+#define LEVEL3_REGEN                (0.03f * LEVEL3_HEALTH)
 #define LEVEL3_COST                 1
 
 #define LEVEL3_UPG_SPEED            1.1f
 #define LEVEL3_UPG_VALUE            AVM(600)
 #define LEVEL3_UPG_HEALTH           AHM(250)
-#define LEVEL3_UPG_REGEN            7
+#define LEVEL3_UPG_REGEN            (0.03f * LEVEL3_UPG_HEALTH)
 #define LEVEL3_UPG_COST             1
 
 #define LEVEL4_SPEED                1.2f
 #define LEVEL4_VALUE                AVM(800)
 #define LEVEL4_HEALTH               AHM(350)
-#define LEVEL4_REGEN                9
+#define LEVEL4_REGEN                (0.025f * LEVEL4_HEALTH)
 #define LEVEL4_COST                 2
 
 
@@ -229,7 +229,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define ALIEN_BHLTH_MODIFIER        1.0f
 #define ABHM(h)                     ((int)((float)h*ALIEN_BHLTH_MODIFIER))
-#define ALIEN_BVALUE_MODIFIER        0.0f
+#define ALIEN_BVALUE_MODIFIER       30.0f
 #define ABVM(h)                      ((int)((float)h*ALIEN_BVALUE_MODIFIER))
 
 #define CREEP_BASESIZE              700
@@ -355,8 +355,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define ALIEN_SPAWN_REPEAT_TIME     10000
 
-#define ALIEN_REGEN_DAMAGE_TIME     1500 //msec since damage that regen starts again
-#define ALIEN_REGEN_NOCREEP_TIME    3000 //msec between regen off creep
+#define ALIEN_REGEN_DAMAGE_TIME     2000 //msec since damage that regen starts again
+#define ALIEN_REGEN_NOCREEP_MOD     (1.0f/3.0f) //regen off creep
 
 #define ALIEN_MAX_FRAGS             9
 #define ALIEN_MAX_CREDITS           (ALIEN_MAX_FRAGS*ALIEN_CREDITS_PER_FRAG)
@@ -437,6 +437,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MDRIVER_K_SCALE             1.0f
 #define MDRIVER_RELOAD              2000
 #define MDRIVER_MAX_HITS            16
+#define MDRIVER_WIDTH               5
 
 #define CHAINGUN_PRICE              400
 #define CHAINGUN_BULLETS            300
@@ -546,7 +547,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define HUMAN_BHLTH_MODIFIER        1.0f
 #define HBHM(h)                     ((int)((float)h*HUMAN_BHLTH_MODIFIER))
-#define HUMAN_BVALUE_MODIFIER       0.0f
+#define HUMAN_BVALUE_MODIFIER       80.0f
 #define HBVM(h)                     ((int)((float)h*(float)HUMAN_BVALUE_MODIFIER)) // remember these are measured in credits not frags (c.f. ALIEN_CREDITS_PER_FRAG)
 
 #define REACTOR_BASESIZE            1000
@@ -660,6 +661,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define HUMAN_MAX_CREDITS           2000
 #define HUMAN_TK_SUICIDE_PENALTY    150
+
+#define HUMAN_BUILDER_SCOREINC      AVM( LEVEL0_VALUE );
+#define ALIEN_BUILDER_SCOREINC      HVM( ALIEN_CREDITS_PER_FRAG );
 
 /*
  * Misc

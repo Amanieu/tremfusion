@@ -79,20 +79,14 @@ typedef unsigned  long uint32_t;
 #define isxupper(c) (isdigit(c) || (c >= 'A' && c <= 'F')) 
 
 // Misc functions
+#define assert( expr )\
+    if( !( expr ) )\
+      Com_Error( ERR_DROP, "%s:%d: Assertion `%s' failed",\
+                 __FILE__, __LINE__, #expr )
 typedef int cmp_t( const void *, const void * );
 void        qsort( void *a, size_t n, size_t es, cmp_t *cmp );
 void        srand( unsigned seed );
 int         rand( void );
-// FIXME: NDEBUG isn't defined for compiling the QVMs
-#ifndef NDEBUG
-// these two are so that __LINE__ is expanded and *then* strung
-#define str2(x) #x
-#define str(x) str2(x)
-#define assert( x ) if( !( x ) ) Com_Error( ERR_DROP, \
-    __FILE__ ":" str(__LINE__) ": Assertion `" #x "' failed" );
-#else
-#define assert( x ) // nothing
-#endif
 
 // String functions
 size_t  strlen( const char *string );

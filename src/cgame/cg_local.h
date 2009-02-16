@@ -1686,6 +1686,7 @@ void        CG_Corpse( centity_t *cent );
 void        CG_ResetPlayerEntity( centity_t *cent );
 void        CG_NewClientInfo( int clientNum );
 void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
+void        CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
@@ -1740,6 +1741,7 @@ void        CG_PainEvent( centity_t *cent, int health );
 void        CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
                 vec3_t origin, vec3_t dir, int entityNum, int charge );
 void        CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci );
+
 
 
 //
