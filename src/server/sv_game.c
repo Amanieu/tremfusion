@@ -24,6 +24,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "server.h"
 
+typedef enum {
+	SYSCALL_UNKNOWN,
+	SYSCALL_OLD,
+	SYSCALL_NEW
+} syscallVersion_t;
+syscallVersion_t syscallVersion;
+
 void SV_GameError( const char *string ) {
 	Com_Error( ERR_DROP, "%s", string );
 }
@@ -300,6 +307,13 @@ The module is making a system call
 ====================
 */
 intptr_t SV_GameSystemCalls( intptr_t *args ) {
+	if ( syscallVersion == SYSCALL_OLD ) {
+		if ( args[0] >= 36 && args[0] <= 38 )
+			args[0] -= 2;
+		else if ( args[0] >= 41 && args[0] <= 46 )
+			args[0] -= 4;
+	}
+
 	switch( args[0] ) {
 	case G_PRINT:
 		Com_Printf( "%s", (const char*)VMA(1) );
@@ -423,6 +437,11 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		}
 
 	case G_REAL_TIME:
+		if ( syscallVersion == SYSCALL_UNKNOWN && args[2] == 1024 ) {
+			syscallVersion = SYSCALL_OLD;
+			return SV_GameSystemCalls( args );
+		} else
+			syscallVersion = SYSCALL_NEW;
 		return Com_RealTime( VMA(1) );
 	case G_SNAPVECTOR:
 		Sys_SnapVector( VMA(1) );
@@ -532,6 +551,9 @@ static void SV_InitGameVM( qboolean restart ) {
 
 	// start the entity parsing at the beginning
 	sv.entityParsePoint = CM_EntityString();
+
+	// we don't know what syscalls this vm is using
+	syscallVersion = SYSCALL_UNKNOWN;
 
 	// clear all gentity pointers that might still be set from
 	// a previous level
