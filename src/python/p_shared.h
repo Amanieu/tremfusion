@@ -20,42 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-
-#include <Python.h>
-
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
-
-qboolean p_initilized;
-
-//
-// p_cvar.c
-//
-PyObject *P_ArgTuple(void);
-
-//
-// p_cvar.c
-//
-void P_Cvar_Init(void);
-
-//
-// p_events.c
-//
-void P_Event_Init(void);
-
-//
-// p_configstrings.c
-//
-void P_Configstring_Init(void);
-
-//
-// p_playerstate.c
-//
-void P_Init_PlayerState(PyObject*);
-#define ADD_MODULE_CONSTANT(m, x) PyModule_AddIntConstant(m, #x, x)
-
-//
-// p_command.c
-//
-void P_Command_Init( void );
-void P_Command_Shutdown( void );
+void P_Event_Newmap(const char *map);
+void P_Event_Maprestart(void);
+void P_Event_Print(const char *text);

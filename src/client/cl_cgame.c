@@ -337,6 +337,9 @@ rescan:
 		// the restart to the cgame
 		Con_ClearNotify();
 		Com_Memset( cl.cmds, 0, sizeof( cl.cmds ) );
+#ifdef USE_PYTHON
+		P_Event_Maprestart();
+#endif
 		return qtrue;
 	}
 
@@ -806,6 +809,9 @@ void CL_InitCGame( void ) {
 	// clear anything that got printed
 	Con_ClearNotify ();
 	CL_WriteClientLog( va("`~=-----------------=~`\n MAP: %s \n`~=-----------------=~`\n", mapname ) );
+#ifdef USE_PYTHON
+	P_Event_Newmap(mapname);
+#endif
 }
 
 

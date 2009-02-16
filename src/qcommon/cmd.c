@@ -1622,7 +1622,11 @@ void	Cmd_ExecuteString( const char *text ) {
 	if ( com_cl_running && com_cl_running->integer && UI_GameCommand() ) {
 		return;
 	}
-
+#ifdef USE_PYTHON
+	if ( P_Call_Command() ) {
+		return;
+	}
+#endif
 	// send it as a server command if we are connected
 	// this will usually result in a chat message
 	CL_ForwardCommandToServer ( cmd.cmd );

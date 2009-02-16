@@ -2,29 +2,26 @@
 ===========================================================================
 Copyright (C) 2008 John Black
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
 #include "p_local.h"
 
-#define P_OUTPUT_LENGTH (10000 - 16)
-
-static char commandbuf[ 32000 ];
 static PyObject *tremfusion_module;
 
 char *Find_File( const char *filename )
@@ -79,33 +76,10 @@ PyObject* P_Print(PyObject* self, PyObject* pArgs)
 
         Py_RETURN_NONE;
 }
-void flush( char *outputbuf )
-{
-        Q_strcat(commandbuf, sizeof(commandbuf), outputbuf );
-}
-
-PyObject* command(PyObject* self, PyObject* pArgs)
-{
-        char *command;
-        char output[P_OUTPUT_LENGTH];
-
-        if (!PyArg_ParseTuple(pArgs, "s", &command))
-                return NULL;
-        commandbuf[ 0 ] = '\0';
-
-        /* Redirect output to return to python */
-        Com_BeginRedirect(output, P_OUTPUT_LENGTH, flush);
-
-        Cbuf_ExecuteText( EXEC_NOW, command);
-        Com_EndRedirect();
-        Com_Printf("%s", commandbuf);
-        return Py_BuildValue("s", commandbuf);
-}
 
 static PyMethodDef tremfusion_methods[] =
 {
  {"p", P_Print, METH_VARARGS, "Prints using Com_Printf"},
- {"command", command, METH_VARARGS,  "call command"},
  {NULL}
 };
 
@@ -120,6 +94,19 @@ char *stdout_catcher = "import tremfusion\n"
 "sys.stdout = StdoutCatcher()\n"
 "sys.stderr = StderrCatcher()\n";
 
+PyObject *P_ArgTuple(void)
+{
+        PyObject *args;
+        int i;
+        args = PyTuple_New(Cmd_Argc() - 1);
+        for (i = 0; i < Cmd_Argc() - 1; i++)
+        {
+                PyTuple_SET_ITEM(args, i,
+                                PyString_FromString(Cmd_Argv( i + 1 )));
+        }
+        return args;
+}
+
 void Cmd_CompletePyName( char *args, int argNum ) {
         if( argNum == 2 ) {
                 Field_CompleteFilename( "python", "py", qfalse );
@@ -128,7 +115,6 @@ void Cmd_CompletePyName( char *args, int argNum ) {
 
 void P_script_f( void )
 {
-        int i;
         FILE *fp;
         char *filepath;
         PyObject *args;
@@ -140,13 +126,8 @@ void P_script_f( void )
                            Cmd_Argv(1));
                 return;
         }
-        args = PyList_New(Cmd_Argc() - 1);
-
-        for (i = 0; i < Cmd_Argc() - 1; i++)
-        {
-                PyList_SET_ITEM(args, i,
-                                PyString_FromString(Cmd_Argv( i + 1 )));
-        }
+        args = P_ArgTuple();
+        
         if(PyObject_SetAttrString(tremfusion_module, "args", args))
                 PyErr_Print();
 
@@ -158,8 +139,10 @@ void P_script_f( void )
 void P_Init(void)
 {
         Com_Printf("----- P_Init -----\n");
-        // Initialize python
+        /* Initialize python */
         Py_Initialize();
+        /* Make python threads work at all */
+        PyEval_InitThreads( );
 
         // Create a module for tremfusion stuff
         tremfusion_module = Py_InitModule("tremfusion", tremfusion_methods);
@@ -171,15 +154,25 @@ void P_Init(void)
         PyRun_SimpleString("print \"Python version: \" + "
                            "sys.version.replace(\"\\n\", \"\\nBuilt with: \")");
 
-        P_CvarModuleInit();
+        P_Cvar_Init();
+        P_Event_Init();
+        P_Configstring_Init();
+        P_Init_PlayerState(tremfusion_module);
+        P_Command_Init();
+
         Cmd_AddCommand("script", P_script_f);
         Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);
+        
+        p_initilized = qtrue;
+        
         Com_Printf("----- finished P_Init -----\n");
 }
 
 void P_Shutdown(void)
 {
         Com_Printf("Shutdown python interpreter\n");
+        P_Command_Shutdown();
+        p_initilized = qfalse;
         Py_Finalize();
         Com_Printf("Shutdown of python interpreter complete\n");
 }

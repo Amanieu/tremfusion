@@ -169,7 +169,9 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 #ifndef DEDICATED
 	CL_ConsolePrint( msg );
 #endif
-
+#ifdef USE_PYTHON
+	P_Event_Print( msg );
+#endif
 	// echo to dedicated console and early console
 	Sys_Print( msg );
 
@@ -2872,6 +2874,9 @@ void Com_Frame( void ) {
 		c_patch_traces = 0;
 		c_pointcontents = 0;
 	}
+#if USE_PYTHON
+	PyRun_SimpleString( "time.sleep(0.001)\n" );
+#endif
 
 	// old net chan encryption key
 	key = lastTime * 0x87243987;

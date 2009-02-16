@@ -1596,7 +1596,11 @@ endif
 ifeq ($(USE_PYTHON),1)
   Q3OBJ += \
     $(B)/client/p_main.o \
-    $(B)/client/p_cvar.o
+    $(B)/client/p_cvar.o \
+    $(B)/client/p_configstrings.o \
+    $(B)/client/p_playerstate.o \
+    $(B)/client/p_events.o \
+    $(B)/client/p_command.o
 endif
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
@@ -1747,7 +1751,11 @@ endif
 ifeq ($(USE_PYTHON),1)
   Q3DOBJ += \
     $(B)/ded/p_main.o \
-    $(B)/ded/p_cvar.o
+    $(B)/ded/p_cvar.o \
+    $(B)/ded/p_configstrings.o \
+    $(B)/ded/p_playerstate.o \
+    $(B)/ded/p_events.o \
+    $(B)/ded/p_command.o
 endif
 
 $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
