@@ -44,14 +44,14 @@ static PyObject *draw_string(PyObject *self, PyObject *args, PyObject *kwargs) {
                                  "forceColour", "noColourEscape", NULL};
         
         /* Check if cache is overflowing and if not get a new drawstring struc*/
-        if( string_cache_size > DRAWING_CACHE_SIZE)
+        if(string_cache_size > DRAWING_CACHE_SIZE)
                 return NULL; //Raise ERROR
         str = &string_cache[string_cache_size];
         string_cache_size++;
         /* Default values */
         str->size = 8;
         colour = Py_None;
-        alpha = -1.0;
+        alpha = 1.0;
         forceColour = Py_False;
         noColourEscape = Py_False;
         /* Parse tuples and keyward args */
@@ -66,10 +66,33 @@ static PyObject *draw_string(PyObject *self, PyObject *args, PyObject *kwargs) {
         str->colour[0] = 1.0;
         str->colour[1] = 1.0;
         str->colour[2] = 1.0;
-        if(alpha == -1.0)
-                str->colour[3] = 1.0;
-        else 
-                str->colour[3] = alpha;
+        if(colour != Py_None) {
+                PyObject *fast;
+                int i;
+                fast = PySequence_Fast(colour, "colour arg must be sequence");
+                if(!fast) return NULL;
+                if(PySequence_Fast_GET_SIZE(fast) != 3) {
+                        PyErr_SetString(PyExc_TypeError, "colour sequence must "
+                                        "have a length of 3");
+                        Py_DECREF(fast);
+                        return NULL;
+                }
+                for(i=0; i<3; i++) {
+                        PyObject *o;
+                        o = PySequence_Fast_GET_ITEM(fast, i);
+                        if(!PyFloat_Check(o) || PyFloat_AS_DOUBLE(o) < 0.0 || 
+                                        PyFloat_AS_DOUBLE(o) > 1.0) {
+                                PyErr_SetString(PyExc_TypeError, "colour values"
+                                                "must be a float between 0.0"
+                                                "and 1.0 (inclusive)");
+                                Py_DECREF(fast);
+                                return NULL;
+                        }
+                        str->colour[i] = PyFloat_AS_DOUBLE(o);
+                }
+                Py_DECREF(fast);
+        }
+        str->colour[3] = alpha;
         str->forceColour = PyObject_IsTrue(forceColour);
         str->noColourEscape = PyObject_IsTrue(noColourEscape);
         
@@ -90,7 +113,7 @@ void P_Draw_Frame(void) {
         drawstring *str;
         
         if(last_update_time == -1 || 
-           (Sys_Milliseconds() - last_update_time) > 1000 ) {
+           (Sys_Milliseconds() - last_update_time) > 100 ) {
                 string_cache_size = 0;
                 P_Event_Update_Draw();
                 last_update_time = Sys_Milliseconds();
