@@ -41,6 +41,8 @@ static void call_callbacks(const char *eventname,  PyObject *args)
   j = PyList_GET_SIZE(callback_list);
   for(i=0; i<j; i++) {
     callback = PyList_GET_ITEM(callback_list, i);
+    if(callback == Py_None)
+      continue; /* TODO: Go thru the list and remove these */
     if (!PyCallable_Check(callback)) {
       Com_Printf("Uncallable callback :x\n");
       goto error;
@@ -70,6 +72,11 @@ void P_Event_Newmap(const char *map)
 void P_Event_Maprestart(void)
 {
   call_callbacks("map_restart", Py_BuildValue("()"));
+}
+
+void P_Event_Update_Draw(void)
+{
+  call_callbacks("draw_update", Py_BuildValue("()"));
 }
 
 static qboolean calling_print_callbacks;
@@ -124,6 +131,7 @@ void P_Event_Init(void)
   PyDict_SetItemString(callback_dict, "new_map", PyList_New(0));
   PyDict_SetItemString(callback_dict, "map_restart", PyList_New(0));
   PyDict_SetItemString(callback_dict, "print", PyList_New(0));
+  PyDict_SetItemString(callback_dict, "draw_update", PyList_New(0));
 //#ifndef NDEBUG
 //  Cmd_AddCommand("testevent", P_test_event_f);
 //#endif

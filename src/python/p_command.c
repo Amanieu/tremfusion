@@ -101,5 +101,6 @@ void P_Command_Init( void )
 
 void P_Command_Shutdown( void )
 {
+        /* TODO: remove all the commands we added */
         Py_CLEAR(commands_dict);
 }

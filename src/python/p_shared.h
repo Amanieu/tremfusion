@@ -23,3 +23,5 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 void P_Event_Newmap(const char *map);
 void P_Event_Maprestart(void);
 void P_Event_Print(const char *text);
+void P_Event_Update_Draw(void);
+void P_Draw_Frame(void);

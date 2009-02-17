@@ -59,3 +59,8 @@ void P_Init_PlayerState(PyObject*);
 //
 void P_Command_Init( void );
 void P_Command_Shutdown( void );
+
+//
+// p_draw.c
+//
+void P_Draw_Init(void);

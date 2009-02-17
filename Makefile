@@ -1601,6 +1601,10 @@ ifeq ($(USE_PYTHON),1)
     $(B)/client/p_playerstate.o \
     $(B)/client/p_events.o \
     $(B)/client/p_command.o
+  ifneq ($(USE_TTY_CLIENT),1)
+    Q3OBJ += \
+      $(B)/client/p_draw.o
+  endif
 endif
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)

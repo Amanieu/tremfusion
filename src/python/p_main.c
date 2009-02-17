@@ -159,6 +159,9 @@ void P_Init(void)
         P_Configstring_Init();
         P_Init_PlayerState(tremfusion_module);
         P_Command_Init();
+#if !defined(DEDICATED) && !defined(USE_TTY_CLIENT)
+        P_Draw_Init();
+#endif
 
         Cmd_AddCommand("script", P_script_f);
         Cmd_SetCommandCompletionFunc("script", Cmd_CompletePyName);
