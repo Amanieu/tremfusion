@@ -131,7 +131,6 @@
     "[granger][[granger]\n"
     "[advgranger][[advgranger]\n"
     "[dretch][[dretch]\n"
-    "[advdretch][[advdretch]\n"
     "[basilisk][[basilisk]\n"
     "[advbasilisk][[advbasilisk]\n"
     "[marauder][[marauder]\n"
@@ -139,7 +138,6 @@
     "[dragoon][[dragoon]\n"
     "[advdragoon][[advdragoon]\n"
     "[tyrant][[tyrant]\n"
-    "[advtyrant][[advtyrant]\n"
   }
   "Emoticons: Humans"
   {
@@ -171,7 +169,6 @@
     "[armoury][[armoury]\n"
     "[defcomp][[defcomp]\n"
     "[medstat][[medstat]\n"
-    "[forcefield][[forcefield]\n"
   }
   "Emoticons: A Buildables"
   {
