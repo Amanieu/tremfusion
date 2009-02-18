@@ -2003,3 +2003,20 @@ void CG_Shutdown( void )
   // Reset cg_version
   trap_Cvar_Set( "cg_version", "" );
 }
+
+/*
+=================
+CG_SoundDuration
+
+Check the client version to make sure the syscall is availible
+=================
+*/
+int CG_SoundDuration( sfxHandle_t handle )
+{
+    char version[ MAX_CVAR_VALUE_STRING ];
+    trap_Cvar_VariableStringBuffer( "version", version, sizeof(version) );
+    if( !Q_stricmpn( version, "tremfusion ", 11 ) )
+        return trap_S_SoundDuration( handle );
+    else
+        return 3;
+}
