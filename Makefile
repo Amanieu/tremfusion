@@ -40,6 +40,13 @@ ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
 endif
 
+# SMP only works on Mac and Windows
+ifneq ($(PLATFORM),darwin)
+ifneq ($(PLATFORM),mingw32)
+  BUILD_CLIENT_SMP = 0
+endif
+endif
+
 #############################################################################
 #
 # If you require a different configuration from the defaults below, create a
