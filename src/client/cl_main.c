@@ -1735,6 +1735,11 @@ void CL_Rcon_f( void ) {
 	char	message[MAX_RCON_MESSAGE];
 	netadr_t	to;
 
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf ("Usage: rcon <command>\n");
+		return;
+	}
+
 	if ( !rcon_client_password->string ) {
 		Com_Printf ("You must set 'rconpassword' before\n"
 					"issuing an rcon command.\n");
