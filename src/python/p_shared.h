@@ -25,3 +25,5 @@ void P_Event_Maprestart(void);
 void P_Event_Print(const char *text);
 void P_Event_Update_Draw(void);
 void P_Draw_Frame(void);
+
+extern int p_promptactive;

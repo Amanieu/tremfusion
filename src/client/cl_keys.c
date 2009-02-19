@@ -740,12 +740,15 @@ void Message_Key( int key ) {
 					return;
 				}
 
+#ifdef USE_PYTHON
+			} else if (p_promptactive) {
+				P_Prompt(chatField.buffer);
+#endif
 			} else if (prompt.active) {
 
 				Cvar_SetLatched( "ui_sayBuffer", chatField.buffer );
 				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
 				Cbuf_ExecuteText( EXEC_NOW, buffer);
-
 			} else
 				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
 

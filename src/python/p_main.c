@@ -21,8 +21,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "p_local.h"
+#ifndef DEDICATED
+#include "../client/client.h"
+#endif
 
 static PyObject *tremfusion_module;
+#ifndef DEDICATED
+PyObject *promptcallback;
+int p_promptactive;
+#endif
 
 char *Find_File( const char *filename )
 {
@@ -77,9 +84,60 @@ PyObject* P_Print(PyObject* self, PyObject* pArgs)
         Py_RETURN_NONE;
 }
 
+#ifndef DEDICATED
+PyObject* set_prompt(PyObject* self, PyObject* pArgs)
+{
+        char* question = NULL;
+        if (!PyArg_ParseTuple(pArgs, "sO", &question, &promptcallback))
+                return NULL;
+        
+        if(!PyCallable_Check(promptcallback)) {
+                PyErr_SetString(PyExc_StandardError,
+                                "callback must be callable");
+                return NULL;
+        }
+        Py_INCREF(promptcallback);
+        
+        chat_playerNum = -1;
+        chat_team = qfalse;
+        chat_admins = qfalse;
+        chat_clans = qfalse;
+        prompt.active = qtrue;
+        p_promptactive = qtrue;
+
+        // copy the rest of the command line
+        Q_strncpyz(prompt.question, question, sizeof(prompt.question));
+
+        Field_Clear( &chatField );
+        chatField.widthInChars = 34 - strlen(prompt.question);
+
+        Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+
+        Py_RETURN_NONE;
+}
+
+void P_Prompt(char *answer)
+{
+        PyObject *args, *ret;
+        args = Py_BuildValue("(s)", answer);
+        ret = PyObject_Call(promptcallback, args, NULL);
+        if(!ret) {
+                Py_XDECREF(args);
+                Py_CLEAR(promptcallback);
+                PyErr_Print();
+                p_promptactive = qfalse;
+        }
+        Py_XDECREF(ret);
+        p_promptactive = qfalse;
+}
+#endif
+
 static PyMethodDef tremfusion_methods[] =
 {
  {"p", P_Print, METH_VARARGS, "Prints using Com_Printf"},
+#ifndef DEDICATED
+ {"prompt", set_prompt, METH_VARARGS, "Opens the chatbox, then calls the callback with the text in args"},
+#endif
  {NULL}
 };
 
@@ -149,7 +207,7 @@ void P_Init(void)
 
         PyRun_SimpleString(stdout_catcher);
 
-        PyRun_SimpleString("import os, sys, time"); // Import some basic modules
+        PyRun_SimpleString("import sys, time"); // Import some basic modules
         /* Make sys.version prettier and print it */
         PyRun_SimpleString("print \"Python version: \" + "
                            "sys.version.replace(\"\\n\", \"\\nBuilt with: \")");
