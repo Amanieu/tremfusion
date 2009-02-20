@@ -299,8 +299,8 @@ void CON_Init(void)
 	if (!curses_on) {
 		SCREEN *test = newterm(NULL, stdout, stdin);
 		if (!test) {
-			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
 			CON_Init_tty();
+			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
 			return;
 		}
 		endwin();
