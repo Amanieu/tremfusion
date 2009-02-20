@@ -437,7 +437,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MDRIVER_K_SCALE             1.0f
 #define MDRIVER_RELOAD              2000
 #define MDRIVER_MAX_HITS            16
-#define MDRIVER_WIDTH               5
 
 #define CHAINGUN_PRICE              400
 #define CHAINGUN_BULLETS            300
