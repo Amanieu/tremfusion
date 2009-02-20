@@ -119,6 +119,8 @@ PyObject* set_prompt(PyObject* self, PyObject* pArgs)
 void P_Prompt(char *answer)
 {
         PyObject *args, *ret;
+        if(!promptcallback)
+                return;
         args = Py_BuildValue("(s)", answer);
         ret = PyObject_Call(promptcallback, args, NULL);
         if(!ret) {
@@ -127,6 +129,7 @@ void P_Prompt(char *answer)
                 PyErr_Print();
                 p_promptactive = qfalse;
         }
+        Py_CLEAR(promptcallback);
         Py_XDECREF(ret);
         p_promptactive = qfalse;
 }

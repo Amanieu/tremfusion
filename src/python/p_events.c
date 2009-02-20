@@ -49,11 +49,11 @@ static void call_callbacks(const char *eventname,  PyObject *args)
     }
     res = PyObject_CallObject(callback, args);
     if(!res) {
-      /* TODO: Make our own exception type so that callbacks can
-       * remove themselves without printing a traceback */
       PyErr_Print();
       goto error;
     }
+    if(res != Py_None && !PyObject_IsTrue(res))
+      goto error;
     Py_XDECREF(res);
     continue;
     error:
