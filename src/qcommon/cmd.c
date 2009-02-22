@@ -465,11 +465,11 @@ void Cmd_Math_f( void ) {
     op = Cmd_Argv( 2 );
     if ( !strcmp( op, "++" ) )
     {
-      Cvar_SetValueLatched( v, ( atof( v ) + 1 ) );
+      Cvar_SetValueLatched( v, Cvar_VariableValue( v ) + 1 );
     }
     else if ( !strcmp( op, "--" ) )
     {
-      Cvar_SetValueLatched( v, ( atof( v ) - 1 ) );
+      Cvar_SetValueLatched( v, Cvar_VariableValue( v ) - 1 );
     }
     else
     {
