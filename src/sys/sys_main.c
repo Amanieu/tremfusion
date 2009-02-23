@@ -552,6 +552,8 @@ int main( int argc, char **argv )
 	// Concatenate the command line for passing to Com_Init
 	for( i = 1; i < argc; i++ )
 	{
+		if( !strcmp( argv[ i ], "+nocurses" ) )
+			continue;
 		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
