@@ -67,30 +67,14 @@ Sys_DefaultHomePath
 char *Sys_DefaultHomePath( char **path2 )
 {
 	TCHAR szPath[MAX_PATH];
-	FARPROC qSHGetFolderPath;
-	HMODULE shfolder = LoadLibrary("shfolder.dll");
 	
 	if( !*homePath )
 	{
-		if(shfolder == NULL)
-		{
-			Com_Printf("Unable to load SHFolder.dll\n");
-			return NULL;
-		}
-
-		qSHGetFolderPath = GetProcAddress(shfolder, "SHGetFolderPathA");
-		if(qSHGetFolderPath == NULL)
-		{
-			Com_Printf("Unable to find SHGetFolderPath in SHFolder.dll\n");
-			FreeLibrary(shfolder);
-			return NULL;
-		}
-
 #if USE_OLD_HOMEPATH
-		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_APPDATA,
+		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
 #else
-		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_PERSONAL,
+		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_PERSONAL,
 						NULL, 0, szPath ) ) )
 #endif
 		{
@@ -99,7 +83,6 @@ char *Sys_DefaultHomePath( char **path2 )
 #else
 			Com_Printf("Unable to find CSIDL_PERSONAL\n");
 #endif
-			FreeLibrary(shfolder);
 			return NULL;
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
@@ -110,11 +93,10 @@ char *Sys_DefaultHomePath( char **path2 )
 #endif
 
 #if USE_OLD_HOMEPATH
-		if( !SUCCEEDED( qSHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
+		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
-			Com_Printf("Unable to detect CSIDL_LOCAL_APPDATA\n");
-			FreeLibrary(shfolder);
+			Com_Printf("Unable to find CSIDL_LOCAL_APPDATA\n");
 			return NULL;
 		}
 		Q_strncpyz( homePathOld, szPath, sizeof( homePath ) );
@@ -123,7 +105,6 @@ char *Sys_DefaultHomePath( char **path2 )
 #else
 		*path2 = NULL;
 #endif
-		FreeLibrary(shfolder);
 	}
 
 	return homePath;
