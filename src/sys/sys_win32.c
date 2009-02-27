@@ -547,7 +547,7 @@ void Sys_Sleep( int msec )
 	if( msec == 0 )
 		return;
 
-#ifdef DEDICATED
+#if DEDICATED || BUILD_TTY_CLIENT
 	if( msec < 0 )
 		WaitForSingleObject( GetStdHandle( STD_INPUT_HANDLE ), INFINITE );
 	else
@@ -602,7 +602,7 @@ void Sys_ErrorDialog( const char *error )
 	}
 }
 
-#ifndef DEDICATED
+#if !DEDICATED && !BUILD_TTY_CLIENT
 static qboolean SDL_VIDEODRIVER_externallySet = qfalse;
 #endif
 
@@ -615,7 +615,7 @@ Windows specific GL implementation initialisation
 */
 void Sys_GLimpInit( void )
 {
-#ifndef DEDICATED
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	if( !SDL_VIDEODRIVER_externallySet )
 	{
 		// It's a little bit weird having in_mouse control the
@@ -645,7 +645,7 @@ Windows specific initialisation
 */
 void Sys_PlatformInit( void )
 {
-#ifndef DEDICATED
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	const char *SDL_VIDEODRIVER = getenv( "SDL_VIDEODRIVER" );
 
 	if( SDL_VIDEODRIVER )

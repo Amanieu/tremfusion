@@ -166,7 +166,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 		return;
 	}
 
-#ifndef DEDICATED
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	CL_ConsolePrint( msg );
 #endif
 
@@ -1509,7 +1509,7 @@ void Com_InitHunkMemory( void ) {
 	cv = Cvar_Get( "com_hunkMegs", DEF_COMHUNKMEGS_S, CVAR_LATCH | CVAR_ARCHIVE );
 
 	// if we are not dedicated min allocation is 56, otherwise min is 1
-	if (com_dedicated && com_dedicated->integer) {
+	if (BUILD_TTY_CLIENT || (com_dedicated && com_dedicated->integer)) {
 		nMinAlloc = MIN_DEDICATED_COMHUNKMEGS;
 		pMsg = "Minimum com_hunkMegs for a dedicated server is %i, allocating %i megs.\n";
 	}
