@@ -1509,7 +1509,11 @@ void Com_InitHunkMemory( void ) {
 	cv = Cvar_Get( "com_hunkMegs", DEF_COMHUNKMEGS_S, CVAR_LATCH | CVAR_ARCHIVE );
 
 	// if we are not dedicated min allocation is 56, otherwise min is 1
-	if (BUILD_TTY_CLIENT || (com_dedicated && com_dedicated->integer)) {
+#if DEDICATED || BUILD_TTY_CLIENT
+	if (1) {
+#else
+	if (com_dedicated && com_dedicated->integer) {
+#endif
 		nMinAlloc = MIN_DEDICATED_COMHUNKMEGS;
 		pMsg = "Minimum com_hunkMegs for a dedicated server is %i, allocating %i megs.\n";
 	}
