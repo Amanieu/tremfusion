@@ -145,7 +145,7 @@ static qboolean CM_PlaneFromPoints_sse( v4f *plane, v4f a, v4f b, v4f c ) {
 	}
 
 	planeVec = v4fScale( v4fInverseRoot( planeLength ), planeVec );
-	planeVec = v4fMix( planeVec, v4fDotProduct( a, planeVec ), 0,0,0,1 );
+	planeVec = v4fMix( planeVec, v4fDotProduct( a, planeVec ), mixMask0001 );
 	*plane = planeVec;
 	return qtrue;
 }

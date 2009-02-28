@@ -166,13 +166,11 @@ ifndef USE_OLD_HOMEPATH
   USE_OLD_HOMEPATH=1
 endif
 
-# SSE is buggy, disabled until it's fixed
-USE_SSE=0
 ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
   else
-    USE_SSE=0
+    USE_SSE=1
   endif
 endif
 

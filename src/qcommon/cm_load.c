@@ -1164,34 +1164,43 @@ clipHandle_t CM_TempBoxModel_sse( v4f mins, v4f maxs, int capsule ) {
 	box_planes[11].dist = s4fToFloat( v4fZ( minsNeg ) );
 
 	// First side
-	vec3aStore( box_brush->edges[ 0 ].p0, v4fMix( mins, maxs, 0,0,0,0 ) );
-	vec3aStore( box_brush->edges[ 0 ].p1, v4fMix( mins, maxs, 0,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 1 ].p0, v4fMix( mins, maxs, 0,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 1 ].p1, v4fMix( mins, maxs, 0,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 2 ].p0, v4fMix( mins, maxs, 0,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 2 ].p1, v4fMix( mins, maxs, 0,0,1,0 ) );
-	vec3aStore( box_brush->edges[ 3 ].p0, v4fMix( mins, maxs, 0,0,1,0 ) );
-	vec3aStore( box_brush->edges[ 3 ].p1, v4fMix( mins, maxs, 0,0,0,0 ) );
+	v4f mix0000 = v4fMix( mins, maxs, mixMask0000 );
+	v4f mix0100 = v4fMix( mins, maxs, mixMask0100 );
+	v4f mix0110 = v4fMix( mins, maxs, mixMask0110 );
+	v4f mix0010 = v4fMix( mins, maxs, mixMask0010 );
+
+	vec3aStore( box_brush->edges[ 0 ].p0, mix0000 );
+	vec3aStore( box_brush->edges[ 0 ].p1, mix0100 );
+	vec3aStore( box_brush->edges[ 1 ].p0, mix0100 );
+	vec3aStore( box_brush->edges[ 1 ].p1, mix0110 );
+	vec3aStore( box_brush->edges[ 2 ].p0, mix0110 );
+	vec3aStore( box_brush->edges[ 2 ].p1, mix0010 );
+	vec3aStore( box_brush->edges[ 3 ].p0, mix0010 );
+	vec3aStore( box_brush->edges[ 3 ].p1, mix0000 );
 
 	// Opposite side
-	vec3aStore( box_brush->edges[ 4 ].p0, v4fMix( mins, maxs, 1,0,0,0 ) );
-	vec3aStore( box_brush->edges[ 4 ].p1, v4fMix( mins, maxs, 1,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 5 ].p0, v4fMix( mins, maxs, 1,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 5 ].p1, v4fMix( mins, maxs, 1,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 6 ].p0, v4fMix( mins, maxs, 1,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 6 ].p1, v4fMix( mins, maxs, 1,0,1,0 ) );
-	vec3aStore( box_brush->edges[ 7 ].p0, v4fMix( mins, maxs, 1,0,1,0 ) );
-	vec3aStore( box_brush->edges[ 7 ].p1, v4fMix( mins, maxs, 1,0,0,0 ) );
+	v4f mix1000 = v4fMix( mins, maxs, mixMask1000 );
+	v4f mix1100 = v4fMix( mins, maxs, mixMask1100 );
+	v4f mix1110 = v4fMix( mins, maxs, mixMask1110 );
+	v4f mix1010 = v4fMix( mins, maxs, mixMask1010 );
+	vec3aStore( box_brush->edges[ 4 ].p0, mix1000 );
+	vec3aStore( box_brush->edges[ 4 ].p1, mix1100 );
+	vec3aStore( box_brush->edges[ 5 ].p0, mix1100 );
+	vec3aStore( box_brush->edges[ 5 ].p1, mix1110 );
+	vec3aStore( box_brush->edges[ 6 ].p0, mix1110 );
+	vec3aStore( box_brush->edges[ 6 ].p1, mix1010 );
+	vec3aStore( box_brush->edges[ 7 ].p0, mix1010 );
+	vec3aStore( box_brush->edges[ 7 ].p1, mix1000 );
 
 	// Connecting edges
-	vec3aStore( box_brush->edges[ 8 ].p0, v4fMix( mins, maxs, 0,0,0,0 ) );
-	vec3aStore( box_brush->edges[ 8 ].p1, v4fMix( mins, maxs, 1,0,0,0 ) );
-	vec3aStore( box_brush->edges[ 9 ].p0, v4fMix( mins, maxs, 0,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 9 ].p1, v4fMix( mins, maxs, 1,1,0,0 ) );
-	vec3aStore( box_brush->edges[ 10 ].p0, v4fMix( mins, maxs, 0,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 10 ].p1, v4fMix( mins, maxs, 1,1,1,0 ) );
-	vec3aStore( box_brush->edges[ 11 ].p0, v4fMix( mins, maxs, 0,0,1,0 ) );
-	vec3aStore( box_brush->edges[ 11 ].p1, v4fMix( mins, maxs, 1,0,1,0 ) );
+	vec3aStore( box_brush->edges[ 8 ].p0, mix0000 );
+	vec3aStore( box_brush->edges[ 8 ].p1, mix1000 );
+	vec3aStore( box_brush->edges[ 9 ].p0, mix0100 );
+	vec3aStore( box_brush->edges[ 9 ].p1, mix1100 );
+	vec3aStore( box_brush->edges[ 10 ].p0, mix0110 );
+	vec3aStore( box_brush->edges[ 10 ].p1, mix1110 );
+	vec3aStore( box_brush->edges[ 11 ].p0, mix0010 );
+	vec3aStore( box_brush->edges[ 11 ].p1, mix1010 );
 
 	vec3aStore( box_brush->bounds[0], mins );
 	vec3aStore( box_brush->bounds[1], maxs );
