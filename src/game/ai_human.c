@@ -765,7 +765,15 @@ void HBotShop(bot_state_t* bs){
         trap_EA_Command(bs->client, "buy helmet" );
         trap_EA_Command(bs->client, "buy prifle" );
         bought = qtrue;
-      }break;
+      }
+      else if( weap != WP_MACHINEGUN ) {
+        reason = "rifle";
+        trap_EA_Command(bs->client, "sell weapons" );
+        trap_EA_Command(bs->client, "sell upgrades" );
+        trap_EA_Command(bs->client, "buy rifle" );
+        bought = qtrue;
+      }
+      break;
     case 2:
       if( totalcredit >= 800 && weap != WP_CHAINGUN ){
         trap_EA_Command(bs->client, "sell weapons" );
@@ -774,7 +782,15 @@ void HBotShop(bot_state_t* bs){
         trap_EA_Command(bs->client, "buy chaingun" );
         //trap_EA_Command(bs->client, "buy lgun" );
         bought = qtrue;
-      }break;
+      }
+      else if( weap != WP_MACHINEGUN ) {
+        reason = "rifle";
+        trap_EA_Command(bs->client, "sell weapons" );
+        trap_EA_Command(bs->client, "sell upgrades" );
+        trap_EA_Command(bs->client, "buy rifle" );
+        bought = qtrue;
+      }
+      break;
   }
   if(bs->ent->client->ps.weapon == WP_BLASTER)
     trap_EA_Command(bs->client, "itemtoggle blaster" );
