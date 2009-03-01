@@ -930,7 +930,7 @@ peeps = {
 	"dmn_clown";
 	"Asvarox";
 	"The Medistation";
-	"Champion"
+	"Champion";
 }
 
 immaturity01 = {
