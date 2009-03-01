@@ -530,6 +530,9 @@ void Sys_ErrorDialog( const char *error )
 
 	Sys_Print( va( "%s\n", error ) );
 
+	// Make sure the curses console is shutdown
+	CON_Shutdown();
+
 	// Write console log to file and to stderr
 	f = FS_FOpenFileWrite( fileName );
 	if( !f )
