@@ -610,10 +610,11 @@ void HBotCheckRespawn(bot_state_t* bs){
   // respawned, but not spawned.. send class cmd
   if( BotIntermission(bs) ){
     // rifle || ckit || akit
-    if( BG_WeaponIsAllowed( WP_HBUILD ) && BG_UpgradeAllowedInStage( WP_HBUILD, g_humanStage.integer ) )
-      Com_sprintf(buf, sizeof(buf), "class ackit");
-    else
-      Com_sprintf(buf, sizeof(buf), "class ckit" );
+//    if( BG_WeaponIsAllowed( WP_HBUILD ) && BG_UpgradeAllowedInStage( WP_HBUILD, g_humanStage.integer ) )
+//      Com_sprintf(buf, sizeof(buf), "class ackit");
+//    else
+//      Com_sprintf(buf, sizeof(buf), "class ckit" );
+    Com_sprintf(buf, sizeof(buf), "class rifle" );
     trap_EA_Command(bs->client, buf );
     return;
   }
@@ -1038,7 +1039,7 @@ qboolean HBotAttack(bot_state_t* bs){
     HBotShop(bs);
   }
   // shoot if target in sight
-  if( BotEntityVisible(bs->entitynum, bs->eye, bs->viewangles, 360, bs->enemy) ){         
+  if( BotEntityVisible(bs->entitynum, bs->eye, bs->viewangles, 360, bs->enemy) ){
     // aim and check attack
     HBotStrafe(bs);
     BotAddInfo(bs, "action", "shoot");
@@ -1092,7 +1093,7 @@ void HBotEnterHeal( bot_state_t* bs, char *s )
   bs->state = HS_HEAL;
 }
 
-// go for medi and heal
+// heal with medkit or go for medi and heal
 qboolean HBotHeal(bot_state_t* bs){
   bot_goal_t goal;
   bot_moveresult_t moveresult;
@@ -1112,6 +1113,12 @@ qboolean HBotHeal(bot_state_t* bs){
     return qfalse;
   } else {
     
+  }
+
+  // use medkit
+  if( bs->inventory[BI_MEDKIT] ){
+    trap_EA_Command(bs->client, "itemact medkit" );
+    return qtrue;
   }
   
   // find medistation
