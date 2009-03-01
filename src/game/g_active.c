@@ -285,6 +285,9 @@ void ClientImpacts( gentity_t *ent, pmove_t *pm )
   {
     other = &g_entities[ pm->touchents[ i ] ];
 
+    if( ( ent->r.svFlags & SVF_BOT ) && ( ent->touch ) )
+      ent->touch( ent, other, &trace );
+
     // see G_UnlaggedDetectCollisions(), this is the inverse of that.
     // if our movement is blocked by another player's real position,
     // don't use the unlagged position for them because they are
@@ -381,6 +384,8 @@ void  G_TouchTriggers( gentity_t *ent )
 
     if( hit->touch )
       hit->touch( hit, ent, &trace );
+    if( ( ent->r.svFlags & SVF_BOT ) && ( ent->touch ) )
+      ent->touch( ent, hit, &trace );
   }
 }
 
@@ -1766,15 +1771,15 @@ void ClientThink( int clientNum )
   // mark the time we got info, so we can display the
   // phone jack if they don't get any for a while
   ent->client->lastCmdTime = level.time;
-
-  if( !g_synchronousClients.integer )
+  
+  if( !( ent->r.svFlags & SVF_BOT ) && !g_synchronousClients.integer )
     ClientThink_real( ent );
 }
 
 
 void G_RunClient( gentity_t *ent )
 {
-  if( !g_synchronousClients.integer )
+  if( !( ent->r.svFlags & SVF_BOT ) && !g_synchronousClients.integer )
     return;
 
   ent->client->pers.cmd.serverTime = level.time;

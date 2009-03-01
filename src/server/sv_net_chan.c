@@ -154,7 +154,7 @@ void SV_Netchan_TransmitNextFragment( client_t *client ) {
 	{
 		// make sure the netchan queue has been properly initialized (you never know)
 		if (!client->netchan_end_queue) {
-			Com_Error(ERR_DROP, "netchan queue is not properly initialized in SV_Netchan_TransmitNextFragment\n");
+			Com_Error(ERR_DROP, "netchan queue is not properly initialized in SV_Netchan_TransmitNextFragment for client '%s'\n", client->name);
 		}
 		// the last fragment was transmitted, check wether we have queued messages
 		if (client->netchan_start_queue) {
@@ -214,6 +214,7 @@ void SV_Netchan_Transmit( client_t *client, msg_t *msg) {	//int length, const by
 		MSG_Copy(&netbuf->msg, netbuf->msgBuffer, sizeof( netbuf->msgBuffer ), msg);
 		netbuf->next = NULL;
 		// insert it in the queue, the message will be encoded and sent later
+		Com_Printf("SV_Netchan_Transmit is setting up netchan_end_queue for '%s'", client->name);
 		*client->netchan_end_queue = netbuf;
 		client->netchan_end_queue = &(*client->netchan_end_queue)->next;
 		// emit the next fragment of the current message for now
