@@ -571,7 +571,7 @@ void IN_DeactivateMouse( void )
 		SDL_WM_GrabInput( SDL_GRAB_OFF );
 
 		// Don't warp the mouse unless the cursor is within the window
-		if( SDL_GetAppState( ) & SDL_APPMOUSEFOCUS )
+		if( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPACTIVE) )
 		{
 			int x, y;
 			IN_GetUIMousePosition( &x, &y );
