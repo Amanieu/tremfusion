@@ -1994,6 +1994,9 @@ $(B)/clienttty/%.o: $(SDIR)/%.c
 $(B)/clienttty/%.o: $(CMDIR)/%.c
 	$(DO_TTY_CC)
 
+$(B)/clienttty/%.o: $(BLIBDIR)/%.c
+	$(DO_BOT_CC)
+
 $(B)/clienttty/%.o: $(ZDIR)/%.c
 	$(DO_TTY_CC)
 
