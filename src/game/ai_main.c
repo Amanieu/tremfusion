@@ -913,9 +913,6 @@ int BotAISetup( int restart ) {
   
   if ( trap_BotLibSetup() != BLERR_NOERROR) return qfalse;
   
-  // load the map's aas
-  trap_Cvar_Register( &mapname, "mapname", "", CVAR_SERVERINFO | CVAR_ROM );
-  trap_BotLibLoadMap( mapname.string );
   return qtrue;
 }
 
