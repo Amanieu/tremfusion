@@ -2594,7 +2594,7 @@ void G_StopFollowing( gentity_t *ent )
   ent->client->ps.eFlags &= ~( EF_WALLCLIMB | EF_WALLCLIMBCEILING );
   ent->client->ps.stats[ STAT_VIEWLOCK ] = 0;
   ent->client->ps.viewangles[ PITCH ] = 0.0f;
-  ent->r.svFlags &= ~SVF_BOT;
+//  ent->r.svFlags &= ~SVF_BOT;
   ent->client->ps.clientNum = ent - g_entities;
 
   CalculateRanks( );
