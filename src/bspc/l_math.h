@@ -26,12 +26,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <math.h>
 
+#ifdef __GNUC__
+#define ALIGNED(x) __attribute__((aligned(x)))
+#else
+#define ALIGNED(x)
+#endif
+
 #ifdef DOUBLEVEC_T
 typedef double vec_t;
 #else
 typedef float vec_t;
 #endif
 typedef vec_t vec3_t[3];
+typedef vec_t vec3a_t[4] ALIGNED(16);
 typedef vec_t vec4_t[4];
 
 #define	SIDE_FRONT		0
