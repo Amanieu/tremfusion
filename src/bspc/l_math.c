@@ -2,14 +2,14 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Quake III Arena source code.
+This file is part of Tremfusion.
 
-Quake III Arena source code is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Quake III Arena source code is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -393,4 +393,25 @@ vec_t DistanceBetweenLineSegmentsSquared(
   VectorSubtract( separation, tMag, separation );
 
   return VectorLengthSquared( separation );
+}
+
+typedef struct cplane_s {
+	vec3_t	normal;
+	float	dist;
+	byte	type;			// for fast side tests: 0,1,2 = axial, 3 = nonaxial
+	byte	signbits;		// signx + (signy<<1) + (signz<<2), used as lookup during collision
+	byte	pad[2];
+} cplane_t;
+
+void SetPlaneSignbits (cplane_t *out) {
+	int	bits, j;
+
+	// for fast box on planeside test
+	bits = 0;
+	for (j=0 ; j<3 ; j++) {
+		if (out->normal[j] < 0) {
+			bits |= 1<<j;
+		}
+	}
+	out->signbits = bits;
 }

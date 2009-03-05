@@ -42,7 +42,7 @@ BASIC MATH
 RotatePoint
 ================
 */
-static void RotatePoint(vec3_t point, /*const*/ vec3_t matrix[3]) { // FIXME 
+void RotatePoint(vec3_t point, /*const*/ vec3_t matrix[3]) { // FIXME 
 	vec3_t tvec;
 
 	VectorCopy(point, tvec);
@@ -70,7 +70,7 @@ static void TransposeMatrix(/*const*/ vec3_t matrix[3], vec3_t transpose[3]) { /
 CreateRotationMatrix
 ================
 */
-static void CreateRotationMatrix(const vec3_t angles, vec3_t matrix[3]) {
+void CreateRotationMatrix(const vec3_t angles, vec3_t matrix[3]) {
 	AngleVectors(angles, matrix[0], matrix[1], matrix[2]);
 	VectorInverse(matrix[1]);
 }

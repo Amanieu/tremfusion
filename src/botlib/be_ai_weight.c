@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -594,9 +594,12 @@ float FuzzyWeight_r(int *inventory, fuzzyseperator_t *fs)
 			if (fs->next->child) w2 = FuzzyWeight_r(inventory, fs->next->child);
 			else w2 = fs->next->weight;
 			//the scale factor
-			scale = (inventory[fs->index] - fs->value) / (fs->next->value - fs->value);
+			if(fs->next->value == MAX_INVENTORYVALUE) // is fs->next the default case?
+        		return w2;      // can't interpolate, return default weight
+			else
+				scale = (float) (inventory[fs->index] - fs->value) / (fs->next->value - fs->value);
 			//scale between the two weights
-			return scale * w1 + (1 - scale) * w2;
+			return (1 - scale) * w1 + scale * w2;
 		} //end if
 		return FuzzyWeight_r(inventory, fs->next);
 	} //end else if
@@ -628,9 +631,12 @@ float FuzzyWeightUndecided_r(int *inventory, fuzzyseperator_t *fs)
 			if (fs->next->child) w2 = FuzzyWeight_r(inventory, fs->next->child);
 			else w2 = fs->next->minweight + random() * (fs->next->maxweight - fs->next->minweight);
 			//the scale factor
-			scale = (inventory[fs->index] - fs->value) / (fs->next->value - fs->value);
+			if(fs->next->value == MAX_INVENTORYVALUE) // is fs->next the default case?
+        		return w2;      // can't interpolate, return default weight
+			else
+				scale = (float) (inventory[fs->index] - fs->value) / (fs->next->value - fs->value);
 			//scale between the two weights
-			return scale * w1 + (1 - scale) * w2;
+			return (1 - scale) * w1 + scale * w2;
 		} //end if
 		return FuzzyWeightUndecided_r(inventory, fs->next);
 	} //end else if
@@ -751,7 +757,7 @@ void ScaleFuzzySeperator_r(fuzzyseperator_t *fs, float scale)
 	else if (fs->type == WT_BALANCE)
 	{
 		//
-		fs->weight = (fs->maxweight + fs->minweight) * scale;
+		fs->weight = (float) (fs->maxweight + fs->minweight) * scale;
 		//get the weight between bounds
 		if (fs->weight < fs->minweight) fs->weight = fs->minweight;
 		else if (fs->weight > fs->maxweight) fs->weight = fs->maxweight;

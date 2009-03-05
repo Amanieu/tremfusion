@@ -2,14 +2,14 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Quake III Arena source code.
+This file is part of Tremfusion.
 
-Quake III Arena source code is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Quake III Arena source code is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -830,7 +830,7 @@ qboolean WriteMapBrush(FILE *fp, mapbrush_t *brush, vec3_t origin)
 				//write the extra brush side info
 				if (loadedmaptype == MAPTYPE_QUAKE2)
 				{
-					if (fprintf(fp, " %ld %ld %ld", s->contents, ti->flags, ti->value) < 0) return false;
+					if (fprintf(fp, " %d %d %d", s->contents, ti->flags, ti->value) < 0) return false;
 				} //end if
 				//*/
 			} //end else

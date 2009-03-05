@@ -2,14 +2,14 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Quake III Arena source code.
+This file is part of Tremfusion.
 
-Quake III Arena source code is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Quake III Arena source code is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -386,11 +386,10 @@ double I_FloatTime (void)
 
 void Q_getwd (char *out)
 {
+   getcwd (out, 255);
 #if defined(WIN32) || defined(_WIN32)
-   getcwd (out, 256);
    strcat (out, "\\");
 #else
-   getwd(out);
    strcat(out, "/");
 #endif
 }

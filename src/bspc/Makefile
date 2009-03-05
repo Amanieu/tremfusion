@@ -9,14 +9,14 @@
 
 #ARCH=i386
 CC=gcc
-BASE_CFLAGS=-Dstricmp=strcasecmp
+BASE_CFLAGS=-Dstricmp=strcasecmp -DLINUX -DBSPC -DNO_GZIP
 
 #use these cflags to optimize it
-CFLAGS=$(BASE_CFLAGS) -O6 -ffast-math -funroll-loops \
+#CFLAGS=$(BASE_CFLAGS) -O6 -ffast-math -funroll-loops \
 	-fomit-frame-pointer -fexpensive-optimizations -falign-loops=2 \
-	-falign-jumps=2 -falign-functions=2 -DLINUX -DBSPC
+	-falign-jumps=2 -falign-functions=2
 #use these when debugging 
-#CFLAGS=$(BASE_CFLAGS) -g
+CFLAGS=$(BASE_CFLAGS) -ggdb3 -O0
 
 LDFLAGS=-ldl -lm -lpthread
 
@@ -86,13 +86,19 @@ GAME_OBJS = \
 	portals.o\
 	textures.o\
 	tree.o\
-	../zlib/unzip.o
+	../zlib/unzip.o\
+	../zlib/ioapi.o\
+	../zlib/adler32.o\
+	../zlib/inffast.o\
+	../zlib/inflate.o\
+	../zlib/inftrees.o\
+	../zlib/zutil.o
 
         #tetrahedron.o
 
 bspc : $(GAME_OBJS)
 	$(CC) $(CFLAGS) -o $@ $(GAME_OBJS) $(LDFLAGS)
-	strip $@
+	#strip $@
 
 
 #############################################################################

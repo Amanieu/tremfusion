@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -83,9 +83,8 @@ typedef enum {qfalse, qtrue}	qboolean;
 
 #define PUNCTABLE
 
-extern punctuation_t default_punctuations[];
-/*//longer punctuations first
-punctuation_t default_punctuations[] =
+//longer punctuations first
+static punctuation_t default_punctuations[] =
 {
 	//binary operators
 	{">>=",P_RSHIFT_ASSIGN, NULL},
@@ -160,7 +159,7 @@ punctuation_t default_punctuations[] =
 	{"$",P_DOLLAR, NULL},
 #endif //DOLLAR
 	{NULL, 0}
-};*/
+};
 
 #ifdef BSPC
 char basefolder[MAX_PATH];
@@ -238,7 +237,7 @@ void QDECL ScriptError(script_t *script, char *str, ...)
 	if (script->flags & SCFL_NOERRORS) return;
 
 	va_start(ap, str);
-	vsprintf(text, str, ap);
+	Q_vsnprintf(text, sizeof(text), str, ap);
 	va_end(ap);
 #ifdef BOTLIB
 	botimport.Print(PRT_ERROR, "file %s, line %d: %s\n", script->filename, script->line, text);
@@ -264,7 +263,7 @@ void QDECL ScriptWarning(script_t *script, char *str, ...)
 	if (script->flags & SCFL_NOWARNINGS) return;
 
 	va_start(ap, str);
-	vsprintf(text, str, ap);
+	Q_vsnprintf(text, sizeof(text), str, ap);
 	va_end(ap);
 #ifdef BOTLIB
 	botimport.Print(PRT_WARNING, "file %s, line %d: %s\n", script->filename, script->line, text);
@@ -556,7 +555,7 @@ int PS_ReadName(script_t *script, token_t *token)
 // Changes Globals:		-
 //============================================================================
 void NumberValue(char *string, int subtype, unsigned long int *intvalue,
-															double *floatvalue)
+															float *floatvalue)
 {
 	unsigned long int dotfound = 0;
 
@@ -575,13 +574,13 @@ void NumberValue(char *string, int subtype, unsigned long int *intvalue,
 			} //end if
 			if (dotfound)
 			{
-				*floatvalue = *floatvalue + (double) (*string - '0') /
-																	(double) dotfound;
+				*floatvalue = *floatvalue + (float) (*string - '0') /
+																	(float) dotfound;
 				dotfound *= 10;
 			} //end if
 			else
 			{
-				*floatvalue = *floatvalue * 10.0 + (double) (*string - '0');
+				*floatvalue = *floatvalue * 10.0 + (float) (*string - '0');
 			} //end else
 			string++;
 		} //end while
@@ -708,14 +707,14 @@ int PS_ReadNumber(script_t *script, token_t *token)
 	{
 		c = *script->script_p;
 		//check for a LONG number
-		if ( (c == 'l' || c == 'L') // bk001204 - brackets 
+		if ( (c == 'l' || c == 'L')
 		     && !(token->subtype & TT_LONG))
 		{
 			script->script_p++;
 			token->subtype |= TT_LONG;
 		} //end if
 		//check for an UNSIGNED number
-		else if ( (c == 'u' || c == 'U') // bk001204 - brackets 
+		else if ( (c == 'u' || c == 'U')
 			  && !(token->subtype & (TT_UNSIGNED | TT_FLOAT)))
 		{
 			script->script_p++;
@@ -1150,10 +1149,10 @@ void StripSingleQuotes(char *string)
 // Returns:					-
 // Changes Globals:		-
 //============================================================================
-double ReadSignedFloat(script_t *script)
+float ReadSignedFloat(script_t *script)
 {
 	token_t token;
-	double sign = 1.0;
+	float sign = 1.0;
 
 	PS_ExpectAnyToken(script, &token);
 	if (!strcmp(token.string, "-"))
@@ -1365,8 +1364,6 @@ script_t *LoadScriptFile(const char *filename)
 	} //end if
 	fclose(fp);
 #endif
-	//
-	script->length = COM_Compress(script->buffer);
 
 	return script;
 } //end of the function LoadScriptFile
@@ -1428,8 +1425,8 @@ void FreeScript(script_t *script)
 void PS_SetBaseFolder(char *path)
 {
 #ifdef BSPC
-	sprintf(basefolder, path);
+	snprintf(basefolder, sizeof(basefolder), "%s", path);
 #else
-	Com_sprintf(basefolder, sizeof(basefolder), path);
+	Com_sprintf(basefolder, sizeof(basefolder), "%s", path);
 #endif
 } //end of the function PS_SetBaseFolder

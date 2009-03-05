@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -368,13 +368,26 @@ void BotQueueConsoleMessage(int chatstate, int type, char *message)
 int BotNextConsoleMessage(int chatstate, bot_consolemessage_t *cm)
 {
 	bot_chatstate_t *cs;
+	bot_consolemessage_t *firstmsg;
 
 	cs = BotChatStateFromHandle(chatstate);
 	if (!cs) return 0;
-	if (cs->firstmessage)
+	if ((firstmsg = cs->firstmessage))
 	{
-		Com_Memcpy(cm, cs->firstmessage, sizeof(bot_consolemessage_t));
-		cm->next = cm->prev = NULL;
+		cm->handle = firstmsg->handle;
+		cm->time = firstmsg->time;
+		cm->type = firstmsg->type;
+		Q_strncpyz(cm->message, firstmsg->message,
+			   sizeof(cm->message));
+		
+		/* We omit setting the two pointers in cm because pointer
+		 * size in the VM differs between the size in the engine on
+		 * 64 bit machines, which would lead to a buffer overflow if
+		 * this functions is called from the VM. The pointers are
+		 * of no interest to functions calling
+		 * BotNextConsoleMessage anyways.
+		 */
+		
 		return cm->handle;
 	} //end if
 	return 0;
@@ -1427,7 +1440,7 @@ int StringsMatch(bot_matchpiece_t *pieces, bot_match_t *match)
 		//if the last piece was a variable string
 		if (lastvariable >= 0)
 		{
-        		assert( match->variables[lastvariable].offset >= 0 ); // bk001204
+        		assert( match->variables[lastvariable].offset >= 0 );
 			match->variables[lastvariable].length =
 				strlen(&match->string[ (int) match->variables[lastvariable].offset]);
 		} //end if
@@ -1488,7 +1501,7 @@ void BotMatchVariable(bot_match_t *match, int variable, char *buf, int size)
 	{
 		if (match->variables[variable].length < size)
 			size = match->variables[variable].length+1;
-		assert( match->variables[variable].offset >= 0 ); // bk001204
+		assert( match->variables[variable].offset >= 0 );
 		strncpy(buf, &match->string[ (int) match->variables[variable].offset], size-1);
 		buf[size-1] = '\0';
 	} //end if
@@ -2304,7 +2317,7 @@ int BotExpandChatMessage(char *outmessage, char *message, unsigned long mcontext
 					} //end if
 					if (match->variables[num].offset >= 0)
 					{
-					        assert( match->variables[num].offset >= 0 ); // bk001204
+					        assert( match->variables[num].offset >= 0 );
 						ptr = &match->string[ (int) match->variables[num].offset];
 						for (i = 0; i < match->variables[num].length; i++)
 						{

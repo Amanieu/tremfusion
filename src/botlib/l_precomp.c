@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -132,7 +132,7 @@ void QDECL SourceError(source_t *source, char *str, ...)
 	va_list ap;
 
 	va_start(ap, str);
-	vsprintf(text, str, ap);
+	Q_vsnprintf(text, sizeof(text), str, ap);
 	va_end(ap);
 #ifdef BOTLIB
 	botimport.Print(PRT_ERROR, "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text);
@@ -156,7 +156,7 @@ void QDECL SourceWarning(source_t *source, char *str, ...)
 	va_list ap;
 
 	va_start(ap, str);
-	vsprintf(text, str, ap);
+	Q_vsnprintf(text, sizeof(text), str, ap);
 	va_end(ap);
 #ifdef BOTLIB
 	botimport.Print(PRT_WARNING, "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text);
@@ -470,9 +470,9 @@ int PC_StringizeTokens(token_t *tokens, token_t *token)
 	strcat(token->string, "\"");
 	for (t = tokens; t; t = t->next)
 	{
-		strncat(token->string, t->string, MAX_TOKEN - strlen(token->string));
+		strncat(token->string, t->string, MAX_TOKEN - strlen(token->string) - 1);
 	} //end for
-	strncat(token->string, "\"", MAX_TOKEN - strlen(token->string));
+	strncat(token->string, "\"", MAX_TOKEN - strlen(token->string) - 1);
 	return qtrue;
 } //end of the function PC_StringizeTokens
 //============================================================================
@@ -654,6 +654,7 @@ void PC_FreeDefine(define_t *define)
 		PC_FreeToken(t);
 	} //end for
 	//free the define
+	FreeMemory(define->name);
 	FreeMemory(define);
 } //end of the function PC_FreeDefine
 //============================================================================
@@ -670,7 +671,7 @@ void PC_AddBuiltinDefines(source_t *source)
 	{
 		char *string;
 		int builtin;
-	} builtin[] = { // bk001204 - brackets
+	} builtin[] = {
 		{ "__LINE__",	BUILTIN_LINE },
 		{ "__FILE__",	BUILTIN_FILE },
 		{ "__DATE__",	BUILTIN_DATE },
@@ -681,9 +682,9 @@ void PC_AddBuiltinDefines(source_t *source)
 
 	for (i = 0; builtin[i].string; i++)
 	{
-		define = (define_t *) GetMemory(sizeof(define_t) + strlen(builtin[i].string) + 1);
+		define = (define_t *) GetMemory(sizeof(define_t));
 		Com_Memset(define, 0, sizeof(define_t));
-		define->name = (char *) define + sizeof(define_t);
+		define->name = (char *) GetMemory(strlen(builtin[i].string) + 1);
 		strcpy(define->name, builtin[i].string);
 		define->flags |= DEFINE_FIXED;
 		define->builtin = builtin[i].builtin;
@@ -706,11 +707,7 @@ int PC_ExpandBuiltinDefine(source_t *source, token_t *deftoken, define_t *define
 										token_t **firsttoken, token_t **lasttoken)
 {
 	token_t *token;
-#ifdef _WIN32
-	unsigned long t;	//	time_t t; //to prevent LCC warning
-#else
 	time_t t;
-#endif
 	
 	char *curtime;
 
@@ -1016,7 +1013,7 @@ int PC_Directive_include(source_t *source)
 				break;
 			} //end if
 			if (token.type == TT_PUNCTUATION && *token.string == '>') break;
-			strncat(path, token.string, MAX_PATH);
+			strncat(path, token.string, MAX_PATH - 1);
 		} //end while
 		if (*token.string != '>')
 		{
@@ -1221,9 +1218,9 @@ int PC_Directive_define(source_t *source)
 #endif //DEFINEHASHING
 	} //end if
 	//allocate define
-	define = (define_t *) GetMemory(sizeof(define_t) + strlen(token.string) + 1);
+	define = (define_t *) GetMemory(sizeof(define_t));
 	Com_Memset(define, 0, sizeof(define_t));
-	define->name = (char *) define + sizeof(define_t);
+	define->name = (char *) GetMemory(strlen(token.string) + 1);
 	strcpy(define->name, token.string);
 	//add the define to the source
 #if DEFINEHASHING
@@ -1457,9 +1454,9 @@ define_t *PC_CopyDefine(source_t *source, define_t *define)
 	define_t *newdefine;
 	token_t *token, *newtoken, *lasttoken;
 
-	newdefine = (define_t *) GetMemory(sizeof(define_t) + strlen(define->name) + 1);
+	newdefine = (define_t *) GetMemory(sizeof(define_t));
 	//copy the define name
-	newdefine->name = (char *) newdefine + sizeof(define_t);
+	newdefine->name = (char *) GetMemory(strlen(define->name) + 1);
 	strcpy(newdefine->name, define->name);
 	newdefine->flags = define->flags;
 	newdefine->builtin = define->builtin;
@@ -1621,7 +1618,7 @@ typedef struct operator_s
 typedef struct value_s
 {
 	signed long int intvalue;
-	double floatvalue;
+	float floatvalue;
 	int parentheses;
 	struct value_s *prev, *next;
 } value_t;
@@ -1689,7 +1686,7 @@ int PC_OperatorPriority(int op)
 #define FreeOperator(op)
 
 int PC_EvaluateTokens(source_t *source, token_t *tokens, signed long int *intvalue,
-																	double *floatvalue, int integer)
+																	float *floatvalue, int integer)
 {
 	operator_t *o, *firstoperator, *lastoperator;
 	value_t *v, *firstvalue, *lastvalue, *v1, *v2;
@@ -1700,7 +1697,7 @@ int PC_EvaluateTokens(source_t *source, token_t *tokens, signed long int *intval
 	int lastwasvalue = 0;
 	int negativevalue = 0;
 	int questmarkintvalue = 0;
-	double questmarkfloatvalue = 0;
+	float questmarkfloatvalue = 0;
 	int gotquestmarkvalue = qfalse;
 	int lastoperatortype = 0;
 	//
@@ -2143,7 +2140,7 @@ int PC_EvaluateTokens(source_t *source, token_t *tokens, signed long int *intval
 // Changes Globals:		-
 //============================================================================
 int PC_Evaluate(source_t *source, signed long int *intvalue,
-												double *floatvalue, int integer)
+												float *floatvalue, int integer)
 {
 	token_t token, *firsttoken, *lasttoken;
 	token_t *t, *nexttoken;
@@ -2242,7 +2239,7 @@ int PC_Evaluate(source_t *source, signed long int *intvalue,
 // Changes Globals:		-
 //============================================================================
 int PC_DollarEvaluate(source_t *source, signed long int *intvalue,
-												double *floatvalue, int integer)
+												float *floatvalue, int integer)
 {
 	int indent, defined = qfalse;
 	token_t token, *firsttoken, *lasttoken;
@@ -2472,7 +2469,7 @@ int PC_Directive_eval(source_t *source)
 //============================================================================
 int PC_Directive_evalfloat(source_t *source)
 {
-	double value;
+	float value;
 	token_t token;
 
 	if (!PC_Evaluate(source, NULL, &value, qfalse)) return qfalse;
@@ -2493,9 +2490,7 @@ int PC_Directive_evalfloat(source_t *source)
 // Returns:					-
 // Changes Globals:		-
 //============================================================================
-//extern directive_t directives[20];
-
-directive_t botlibdirectives[20] =
+static directive_t directives[20] =
 {
 	{"if", PC_Directive_if},
 	{"ifdef", PC_Directive_ifdef},
@@ -2536,11 +2531,11 @@ int PC_ReadDirective(source_t *source)
 	if (token.type == TT_NAME)
 	{
 		//find the precompiler directive
-		for (i = 0; botlibdirectives[i].name; i++)
+		for (i = 0; directives[i].name; i++)
 		{
-			if (!strcmp(botlibdirectives[i].name, token.string))
+			if (!strcmp(directives[i].name, token.string))
 			{
-				return botlibdirectives[i].func(source);
+				return directives[i].func(source);
 			} //end if
 		} //end for
 	} //end if
@@ -2583,7 +2578,7 @@ int PC_DollarDirective_evalint(source_t *source)
 //============================================================================
 int PC_DollarDirective_evalfloat(source_t *source)
 {
-	double value;
+	float value;
 	token_t token;
 
 	if (!PC_DollarEvaluate(source, NULL, &value, qfalse)) return qfalse;
@@ -2608,8 +2603,7 @@ int PC_DollarDirective_evalfloat(source_t *source)
 // Returns:					-
 // Changes Globals:		-
 //============================================================================
-//extern directive_t botlibdollardirectives[20];
-directive_t botlibdollardirectives[20] =
+static directive_t dollardirectives[20] =
 {
 	{"evalint", PC_DollarDirective_evalint},
 	{"evalfloat", PC_DollarDirective_evalfloat},
@@ -2638,11 +2632,11 @@ int PC_ReadDollarDirective(source_t *source)
 	if (token.type == TT_NAME)
 	{
 		//find the precompiler directive
-		for (i = 0; botlibdollardirectives[i].name; i++)
+		for (i = 0; dollardirectives[i].name; i++)
 		{
-			if (!strcmp(botlibdollardirectives[i].name, token.string))
+			if (!strcmp(dollardirectives[i].name, token.string))
 			{
-				return botlibdollardirectives[i].func(source);
+				return dollardirectives[i].func(source);
 			} //end if
 		} //end for
 	} //end if
@@ -2692,9 +2686,9 @@ int QuakeCMacro(source_t *source)
 		return qtrue;
 	} //end if
 	//find the precompiler directive
-	for (i = 0; botlibdollardirectives[i].name; i++)
+	for (i = 0; dollardirectives[i].name; i++)
 	{
-		if (!strcmp(botlibdollardirectives[i].name, token.string))
+		if (!strcmp(dollardirectives[i].name, token.string))
 		{
 			PC_UnreadSourceToken(source, &token);
 			return qfalse;

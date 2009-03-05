@@ -2,14 +2,14 @@
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
-This file is part of Quake III Arena source code.
+This file is part of Tremfusion.
 
-Quake III Arena source code is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Quake III Arena source code is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -273,8 +273,7 @@ quakefile_t *FindQuakeFilesInZip(char *zipfile, char *filter)
 			strcpy(qf->filename, zipfile);
 			strcpy(qf->origname, filename_inzip);
 			qf->zipfile = true;
-			//memcpy( &buildBuffer[i].zipfileinfo, (unz_s*)uf, sizeof(unz_s));
-			memcpy(&qf->zipinfo, (unz_s*)uf, sizeof(unz_s));
+			qf->zipoffset = unzGetOffset(uf);
 			qf->offset = 0;
 			qf->length = file_info.uncompressed_size;
 			qf->type = QuakeFileType(filename_inzip);
@@ -581,16 +580,16 @@ int LoadQuakeFile(quakefile_t *qf, void **bufferptr)
 		//open the zip file
 		zf = unzOpen(qf->pakfile);
 		//set the file pointer
-		qf->zipinfo.file = ((unz_s *) zf)->file;
+		unzSetOffset(zf, qf->zipoffset);
 		//open the Quake file in the zip file
-		unzOpenCurrentFile(&qf->zipinfo);
+		unzOpenCurrentFile(zf);
 		//allocate memory for the buffer
 		length = qf->length;
 		buffer = GetMemory(length+1);
 		//read the Quake file from the zip file
-		length = unzReadCurrentFile(&qf->zipinfo, buffer, length);
+		length = unzReadCurrentFile(zf, buffer, length);
 		//close the Quake file in the zip file
-		unzCloseCurrentFile(&qf->zipinfo);
+		unzCloseCurrentFile(zf);
 		//close the zip file
 		unzClose(zf);
 
@@ -630,21 +629,21 @@ int ReadQuakeFile(quakefile_t *qf, void *buffer, int offset, int length)
 		//open the zip file
 		zf = unzOpen(qf->pakfile);
 		//set the file pointer
-		qf->zipinfo.file = ((unz_s *) zf)->file;
+		unzSetOffset(zf, qf->zipoffset);
 		//open the Quake file in the zip file
-		unzOpenCurrentFile(&qf->zipinfo);
+		unzOpenCurrentFile(zf);
 		//
 		while(offset > 0)
 		{
 			read = offset;
 			if (read > sizeof(tmpbuf)) read = sizeof(tmpbuf);
-			unzReadCurrentFile(&qf->zipinfo, tmpbuf, read);
+			unzReadCurrentFile(zf, tmpbuf, read);
 			offset -= read;
 		} //end while
 		//read the Quake file from the zip file
-		length = unzReadCurrentFile(&qf->zipinfo, buffer, length);
+		length = unzReadCurrentFile(zf, buffer, length);
 		//close the Quake file in the zip file
-		unzCloseCurrentFile(&qf->zipinfo);
+		unzCloseCurrentFile(zf);
 		//close the zip file
 		unzClose(zf);
 

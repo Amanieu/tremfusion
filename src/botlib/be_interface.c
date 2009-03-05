@@ -3,26 +3,26 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
 /*****************************************************************************
- * name:		be_interface.c // bk010221 - FIXME - DEAD code elimination
+ * name:		be_interface.c
  *
  * desc:		bot library interface
  *
@@ -137,11 +137,11 @@ qboolean BotLibSetup(char *str)
 int Export_BotLibSetup(void)
 {
 	int		errnum;
-	char		logfilename[MAX_QPATH];
+	char		logfilename[MAX_OSPATH];
 	char		*homedir, *gamedir;
 	
 	bot_developer = LibVarGetValue("bot_developer");
-  memset( &botlibglobals, 0, sizeof(botlibglobals) ); // bk001207 - init
+ 	memset( &botlibglobals, 0, sizeof(botlibglobals) );
 	//initialize byte swapping (litte endian etc.)
 //	Swap_Init();
 	homedir = LibVarGetString("homedir");
@@ -151,7 +151,7 @@ int Export_BotLibSetup(void)
 			Com_sprintf(logfilename, sizeof(logfilename), "%s%c%s%cbotlib.log", homedir, PATH_SEP, gamedir, PATH_SEP);
 		}
 		else {
-			/*Com_sprintf(logfilename, sizeof(logfilename), "%s%c" BASEGAME "%cbotlib.log", homedir, PATH_SEP, PATH_SEP);*/
+			Com_sprintf(logfilename, sizeof(logfilename), "%s%c" BASEGAME "%cbotlib.log", homedir, PATH_SEP, PATH_SEP);
 		}
 	} else {
 		Com_sprintf(logfilename, sizeof(logfilename), "botlib.log");
@@ -169,8 +169,8 @@ int Export_BotLibSetup(void)
 	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupWeaponAI();	//be_ai_weap.c
 	if (errnum != BLERR_NOERROR)return errnum;
-	//errnum = BotSetupGoalAI();		//be_ai_goal.c
-	//if (errnum != BLERR_NOERROR) return errnum;
+	errnum = BotSetupGoalAI();		//be_ai_goal.c
+	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupChatAI();		//be_ai_chat.c
 	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupMoveAI();		//be_ai_move.c
@@ -861,9 +861,9 @@ GetBotLibAPI
 ============
 */
 botlib_export_t *GetBotLibAPI(int apiVersion, botlib_import_t *import) {
-	assert(import);   // bk001129 - this wasn't set for baseq3/
-  botimport = *import;
-  assert(botimport.Print);   // bk001129 - pars pro toto
+	assert(import);
+	botimport = *import;
+	assert(botimport.Print);
 
 	Com_Memset( &be_botlib_export, 0, sizeof( be_botlib_export ) );
 
