@@ -308,7 +308,7 @@ Redirect console output to a client
 */
 static client_t *redirect_client = NULL;
 static void SV_ClientRedirect( char *outputbuf ) {
-	SV_SendServerCommand( redirect_client, "%s", outputbuf );
+	SV_SendServerCommand( redirect_client, "print \"%s\"", outputbuf );
 }
 static void SV_StartRedirect_f( void ) {
 #define SV_OUTPUTBUF_LENGTH (1024 - 16)

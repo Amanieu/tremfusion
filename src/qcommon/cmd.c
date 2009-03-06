@@ -994,7 +994,6 @@ void Cmd_Alias_f(void)
 {
 	cmd_alias_t	*alias;
 	const char	*name;
-	int			i;
 
 	// Get args
 	if (Cmd_Argc() < 2)
@@ -1036,7 +1035,7 @@ void Cmd_Alias_f(void)
 		{
 			// Reallocate the exec string
 			Z_Free(alias->exec);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}
