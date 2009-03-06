@@ -604,7 +604,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	if ( interpret == VMI_NATIVE ) {
 		// try to load as a system dll
 		Com_DPrintf( "Loading dll file %s.\n", vm->name );
-		vm->dllHandle = Sys_LoadDll( module, vm->fqpath , &vm->entryPoint, VM_DllSyscall );
+		vm->dllHandle = Sys_LoadDll( module, &vm->entryPoint, VM_DllSyscall );
 		if ( vm->dllHandle ) {
 			return vm;
 		}
@@ -715,33 +715,16 @@ void VM_Forced_Unload_Done(void) {
 }
 
 void *VM_ArgPtr( intptr_t intValue ) {
-	if ( !intValue ) {
-		return NULL;
-	}
-	// currentVM is missing on reconnect
-	if ( currentVM==NULL )
-	  return NULL;
-
-	if ( currentVM->entryPoint ) {
-		return (void *)(currentVM->dataBase + intValue);
-	}
-	else {
-		return (void *)(currentVM->dataBase + (intValue & currentVM->dataMask));
-	}
+	return VM_ExplicitArgPtr( currentVM, intValue );
 }
 
 void *VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue ) {
-	if ( !intValue ) {
+	if ( !intValue || !vm ) {
 		return NULL;
 	}
 
-	// currentVM is missing on reconnect here as well?
-	if ( currentVM==NULL )
-	  return NULL;
-
-	//
 	if ( vm->entryPoint ) {
-		return (void *)(vm->dataBase + intValue);
+		return (void *)intValue;
 	}
 	else {
 		return (void *)(vm->dataBase + (intValue & vm->dataMask));

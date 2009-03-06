@@ -112,6 +112,4 @@ equ atan2                             -206
 equ sqrt                              -207
 equ floor                             -208
 equ ceil                              -209
-equ testPrintInt                      -210
-equ testPrintFloat                    -211
 
