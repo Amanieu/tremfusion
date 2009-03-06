@@ -994,7 +994,6 @@ void Cmd_Alias_f(void)
 {
 	cmd_alias_t	*alias;
 	const char	*name;
-	char		exec[MAX_STRING_CHARS];
 	int			i;
 
 	// Get args
@@ -1016,11 +1015,6 @@ void Cmd_Alias_f(void)
 	// Modify/create an alias
 	if (Cmd_Argc() > 2)
 	{
-		// Get the exec string
-		exec[0] = 0;
-		for (i = 2; i < Cmd_Argc(); i++)
-			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
-
 		// Crude protection from infinite loops
 		if (!strcmp(Cmd_Argv(2), name))
 		{
@@ -1033,7 +1027,7 @@ void Cmd_Alias_f(void)
 		{
 			alias = S_Malloc(sizeof(cmd_alias_t));
 			alias->name = CopyString(name);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			alias->next = cmd_aliases;
 			cmd_aliases = alias;
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
