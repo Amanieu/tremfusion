@@ -169,8 +169,8 @@ int Export_BotLibSetup(void)
 	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupWeaponAI();	//be_ai_weap.c
 	if (errnum != BLERR_NOERROR)return errnum;
-	errnum = BotSetupGoalAI();		//be_ai_goal.c
-	if (errnum != BLERR_NOERROR) return errnum;
+//	errnum = BotSetupGoalAI();		//be_ai_goal.c
+//	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupChatAI();		//be_ai_chat.c
 	if (errnum != BLERR_NOERROR) return errnum;
 	errnum = BotSetupMoveAI();		//be_ai_move.c
