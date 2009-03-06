@@ -85,10 +85,6 @@ else
 endif
 export CROSS_COMPILING
 
-ifndef COPYDIR
-  COPYDIR="/usr/local/games/tremulous"
-endif
-
 ifndef MOUNT_DIR
   MOUNT_DIR=src
 endif
@@ -874,7 +870,6 @@ ifeq ($(PLATFORM),sunos)
   CC=gcc
   INSTALL=ginstall
   MKDIR=gmkdir
-  COPYDIR="/usr/local/share/games/tremulous"
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86
@@ -939,7 +934,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin
@@ -1113,7 +1108,7 @@ endif
 # an informational message, then start building
 targets: makedirs
 	@echo ""
-	@echo "Building Tremulous in $(B):"
+	@echo "Building Tremfusion in $(B):"
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  ARCH: $(ARCH)"
 	@echo "  VERSION: $(VERSION)"
@@ -1715,7 +1710,7 @@ $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 
 
 #############################################################################
-## TREMULOUS CGAME
+## TREMFUSION CGAME
 #############################################################################
 
 CGOBJ_ = \
@@ -1767,7 +1762,7 @@ $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMULOUS GAME
+## TREMFUSION GAME
 #############################################################################
 
 GOBJ_ = \
@@ -1816,7 +1811,7 @@ $(B)/base/vm/game.qvm: $(GVMOBJ) $(GDIR)/g_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMULOUS UI
+## TREMFUSION UI
 #############################################################################
 
 UIOBJ_ = \
@@ -2039,12 +2034,6 @@ toolsclean2:
 distclean:
 	@rm -rf $(BUILD_DIR)
 
-dist:
-	rm -rf tremulous-$(SCM_VERSION)
-	svn export . tremulous-$(SCM_VERSION)
-	tar --owner=root --group=root --force-local -cjf tremulous-$(SCM_VERSION).tar.bz2 tremulous-$(SCM_VERSION)
-	rm -rf tremulous-$(SCM_VERSION)
-
 #############################################################################
 # DEPENDENCIES
 #############################################################################
@@ -2054,6 +2043,6 @@ TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
 -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 
 .PHONY: all clean clean2 clean-debug clean-release copyfiles \
-	debug default dist distclean makedirs \
+	debug default distclean makedirs \
 	release targets \
 	toolsclean toolsclean2 toolsclean-debug toolsclean-release
