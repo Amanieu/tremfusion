@@ -1176,8 +1176,8 @@ void Item_SetScreenCoords( itemDef_t *item, float x, float y )
   item->window.rect.h = item->window.rectClient.h;
 
   // force the text rects to recompute
-  item->textRect.w = 0;
-  item->textRect.h = 0;
+  //item->textRect.w = 0;
+  //item->textRect.h = 0;
 }
 
 // FIXME: consolidate this with nearby stuff
