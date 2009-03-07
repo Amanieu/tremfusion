@@ -225,8 +225,6 @@ char *Sys_GetClipboardData( void )
 				data = Z_Malloc( GlobalSize( hClipboardData ) + 1 );
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData ) );
 				GlobalUnlock( hClipboardData );
-				
-				strtok( data, "\n\r\b" );
 			}
 		}
 		CloseClipboard();

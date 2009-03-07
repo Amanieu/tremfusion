@@ -3650,6 +3650,43 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
+      else if( key == 'c' - 'a' + 1 )
+      {
+        // ctrl-c clears the field
+
+        item->cursorPos = 0;
+        DC->setCVar( item->cvar, "" );
+      }
+      else if( key == 'a' - 'a' + 1 )
+      {
+        // ctrl-a is home
+
+        item->cursorPos = 0;
+      }
+      else if( key == 'e' - 'a' + 1 )
+      {
+        // ctrl-e is end
+
+        item->cursorPos = strlen( buff ) - 1;
+      }
+      else if( key == 'w' - 'a' + 1 )
+      {
+        // ctrl-w deletes the last word
+
+        while ( item->cursorPos )
+        {
+          if ( buff[ item->cursorPos - 1 ] != ' ' ) {
+            buff[ item->cursorPos - 1 ] = 0;
+            item->cursorPos--;
+          } else {
+            item->cursorPos--;
+            if ( buff[ item->cursorPos - 1 ] != ' ' )
+              break;
+          }
+        }
+
+        DC->setCVar( item->cvar, buff );
+      }
       else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars

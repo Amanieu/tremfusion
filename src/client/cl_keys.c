@@ -397,8 +397,9 @@ Field_Paste
 ================
 */
 void Field_Paste( field_t *edit ) {
+	void Console_Key (int key);
 	char	*cbd;
-	int		pasteLen, i;
+	int		pasteLen, i, lineCounter = 0;
 
 	cbd = Sys_GetClipboardData();
 
@@ -409,8 +410,15 @@ void Field_Paste( field_t *edit ) {
 	// send as if typed, so insert / overstrike works properly
 	pasteLen = strlen( cbd );
 	for ( i = 0 ; i < pasteLen ; i++ ) {
-		Field_CharEvent( edit, cbd[i] );
+		// dont press enter if theres nothing after
+		if ( cbd[i] == '\n' && (i+1) < pasteLen ) {
+			Console_Key( '\n' );
+			lineCounter++;
+		} else
+			Field_CharEvent( edit, cbd[i] );
 	}
+	if ( lineCounter )
+		Console_Key( '\n' );
 
 	Z_Free( cbd );
 }
@@ -526,6 +534,11 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
+	if ( ch == 'e' - 'a' + 1 ) {	// ctrl-w deletes the last word
+		Field_WordDelete( edit );
+		return;
+	}
+
 	//
 	// ignore any other non printable chars
 	//
@@ -603,9 +616,9 @@ void Console_Key (int key) {
 			if ( !g_consoleField.buffer[0] ) {
 				return;	// empty lines just scroll the console without adding to history
 			} else {
-				Cbuf_AddText ("cmd say ");
+				Cbuf_AddText ("say \""); // use say instead of cmd say to allow printing URLs
 				Cbuf_AddText( g_consoleField.buffer );
-				Cbuf_AddText ("\n");
+				Cbuf_AddText ("\"\n");
 			}
 		}
 
@@ -729,16 +742,7 @@ void Message_Key( int key ) {
 				char clantagDecolored[ 32 ];
 				Q_strncpyz(clantagDecolored, cl_clantag->string, sizeof( clantagDecolored ) );
 				Q_CleanStr(clantagDecolored);
-
-				if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 ) {
-					Com_sprintf( buffer, sizeof( buffer ), "m \"%s\" \"%s\"\n", clantagDecolored, chatField.buffer );
-				} else {
-					//string isnt long enough
-					Com_Printf ( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
-					Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
-					Field_Clear( &chatField );
-					return;
-				}
+				Com_sprintf( buffer, sizeof( buffer ), "m \"%s\" \"%s\"\n", clantagDecolored, chatField.buffer );
 
 			} else if (prompt.active) {
 

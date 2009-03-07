@@ -3175,9 +3175,7 @@ static void UI_RunMenuScript( char **args )
       char buffer[ MAX_CVAR_VALUE_STRING ];
       trap_Cvar_VariableStringBuffer( "ui_sayBuffer", buffer, sizeof( buffer ) );
 
-      if( !buffer[ 0 ] )
-      {
-      }
+      if( !buffer[ 0 ] ) {}
       else if( uiInfo.chatTargetClientNum != -1 )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "tell %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
       else if( uiInfo.chatTeam )
@@ -3189,10 +3187,7 @@ static void UI_RunMenuScript( char **args )
         char clantagDecolored[ 32 ];
         trap_Cvar_VariableStringBuffer( "cl_clantag", clantagDecolored, sizeof( clantagDecolored ) );
         Q_CleanStr( clantagDecolored );
-        if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 )
-          trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
-        else
-          Com_Printf( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
       }
       else if( uiInfo.chatPrompt )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );

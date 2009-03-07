@@ -48,8 +48,6 @@ typedef struct {
 	float	finalFrac;		// 0.0 to 1.0 lines of console to display
 
 	int		vislines;		// in scanlines
-
-	vec4_t	color;
 } console_t;
 
 extern	console_t	con;
@@ -599,10 +597,6 @@ void CL_ConsolePrint( char *txt ) {
 	}
 	
 	if (!con.initialized) {
-		con.color[0] = 
-		con.color[1] = 
-		con.color[2] =
-		con.color[3] = 1.0f;
 		con.linewidth = -1;
 		Con_CheckResize ();
 		con.initialized = qtrue;
@@ -683,21 +677,25 @@ Draw the editline after a ] prompt
 */
 void Con_DrawInput (void) {
 	int		y;
-	char	prompt[ MAX_STRING_CHARS ];
+	char	prompt[ MAX_STRING_CHARS ] = "";
+	qtime_t realtime;
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 		return;
 	}
 
+	Com_RealTime( &realtime );
+
 	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
-	re.SetColor( con.color );
+	if ( com_timestamps->integer )
+		Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 ", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min );
 
-	Q_strncpyz( prompt, cl_consolePrompt->string, sizeof( prompt ) );
+	Q_strcat( prompt, sizeof( prompt ), cl_consolePrompt->string );
+
+	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, colorWhite, qfalse, qfalse );
+
 	Q_CleanStr( prompt );
-
-	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, cl_consolePrompt->string, colorWhite, qfalse, qfalse );
-
 	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue );
 }
 

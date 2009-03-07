@@ -727,6 +727,7 @@ typedef struct {
 } field_t;
 
 void Field_Clear( field_t *edit );
+void Field_WordDelete( field_t *edit );
 void Field_AutoComplete( field_t *edit, const char *prompt );
 void Field_CompleteKeyname( void );
 void Field_CompleteFilename( const char *dir,
@@ -819,6 +820,7 @@ extern	cvar_t	*com_buildScript;		// for building release pak files
 extern	cvar_t	*com_journal;
 extern	cvar_t	*com_cameraMode;
 extern	cvar_t	*com_ansiColor;
+extern	cvar_t	*com_timestamps;
 extern	cvar_t	*com_unfocused;
 extern	cvar_t	*com_maxfpsUnfocused;
 extern	cvar_t	*com_minimized;
@@ -1017,15 +1019,6 @@ void	Sys_Init (void);
 void	* QDECL Sys_LoadDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
 				  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
 void	Sys_UnloadDll( void *dllHandle );
-
-void	Sys_UnloadGame( void );
-void	*Sys_GetGameAPI( void *parms );
-
-void	Sys_UnloadCGame( void );
-void	*Sys_GetCGameAPI( void );
-
-void	Sys_UnloadUI( void );
-void	*Sys_GetUIAPI( void );
 
 //bot libraries
 void	Sys_UnloadBotLib( void );
