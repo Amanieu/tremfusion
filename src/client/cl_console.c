@@ -602,11 +602,14 @@ void CL_ConsolePrint( char *txt ) {
 		con.initialized = qtrue;
 	}
 
-	if( !skipnotify && !( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
+	if( !skipnotify ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		Cmd_TokenizeString( txt );
+		if( com_timestamps->integer )
+			Cmd_TokenizeString( txt + 8 );
+		else
+			Cmd_TokenizeString( txt );
 		CL_GameConsoleText( );
 
 		Cmd_RestoreCmdContext( );
