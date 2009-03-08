@@ -331,13 +331,14 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_debugVoices, "cg_debugVoices", "0", 0 },
   
-  { &ui_currentClass, "ui_currentClass", "0", 0 },
-  { &ui_carriage, "ui_carriage", "", 0 },
-  { &ui_stage, "ui_stage", "0", 0 },
-  { &ui_dialog, "ui_dialog", "Text not set", 0 },
-  { &ui_voteActive, "ui_voteActive", "0", 0 },
-  { &ui_humanTeamVoteActive, "ui_humanTeamVoteActive", "0", 0 },
-  { &ui_alienTeamVoteActive, "ui_alienTeamVoteActive", "0", 0 },
+  // communication cvars set by the cgame to be read by ui
+  { &ui_currentClass, "ui_currentClass", "0", CVAR_ROM },
+  { &ui_carriage, "ui_carriage", "", CVAR_ROM },
+  { &ui_stage, "ui_stage", "0", CVAR_ROM },
+  { &ui_dialog, "ui_dialog", "Text not set", CVAR_ROM },
+  { &ui_voteActive, "ui_voteActive", "0", CVAR_ROM },
+  { &ui_humanTeamVoteActive, "ui_humanTeamVoteActive", "0", CVAR_ROM },
+  { &ui_alienTeamVoteActive, "ui_alienTeamVoteActive", "0", CVAR_ROM },
 
   { &cg_debugRandom, "cg_debugRandom", "0", 0 },
   
@@ -1929,6 +1930,15 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
 
   // get the gamestate from the client system
   trap_GetGameState( &cgs.gameState );
+
+  // copy vote display strings so they don't show up blank if we see 
+  // the same one directly after connecting
+  Q_strncpyz( cgs.voteString, CG_ConfigString( CS_VOTE_STRING ), 
+      sizeof( cgs.voteString ) );
+  Q_strncpyz( cgs.teamVoteString[ 0 ], CG_ConfigString( CS_TEAMVOTE_STRING + 0 ), 
+      sizeof( cgs.teamVoteString[ 0 ] ) );
+  Q_strncpyz( cgs.teamVoteString[ 1 ], CG_ConfigString( CS_TEAMVOTE_STRING + 1 ),
+      sizeof( cgs.teamVoteString[ 1 ] ) );
 
   // check version
   s = CG_ConfigString( CS_GAME_VERSION );

@@ -162,7 +162,7 @@ g_admin_cmd_t g_admin_cmds[ ] =
 
     {"showbans", G_admin_showbans, "B",
       "display a (partial) list of active bans",
-      "(^5start at ban#^7)"
+      "(^5start at ban#^7) (^5name|IP^7)"
     },
 
     {"spec999", G_admin_spec999, "P",
@@ -555,11 +555,11 @@ static void admin_default_levels( void )
 
   Q_strncpyz( g_admin_levels[ 3 ]->name, "^2Junior Admin",
     sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 3 ]->flags, "iahCpPkm$?", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_levels[ 3 ]->flags, "iahCpPkm?", sizeof( l->flags ) );
 
   Q_strncpyz( g_admin_levels[ 4 ]->name, "^3Senior Admin",
     sizeof( l->name ) );
-  Q_strncpyz( g_admin_levels[ 4 ]->flags, "iahCpPkmBbe$?", sizeof( l->flags ) );
+  Q_strncpyz( g_admin_levels[ 4 ]->flags, "iahCpPkmBbe?", sizeof( l->flags ) );
 
   Q_strncpyz( g_admin_levels[ 5 ]->name, "^1Server Operator",
     sizeof( l->name ) );
@@ -1624,7 +1624,8 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
     minargc = 2 + skiparg;
   }
   else if( G_admin_permission( ent, ADMF_CAN_PERM_BAN ) ||
-            G_admin_permission( ent, ADMF_UNACCOUNTABLE ) )
+           G_admin_permission( ent, ADMF_UNACCOUNTABLE ) ||
+           g_adminMaxBan.integer )
   {
     minargc = 3 + skiparg;
   }
@@ -1644,7 +1645,13 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
   seconds = G_admin_parse_time( secs );
   if( seconds <= 0 )
   {
-    if( G_admin_permission( ent, ADMF_CAN_PERM_BAN ) )
+    if( g_adminMaxBan.integer && !G_admin_permission( ent, ADMF_CAN_PERM_BAN) )
+    {
+       ADMP( va( "^3!ban: ^7using your admin level's maximum ban length of %s\n",
+                 g_adminMaxBan.string ) );
+       seconds = G_admin_parse_time( g_adminMaxBan.string );
+    }
+    else if( G_admin_permission( ent, ADMF_CAN_PERM_BAN ) )
     {
       seconds = 0;
     }
@@ -1657,6 +1664,14 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
   }
   else
   {
+    if( g_adminMaxBan.integer &&
+        !G_admin_permission( ent, ADMF_CAN_PERM_BAN ) &&
+        seconds > G_admin_parse_time( g_adminMaxBan.string ) )
+    {
+      ADMP( va( "^3!ban: ^7ban length limited to %s for your admin level\n",
+                g_adminMaxBan.string ) );
+      seconds = G_admin_parse_time( g_adminMaxBan.string );
+    }
     reason = G_SayConcatArgs( 3 + skiparg );
   }
 
@@ -1802,6 +1817,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
 qboolean G_admin_unban( gentity_t *ent, int skiparg )
 {
   int bnum;
+  int time = trap_RealTime( NULL );
   char bs[ 5 ];
 
   if( G_SayArgc() < 2 + skiparg )
@@ -1822,7 +1838,15 @@ qboolean G_admin_unban( gentity_t *ent, int skiparg )
     ADMP( "^3!unban: ^7you cannot remove permanent bans\n" );
     return qfalse;
   }
-  g_admin_bans[ bnum - 1 ]->expires = trap_RealTime( NULL );
+  if( g_adminMaxBan.integer &&
+      !G_admin_permission( ent, ADMF_CAN_PERM_BAN ) &&
+      g_admin_bans[ bnum - 1 ]->expires - time > G_admin_parse_time( g_adminMaxBan.string ) )
+  {
+    ADMP( va( "^3!unban: ^7your admin level cannot remove bans longer than %s\n",
+              g_adminMaxBan.string ) );
+    return qfalse;
+  }
+  g_admin_bans[ bnum - 1 ]->expires = time;
   AP( va( "print \"^3!unban: ^7ban #%d for %s^7 has been removed by %s\n\"",
           bnum,
           g_admin_bans[ bnum - 1 ]->name,
@@ -1863,6 +1887,14 @@ qboolean G_admin_adjustban( gentity_t *ent, int skiparg )
     ADMP( "^3!adjustban: ^7you cannot modify permanent bans\n" );
     return qfalse;
   }
+  if( g_adminMaxBan.integer &&
+      !G_admin_permission( ent, ADMF_CAN_PERM_BAN ) &&
+      ban->expires - time > G_admin_parse_time( g_adminMaxBan.string ) )
+  {
+    ADMP( va( "^3!adjustban: ^7your admin level cannot modify bans longer than %s\n",
+              g_adminMaxBan.string ) );
+    return qfalse;
+  }
   G_SayArgv( 2 + skiparg, secs, sizeof( secs ) );
   if( secs[ 0 ] == '+' || secs[ 0 ] == '-' )
     mode = secs[ 0 ];
@@ -1888,6 +1920,15 @@ qboolean G_admin_adjustban( gentity_t *ent, int skiparg )
       {
         ADMP( "^3!adjustban: ^7ban duration must be positive\n" );
         return qfalse;
+      }
+      if( g_adminMaxBan.integer &&
+          !G_admin_permission( ent, ADMF_CAN_PERM_BAN ) &&
+          expires - time > G_admin_parse_time( g_adminMaxBan.string ) )
+      {
+        ADMP( va( "^3!adjustban: ^7ban length is limited to %s for your admin level\n",
+                  g_adminMaxBan.string ) );
+        length = G_admin_parse_time( g_adminMaxBan.string );
+        expires = time + length;
       }
     }
     else if( G_admin_permission( ent, ADMF_CAN_PERM_BAN ) )
@@ -2347,32 +2388,19 @@ qboolean G_admin_listplayers( gentity_t *ent, int skiparg )
 
     }
 
-    if( G_admin_permission( ent, ADMF_SEESFULLLISTPLAYERS ) )
-    {
-      ADMBP( va( "%2i %s%s^7 %-2i %s^7 (*%s) ^1%1s%1s^7 %s^7 %s%s^7%s\n",
-                i,
-                c,
-                t,
-                l,
-                lname,
-                guid_stub,
-                muted,
-                denied,
-                p->pers.netname,
-                ( *n ) ? "(a.k.a. " : "",
-                n,
-                ( *n ) ? ")" : "" ) );
-    }
-    else
-    {
-      ADMBP( va( "%2i %s%s^7 ^1%1s%1s^7 %s^7\n",
-                i,
-                c,
-                t,
-                muted,
-                denied,
-                p->pers.netname ) );
-    }
+    ADMBP( va( "%2i %s%s^7 %-2i %s^7 (*%s) ^1%1s%1s^7 %s^7 %s%s^7%s\n",
+              i,
+              c,
+              t,
+              l,
+              lname,
+              guid_stub,
+              muted,
+              denied,
+              p->pers.netname,
+              ( *n ) ? "(a.k.a. " : "",
+              n,
+              ( *n ) ? ")" : "" ) );
   }
   ADMBP_end();
   return qtrue;
@@ -2388,12 +2416,16 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
   int len;
   int secs;
   int start = 0;
-  char skip[ 11 ];
+  char filter[ MAX_NAME_LENGTH ] = {""};
   char date[ 11 ];
   char *made;
   int j, k;
-  char n1[ MAX_NAME_LENGTH ] = {""};
-  char n2[ MAX_NAME_LENGTH ] = {""};
+  char n1[ MAX_NAME_LENGTH * 2 ] = {""};
+  char n2[ MAX_NAME_LENGTH * 2 ] = {""};
+  qboolean numeric = qtrue;
+  char *ip_match = NULL;
+  int ip_match_len = 0;
+  char name_match[ MAX_NAME_LENGTH ] = {""};
 
   t = trap_RealTime( NULL );
 
@@ -2414,10 +2446,37 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
     return qfalse;
   }
 
-  if( G_SayArgc() == 2 + skiparg )
+  if( G_SayArgc() >= 2 + skiparg )
   {
-    G_SayArgv( 1 + skiparg, skip, sizeof( skip ) );
-    start = atoi( skip );
+    G_SayArgv( 1 + skiparg, filter, sizeof( filter ) );
+    if( G_SayArgc() >= 3 + skiparg )
+    {
+      start = atoi( filter );
+      G_SayArgv( 2 + skiparg, filter, sizeof( filter ) );
+    }
+    for( i = 0; i < sizeof( filter ) && filter[ i ] ; i++ )
+    {
+      if( !isdigit( filter[ i ] ) &&
+          filter[ i ] != '.' && filter[ i ] != '-' )
+      {
+        numeric = qfalse;
+        break;
+      }
+    }
+    if( !numeric )
+    {
+      G_SanitiseString( filter, name_match, sizeof( name_match ) );
+    }
+    else if( strchr( filter, '.' ) )
+    {
+      ip_match = filter;
+      ip_match_len = strlen(ip_match);
+    }
+    else
+    {
+      start = atoi( filter );
+      filter[ 0 ] = '\0';
+    }
     // showbans 1 means start with ban 0
     if( start > 0 )
       start--;
@@ -2446,6 +2505,16 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
       ( g_admin_bans[ i ]->expires - t ) < 1 )
       continue;
 
+    if( name_match[ 0 ] )
+    {
+      G_SanitiseString( g_admin_bans[ i ]->name, n1, sizeof( n1 ) );
+      if( !strstr( n1, name_match) )
+        continue;
+    }
+    if( ip_match &&
+      Q_strncmp( ip_match, g_admin_bans[ i ]->ip, ip_match_len ) )
+        continue;
+
     count++;
 
     len = Q_PrintStrlen( g_admin_bans[ i ]->name );
@@ -2462,6 +2531,16 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
     if( g_admin_bans[ i ]->expires != 0 &&
       ( g_admin_bans[ i ]->expires - t ) < 1 )
       continue;
+
+    if( name_match[ 0 ] )
+    {
+      G_SanitiseString( g_admin_bans[ i ]->name, n1, sizeof( n1 ) );
+      if( !strstr( n1, name_match) )
+        continue;
+    }
+    if( ip_match &&
+      Q_strncmp( ip_match, g_admin_bans[ i ]->ip, ip_match_len ) )
+        continue;
 
     count++;
 
@@ -2504,13 +2583,26 @@ qboolean G_admin_showbans( gentity_t *ent, int skiparg )
              g_admin_bans[ i ]->reason ) );
   }
 
-  ADMBP( va( "^3!showbans:^7 showing bans %d - %d of %d (%d total).",
-           ( found ) ? ( start + 1 ) : 0,
-           i,
-           max + 1,
-           found ) );
+  if( name_match[ 0 ] || ip_match )
+  {
+    ADMBP( va( "^3!showbans:^7 found %d matching bans by %s.  ",
+             count,
+             ( ip_match ) ? "IP" : "name" ) );
+  }
+  else
+  {
+    ADMBP( va( "^3!showbans:^7 showing bans %d - %d of %d (%d total).",
+             ( found ) ? ( start + 1 ) : 0,
+             i,
+             max + 1,
+             found ) );
+  }
+
   if( i <= max )
-    ADMBP( va( "  run !showbans %d to see more", i + 1 ) );
+    ADMBP( va( "  run !showbans %d%s%s to see more",
+             i + 1,
+             ( filter[ 0 ] ) ? " " : "",
+             ( filter[ 0 ] ) ? filter : "" ) );
   ADMBP( "\n" );
   ADMBP_end();
   return qtrue;
@@ -2578,7 +2670,7 @@ qboolean G_admin_help( gentity_t *ent, int skiparg )
       {
         if( !G_admin_permission( ent, g_admin_cmds[ i ].flag[ 0 ] ) )
         {
-          ADMBP( va( "^3!help: ^7you have no permission to use '%s'\n",
+          ADMBP( va( "^3!help: ^7you do not have permission to use '%s'\n",
                    g_admin_cmds[ i ].keyword ) );
           ADMBP_end();
           return qfalse;
@@ -2599,7 +2691,7 @@ qboolean G_admin_help( gentity_t *ent, int skiparg )
       {
         if( !admin_command_permission( ent, g_admin_commands[ i ]->command ) )
         {
-          ADMBP( va( "^3!help: ^7you have no permission to use '%s'\n",
+          ADMBP( va( "^3!help: ^7you do not have permission to use '%s'\n",
                    g_admin_commands[ i ]->command ) );
           ADMBP_end();
           return qfalse;
