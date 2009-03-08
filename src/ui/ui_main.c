@@ -4640,9 +4640,10 @@ void UI_DrawConnectScreen( qboolean overlay )
   
         if( prompt & DLP_SHOW )
         {
+          if (!Menus_ActivateByName( "download_popmenu" ))
+            return;
           Com_Printf( "Opening download prompt...\n" );
           trap_Key_SetCatcher( KEYCATCH_UI );
-          Menus_ActivateByName( "download_popmenu" );
           trap_Cvar_Set( "cl_downloadPrompt", "0" );
         }
 
