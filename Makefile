@@ -40,10 +40,12 @@ ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
 endif
 
-# SMP only works on Mac and Windows
+# SMP only works on Mac, Linux and Windows
 ifneq ($(PLATFORM),darwin)
 ifneq ($(PLATFORM),mingw32)
+ifneq ($(PLATFORM),linux)
   BUILD_CLIENT_SMP = 0
+endif
 endif
 endif
 
@@ -360,7 +362,9 @@ ifeq ($(PLATFORM),linux)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  THREAD_LIBS=-lpthread
+  BASE_CFLAGS+=-I/usr/X11R6/include
+  THREAD_LDFLAGS=-L/usr/X11R6/$(LIB)
+  THREAD_LIBS=-lpthread -lX11
   LIBS=-ldl -lm
 
   CLIENT_LIBS += $(shell sdl-config --libs) -lGL
@@ -1562,7 +1566,7 @@ $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LI
 $(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(THREAD_LDFLAGS) \
-       -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
+       -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
 $(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)

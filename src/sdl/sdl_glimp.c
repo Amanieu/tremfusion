@@ -24,6 +24,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef SMP
 #	include <SDL_thread.h>
+#	ifdef __linux__
+#		include <X11/Xlib.h>
+#	endif
 #endif
 
 #include <stdarg.h>
@@ -44,7 +47,7 @@ typedef CGLContextObj QGLContext;
 
 static QGLContext opengl_context;
 
-static void GLimp_GetCurrentContext()
+static void GLimp_GetCurrentContext(void)
 {
 	opengl_context = CGLGetCurrentContext();
 }
@@ -58,20 +61,46 @@ static void GLimp_SetCurrentContext(qboolean enable)
 		CGLSetCurrentContext(NULL);
 }
 #endif
+#elif __linux__
+#include <GL/glx.h>
+typedef struct
+{
+	GLXContext      ctx;
+	Display         *dpy;
+	GLXDrawable     drawable;
+} QGLContext_t;
+typedef QGLContext_t QGLContext;
+
+static QGLContext opengl_context;
+
+static void GLimp_GetCurrentContext(void)
+{
+	opengl_context.ctx = glXGetCurrentContext();
+	opengl_context.dpy = glXGetCurrentDisplay();
+	opengl_context.drawable = glXGetCurrentDrawable();
+}
+
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable)
+{
+	if(enable)
+		glXMakeCurrent(opengl_context.dpy, opengl_context.drawable, opengl_context.ctx);
+	else
+		glXMakeCurrent(opengl_context.dpy, None, NULL);
+}
+#endif
 #elif WIN32
 typedef struct
 {
 	HDC             hDC;		// handle to device context
 	HGLRC           hGLRC;		// handle to GL rendering context
 } QGLContext_t;
-typedef QGLContext_t *QGLContext;
+typedef QGLContext_t QGLContext;
 
 static QGLContext opengl_context;
 
 static void GLimp_GetCurrentContext(void)
 {
-	static QGLContext_t ctx;
-
 	SDL_SysWMinfo info;
 
 	SDL_VERSION(&info.version);
@@ -81,19 +110,17 @@ static void GLimp_GetCurrentContext(void)
 		return;
 	}
 
-	ctx.hDC = GetDC(info.window);
-	ctx.hGLRC = info.hglrc;
-
-	opengl_context = &ctx;
+	opengl_context.hDC = GetDC(info.window);
+	opengl_context.hGLRC = info.hglrc;
 }
 
 #ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable)
 {
 	if(enable)
-		wglMakeCurrent(opengl_context->hDC, opengl_context->hGLRC);
+		wglMakeCurrent(opengl_context.hDC, opengl_context.hGLRC);
 	else
-		wglMakeCurrent(opengl_context->hDC, NULL);
+		wglMakeCurrent(opengl_context.hDC, NULL);
 }
 #endif
 #else
@@ -732,6 +759,10 @@ void GLimp_Init( void )
 
 	Sys_GLimpInit( );
 
+#if defined(SMP) && defined(__linux__)
+	XInitThreads( );
+#endif
+
 	// create the window and set up the context
 	if( !GLimp_StartDriverAndSetMode( qfalse, r_fullscreen->integer ) )
 	{
@@ -941,7 +972,7 @@ qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
 		warned = qtrue;
 	}
 
-#if !defined(MACOS_X) && !defined(WIN32)
+#if !defined(MACOS_X) && !defined(WIN32) && !defined (__linux__)
 	return qfalse;  /* better safe than sorry for now. */
 #endif
 
