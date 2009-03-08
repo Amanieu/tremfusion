@@ -606,8 +606,8 @@ void CL_ConsolePrint( char *txt ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		if( com_timestamps->integer )
-			Cmd_TokenizeString( txt + 8 );
+		if( !com_timestamps || com_timestamps->integer )
+			Cmd_TokenizeString( txt + 16 );
 		else
 			Cmd_TokenizeString( txt );
 		CL_GameConsoleText( );

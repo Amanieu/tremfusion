@@ -531,7 +531,7 @@ void Sys_ErrorDialog( const char *error )
 	Sys_Print( va( "%s\n", error ) );
 
 	// Write console log to file and to stderr
-	f = FS_FOpenFileWrite( fileName );
+	f = FS_SV_FOpenFileWrite( fileName );
 	if( !f )
 	{
 		Com_Printf( "ERROR: couldn't open %s\n", fileName );

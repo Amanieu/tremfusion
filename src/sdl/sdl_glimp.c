@@ -947,13 +947,14 @@ GLimp_RenderThreadWrapper
 */
 static int GLimp_RenderThreadWrapper( void *arg )
 {
-	Com_Printf( "Render thread starting\n" );
+	// These printfs cause race conditions which mess up the console output
+	//Com_Printf( "Render thread starting\n" );
 
 	glimpRenderThread();
 
 	GLimp_SetCurrentContext(qfalse);
 
-	Com_Printf( "Render thread terminating\n" );
+	//Com_Printf( "Render thread terminating\n" );
 
 	return 0;
 }
