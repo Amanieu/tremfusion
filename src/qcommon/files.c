@@ -2768,11 +2768,11 @@ static void FS_ReorderExtraPaks( void )
 				// increment insert list
 				p_insert_index = &s->next;
 
-				if (s->dir) {
+				if (s->dir)
 					fs_unpureAllowed = qtrue;
-				} else {
-					break; // iterate to next server pack
-				}
+				else
+					s->pack->referenced |= FS_EXTRA_REF;
+				break; // iterate to next server pack
 			}
 			p_previous = &s->next;
 		}
