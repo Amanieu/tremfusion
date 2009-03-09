@@ -561,6 +561,7 @@ void CL_ConsolePrint( char *txt ) {
 	int		c, l;
 	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
+	static qboolean is_new_line = qtrue;
 	
 	CL_WriteClientChatLog( txt );
 	
@@ -606,7 +607,7 @@ void CL_ConsolePrint( char *txt ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		if( !com_timestamps || com_timestamps->integer )
+		if( is_new_line && ( !com_timestamps || com_timestamps->integer ) )
 			Cmd_TokenizeString( txt + 16 );
 		else
 			Cmd_TokenizeString( txt );
@@ -659,6 +660,7 @@ void CL_ConsolePrint( char *txt ) {
 			break;
 		}
 	}
+	is_new_line = txt[strlen(txt) - 1] == '\n';
 }
 
 
