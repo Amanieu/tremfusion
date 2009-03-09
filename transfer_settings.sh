@@ -50,6 +50,8 @@ find * \( -type f -o -type l \) \
 echo "Fixing autogen.cfg..."
 sed -e 's/seta\ cl_defaultUI\ \"[^\"]*\"//' \
 	-e 's/seta\ fs_extrapaks\ \"[^\"]*\"//' \
+	-e 's/seta\ s_alDriver\ \"[^\"]*\"//' \
+	-e 's/seta\ s_useOpenAL\ \"[^\"]*\"//' \
 	autogen.cfg > $DESTDIR/autogen.cfg
 
 echo "Done."
