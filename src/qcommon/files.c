@@ -485,18 +485,19 @@ static qboolean FS_CreatePath (char *OSPath) {
 
 /*
 =================
-FS_FilenameIsExecutable
+FS_CheckFilenameIsNotExecutable
 
 ERR_FATAL if trying to maniuplate a file with the platform library extension
 =================
  */
-static void FS_FilenameIsExecutable( const char *filename, const char *function )
+static void FS_CheckFilenameIsNotExecutable( const char *filename,
+		const char *function )
 {
 	// Check if the filename ends with the library extension
-	if( !Q_stricmp( filename + strlen( filename ) - strlen( DLL_EXT ), DLL_EXT ) )
+	if( !Q_stricmp( COM_GetExtension( filename ), DLL_EXT ) )
 	{
-		Com_Error( ERR_FATAL, "%s: Not allowed to write '%s' due to %s extension\n",
-			function, filename, DLL_EXT );
+		Com_Error( ERR_FATAL, "%s: Not allowed to manipulate '%s' due "
+			"to %s extension\n", function, filename, DLL_EXT );
 	}
 }
 
@@ -515,7 +516,7 @@ static void FS_CopyFile( char *fromOSPath, char *toOSPath ) {
 
 	Com_Printf( "copy %s to %s\n", fromOSPath, toOSPath );
 
-	FS_FilenameIsExecutable( toOSPath, __func__ );
+	FS_CheckFilenameIsNotExecutable( toOSPath, __func__ );
 
 	if (strstr(fromOSPath, "journal.dat") || strstr(fromOSPath, "journaldata.dat")) {
 		Com_Printf( "Ignoring journal files\n");
@@ -558,7 +559,7 @@ FS_Remove
 ===========
 */
 void FS_Remove( const char *osPath ) {
-	FS_FilenameIsExecutable( osPath, __func__ );
+	FS_CheckFilenameIsNotExecutable( osPath, __func__ );
 
 	remove( osPath );
 }
@@ -570,7 +571,7 @@ FS_HomeRemove
 ===========
 */
 void FS_HomeRemove( const char *homePath ) {
-	FS_FilenameIsExecutable( homePath, __func__ );
+	FS_CheckFilenameIsNotExecutable( homePath, __func__ );
 
 	remove( FS_BuildOSPath( fs_homepath->string,
 			fs_gamedir, homePath ) );
@@ -580,36 +581,12 @@ void FS_HomeRemove( const char *homePath ) {
 ================
 FS_FileExists
 
-Tests if the file exists in the current gamedir, this DOES NOT
-search the paths.  This is to determine if opening a file to write
-(which always goes into the current gamedir) will cause any overwrites.
-NOTE TTimo: this goes with FS_FOpenFileWrite for opening the file afterwards
+Just search the paths
 ================
 */
 qboolean FS_FileExists( const char *file )
 {
-	FILE *f;
-	char *testpath;
-
-	testpath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, file );
-
-	f = fopen( testpath, "rb" );
-	if (f) {
-		fclose( f );
-		return qtrue;
-	}
-
-	if (Q_stricmp(fs_homepath->string,fs_extrapath->string)) {
-		testpath = FS_BuildOSPath( fs_extrapath->string, fs_gamedir, file );
-
-		f = fopen( testpath, "rb" );
-		if (f) {
-			fclose( f );
-			return qtrue;
-		}
-	}
-
-	return qfalse;
+	return FS_FOpenFileRead( file, NULL, qtrue );
 }
 
 /*
@@ -672,7 +649,7 @@ fileHandle_t FS_SV_FOpenFileWrite( const char *filename ) {
 		Com_Printf( "FS_SV_FOpenFileWrite: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -800,7 +777,7 @@ void FS_SV_Rename( const char *from, const char *to ) {
 		Com_Printf( "FS_SV_Rename: %s --> %s\n", from_ospath, to_ospath );
 	}
 
-	FS_FilenameIsExecutable( to_ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( to_ospath, __func__ );
 
 	if (rename( from_ospath, to_ospath )) {
 		// Failed, try copying it and deleting the original
@@ -834,7 +811,7 @@ void FS_Rename( const char *from, const char *to ) {
 		Com_Printf( "FS_Rename: %s --> %s\n", from_ospath, to_ospath );
 	}
 
-	FS_FilenameIsExecutable( to_ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( to_ospath, __func__ );
 
 	if (rename( from_ospath, to_ospath )) {
 		// Failed, try copying it and deleting the original
@@ -897,7 +874,7 @@ fileHandle_t FS_FOpenFileWrite( const char *filename ) {
 		Com_Printf( "FS_FOpenFileWrite: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -945,7 +922,7 @@ fileHandle_t FS_FOpenFileAppend( const char *filename ) {
 		Com_Printf( "FS_FOpenFileAppend: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -2384,7 +2361,7 @@ void FS_Path_f( void ) {
 	Com_Printf ("fs_homepath: %s\n", fs_homepath->string);
 	Com_Printf ("fs_extrapath: %s\n", fs_extrapath->string);
 	Com_Printf ("fs_basepath: %s\n", fs_basepath->string);
-	Com_Printf ("fs_game: %s\n", fs_gamedirvar->string);
+	Com_Printf ("fs_game: %s\n", fs_gamedir);
 	Com_Printf ("fs_basegame: %s\n", fs_basegame->string);
 
 	Com_Printf ("Current search path:\n");
@@ -2829,10 +2806,10 @@ static void FS_Startup( const char *gameName )
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
-	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", ". tremfusion-base", CVAR_ARCHIVE );
+	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
+	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE|CVAR_VM_CREATED );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
-	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_ARCHIVE );
+	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {

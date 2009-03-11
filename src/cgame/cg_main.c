@@ -216,6 +216,11 @@ vmCvar_t  cg_debugRandom;
 vmCvar_t  cg_optimizePrediction;
 vmCvar_t  cg_projectileNudge;
 
+vmCvar_t  cg_drawBuildableStatus;
+vmCvar_t  cg_hideHealthyBuildableStatus;
+vmCvar_t  cg_drawTeamStatus;
+vmCvar_t  cg_hideHealthyTeamStatus;
+
 vmCvar_t  cg_suppressWAnimWarnings;
 
 vmCvar_t  cg_voice;
@@ -315,7 +320,9 @@ static cvarTable_t cvarTable[ ] =
   { &cg_tutorial, "cg_tutorial", "1", CVAR_ARCHIVE },
   { &cg_hudFiles, "cg_hudFiles", "ui/hud.txt", CVAR_ARCHIVE},
   { &cg_hudFilesEnable, "cg_hudFilesEnable", "0", CVAR_ARCHIVE},
-
+  { NULL, "cg_alienConfig", "", CVAR_ARCHIVE },
+  { NULL, "cg_humanConfig", "", CVAR_ARCHIVE },
+  { NULL, "cg_spectatorConfig", "", CVAR_ARCHIVE },
   { &cg_painBlendUpRate, "cg_painBlendUpRate", "10.0", 0 },
   { &cg_painBlendDownRate, "cg_painBlendDownRate", "0.5", 0 },
   { &cg_painBlendMax, "cg_painBlendMax", "0.7", 0 },
@@ -324,18 +331,25 @@ static cvarTable_t cvarTable[ ] =
 
   { &cg_debugVoices, "cg_debugVoices", "0", 0 },
   
-  { &ui_currentClass, "ui_currentClass", "0", 0 },
-  { &ui_carriage, "ui_carriage", "", 0 },
-  { &ui_stage, "ui_stage", "0", 0 },
-  { &ui_dialog, "ui_dialog", "Text not set", 0 },
-  { &ui_voteActive, "ui_voteActive", "0", 0 },
-  { &ui_humanTeamVoteActive, "ui_humanTeamVoteActive", "0", 0 },
-  { &ui_alienTeamVoteActive, "ui_alienTeamVoteActive", "0", 0 },
+  // communication cvars set by the cgame to be read by ui
+  { &ui_currentClass, "ui_currentClass", "0", CVAR_ROM },
+  { &ui_carriage, "ui_carriage", "", CVAR_ROM },
+  { &ui_stage, "ui_stage", "0", CVAR_ROM },
+  { &ui_dialog, "ui_dialog", "Text not set", CVAR_ROM },
+  { &ui_voteActive, "ui_voteActive", "0", CVAR_ROM },
+  { &ui_humanTeamVoteActive, "ui_humanTeamVoteActive", "0", CVAR_ROM },
+  { &ui_alienTeamVoteActive, "ui_alienTeamVoteActive", "0", CVAR_ROM },
 
   { &cg_debugRandom, "cg_debugRandom", "0", 0 },
   
   { &cg_optimizePrediction, "cg_optimizePrediction", "1", CVAR_ARCHIVE },
   { &cg_projectileNudge, "cg_projectileNudge", "1", CVAR_ARCHIVE },
+
+  { &cg_drawBuildableStatus, "cg_drawBuildableStatus", "1", CVAR_ARCHIVE },
+  { &cg_hideHealthyBuildableStatus, "cg_hideHealthyBuildableStatus", "1", CVAR_ARCHIVE },
+  { &cg_drawTeamStatus, "cg_drawTeamStatus", "1", CVAR_USERINFO | CVAR_ARCHIVE },
+  { &cg_hideHealthyTeamStatus, "cg_hideHealthyTeamStatus", "1", CVAR_ARCHIVE },
+  { NULL, "teamoverlay", "1", CVAR_USERINFO | CVAR_ARCHIVE }, //if this is 0 the server will not send tinfo and teammate health will not work
 
   // the following variables are created in other parts of the system,
   // but we also reference them here
@@ -812,6 +826,34 @@ static void CG_RegisterGraphics( void )
         "ui/assets/alien/feedback/scratch_09",
         "ui/assets/alien/feedback/scratch_10"
   };
+   static char *alienAttackFeedbackShadersFlipped[ 11 ] =
+  {
+        "ui/assets/alien/feedback/scratchr_00",
+        "ui/assets/alien/feedback/scratchr_01",
+        "ui/assets/alien/feedback/scratchr_02",
+        "ui/assets/alien/feedback/scratchr_03",
+        "ui/assets/alien/feedback/scratchr_04",
+        "ui/assets/alien/feedback/scratchr_05",
+        "ui/assets/alien/feedback/scratchr_06",
+        "ui/assets/alien/feedback/scratchr_07",
+        "ui/assets/alien/feedback/scratchr_08",
+        "ui/assets/alien/feedback/scratchr_09",
+        "ui/assets/alien/feedback/scratchr_10"
+  };
+   static char *alienRangedAttackFeedbackShaders[ 11 ] =
+  {
+        "ui/assets/alien/feedback/rangefeedback_00",
+        "ui/assets/alien/feedback/rangefeedback_01",
+        "ui/assets/alien/feedback/rangefeedback_02",
+        "ui/assets/alien/feedback/rangefeedback_03",
+        "ui/assets/alien/feedback/rangefeedback_04",
+        "ui/assets/alien/feedback/rangefeedback_05",
+        "ui/assets/alien/feedback/rangefeedback_06",
+        "ui/assets/alien/feedback/rangefeedback_07",
+        "ui/assets/alien/feedback/rangefeedback_08",
+        "ui/assets/alien/feedback/rangefeedback_09",
+        "ui/assets/alien/feedback/rangefeedback_10"
+  };
 
   // clear any references to old media
   memset( &cg.refdef, 0, sizeof( cg.refdef ) );
@@ -846,6 +888,10 @@ static void CG_RegisterGraphics( void )
     cgs.media.buildWeaponTimerPie[ i ] = trap_R_RegisterShader( buildWeaponTimerPieShaders[ i ] );
   for( i = 0; i < 11; i++ )
     cgs.media.alienAttackFeedbackShaders[i] = trap_R_RegisterShader( alienAttackFeedbackShaders[i] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienAttackFeedbackShadersFlipped[i] = trap_R_RegisterShader( alienAttackFeedbackShadersFlipped[i] );
+  for( i = 0; i < 11; i++ )
+    cgs.media.alienRangedAttackFeedbackShaders[i] = trap_R_RegisterShader( alienRangedAttackFeedbackShaders[i] );
 
   // player health cross shaders
   cgs.media.healthCross               = trap_R_RegisterShader( "ui/assets/neutral/cross.tga" );
@@ -1778,6 +1824,7 @@ void CG_LoadHudMenu( void )
   cgDC.stopCinematic        = &CG_StopCinematic;
   cgDC.drawCinematic        = &CG_DrawCinematic;
   cgDC.runCinematicFrame    = &CG_RunCinematicFrame;
+  cgDC.getFileList          = &trap_FS_GetFileList;
   cgDC.hudloading           = qtrue;
   Init_Display( &cgDC );
 
@@ -1884,6 +1931,15 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
   // get the gamestate from the client system
   trap_GetGameState( &cgs.gameState );
 
+  // copy vote display strings so they don't show up blank if we see 
+  // the same one directly after connecting
+  Q_strncpyz( cgs.voteString, CG_ConfigString( CS_VOTE_STRING ), 
+      sizeof( cgs.voteString ) );
+  Q_strncpyz( cgs.teamVoteString[ 0 ], CG_ConfigString( CS_TEAMVOTE_STRING + 0 ), 
+      sizeof( cgs.teamVoteString[ 0 ] ) );
+  Q_strncpyz( cgs.teamVoteString[ 1 ], CG_ConfigString( CS_TEAMVOTE_STRING + 1 ),
+      sizeof( cgs.teamVoteString[ 1 ] ) );
+
   // check version
   s = CG_ConfigString( CS_GAME_VERSION );
 
@@ -1956,4 +2012,21 @@ void CG_Shutdown( void )
 
   // Reset cg_version
   trap_Cvar_Set( "cg_version", "" );
+}
+
+/*
+=================
+CG_SoundDuration
+
+Check the client version to make sure the syscall is availible
+=================
+*/
+int CG_SoundDuration( sfxHandle_t handle )
+{
+    char version[ MAX_CVAR_VALUE_STRING ];
+    trap_Cvar_VariableStringBuffer( "version", version, sizeof(version) );
+    if( !Q_stricmpn( version, "tremfusion ", 11 ) )
+        return trap_S_SoundDuration( handle );
+    else
+        return 3;
 }

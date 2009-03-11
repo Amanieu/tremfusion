@@ -33,6 +33,9 @@ USER INTERFACE MAIN
 
 uiInfo_t uiInfo;
 
+static char screenshots[ 1024 ][ MAX_QPATH ];
+static int current_screen = 0, maxscreens = 0;
+
 static const char *MonthAbbrev[ ] =
 {
   "Jan", "Feb", "Mar",
@@ -96,6 +99,8 @@ vmCvar_t  ui_serverStatusTimeOut;
 vmCvar_t  ui_textWrapCache;
 vmCvar_t  ui_developer;
 vmCvar_t  ui_screen;
+vmCvar_t  ui_screens;
+vmCvar_t  ui_screenname;
 
 vmCvar_t  ui_winner;
 
@@ -123,8 +128,11 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_serverStatusTimeOut, "ui_serverStatusTimeOut", "7000", CVAR_ARCHIVE},
   { &ui_textWrapCache, "ui_textWrapCache", "1", CVAR_ARCHIVE },
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
-  { &ui_developer, "ui_screen", "0", CVAR_ARCHIVE },
   { &ui_emoticons, "cg_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
+  { &ui_winner, "ui_winner", "", CVAR_ROM }
+  { &ui_screen, "ui_screen", "0", CVAR_ROM },
+  { &ui_screens, "ui_screens", "0", CVAR_ROM },
+  { &ui_screenname, "ui_screenname", "", CVAR_ROM },
 };
 
 static int    cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
@@ -1122,7 +1130,7 @@ static void UI_StartServerRefresh( qboolean full )
 
   if( ui_netSource.integer == AS_LOCAL )
   {
-    trap_Cmd_ExecuteText( EXEC_NOW, "localservers\n" );
+    trap_Cmd_ExecuteText( EXEC_APPEND, "localservers\n" );
     uiInfo.serverStatus.refreshtime = uiInfo.uiDC.realTime + 1000;
     return;
   }
@@ -1139,10 +1147,10 @@ static void UI_StartServerRefresh( qboolean full )
     ptr = UI_Cvar_VariableString( "debug_protocol" );
 
     if( strlen( ptr ) )
-      trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %s full empty\n", i, ptr ) );
+      trap_Cmd_ExecuteText( EXEC_APPEND, va( "globalservers %d %s full empty\n", i, ptr ) );
     else
     {
-      trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %d full empty\n", i,
+      trap_Cmd_ExecuteText( EXEC_APPEND, va( "globalservers %d %d full empty\n", i,
                             (int)trap_Cvar_VariableValue( "protocol" ) ) );
     }
   }
@@ -1938,6 +1946,81 @@ static void UI_DrawGLInfo( rectDef_t *rect, float scale, int textalign, int text
                     textalign, textvalign, textStyle, buffer );
 }
 
+static void UI_DrawCredits( rectDef_t *rect, float scale, int textalign, int textvalign,
+                           vec4_t color, int textStyle, float text_x, float text_y )
+{
+  UI_DrawTextBlock( rect, text_x, text_y, color, scale, textalign, textvalign, textStyle,
+  "^2~~=[ ^4Tremfusion Core Development Team ^2]=~~\n\n"
+  "^1Amanieu d'Antras\n^3- Programmer: Game and engine enhancements\n\n"
+  "^1Eli Ribble \"Ender\"\n^3- Programmer: Bots, Xreal renderer porting\n\n"
+  "^1John Black \"Champion\"\n^3- Programmer: Bots, Python scripting, Wii Port\n\n"
+  "^1Maurice Doison \"Azreal07\"\n^3- Programmer: Lua scripting, Game scripting engine\n\n"
+  "^1Thomas Brethome \"Madtree\"\n^3- Programmer: Code optimisations, Renderer enhancements\n\n"
+  "^1Griffon Bowman\n^3- Programmer: NCurses Console, IRIX port\n\n"
+  "^1Pierre Fersing \"PierreF\"\n^3- Server Administration, Hosting\n\n"
+  "^1Corentin Wallez \"Kangounator\"\n^3- UI Designer\n\n"
+  "^1Jonathan Itschner \"Chessguy\"\n^3- 2D Artist\n\n"
+  "\n"
+  "^2~~=[ ^4External Contributors ^2]=~~\n\n"
+  "We thank the many people who have contributed to this project to make it what it is today:\n\n"
+  "^1Ian Weller: ^3Website design\n"
+  "^1Raoni: ^33D Modelling\n"
+  "^1CeRRa: ^3Artwork\n"
+  "^1Haptism: ^3Helped the Mac port\n"
+  "^1Daniel Dunwody \"WireDDD\": ^3Programming\n"
+  "^1f0rqu3: ^3Programming\n"
+  "^1/dev/humancontroller: ^3Programming\n"
+  "^1Troy: ^3Programming\n"
+  "^1Gewgle/Mercury: ^3Programming\n"
+  "^1SlackerLinux: ^3Programming\n"
+  "^1Critux/Snapser: ^3Programming\n"
+  "^1Evan Goers \"Odin\"/\"megatog615\": ^3Programming\n"
+  "^1Rezyn: ^3Programming\n"
+  "^1David Serverwright \"DavidSev\": ^3Programming\n"
+  "^1Ben Millwood \"benmachine\": ^3Programming\n"
+  "^1Chris Schwarz \"Lakitu7\": ^3Programming\n"
+  "^1Roman Tetelman \"kevlarman\": ^3Programming\n"
+  "\n"
+  "We would like to thank the Tremulous development team for creating a great game:\n\n"
+  "^1Asa Kravets \"Norfenstein\"\n"
+  "^1Ben Millwood \"benmachine\"\n"
+  "^1Ben Scholzen \"DASPRiD\"\n"
+  "^1Catalyc\n"
+  "^1Chris McCarthy \"Dolby\"\n"
+  "^1Chris Schwarz \"Lakitu7\"\n"
+  "^1Gordon Miller \"Godmil\"\n"
+  "^1Jan van der Weg \"Stannum\"\n"
+  "^1Khalsa\n"
+  "^1M. Kristall \"Undeference\"\n"
+  "^1Mike Mcinnerney \"Vedacon\"\n"
+  "^1Nick Jansens \"Jex\"\n"
+  "^1Paul Greveson \"Mop\"\n"
+  "^1Robin Marshall \"OverFlow\"\n"
+  "^1Tim Angus \"Timbo\"\n"
+  "^1Tony White \"tjw\"\n"
+  "^1Who-[Soup]\n"
+  "\n"
+  "We would also like to thank the ioquake3 maintainers for their great engine:\n\n"
+  "^1Ludwig Nussel\n"
+  "^1Thilo Schulz\n"
+  "^1Tim Angus\n"
+  "^1Tony J. White\n"
+  "^1Zachary J. Slater\n" );
+}
+
+static void UI_DrawScreen( rectDef_t *rect, int modifier )
+{
+  int shotNumber;
+
+  shotNumber = current_screen + modifier;
+
+  if ( shotNumber < 0 || shotNumber >= maxscreens )
+    return;
+
+  UI_DrawHandlePic( rect->x, rect->y, rect->w, rect->h,
+                    trap_R_RegisterShaderNoMip( va( "screenshots/%s", screenshots[ shotNumber ] ) ) );
+}
+
 // FIXME: table drive
 //
 static void UI_OwnerDraw( float x, float y, float w, float h,
@@ -2015,6 +2098,14 @@ static void UI_OwnerDraw( float x, float y, float w, float h,
 
     case UI_GLINFO:
       UI_DrawGLInfo( &rect, scale, textalign, textvalign, foreColor, textStyle, text_x, text_y );
+      break;
+
+    case UI_CREDITS:
+      UI_DrawCredits( &rect, scale, textalign, textvalign, foreColor, textStyle, text_x, text_y );
+      break;
+
+    case UI_SCREEN:
+      UI_DrawScreen( &rect, special );
       break;
 
     default:
@@ -2683,7 +2774,6 @@ static void UI_LoadDemos( void )
       if( !Q_stricmp( demoname +  len - strlen( demoExt ), demoExt ) )
         demoname[len-strlen( demoExt )] = '\0';
 
-      Q_strupr( demoname );
       uiInfo.demoList[i] = String_Alloc( demoname );
       demoname += len + 1;
     }
@@ -2833,6 +2923,82 @@ static void UI_Update( const char *name )
   }
 }
 
+void UI_ScreenChange( char **args )
+{
+  static int saved_index = 0;
+  const char *string;
+  int i, modifier;
+  char buffer[ 8192 ];
+
+  // Reload the screenshots list
+  maxscreens = trap_FS_GetFileList( "screenshots", ".jpg", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  string = buffer;
+  for (i = 0; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
+  }
+
+  // Also load TGAs
+  maxscreens += trap_FS_GetFileList( "screenshots", ".tga", buffer, sizeof( buffer ));
+  if ( maxscreens > 1024 )
+    maxscreens = 1024;
+  trap_Cvar_SetValue( "ui_screens", maxscreens );
+  string = buffer;
+  for (; i < maxscreens; i++)
+  {
+    Q_strncpyz( screenshots[ i ], string, sizeof( screenshots[ i ] ) );
+    string += strlen( string ) + 1;
+  }
+
+  // Sort the list
+  qsort(screenshots, maxscreens, MAX_QPATH, (int(*)(const void *, const void *))strcmp);
+
+  // Get the modifier & find the screen index
+  if( String_Parse( args, &string ) )
+  {
+    if( string[0] == '+' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen += modifier;
+    }
+    else if( string[0] == '-' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen -= modifier;
+    }
+    else if( string[0] == '=' )
+    {
+      if( Int_Parse( args, &modifier ) )
+        current_screen = modifier;
+    }
+    // Hack for saving the index when switching from multiview to detail view
+    else if( string[0] == '?' )
+      saved_index = current_screen;
+    else if( string[0] == '!' )
+      current_screen = saved_index;
+  }
+
+  // We don't want it to go below 0 or above the max number of screens
+  if( current_screen >= maxscreens )
+  {
+    current_screen -= modifier;
+    if( current_screen >= maxscreens )
+      current_screen = maxscreens - 1;
+  }
+  else if( current_screen < 0 )
+  {
+    current_screen += modifier;
+    if( current_screen < 0 )
+      current_screen = 0;
+  }
+
+  trap_Cvar_SetValue( "ui_screen", current_screen );
+  trap_Cvar_Set( "ui_screenname", screenshots[ current_screen ] );
+}
+
 //FIXME: lookup table
 static void UI_RunMenuScript( char **args )
 {
@@ -2869,6 +3035,12 @@ static void UI_RunMenuScript( char **args )
       Controls_GetConfig();
     else if( Q_stricmp( name, "clearError" ) == 0 )
       trap_Cvar_Set( "com_errorMessage", "" );
+    else if (Q_stricmp(name, "downloadIgnore") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
+    else if (Q_stricmp(name, "downloadCURL") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_CURL ) );
+    else if (Q_stricmp(name, "downloadUDP") == 0)
+      trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_UDP ) );
     else if( Q_stricmp( name, "RefreshServers" ) == 0 )
     {
       UI_StartServerRefresh( qtrue );
@@ -3004,9 +3176,7 @@ static void UI_RunMenuScript( char **args )
       char buffer[ MAX_CVAR_VALUE_STRING ];
       trap_Cvar_VariableStringBuffer( "ui_sayBuffer", buffer, sizeof( buffer ) );
 
-      if( !buffer[ 0 ] )
-      {
-      }
+      if( !buffer[ 0 ] ) {}
       else if( uiInfo.chatTargetClientNum != -1 )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "tell %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
       else if( uiInfo.chatTeam )
@@ -3018,10 +3188,7 @@ static void UI_RunMenuScript( char **args )
         char clantagDecolored[ 32 ];
         trap_Cvar_VariableStringBuffer( "cl_clantag", clantagDecolored, sizeof( clantagDecolored ) );
         Q_CleanStr( clantagDecolored );
-        if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 )
-          trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
-        else
-          Com_Printf( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
       }
       else if( uiInfo.chatPrompt )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
@@ -3121,7 +3288,7 @@ static void UI_RunMenuScript( char **args )
       }
     }
     else if( Q_stricmp( name, "Quit" ) == 0 )
-      trap_Cmd_ExecuteText( EXEC_NOW, "quit" );
+      trap_Cmd_ExecuteText( EXEC_APPEND, "quit" );
     else if( Q_stricmp( name, "Leave" ) == 0 )
     {
       trap_Cmd_ExecuteText( EXEC_APPEND, "disconnect\n" );
@@ -3313,14 +3480,14 @@ static void UI_RunMenuScript( char **args )
         {
           BG_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] );
-          trap_Cmd_ExecuteText( EXEC_NOW, va( "unignore %i\n",
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "unignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
         else
         {
           BG_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                             uiInfo.clientNums[ uiInfo.ignoreIndex ] );
-          trap_Cmd_ExecuteText( EXEC_NOW, va( "ignore %i\n",
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "ignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
       }
@@ -3334,7 +3501,7 @@ static void UI_RunMenuScript( char **args )
         {
           BG_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                             uiInfo.clientNums[ uiInfo.ignoreIndex ] );
-          trap_Cmd_ExecuteText( EXEC_NOW, va( "ignore %i\n",
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "ignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
       }
@@ -3348,10 +3515,14 @@ static void UI_RunMenuScript( char **args )
         {
           BG_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] );
-          trap_Cmd_ExecuteText( EXEC_NOW, va( "unignore %i\n",
+          trap_Cmd_ExecuteText( EXEC_APPEND, va( "unignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
       }
+    }
+    else if( Q_stricmp( name, "ScreenChange" ) == 0 )
+    {
+      UI_ScreenChange( args );
     }
     else
       Com_Printf( "unknown UI script %s\n", name );
@@ -4017,6 +4188,7 @@ void UI_Init( qboolean inGameLoad )
   uiInfo.uiDC.stopCinematic = &UI_StopCinematic;
   uiInfo.uiDC.drawCinematic = &UI_DrawCinematic;
   uiInfo.uiDC.runCinematicFrame = &UI_RunCinematicFrame;
+  uiInfo.uiDC.getFileList = &trap_FS_GetFileList;
 
   Init_Display( &uiInfo.uiDC );
 
@@ -4465,6 +4637,16 @@ void UI_DrawConnectScreen( qboolean overlay )
     case CA_CONNECTED:
       {
         char downloadName[MAX_INFO_VALUE];
+        int prompt = trap_Cvar_VariableValue( "cl_downloadPrompt" );
+  
+        if( prompt & DLP_SHOW )
+        {
+          if (!Menus_ActivateByName( "download_popmenu" ))
+            return;
+          Com_Printf( "Opening download prompt...\n" );
+          trap_Key_SetCatcher( KEYCATCH_UI );
+          trap_Cvar_Set( "cl_downloadPrompt", "0" );
+        }
 
         trap_Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof( downloadName ) );
 

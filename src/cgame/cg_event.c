@@ -359,49 +359,6 @@ static void CG_Obituary( entityState_t *ent )
 }
 
 
-/*
-=============
-CG_TeamJoinMessage
-
-Prints messages when players change teams
-=============
-*/
-void CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci )
-{
-  int           team;
-  int           oldteam;
-  char          *playerName;
-
-
-  // Collect info
-  team = newInfo->team;
-  oldteam = ci->team;
-
-  playerName = newInfo->name;
-
-  // If no change occurred, print nothing
-  if( team == oldteam )
-    return;
-
-  // Print the appropriate message
-  if( team == TEAM_NONE )
-  {
-    CG_Printf( "%s" S_COLOR_WHITE " left the %ss\n",
-      playerName, BG_TeamName( oldteam ) );
-  }
-  else if( oldteam == TEAM_NONE )
-  {
-    CG_Printf( "%s" S_COLOR_WHITE " joined the %ss\n",
-      playerName, BG_TeamName( team ) );
-  }
-  else
-  {
-    CG_Printf( "%s" S_COLOR_WHITE " left the %ss and joined the %ss\n",
-      playerName, BG_TeamName( oldteam ), BG_TeamName( team ) );
-  }
-}
-
-
 
 //==========================================================================
 
@@ -781,6 +738,17 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
         CG_HandleAlienFeedback( cent, AFEEDBACK_TEAMHIT );
         break;
 
+    case EV_ALIENRANGED_HIT:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_HIT );
+        break;
+  	 
+    case EV_ALIENRANGED_MISS:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_MISS );
+        break;
+  	 
+    case EV_ALIENRANGED_TEAMHIT:
+        CG_HandleAlienFeedback( cent, AFEEDBACK_RANGED_TEAMHIT );
+        break;
     //=================================================================
 
     //
@@ -880,8 +848,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position )
       break;
 
     case EV_MASS_DRIVER:
-      ByteToDir( es->eventParm, dir );
-      CG_MissileHitWall( es->weapon, es->generic1, 0, position, dir, IMPACTSOUND_DEFAULT, 0 );
       CG_MassDriverFire( es );
       break;
 

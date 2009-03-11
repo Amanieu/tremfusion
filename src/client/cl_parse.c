@@ -421,7 +421,7 @@ void CL_SystemInfoChanged( void ) {
 			baseGameSet = qtrue;
 		}
 
-		if (!Q_stricmp(key, "sv_pure") || !Q_stricmp(key, "sv_restrict"))
+		if (!Q_stricmp(key, "sv_pure"))
 			cl_connectedToPureServer = atoi(value);
 
 		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
@@ -447,7 +447,6 @@ void CL_SystemInfoChanged( void ) {
 	}
 	if ( clc.demoplaying ) {
 		Cvar_Set( "sv_pure", "0" );
-		Cvar_Set( "sv_restricted", "0" );
 		Cvar_Set( "sv_cheats", "1" );
 		cl_connectedToPureServer = qfalse;
 	}
@@ -474,12 +473,16 @@ static void CL_ParseServerInfo(void)
 		Info_ValueForKey(serverInfo, "sv_dlURL"),
 		sizeof(clc.sv_dlURL));
 	if (!clc.sv_dlURL[0]) {
-		if (!atoi(Info_ValueForKey(systemInfo, "sv_wwwDownload")))
-			clc.sv_allowDownload |= DLF_NO_REDIRECT;
 		Q_strncpyz(clc.sv_dlURL,
 			Info_ValueForKey(systemInfo, "sv_wwwBaseURL"),
 			sizeof(clc.sv_dlURL));
 	}
+	// If we have an URL, assume we can use HTTP
+	if (clc.sv_dlURL[0] || cl_dlURLOverride->string[0]) {
+		clc.sv_allowDownload |= DLF_ENABLE;
+		clc.sv_allowDownload &= ~DLF_NO_REDIRECT;
+	}
+	Cvar_SetValue("ui_serverinfo_allowdl", clc.sv_allowDownload);
 }
 
 /*

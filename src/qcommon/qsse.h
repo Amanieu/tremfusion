@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremulous.
+This file is part of Tremfusion.
 
-Tremulous is free software; you can redistribute it
+Tremfusion is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremulous is distributed in the hope that it will be
+Tremfusion is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremulous; if not, write to the Free Software
+along with Tremfusion; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -32,8 +32,10 @@ typedef __m128  s4f;   /* scalar of 4 floats (all components are equal) */
 
 extern v4f v4fZero;
 extern v4f v4fZeroDotOne;
+extern v4f v4fMZeroDotOne;
 extern v4f v4fZeroDotTwoFive;
 extern v4f v4fZeroDotFive;
+extern v4f v4fMZeroDotFive;
 extern v4f v4fOne;
 extern v4f v4fMOne;
 extern v4f v4fXMask;
@@ -83,6 +85,16 @@ v4fStoreU(float *adr, v4f vec) {
 static ID_INLINE void
 v4fStoreA(float *adr, v4f vec) {
 	_mm_store_ps(adr, vec);
+}
+
+static ID_INLINE void
+v4fStoreLoA(float *adr, v4f vec) {
+	_mm_storel_pi((__m64 *)adr, vec);
+}
+
+static ID_INLINE void
+v4fStoreHiA(float *adr, v4f vec) {
+	_mm_storeh_pi((__m64 *)adr, vec);
 }
 
 
@@ -193,6 +205,11 @@ v4iStoreU(int *adr, v4i vec) {
 static ID_INLINE void
 v4iStoreA(int *adr, v4i vec) {
 	_mm_store_si128((__m128i *)adr, vec);
+}
+
+static ID_INLINE void
+v4iStoreLoA(int *adr, v4i vec) {
+	_mm_storel_epi64((__m128i *)adr, vec);
 }
 
 
@@ -511,10 +528,13 @@ v4fAndNot(v4f a, v4f b) {
 	return _mm_andnot_ps(a, b);
 }
 
+extern v4f mixMask0000, mixMask0001, mixMask0010, mixMask0011,
+           mixMask0100, mixMask0101, mixMask0110, mixMask0111,
+           mixMask1000, mixMask1001, mixMask1010, mixMask1011,
+           mixMask1100, mixMask1101, mixMask1110, mixMask1111;
+
 static ID_INLINE v4f
-v4fMix(v4f v0, v4f v1, int idx0, int idx1, int idx2, int idx3) {
-	int idx[4] ALIGNED(16) = { -idx0, -idx1, -idx2, -idx3 };
-	v4f mask = v4fLoadA( (float *)idx );
+v4fMix(v4f v0, v4f v1, v4f mask) {
 	return _mm_or_ps( _mm_and_ps( mask, v1 ), _mm_andnot_ps( mask, v0 ));
 }
 
@@ -526,6 +546,11 @@ v2iOr(v2i a, v2i b) {
 static ID_INLINE v2i
 v2iAnd(v2i a, v2i b) {
 	return _mm_and_si64(a, b);
+}
+
+static ID_INLINE v2i
+v2iAndNot(v2i a, v2i b) {
+	return _mm_andnot_si64(a, b);
 }
 
 static ID_INLINE v2i
@@ -577,6 +602,11 @@ v4iOr(v4i a, v4i b) {
 static ID_INLINE v4i
 v4iAnd(v4i a, v4i b) {
 	return _mm_and_si128(a, b);
+}
+
+static ID_INLINE v4i
+v4iAndNot(v4i a, v4i b) {
+	return _mm_andnot_si128(a, b);
 }
 
 static ID_INLINE v4i
@@ -778,7 +808,7 @@ void InitSSEMode(void);
 
 static ID_INLINE v4f
 v4fRound(v4f vec) {
-	return v4fAdd(v4fSub(v4fSub(v4fAdd(v4fAdd(vec, v4fZeroDotFive),
+	return v4fAdd(v4fSub(v4fSub(v4fAdd(vec,
 					   v4fTwoTwentyThree),
 				    v4fTwoTwentyThree),
 			     v4fTwoTwentyThree),
@@ -858,6 +888,18 @@ v4fVectorCompareEpsilon(v4f v1, v4f v2, s4f epsilon )
 		return 0;
 
 	return 1;
+}
+
+static ID_INLINE int
+v4fBoxOnPlaneSide(v4f mins, v4f maxs, v4f plane) {
+	v4f mask = v4fLt( plane, v4fZero );
+	v4f corner0 = v4fOr( v4fAnd( mask, mins ), v4fAndNot( mask, maxs ) );
+	v4f corner1 = v4fOr( v4fAnd( mask, maxs ), v4fAndNot( mask, mins ) );
+	
+	v4f dist1 = v4fNeg( v4fPlaneDist( corner0, plane ) );
+	v4f dist2 =         v4fPlaneDist( corner1, plane );
+	
+	return v4fSignBits( v4fMix( dist1, dist2, mixMask0111 ) ) & 0x03;
 }
 
 static ID_INLINE v4f

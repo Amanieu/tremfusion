@@ -465,7 +465,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 		if (!fd_zero)
 		{
-			Com_DPrintf("VM_LoadQVM: open(/dev/zero) failure: %s", strerror(errno));
+			Com_DPrintf("VM_LoadQVM: open(/dev/zero) failure");
 		}
 		else
 		{
@@ -629,7 +629,7 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	if ( interpret == VMI_NATIVE ) {
 		// try to load as a system dll
 		Com_DPrintf( "Loading dll file %s.\n", vm->name );
-		vm->dllHandle = Sys_LoadDll( module, vm->fqpath , &vm->entryPoint, VM_DllSyscall );
+		vm->dllHandle = Sys_LoadDll( module, &vm->entryPoint, VM_DllSyscall );
 		if ( vm->dllHandle ) {
 			return vm;
 		}
@@ -740,33 +740,16 @@ void VM_Forced_Unload_Done(void) {
 }
 
 void *VM_ArgPtr( intptr_t intValue ) {
-	if ( !intValue ) {
-		return NULL;
-	}
-	// currentVM is missing on reconnect
-	if ( currentVM==NULL )
-	  return NULL;
-
-	if ( currentVM->entryPoint ) {
-		return (void *)(currentVM->dataBase + intValue);
-	}
-	else {
-		return (void *)(currentVM->dataBase + (intValue & currentVM->dataMask));
-	}
+	return VM_ExplicitArgPtr( currentVM, intValue );
 }
 
 void *VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue ) {
-	if ( !intValue ) {
+	if ( !intValue || !vm ) {
 		return NULL;
 	}
 
-	// currentVM is missing on reconnect here as well?
-	if ( currentVM==NULL )
-	  return NULL;
-
-	//
 	if ( vm->entryPoint ) {
-		return (void *)(vm->dataBase + intValue);
+		return (void *)intValue;
 	}
 	else {
 		return (void *)(vm->dataBase + (intValue & vm->dataMask));
@@ -833,7 +816,7 @@ intptr_t	QDECL VM_Call( vm_t *vm, int callnum, ... ) {
                             args[4],  args[5],  args[6], args[7],
                             args[8],  args[9]);
 	} else {
-#if id386 // i386 calling convention doesn't need conversion
+#if id386 || idsparc // i386/sparc calling convention doesn't need conversion
 #ifndef NO_VM_COMPILED
 		if ( vm->compiled )
 			r = VM_CallCompiled( vm, (int*)&callnum );

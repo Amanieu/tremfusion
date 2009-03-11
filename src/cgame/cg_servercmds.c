@@ -161,11 +161,10 @@ Called on load to set the initial values from configure strings
 void CG_SetConfigValues( void )
 {
   sscanf( CG_ConfigString( CS_BUILDPOINTS ),
-          "%d %d %d %d %d", &cgs.alienBuildPoints,
+          "%d %d %d %d", &cgs.alienBuildPoints,
                             &cgs.alienBuildPointsTotal,
                             &cgs.humanBuildPoints,
-                            &cgs.humanBuildPointsTotal,
-                            &cgs.humanBuildPointsPowered );
+                            &cgs.humanBuildPointsTotal );
 
   sscanf( CG_ConfigString( CS_STAGES ), "%d %d %d %d %d %d", &cgs.alienStage, &cgs.humanStage,
       &cgs.alienCredits, &cgs.humanCredits, &cgs.alienNextStageThreshold, &cgs.humanNextStageThreshold );
@@ -290,11 +289,10 @@ static void CG_ConfigStringModified( void )
   else if( num == CS_WARMUP )
     CG_ParseWarmup( );
   else if( num == CS_BUILDPOINTS )
-    sscanf( str, "%d %d %d %d %d", &cgs.alienBuildPoints,
+    sscanf( str, "%d %d %d %d", &cgs.alienBuildPoints,
                                    &cgs.alienBuildPointsTotal,
                                    &cgs.humanBuildPoints,
-                                   &cgs.humanBuildPointsTotal,
-                                   &cgs.humanBuildPointsPowered );
+                                   &cgs.humanBuildPointsTotal );
   else if( num == CS_STAGES )
   {
     stage_t oldAlienStage = cgs.alienStage;
@@ -590,14 +588,14 @@ void CG_Menu( int menu, int arg )
     
     case MN_B_NOROOM:
       longMsg   = "There is no room to build here. Move until the structure turns "
-                  "translucent green indicating a valid build location.";
+                  "translucent green, indicating a valid build location.";
       shortMsg  = "There is no room to build here";
       type      = DT_BUILD;
       break;
 
     case MN_B_NORMAL:
       longMsg   = "Cannot build on this surface. The surface is too steep or "
-                  "unsuitable to build on. Please choose another site for this "
+                  "unsuitable for building. Please choose another site for this "
 	                "structure.";
       shortMsg  = "Cannot build on this surface";
       type      = DT_BUILD;
@@ -765,7 +763,7 @@ void CG_Menu( int menu, int arg )
 
     case MN_A_NOOVMND:
       longMsg   = "There is no Overmind. An Overmind must be built to control "
-                  "the structure you tried to place";
+                  "the structure you tried to place.";
       shortMsg  = "There is no Overmind";
       type      = DT_BUILD;
       break;
@@ -800,9 +798,8 @@ void CG_Menu( int menu, int arg )
 
     case MN_A_TOOCLOSE:
       longMsg   = "This location is too close to the enemy to evolve. Move away "
-                  "until you are no longer aware of the enemy's presence and try "
-	                "again.";
-      shortMsg  = "This location is too close to the enemy to evolve";
+                  "from the enemy's presence and try again.";
+      shortMsg  = "This location is too close to the enemy to evolve\n";
       type      = DT_ARMOURYEVOLVE;
       break;
 

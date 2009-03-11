@@ -997,6 +997,7 @@ void ClientUserinfoChanged( int clientNum )
   gentity_t *ent;
   int       health;
   char      *s;
+  char      *s2;
   char      model[ MAX_QPATH ];
   char      buffer[ MAX_QPATH ];
   char      filename[ MAX_QPATH ];
@@ -1044,6 +1045,12 @@ void ClientUserinfoChanged( int clientNum )
       trap_SendServerCommand( ent - g_entities, va(
         "print \"Maximum name changes reached (g_maxNameChanges = %d)\n\"",
          g_maxNameChanges.integer ) );
+      revertName = qtrue;
+    }
+    else if( client->pers.muted )
+    {
+      trap_SendServerCommand( ent - g_entities,
+        "print \"You cannot change your name while you are muted\n\"" );
       revertName = qtrue;
     }
     else if( !G_admin_name_check( ent, newname, err, sizeof( err ) ) )
@@ -1149,8 +1156,9 @@ void ClientUserinfoChanged( int clientNum )
 
   // teamInfo
   s = Info_ValueForKey( userinfo, "teamoverlay" );
+  s2 = Info_ValueForKey( userinfo, "cg_drawTeamStatus" );
 
-  if( atoi( s ) != 0 )
+  if( atoi( s ) != 0 || atoi( s2 ) != 0)
     client->pers.teamInfo = qtrue;
   else
     client->pers.teamInfo = qfalse;
@@ -1614,6 +1622,7 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, vec3_t origin, vec3_t angles
 
   client->respawnTime = level.time;
   client->lastKillTime = level.time;
+  ent->nextRegenTime = level.time;
 
   client->inactivityTime = level.time + g_inactivity.integer * 1000;
   client->latched_buttons = 0;

@@ -37,7 +37,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_MENUDEFFILE 4096
 #define MAX_MENUFILE 32768
 #define MAX_MENUS 256
-#define MAX_MENUITEMS 128
+#define MAX_MENUITEMS 512
 #define MAX_COLOR_RANGES 10
 #define MAX_OPEN_MENUS 16
 
@@ -246,6 +246,18 @@ typedef struct modelDef_s
   float fov_x;
   float fov_y;
   int rotationSpeed;
+
+  vec3_t axis;
+
+  int   animated;
+  int   startframe;
+  int   numframes;
+  int   fps;
+
+  int   frame;
+  int   oldframe;
+  float backlerp;
+  int   frameTime;
 }
 modelDef_t;
 
@@ -418,6 +430,7 @@ typedef struct
   void ( *stopCinematic )( int handle );
   void ( *drawCinematic )( int handle, float x, float y, float w, float h );
   void ( *runCinematicFrame )( int handle );
+  int ( *getFileList )( const char *path, const char *extension, char *listbuf, int bufsize );
 
   float      yscale;
   float      xscale;

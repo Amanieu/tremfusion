@@ -242,7 +242,7 @@ struct gentity_s
   int               suicideTime;                    // when the client will suicide
 
   int               lastDamageTime;
-  int               lastRegenTime;
+  int               nextRegenTime;
 
   qboolean          zapping;                        // adv maurader is zapping
   qboolean          wasZapping;                     // adv maurader was zapping
@@ -410,6 +410,7 @@ struct gclient_s
 
   int                 time100;          // timer for 100ms interval events
   int                 time1000;         // timer for one second interval events
+  int                 time10000;        // timer for ten second interval events
 
   char                *areabits;
 
@@ -545,6 +546,7 @@ typedef struct
   char              voteString[MAX_STRING_CHARS];
   char              voteDisplayString[MAX_STRING_CHARS];
   int               voteTime;                     // level.time vote was called
+  int               votePassThreshold;            // need at least this percent to pass
   int               voteExecuteTime;              // time the vote is executed
   int               voteYes;
   int               voteNo;
@@ -596,8 +598,11 @@ typedef struct
   int               numLiveHumanClients;
 
   int               alienBuildPoints;
+  int               alienBuildPointQueue;
+  int               alienNextQueueTime;
   int               humanBuildPoints;
-  int               humanBuildPointsPowered;
+  int               humanBuildPointQueue;
+  int               humanNextQueueTime;
 
   gentity_t         *markedBuildables[ MAX_GENTITIES ];
   int               numBuildablesForRemoval;
@@ -613,6 +618,8 @@ typedef struct
 
   team_t            lastWin;
 
+  qboolean          suddenDeath;
+  int               suddenDeathBeginTime;
   timeWarning_t     suddenDeathWarning;
   timeWarning_t     timelimitWarning;
 
@@ -685,7 +692,9 @@ void      G_FollowLockView( gentity_t *ent );
 qboolean  G_FollowNewClient( gentity_t *ent, int dir );
 void      G_ToggleFollow( gentity_t *ent );
 void      G_MatchOnePlayer( int *plist, int num, char *err, int len );
+int       G_ClientNumberFromString( char *s );
 int       G_ClientNumbersFromString( char *s, int *plist, int max );
+void      G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText );
 int       G_SayArgc( void );
 qboolean  G_SayArgv( int n, char *buffer, int bufferLength );
 char      *G_SayConcatArgs( int start );
@@ -741,7 +750,6 @@ gentity_t         *G_CheckSpawnPoint( int spawnNum, vec3_t origin, vec3_t normal
 buildable_t       G_IsPowered( vec3_t origin );
 qboolean          G_IsDCCBuilt( void );
 int               G_FindDCC( gentity_t *self );
-qboolean          G_IsOvermindBuilt( void );
 qboolean          G_FindOvermind( gentity_t *self );
 qboolean          G_FindCreep( gentity_t *self );
 
@@ -758,6 +766,7 @@ int               G_LayoutList( const char *map, char *list, int len );
 void              G_LayoutSelect( void );
 void              G_LayoutLoad( void );
 void              G_BaseSelfDestruct( team_t team );
+void              G_QueueBuildPoints( gentity_t *self );
 
 //
 // g_utils.c
@@ -898,7 +907,7 @@ qboolean  CheckPounceAttack( gentity_t *ent );
 void      CheckCkitRepair( gentity_t *ent );
 void      G_ChargeAttack( gentity_t *ent, gentity_t *victim );
 void      G_CrushAttack( gentity_t *ent, gentity_t *victim );
-void      G_UpdateZaps( gentity_t *ent );
+void      G_UpdateZaps( int msec );
 
 
 //
@@ -1064,11 +1073,12 @@ typedef struct mapRotations_s
 } mapRotations_t;
 
 void      G_PrintRotations( void );
-qboolean  G_AdvanceMapRotation( void );
+void      G_AdvanceMapRotation( void );
 qboolean  G_StartMapRotation( char *name, qboolean changeMap );
 void      G_StopMapRotation( void );
 qboolean  G_MapRotationActive( void );
 void      G_InitMapRotations( void );
+qboolean  G_MapExists( char *name );
 
 //
 // g_ptr.c
@@ -1098,6 +1108,7 @@ extern  vmCvar_t  g_maxNameChanges;
 
 extern  vmCvar_t  g_timelimit;
 extern  vmCvar_t  g_suddenDeathTime;
+extern  vmCvar_t  g_suddenDeath;
 extern  vmCvar_t  g_friendlyFire;
 extern  vmCvar_t  g_friendlyFireHumans;
 extern  vmCvar_t  g_friendlyFireAliens;
@@ -1119,6 +1130,8 @@ extern  vmCvar_t  g_warmup;
 extern  vmCvar_t  g_doWarmup;
 extern  vmCvar_t  g_allowVote;
 extern  vmCvar_t  g_voteLimit;
+extern  vmCvar_t  g_suddenDeathVotePercent;
+extern  vmCvar_t  g_suddenDeathVoteDelay;
 extern  vmCvar_t  g_teamAutoJoin;
 extern  vmCvar_t  g_teamForceBalance;
 extern  vmCvar_t  g_smoothClients;
@@ -1130,6 +1143,8 @@ extern  vmCvar_t  g_singlePlayer;
 
 extern  vmCvar_t  g_humanBuildPoints;
 extern  vmCvar_t  g_alienBuildPoints;
+extern  vmCvar_t  g_humanBuildQueueTime;
+extern  vmCvar_t  g_alienBuildQueueTime;
 extern  vmCvar_t  g_humanStage;
 extern  vmCvar_t  g_humanCredits;
 extern  vmCvar_t  g_humanMaxStage;
@@ -1152,8 +1167,10 @@ extern  vmCvar_t  g_markDeconstruct;
 extern  vmCvar_t  g_debugMapRotation;
 extern  vmCvar_t  g_currentMapRotation;
 extern  vmCvar_t  g_currentMap;
+extern  vmCvar_t  g_nextMap;
 extern  vmCvar_t  g_initialMapRotation;
 extern  vmCvar_t  g_chatTeamPrefix;
+extern  vmCvar_t  g_sayAreaRange;
 
 extern  vmCvar_t  g_debugVoices;
 extern  vmCvar_t  g_voiceChats;
@@ -1175,10 +1192,12 @@ extern  vmCvar_t  g_adminLog;
 extern  vmCvar_t  g_adminParseSay;
 extern  vmCvar_t  g_adminNameProtect;
 extern  vmCvar_t  g_adminTempBan;
+extern  vmCvar_t  g_adminMaxBan;
 
 extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
+extern  vmCvar_t  g_specChat;
 extern  vmCvar_t  g_publicAdminMessages;
 
 

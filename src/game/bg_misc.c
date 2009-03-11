@@ -892,7 +892,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     0,                                              //int     health;
     0.0f,                                           //float   fallDamage;
-    0,                                              //int     regenRate;
+    0.0f,                                           //float   regenRate;
     0,                                              //int     abilities;
     WP_NONE,                                        //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -919,7 +919,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     ABUILDER_HEALTH,                                //int     health;
     0.2f,                                           //float   fallDamage;
-    ABUILDER_REGEN,                                 //int     regenRate;
+    ABUILDER_REGEN,                                 //float   regenRate;
     SCA_TAKESFALLDAMAGE|SCA_FOVWARPS|SCA_ALIENSENSE,//int     abilities;
     WP_ABUILD,                                      //weapon_t  startWeapon
     95.0f,                                          //float   buildDist;
@@ -947,7 +947,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     ABUILDER_UPG_HEALTH,                            //int     health;
     0.2f,                                           //float   fallDamage;
-    ABUILDER_UPG_REGEN,                             //int     regenRate;
+    ABUILDER_UPG_REGEN,                             //float   regenRate;
     SCA_TAKESFALLDAMAGE|SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
     WP_ABUILD2,                                     //weapon_t  startWeapon
     105.0f,                                         //float   buildDist;
@@ -974,7 +974,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL0_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL0_REGEN,                                   //int     regenRate;
+    LEVEL0_REGEN,                                   //float   regenRate;
     SCA_WALLCLIMBER|SCA_FOVWARPS|SCA_ALIENSENSE,    //int     abilities;
     WP_ALEVEL0,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1003,7 +1003,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL1_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL1_REGEN,                                   //int     regenRate;
+    LEVEL1_REGEN,                                   //float   regenRate;
     SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
     WP_ALEVEL1,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1032,7 +1032,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     LEVEL1_UPG_HEALTH,                              //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL1_UPG_REGEN,                               //int     regenRate;
+    LEVEL1_UPG_REGEN,                               //float   regenRate;
     SCA_FOVWARPS|SCA_WALLCLIMBER|SCA_ALIENSENSE,    //int     abilities;
     WP_ALEVEL1_UPG,                                 //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1059,7 +1059,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL2_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL2_REGEN,                                   //int     regenRate;
+    LEVEL2_REGEN,                                   //float   regenRate;
     SCA_WALLJUMPER|SCA_FOVWARPS|SCA_ALIENSENSE,     //int     abilities;
     WP_ALEVEL2,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1086,7 +1086,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S2 )|( 1 << S3 ),                        //int  stages
     LEVEL2_UPG_HEALTH,                              //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL2_UPG_REGEN,                               //int     regenRate;
+    LEVEL2_UPG_REGEN,                               //float   regenRate;
     SCA_WALLJUMPER|SCA_FOVWARPS|SCA_ALIENSENSE,     //int     abilities;
     WP_ALEVEL2_UPG,                                 //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1114,7 +1114,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     LEVEL3_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL3_REGEN,                                   //int     regenRate;
+    LEVEL3_REGEN,                                   //float   regenRate;
     SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
     WP_ALEVEL3,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1142,7 +1142,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S2 )|( 1 << S3 ),                                    //int  stages
     LEVEL3_UPG_HEALTH,                              //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL3_UPG_REGEN,                               //int     regenRate;
+    LEVEL3_UPG_REGEN,                               //float   regenRate;
     SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
     WP_ALEVEL3_UPG,                                 //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1171,7 +1171,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S3 ),                                    //int  stages
     LEVEL4_HEALTH,                                  //int     health;
     0.0f,                                           //float   fallDamage;
-    LEVEL4_REGEN,                                   //int     regenRate;
+    LEVEL4_REGEN,                                   //float   regenRate;
     SCA_FOVWARPS|SCA_ALIENSENSE,                    //int     abilities;
     WP_ALEVEL4,                                     //weapon_t  startWeapon
     0.0f,                                           //float   buildDist;
@@ -1197,7 +1197,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S1 )|( 1 << S2 )|( 1 << S3 ),            //int  stages
     100,                                            //int     health;
     1.0f,                                           //float   fallDamage;
-    0,                                              //int     regenRate;
+    0.0f,                                           //float   regenRate;
     SCA_TAKESFALLDAMAGE|SCA_CANUSELADDERS,          //int     abilities;
     WP_NONE, //special-cased in g_client.c          //weapon_t  startWeapon
     110.0f,                                         //float   buildDist;
@@ -1223,7 +1223,7 @@ static const classAttributes_t bg_classList[ ] =
     ( 1 << S3 ),                                    //int  stages
     100,                                            //int     health;
     1.0f,                                           //float   fallDamage;
-    0,                                              //int     regenRate;
+    0.0f,                                           //float   regenRate;
     SCA_TAKESFALLDAMAGE|
       SCA_CANUSELADDERS,                            //int     abilities;
     WP_NONE, //special-cased in g_client.c          //weapon_t  startWeapon
@@ -2756,6 +2756,7 @@ char *eventnames[ ] =
   "EV_BULLET_HIT_WALL",
 
   "EV_SHOTGUN",
+  "EV_MASS_DRIVER",
 
   "EV_MISSILE_HIT",
   "EV_MISSILE_MISS",
@@ -2802,10 +2803,14 @@ char *eventnames[ ] =
   "EV_MGTURRET_SPINUP", // turret spinup sound should play
 
   "EV_RPTUSE_SOUND",    // trigger a sound
- 
+
   "EV_ALIEN_HIT",       // Alien feedback for hitting an enemy
   "EV_ALIEN_MISS",      // Alien feedback for missing a strike
   "EV_ALIEN_TEAMHIT",   // Alien feedback for hitting a teammate
+
+  "EV_ALIENRANGED_HIT",       // Alien ranged attack feedback for hitting an enemy
+  "EV_ALIENRANGED_MISS",      // Alien ranged attack feedback for missing a strike
+  "EV_ALIENRANGED_TEAMHIT",   // Alien ranged attack feedback for hitting a teammate
 
   "EV_LEV2_ZAP"
 };
@@ -3398,7 +3403,9 @@ qboolean BG_PlayerCanChangeWeapon( playerState_t *ps )
   // prevent lcannon ammo conservation exploit
   if( ( ps->weapon == WP_LUCIFER_CANNON &&
       ps->stats[ STAT_MISC ] > LCANNON_CHARGE_TIME_MIN ) ||
-      ps->weaponTime > 0 || ps->weaponstate == WEAPON_FIRING )
+      //not pretty, allow players to switch weapons while ckit is repairing
+      ( ps->weapon != WP_HBUILD &&
+        ( ps->weaponTime > 0 || ps->weaponstate == WEAPON_FIRING ) ) )
     return qfalse;
 
   return qtrue;

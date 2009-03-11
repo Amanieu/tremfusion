@@ -145,7 +145,7 @@
 
     itemDef
     {
-      text "Kills"
+      text "Score"
       textscale .33
       style WINDOW_STYLE_EMPTY
       rect (LLIST_R-95) (BAR_H+BORDER) 1 BAR_H
@@ -215,7 +215,7 @@
 
     itemDef
     {
-      text "Kills"
+      text "Score"
       textscale .33
       style WINDOW_STYLE_EMPTY
       rect (RLIST_R-95) (BAR_H+BORDER) 1 BAR_H
@@ -354,6 +354,20 @@
       textvalign VALIGN_CENTER
       visible MENU_TRUE
       ownerdraw CG_SPECTATORS
+      decoration
+    }
+
+    itemDef
+    {
+      name winner
+      rect (W/2) (H+BAR_H) 0 0
+      style WINDOW_STYLE_EMPTY
+      forecolor 1 1 1 1
+      textscale 0.5
+      textalign ALIGN_CENTER
+      textvalign VALIGN_TOP
+      visible MENU_TRUE
+      cvar "ui_winner"
       decoration
     }
   }

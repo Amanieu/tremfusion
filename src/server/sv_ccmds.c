@@ -48,71 +48,6 @@ static void SV_CompleteDemoName( char *args, int argNum )
 	}
 }
 
-/*
-==================
-SV_GetPlayerByHandle
-
-Returns the player with player id or name from Cmd_Argv(1)
-==================
-*/
-static client_t *SV_GetPlayerByHandle( void ) {
-	client_t	*cl;
-	int			i;
-	char		*s;
-	char		cleanName[64];
-
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		return NULL;
-	}
-
-	if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "No player specified.\n" );
-		return NULL;
-	}
-
-	s = Cmd_Argv(1);
-
-	// Check whether this is a numeric player handle
-	for(i = 0; s[i] >= '0' && s[i] <= '9'; i++);
-	
-	if(!s[i])
-	{
-		int plid = atoi(s);
-
-		// Check for numeric playerid match
-		if(plid >= 0 && plid < sv_maxclients->integer)
-		{
-			cl = &svs.clients[plid];
-			
-			if(cl->state)
-				return cl;
-		}
-	}
-
-	// check for a name match
-	for ( i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++ ) {
-		if ( !cl->state ) {
-			continue;
-		}
-		if ( !Q_stricmp( cl->name, s ) ) {
-			return cl;
-		}
-
-		Q_strncpyz( cleanName, cl->name, sizeof(cleanName) );
-		Q_CleanStr( cleanName );
-		if ( !Q_stricmp( cleanName, s ) ) {
-			return cl;
-		}
-	}
-
-	Com_Printf( "Player %s is not on the server\n", s );
-
-	return NULL;
-}
-
-//=========================================================
-
 
 /*
 ==================
@@ -315,74 +250,6 @@ static void SV_MapRestart_f( void ) {
 	}
 }
 
-//===============================================================
-
-
-/*
-================
-SV_Status_f
-================
-*/
-static void SV_Status_f( void ) {
-	int			i, j, l;
-	client_t	*cl;
-	playerState_t	*ps;
-	const char		*s;
-	int			ping;
-
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		Com_Printf( "Server is not running.\n" );
-		return;
-	}
-
-	Com_Printf ("map: %s\n", sv_mapname->string );
-
-	Com_Printf ("num score ping name            lastmsg address               qport rate\n");
-	Com_Printf ("--- ----- ---- --------------- ------- --------------------- ----- -----\n");
-	for (i=0,cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++)
-	{
-		if (!cl->state)
-			continue;
-		Com_Printf ("%3i ", i);
-		ps = SV_GameClientNum( i );
-		Com_Printf ("%5i ", ps->persistant[PERS_SCORE]);
-
-		if (cl->state == CS_CONNECTED)
-			Com_Printf ("CNCT ");
-		else if (cl->state == CS_ZOMBIE)
-			Com_Printf ("ZMBI ");
-		else
-		{
-			ping = cl->ping < 9999 ? cl->ping : 9999;
-			Com_Printf ("%4i ", ping);
-		}
-
-		Com_Printf ("%s", cl->name);
-    // TTimo adding a ^7 to reset the color
-    // NOTE: colored names in status breaks the padding (WONTFIX)
-    Com_Printf ("^7");
-		l = 16 - strlen(cl->name);
-		for (j=0 ; j<l ; j++)
-			Com_Printf (" ");
-
-		Com_Printf ("%7i ", svs.time - cl->lastPacketTime );
-
-		s = NET_AdrToString( cl->netchan.remoteAddress );
-		Com_Printf ("%s", s);
-		l = 22 - strlen(s);
-		for (j=0 ; j<l ; j++)
-			Com_Printf (" ");
-		
-		Com_Printf ("%5i", cl->netchan.qport);
-
-		Com_Printf (" %5i", cl->rate);
-
-		Com_Printf ("\n");
-	}
-	Com_Printf ("\n");
-}
-
 
 /*
 ==================
@@ -423,38 +290,6 @@ static void SV_Systeminfo_f( void ) {
 
 
 /*
-===========
-SV_DumpUser_f
-
-Examine all a users info strings FIXME: move to game
-===========
-*/
-static void SV_DumpUser_f( void ) {
-	client_t	*cl;
-
-	// make sure server is running
-	if ( !com_sv_running->integer ) {
-		Com_Printf( "Server is not running.\n" );
-		return;
-	}
-
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf ("Usage: info <userid>\n");
-		return;
-	}
-
-	cl = SV_GetPlayerByHandle();
-	if ( !cl ) {
-		return;
-	}
-
-	Com_Printf( "userinfo\n" );
-	Com_Printf( "--------\n" );
-	Info_Print( cl->userinfo );
-}
-
-
-/*
 =================
 SV_KillServer
 =================
@@ -473,7 +308,7 @@ Redirect console output to a client
 */
 static client_t *redirect_client = NULL;
 static void SV_ClientRedirect( char *outputbuf ) {
-	SV_SendServerCommand( redirect_client, "%s", outputbuf );
+	SV_SendServerCommand( redirect_client, "print \"%s\"", outputbuf );
 }
 static void SV_StartRedirect_f( void ) {
 #define SV_OUTPUTBUF_LENGTH (1024 - 16)
@@ -625,10 +460,8 @@ void SV_AddOperatorCommands( void ) {
 	initialized = qtrue;
 
 	Cmd_AddCommand ("heartbeat", SV_Heartbeat_f);
-	Cmd_AddCommand ("status", SV_Status_f);
 	Cmd_AddCommand ("serverinfo", SV_Serverinfo_f);
 	Cmd_AddCommand ("systeminfo", SV_Systeminfo_f);
-	Cmd_AddCommand ("dumpuser", SV_DumpUser_f);
 	Cmd_AddCommand ("map_restart", SV_MapRestart_f);
 	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
 	Cmd_AddCommand ("map", SV_Map_f);

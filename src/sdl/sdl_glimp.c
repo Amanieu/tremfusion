@@ -22,15 +22,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <SDL.h>
 
-#if !SDL_VERSION_ATLEAST(1, 2, 10)
-#define SDL_GL_ACCELERATED_VISUAL 15
-#define SDL_GL_SWAP_CONTROL 16
-#elif MINSDL_PATCH >= 10
-#error Code block no longer necessary, please remove
-#endif
-
 #ifdef SMP
 #	include <SDL_thread.h>
+#	ifdef __linux__ || __sgi
+#		include <X11/Xlib.h>
+#	endif
 #endif
 
 #include <stdarg.h>
@@ -42,20 +38,97 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/client.h"
 #include "../sys/sys_local.h"
 #include "sdl_icon.h"
+#include "SDL_syswm.h"
 
 /* Just hack it for now. */
 #ifdef MACOS_X
 #include <OpenGL/OpenGL.h>
 typedef CGLContextObj QGLContext;
-#define GLimp_GetCurrentContext() CGLGetCurrentContext()
-#define GLimp_SetCurrentContext(ctx) CGLSetCurrentContext(ctx)
-#else
-typedef void *QGLContext;
-#define GLimp_GetCurrentContext() (NULL)
-#define GLimp_SetCurrentContext(ctx)
-#endif
 
 static QGLContext opengl_context;
+
+static void GLimp_GetCurrentContext(void)
+{
+	opengl_context = CGLGetCurrentContext();
+}
+
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable)
+{
+	if(enable)
+		CGLSetCurrentContext(opengl_context);
+	else
+		CGLSetCurrentContext(NULL);
+}
+#endif
+#elif __linux__ || __sgi
+#include <GL/glx.h>
+typedef struct
+{
+	GLXContext      ctx;
+	Display         *dpy;
+	GLXDrawable     drawable;
+} QGLContext_t;
+typedef QGLContext_t QGLContext;
+
+static QGLContext opengl_context;
+
+static void GLimp_GetCurrentContext(void)
+{
+	opengl_context.ctx = glXGetCurrentContext();
+	opengl_context.dpy = glXGetCurrentDisplay();
+	opengl_context.drawable = glXGetCurrentDrawable();
+}
+
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable)
+{
+	if(enable)
+		glXMakeCurrent(opengl_context.dpy, opengl_context.drawable, opengl_context.ctx);
+	else
+		glXMakeCurrent(opengl_context.dpy, None, NULL);
+}
+#endif
+#elif WIN32
+typedef struct
+{
+	HDC             hDC;		// handle to device context
+	HGLRC           hGLRC;		// handle to GL rendering context
+} QGLContext_t;
+typedef QGLContext_t QGLContext;
+
+static QGLContext opengl_context;
+
+static void GLimp_GetCurrentContext(void)
+{
+	SDL_SysWMinfo info;
+
+	SDL_VERSION(&info.version);
+	if(!SDL_GetWMInfo(&info))
+	{
+		ri.Printf(PRINT_WARNING, "Failed to obtain HWND from SDL (InputRegistry)");
+		return;
+	}
+
+	opengl_context.hDC = GetDC(info.window);
+	opengl_context.hGLRC = info.hglrc;
+}
+
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable)
+{
+	if(enable)
+		wglMakeCurrent(opengl_context.hDC, opengl_context.hGLRC);
+	else
+		wglMakeCurrent(opengl_context.hDC, NULL);
+}
+#endif
+#else
+static void GLimp_GetCurrentContext(void) {}
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable) {}
+#endif
+#endif
 
 typedef enum
 {
@@ -97,6 +170,12 @@ void GLimp_Shutdown( void )
 	Com_Memset( &glConfig, 0, sizeof( glConfig ) );
 	glConfig.displayAspect = oldDisplayAspect;
 	Com_Memset( &glState, 0, sizeof( glState ) );
+
+#ifdef MACOS_X
+	extern qboolean fullscreen_minimized;
+	if( fullscreen_minimized )
+		Cvar_Set( "r_fullscreen", "1" );
+#endif
 }
 
 /*
@@ -146,16 +225,8 @@ static void GLimp_DetectAvailableModes(void)
 	SDL_Rect **modes;
 	int numModes;
 	int i;
-	SDL_PixelFormat *format = NULL;
 
-#if SDL_VERSION_ATLEAST(1, 2, 10)
-	format = videoInfo->vfmt;
-#	if MINSDL_PATCH >= 10
-#		error Ifdeffery no longer necessary, please remove
-#	endif
-#endif
-
-	modes = SDL_ListModes( format, SDL_OPENGL | SDL_FULLSCREEN );
+	modes = SDL_ListModes( NULL, SDL_OPENGL | SDL_FULLSCREEN );
 
 	if( !modes )
 	{
@@ -232,33 +303,13 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL display\n");
 
-#if !SDL_VERSION_ATLEAST(1, 2, 10)
-	// 1.2.10 is needed to get the desktop resolution
-	glConfig.displayAspect = 4.0f / 3.0f;
-#elif MINSDL_PATCH >= 10
-#	error Ifdeffery no longer necessary, please remove
-#else
-	if( videoInfo == NULL )
-	{
-		static SDL_VideoInfo sVideoInfo;
-		static SDL_PixelFormat sPixelFormat;
+	// Guess the display aspect ratio through the desktop resolution
+	// by assuming (relatively safely) that it is set at or close to
+	// the display's native aspect ratio
+	videoInfo = SDL_GetVideoInfo();
+	glConfig.displayAspect = (float)videoInfo->current_w / (float)videoInfo->current_h;
 
-		videoInfo = SDL_GetVideoInfo( );
-
-		// Take a copy of the videoInfo
-		Com_Memcpy( &sPixelFormat, videoInfo->vfmt, sizeof( SDL_PixelFormat ) );
-		sPixelFormat.palette = NULL; // Should already be the case
-		Com_Memcpy( &sVideoInfo, videoInfo, sizeof( SDL_VideoInfo ) );
-		sVideoInfo.vfmt = &sPixelFormat;
-		videoInfo = &sVideoInfo;
-		// Guess the display aspect ratio through the desktop resolution
-		// by assuming (relatively safely) that it is set at or close to
-		// the display's native aspect ratio
-		glConfig.displayAspect = (float)videoInfo->current_w / (float)videoInfo->current_h;
-
-		ri.Printf( PRINT_DEVELOPER, "Estimated display aspect: %.3f\n", glConfig.displayAspect );
-	}
-#endif
+	ri.Printf( PRINT_DEVELOPER, "Estimated display aspect: %.3f\n", glConfig.displayAspect );
 
 	if( !failSafe )
 	{
@@ -392,7 +443,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, tdepthbits );
 		SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, tstencilbits );
 
-		if(r_stereoEnabled->integer)
+		if(r_stereoEnabled->integer && !failSafe)
 		{
 			glConfig.stereoEnabled = qtrue;
 			SDL_GL_SetAttribute(SDL_GL_STEREO, 1);
@@ -404,18 +455,6 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		}
 		
 		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-
-#if 0 // See http://bugzilla.icculus.org/show_bug.cgi?id=3526
-		// If not allowing software GL, demand accelerated
-		if( !r_allowSoftwareGL->integer )
-		{
-			if( SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 ) < 0 )
-			{
-				ri.Printf( PRINT_ALL, "Unable to guarantee accelerated "
-						"visual with libSDL < 1.2.10\n" );
-			}
-		}
-#endif
 
 		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval->integer ) < 0 )
 			ri.Printf( PRINT_ALL, "r_swapInterval requires libSDL >= 1.2.10\n" );
@@ -449,7 +488,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 			continue;
 		}
 
-		opengl_context = GLimp_GetCurrentContext();
+		GLimp_GetCurrentContext();
 
 		ri.Printf( PRINT_DEVELOPER, "Using %d/%d/%d Color bits, %d depth, %d stencil display.\n",
 				sdlcolorbits, sdlcolorbits, sdlcolorbits, tdepthbits, tstencilbits);
@@ -720,6 +759,10 @@ void GLimp_Init( void )
 
 	Sys_GLimpInit( );
 
+#if defined(SMP) && (defined(__linux__) || defined(__sgi))
+	XInitThreads( );
+#endif
+
 	// create the window and set up the context
 	if( !GLimp_StartDriverAndSetMode( qfalse, r_fullscreen->integer ) )
 	{
@@ -904,13 +947,14 @@ GLimp_RenderThreadWrapper
 */
 static int GLimp_RenderThreadWrapper( void *arg )
 {
-	Com_Printf( "Render thread starting\n" );
+	// These printfs cause race conditions which mess up the console output
+	//Com_Printf( "Render thread starting\n" );
 
 	glimpRenderThread();
 
-	GLimp_SetCurrentContext(NULL);
+	GLimp_SetCurrentContext(qfalse);
 
-	Com_Printf( "Render thread terminating\n" );
+	//Com_Printf( "Render thread terminating\n" );
 
 	return 0;
 }
@@ -929,7 +973,7 @@ qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
 		warned = qtrue;
 	}
 
-#ifndef MACOS_X
+#if !defined(MACOS_X) && !defined(WIN32) && !defined (__linux__) && !defined (__sgi)
 	return qfalse;  /* better safe than sorry for now. */
 #endif
 
@@ -999,7 +1043,7 @@ void *GLimp_RendererSleep( void )
 {
 	void  *data = NULL;
 
-	GLimp_SetCurrentContext(NULL);
+	GLimp_SetCurrentContext(qfalse);
 
 	SDL_LockMutex(smpMutex);
 	{
@@ -1016,7 +1060,7 @@ void *GLimp_RendererSleep( void )
 	}
 	SDL_UnlockMutex(smpMutex);
 
-	GLimp_SetCurrentContext(opengl_context);
+	GLimp_SetCurrentContext(qtrue);
 
 	return data;
 }
@@ -1035,7 +1079,7 @@ void GLimp_FrontEndSleep( void )
 	}
 	SDL_UnlockMutex(smpMutex);
 
-	GLimp_SetCurrentContext(opengl_context);
+	GLimp_SetCurrentContext(qtrue);
 }
 
 /*
@@ -1045,7 +1089,7 @@ GLimp_WakeRenderer
 */
 void GLimp_WakeRenderer( void *data )
 {
-	GLimp_SetCurrentContext(NULL);
+	GLimp_SetCurrentContext(qfalse);
 
 	SDL_LockMutex(smpMutex);
 	{

@@ -85,6 +85,7 @@ itemDef_t *Menu_SetPrevCursorItem( menuDef_t *menu );
 itemDef_t *Menu_SetNextCursorItem( menuDef_t *menu );
 static qboolean Menu_OverActiveItem( menuDef_t *menu, float x, float y );
 
+void trap_R_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 /*
 ===============
 UI_InstallCaptureFunc
@@ -1175,8 +1176,8 @@ void Item_SetScreenCoords( itemDef_t *item, float x, float y )
   item->window.rect.h = item->window.rectClient.h;
 
   // force the text rects to recompute
-  item->textRect.w = 0;
-  item->textRect.h = 0;
+  //item->textRect.w = 0;
+  //item->textRect.h = 0;
 }
 
 // FIXME: consolidate this with nearby stuff
@@ -1886,24 +1887,6 @@ void Script_playLooped( itemDef_t *item, char **args )
   }
 }
 
-void Script_ScreenChange( itemDef_t *item, char **args )
-{
-  const char *string;
-  int modifier;
-
-  if( String_Parse( args, &string ) && Int_Parse( args, &modifier ) ){
-    if( string[0] == '-' ) //Hack to Com_ParseExt not reading "-6" but "-" instead
-      modifier = - modifier;
-
-    DC->setCVar( "ui_screen", va( "%i", (int) (DC->getCVarValue( "ui_screen" ) + modifier)) );
-    
-    //we don't want it to go below 0
-    if( DC->getCVarValue( "ui_screen" ) < 0 )
-      DC->setCVar( "ui_screen", "0" );
-
-  }
-}
-
 static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
                                   int *length, qhandle_t *h, int *width )
 {
@@ -2566,7 +2549,6 @@ commandDef_t commandList[] =
     {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
     {"orbit", &Script_Orbit},                      // group/name
-    {"screenchange", &Script_ScreenChange}        // modifier
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -3668,6 +3650,43 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
+      else if( key == 'c' - 'a' + 1 )
+      {
+        // ctrl-c clears the field
+
+        item->cursorPos = 0;
+        DC->setCVar( item->cvar, "" );
+      }
+      else if( key == 'a' - 'a' + 1 )
+      {
+        // ctrl-a is home
+
+        item->cursorPos = 0;
+      }
+      else if( key == 'e' - 'a' + 1 )
+      {
+        // ctrl-e is end
+
+        item->cursorPos = strlen( buff ) - 1;
+      }
+      else if( key == 'w' - 'a' + 1 )
+      {
+        // ctrl-w deletes the last word
+
+        while ( item->cursorPos )
+        {
+          if ( buff[ item->cursorPos - 1 ] != ' ' ) {
+            buff[ item->cursorPos - 1 ] = 0;
+            item->cursorPos--;
+          } else {
+            item->cursorPos--;
+            if ( buff[ item->cursorPos - 1 ] != ' ' )
+              break;
+          }
+        }
+
+        DC->setCVar( item->cvar, buff );
+      }
       else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars
@@ -4410,10 +4429,8 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   // default handling
   switch( key )
   {
-    case K_F12:
-      if( DC->getCVarValue( "developer" ) )
-        DC->executeText( EXEC_APPEND, "screenshot\n" );
-
+    case K_F11:
+      DC->executeText( EXEC_APPEND, "screenshotJPEG\n" );
       break;
 
     case K_KP_UPARROW:
@@ -4551,15 +4568,15 @@ void Item_SetTextExtents( itemDef_t *item, int *width, int *height, const char *
   *width = item->textRect.w;
   *height = item->textRect.h;
 
+  // as long as the item isn't dynamic content (ownerdraw or cvar), this
   // keeps us from computing the widths and heights more than once
-
-  if( *width == 0 || ( item->type == ITEM_TYPE_OWNERDRAW && item->textalignment == ALIGN_CENTER ) )
+  if( *width == 0 || item->cvar || ( item->type == ITEM_TYPE_OWNERDRAW &&
+      item->textalignment != ALIGN_LEFT ) )
   {
     int originalWidth;
 
-    if( item->type == ITEM_TYPE_EDITFIELD && item->textalignment == ALIGN_CENTER && item->cvar )
+    if( item->cvar && item->textalignment != ALIGN_LEFT )
     {
-      //FIXME: this will only be called once?
       char buff[256];
       DC->getCVarString( item->cvar, buff, 256 );
       originalWidth = UI_Text_Width( item->text, item->textscale, 0 ) +
@@ -4766,7 +4783,7 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 }
 
 #define MAX_WRAP_CACHE  16
-#define MAX_WRAP_LINES  32
+#define MAX_WRAP_LINES  128
 #define MAX_WRAP_TEXT   512
 
 typedef struct
@@ -4908,7 +4925,7 @@ void Item_Text_Wrapped_Paint( itemDef_t *item )
   }
   else
   {
-    char        buff[ 1024 ];
+    char        buff[ 4096 ];
     float       fontHeight    = UI_Text_EmHeight( item->textscale );
     const float lineSpacing   = fontHeight * 0.4f;
     float       lineHeight    = fontHeight + lineSpacing;
@@ -4975,6 +4992,7 @@ void Item_Text_Wrapped_Paint( itemDef_t *item )
         itemDef_t   lineItem;
         int         width, height;
 
+        memset( &lineItem, 0, sizeof( itemDef_t ) );
         strncpy( buff, p, lineLength );
         buff[ lineLength ] = '\0';
         p = &textPtr[ i + 1 ];
@@ -5674,28 +5692,6 @@ void AdjustFrom640( float *x, float *y, float *w, float *h )
   *h *= DC->yscale;
 }
 
-void Item_Screen_Paint( itemDef_t *item )
-{
-  int a,b,c,d;
-  int shotNumber;
-
-  shotNumber = (int)DC->getCVarValue( "ui_screen" ) + item->modifier;
-
-  if ( shotNumber < 0 || shotNumber > 9999 )
-    return;
-
-  a = shotNumber / 1000;
-  shotNumber -= a*1000;
-  b = shotNumber / 100;
-  shotNumber -= b*100;
-  c = shotNumber / 10;
-  shotNumber -= c*10;
-  d = shotNumber;
-
-  DC->drawHandlePic( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h,
-      	             DC->registerShaderNoMip( va("screenshots/shot%i%i%i%i.jpg", a, b, c, d) ) );
-}
-
 void Item_Model_Paint( itemDef_t *item )
 {
   float x, y, w, h;
@@ -5705,8 +5701,18 @@ void Item_Model_Paint( itemDef_t *item )
   vec3_t      angles;
   modelDef_t *modelPtr = ( modelDef_t* )item->typeData;
 
+  qhandle_t hModel;
+  int backLerpWhole;
+//  vec3_t axis[3];
+
   if( modelPtr == NULL )
     return;
+
+  if(!item->asset)
+    return;
+
+  hModel = item->asset;
+
 
   // setup the refdef
   memset( &refdef, 0, sizeof( refdef ) );
@@ -5727,7 +5733,7 @@ void Item_Model_Paint( itemDef_t *item )
   refdef.width = w;
   refdef.height = h;
 
-  DC->modelBounds( item->asset, mins, maxs );
+  DC->modelBounds( hModel, mins, maxs );
 
   origin[2] = -0.5 * ( mins[2] + maxs[2] );
   origin[1] = 0.5 * ( mins[1] + maxs[1] );
@@ -5773,16 +5779,65 @@ void Item_Model_Paint( itemDef_t *item )
     }
   }
 
-  VectorSet( angles, 0, modelPtr->angle, 0 );
-  AnglesToAxis( angles, ent.axis );
+  if(VectorLengthSquared(modelPtr->axis))
+  {
+    VectorNormalize(modelPtr->axis);
+    angles[0] = AngleNormalize360(modelPtr->axis[0]*modelPtr->angle);
+    angles[1] = AngleNormalize360(modelPtr->axis[1]*modelPtr->angle);
+    angles[2] = AngleNormalize360(modelPtr->axis[2]*modelPtr->angle);
+    AnglesToAxis( angles, ent.axis );
+  }
+  else
+  {
+    VectorSet( angles, 0, modelPtr->angle, 0 );
+    AnglesToAxis( angles, ent.axis );
+  }
 
-  ent.hModel = item->asset;
+  ent.hModel = hModel;
+
+
+  if(modelPtr->frameTime)	// don't advance on the first frame
+    modelPtr->backlerp+=( ((DC->realTime - modelPtr->frameTime)/1000.0f) * (float)modelPtr->fps );
+
+  if(modelPtr->backlerp > 1)
+  {
+    backLerpWhole = floor(modelPtr->backlerp);
+
+    modelPtr->frame+=(backLerpWhole);
+    if((modelPtr->frame - modelPtr->startframe) > modelPtr->numframes)
+      modelPtr->frame = modelPtr->startframe + modelPtr->frame % modelPtr->numframes;	// todo: ignoring loopframes
+
+    modelPtr->oldframe+=(backLerpWhole);
+    if((modelPtr->oldframe - modelPtr->startframe) > modelPtr->numframes)
+      modelPtr->oldframe = modelPtr->startframe + modelPtr->oldframe % modelPtr->numframes;	// todo: ignoring loopframes
+
+    modelPtr->backlerp = modelPtr->backlerp - backLerpWhole;
+  }
+
+  modelPtr->frameTime = DC->realTime;
+
+  ent.frame		= modelPtr->frame;
+  ent.oldframe	= modelPtr->oldframe;
+  ent.backlerp	= 1.0f - modelPtr->backlerp;
+
   VectorCopy( origin, ent.origin );
   VectorCopy( origin, ent.lightingOrigin );
   ent.renderfx = RF_LIGHTING_ORIGIN | RF_NOSHADOW;
   VectorCopy( ent.origin, ent.oldorigin );
 
   DC->addRefEntityToScene( &ent );
+
+  // add an accent light
+  origin[0] -= 100;	// + = behind, - = in front
+  origin[1] += 100;	// + = left, - = right
+  origin[2] += 100;	// + = above, - = below
+  trap_R_AddLightToScene( origin, 500, 1.0, 1.0, 1.0 );
+
+  origin[0] -= 100;
+  origin[1] -= 100;
+  origin[2] -= 100;
+  trap_R_AddLightToScene( origin, 500, 1.0, 0.0, 0.0 );
+
   DC->renderScene( &refdef );
 
 }
@@ -6396,10 +6451,6 @@ void Item_Paint( itemDef_t *item )
       Item_Slider_Paint( item );
       break;
 
-    case ITEM_TYPE_SCREEN:
-      Item_Screen_Paint( item );
-      break;
-
     default:
       break;
   }
@@ -6957,6 +7008,38 @@ qboolean ItemParse_model_angle( itemDef_t *item, int handle )
   return qtrue;
 }
 
+// model_axis <number> <number> <number> //:://
+qboolean ItemParse_model_axis( itemDef_t *item, int handle ) {
+  modelDef_t *modelPtr;
+  Item_ValidateTypeData(item);
+  modelPtr = (modelDef_t*)item->typeData;
+
+  if (!PC_Float_Parse(handle, &modelPtr->axis[0])) return qfalse;
+  if (!PC_Float_Parse(handle, &modelPtr->axis[1])) return qfalse;
+  if (!PC_Float_Parse(handle, &modelPtr->axis[2])) return qfalse;
+
+  return qtrue;
+}
+
+// model_animplay <int(startframe)> <int(numframes)> <int(fps)>
+qboolean ItemParse_model_animplay(itemDef_t *item, int handle ) {
+  modelDef_t *modelPtr;
+  Item_ValidateTypeData(item);
+  modelPtr = (modelDef_t*)item->typeData;
+
+  modelPtr->animated = 1;
+
+  if (!PC_Int_Parse(handle, &modelPtr->startframe))	return qfalse;
+  if (!PC_Int_Parse(handle, &modelPtr->numframes))	return qfalse;
+  if (!PC_Int_Parse(handle, &modelPtr->fps))			return qfalse;
+
+  modelPtr->frame		= modelPtr->startframe + 1;
+  modelPtr->oldframe	= modelPtr->startframe;
+  modelPtr->backlerp	= 0.0f;
+  modelPtr->frameTime = DC->realTime;
+  return qtrue;
+}
+
 // rect <rectangle>
 qboolean ItemParse_rect( itemDef_t *item, int handle )
 {
@@ -7402,14 +7485,6 @@ qboolean ItemParse_special( itemDef_t *item, int handle )
   return qtrue;
 }
 
-qboolean ItemParse_modifier( itemDef_t *item, int handle )
-{
-  if( !PC_Int_Parse( handle, &item->modifier ) )
-    return qfalse;
-
-  return qtrue;
-}
-
 qboolean ItemParse_cvarTest( itemDef_t *item, int handle )
 {
   if( !PC_String_Parse( handle, &item->cvarTest ) )
@@ -7718,6 +7793,8 @@ keywordHash_t itemParseKeywords[] = {
   {"model_fovy", ItemParse_model_fovy, NULL},
   {"model_rotation", ItemParse_model_rotation, NULL},
   {"model_angle", ItemParse_model_angle, NULL},
+  {"model_axis", ItemParse_model_axis, NULL},
+  {"model_animplay", ItemParse_model_animplay, NULL},
   {"rect", ItemParse_rect, NULL},
   {"aspectBias", ItemParse_aspectBias, NULL},
   {"style", ItemParse_style, NULL},
@@ -7757,7 +7834,6 @@ keywordHash_t itemParseKeywords[] = {
   {"onTextEntry", ItemParse_onTextEntry, NULL},
   {"action", ItemParse_action, NULL},
   {"special", ItemParse_special, NULL},
-  {"modifier", ItemParse_modifier, NULL},
   {"cvar", ItemParse_cvar, NULL},
   {"maxChars", ItemParse_maxChars, NULL},
   {"maxPaintChars", ItemParse_maxPaintChars, NULL},
@@ -8396,8 +8472,8 @@ void Menu_PaintAll( void )
       captureFunc( captureData );
   }
 
-  for( i = 0; i < Menu_Count(); i++ )
-    Menu_Paint( &Menus[i], qfalse );
+  for( i = 0; i < openMenuCount; i++ )
+    Menu_Paint( menuStack[i], qfalse );
 
   if( DC->getCVarValue( "ui_developer" ) )
   {

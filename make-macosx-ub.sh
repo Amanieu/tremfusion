@@ -1,9 +1,9 @@
 #!/bin/sh
-APPBUNDLE=Tremulous.app
-BINARY=Tremulous.ub
+APPBUNDLE=Tremfusion.app
+BINARY=Tremfusion.ub
 DEDBIN=Tremded.ub
-PKGINFO=APPLTREM
-ICNS=misc/Tremulous.icns
+PKGINFO=APPLTREMFUSION
+ICNS=misc/Tremfusion.icns
 DESTDIR=build/release-darwin-ub
 BASEDIR=base
 
@@ -15,18 +15,10 @@ BIN_DEDOBJ="
 	build/release-darwin-ppc/tremded.ppc
 	build/release-darwin-x86/tremded.x86
 "
-BASE_OBJ="
-	build/release-darwin-ppc/$BASEDIR/cgameppc.dylib
-	build/release-darwin-x86/$BASEDIR/cgamex86.dylib
-	build/release-darwin-ppc/$BASEDIR/uippc.dylib
-	build/release-darwin-x86/$BASEDIR/uix86.dylib
-	build/release-darwin-ppc/$BASEDIR/gameppc.dylib
-	build/release-darwin-x86/$BASEDIR/gamex86.dylib
-"
 
 cd `dirname $0`
 if [ ! -f Makefile ]; then
-	echo "This script must be run from the Tremulous build directory";
+	echo "This script must be run from the Tremfusion build directory";
 	exit 1
 fi
 
@@ -121,10 +113,12 @@ NCPU=`sysctl -n hw.ncpu`
 
 # ppc client and server
 (ARCH=ppc USE_OPENAL_DLOPEN=1 CC=$PPC_CC CFLAGS=$PPC_CFLAGS \
-	LDFLAGS=$PPC_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1 $*) || exit 1;
+	LDFLAGS=$PPC_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1 BUILD_GAME_SO=0 \
+	BUILD_GAME_QVM=0 $*) || exit 1;
 
 # intel client and server
-(ARCH=x86 CFLAGS=$X86_CFLAGS LDFLAGS=$X86_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1 $*) || exit 1;
+(ARCH=x86 CFLAGS=$X86_CFLAGS LDFLAGS=$X86_LDFLAGS make -j$NCPU \
+	BUILD_CLIENT_SMP=1 BUILD_GAME_SO=0 BUILD_GAME_QVM=0 $*) || exit 1;
 
 echo "Creating .app bundle $DESTDIR/$APPBUNDLE"
 if [ ! -d $DESTDIR/$APPBUNDLE/Contents/MacOS/$BASEDIR ]; then
@@ -136,7 +130,7 @@ fi
 if [ ! -d $DESTDIR/$APPBUNDLE/Contents/Resources ]; then
 	mkdir -p $DESTDIR/$APPBUNDLE/Contents/Resources
 fi
-cp $ICNS $DESTDIR/$APPBUNDLE/Contents/Resources/Tremulous.icns || exit 1;
+cp $ICNS $DESTDIR/$APPBUNDLE/Contents/Resources/Tremfusion.icns || exit 1;
 echo $PKGINFO > $DESTDIR/$APPBUNDLE/Contents/PkgInfo
 echo "
 	<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -152,13 +146,13 @@ echo "
 		<key>CFBundleGetInfoString</key>
 		<string>$Q3_VERSION</string>
 		<key>CFBundleIconFile</key>
-		<string>Tremulous.icns</string>
+		<string>Tremfusion.icns</string>
 		<key>CFBundleIdentifier</key>
-		<string>net.tremulous</string>
+		<string>net.tremfusion</string>
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>Tremulous</string>
+		<string>Tremfusion</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -176,6 +170,4 @@ echo "
 	" > $DESTDIR/$APPBUNDLE/Contents/Info.plist
 
 lipo -create -o $DESTDIR/$APPBUNDLE/Contents/MacOS/$BINARY $BIN_OBJ
-lipo -create -o $DESTDIR/$APPBUNDLE/Contents/MacOS/$DEDBIN $BIN_DEDOBJ
-cp src/libs/macosx/*.dylib $DESTDIR/$APPBUNDLE/Contents/MacOS/
-
+lipo -create -o $DESTDIR/$DEDBIN $BIN_DEDOBJ

@@ -85,6 +85,27 @@ static void CG_GetBindings( void )
 }
 
 /*
+=================
+CG_FixBindings
+
+Fix people who have "boost" bound instead of "+button6"
+Could also extend this function for future bind changes
+=================
+*/
+static void CG_FixBindings( void )
+{
+  int i;
+  char buffer[ MAX_STRING_CHARS ];
+
+  for( i = 0; i < K_LAST_KEY; i++ )
+  {
+    trap_Key_GetBindingBuf( i, buffer, sizeof( buffer ) );
+    if( !Q_stricmp( buffer, "boost" ) )
+      trap_Key_SetBinding( i, "+button6" );
+  }
+}
+
+/*
 ===============
 CG_KeyNameForCommand
 ===============
@@ -249,7 +270,7 @@ CG_AlienLevel0Text
 static void CG_AlienLevel0Text( char *text, playerState_t *ps )
 {
   Q_strcat( text, MAX_TUTORIAL_TEXT,
-      "Touch a human to damage it\n" );
+      "Touch humans to damage them\n" );
 
   Q_strcat( text, MAX_TUTORIAL_TEXT,
       va( "Press %s to walk on walls\n",
@@ -264,7 +285,7 @@ CG_AlienLevel1Text
 static void CG_AlienLevel1Text( char *text, playerState_t *ps )
 {
   Q_strcat( text, MAX_TUTORIAL_TEXT,
-      "Touch a human to grab it\n" );
+      "Touch humans to grab them\n" );
 
   Q_strcat( text, MAX_TUTORIAL_TEXT,
       va( "Press %s to swipe\n",
@@ -353,7 +374,6 @@ static void CG_HumanCkitText( char *text, playerState_t *ps )
 {
   buildable_t   buildable = ps->stats[ STAT_BUILDABLE ] & ~SB_VALID_TOGGLEBIT;
   entityState_t *es;
-  float         health;
 
   if( buildable > BA_NONE )
   {
@@ -601,6 +621,7 @@ const char *CG_TutorialText( void )
   playerState_t *ps;
   static char   text[ MAX_TUTORIAL_TEXT ];
 
+  CG_FixBindings( );
   CG_GetBindings( );
 
   text[ 0 ] = '\0';

@@ -16,12 +16,19 @@ ifeq ($(COMPILE_PLATFORM),darwin)
   # Apple does some things a little differently...
   COMPILE_ARCH=$(shell uname -p | sed -e s/i.86/x86/)
 endif
+ifeq ($(COMPILE_PLATFORM),windowsnt)
+  # Sometimes msys uname returns this
+  COMPILE_PLATFORM=mingw32
+endif
 
 ifndef BUILD_CLIENT
   BUILD_CLIENT     = 1
 endif
 ifndef BUILD_CLIENT_SMP
   BUILD_CLIENT_SMP = 1
+endif
+ifndef BUILD_CLIENT_TTY
+  BUILD_CLIENT_TTY = 1
 endif
 ifndef BUILD_SERVER
   BUILD_SERVER     = 1
@@ -33,9 +40,15 @@ ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
 endif
 
-# SDL 1.2 is only thread-safe on Macs
+# SMP only works on IRIX, Linux, Mac, and Windows
 ifneq ($(PLATFORM),darwin)
+ifneq ($(PLATFORM),mingw32)
+ifneq ($(PLATFORM),linux)
+ifneq ($(PLATFORM),irix64)
   BUILD_CLIENT_SMP = 0
+endif
+endif
+endif
 endif
 
 #############################################################################
@@ -76,10 +89,6 @@ else
 endif
 export CROSS_COMPILING
 
-ifndef COPYDIR
-  COPYDIR="/usr/local/games/tremulous"
-endif
-
 ifndef MOUNT_DIR
   MOUNT_DIR=src
 endif
@@ -92,24 +101,12 @@ ifndef GENERATE_DEPENDENCIES
   GENERATE_DEPENDENCIES=1
 endif
 
-ifndef USE_TTY_CLIENT
-  USE_TTY_CLIENT=0
-endif
-
 ifndef USE_OPENAL
-  ifeq ($(USE_TTY_CLIENT),1)
-    USE_OPENAL=0
-  else
-    USE_OPENAL=1
-  endif
+  USE_OPENAL=1
 endif
 
 ifndef USE_OPENAL_DLOPEN
-  ifeq ($(PLATFORM),mingw32)
-    USE_OPENAL_DLOPEN=1
-  else
-    USE_OPENAL_DLOPEN=0
-  endif
+  USE_OPENAL_DLOPEN=1
 endif
 
 ifndef USE_CURL
@@ -125,11 +122,7 @@ ifndef USE_CURL_DLOPEN
 endif
 
 ifndef USE_CODEC_VORBIS
-  ifeq ($(USE_TTY_CLIENT),1)
-    USE_CODEC_VORBIS=0
-  else
-    USE_CODEC_VORBIS=1
-  endif
+  USE_CODEC_VORBIS=1
 endif
 
 ifndef USE_CURSES
@@ -137,19 +130,11 @@ ifndef USE_CURSES
 endif
 
 ifndef USE_MUMBLE
-  ifeq ($(USE_TTY_CLIENT),1)
-    USE_MUMBLE=0
-  else
-    USE_MUMBLE=1
-  endif
+  USE_MUMBLE=1
 endif
 
 ifndef USE_VOIP
-  ifeq ($(USE_TTY_CLIENT),1)
-    USE_VOIP=0
-  else
-    USE_VOIP=1
-  endif
+  USE_VOIP=1
 endif
 
 ifndef USE_INTERNAL_SPEEX
@@ -174,11 +159,7 @@ ifndef USE_SCM_VERSION
 endif
 
 ifndef USE_FREETYPE
-  ifeq ($(USE_TTY_CLIENT),1)
-    USE_FREETYPE=0
-  else
-    USE_FREETYPE=1
-  endif
+  USE_FREETYPE=1
 endif
 
 ifndef USE_OLD_HOMEPATH
@@ -186,7 +167,11 @@ ifndef USE_OLD_HOMEPATH
 endif
 
 ifndef USE_SSE
-  USE_SSE=0
+  ifeq ($(ARCH),x86_64)
+    USE_SSE=2
+  else
+    USE_SSE=1
+  endif
 endif
 
 #############################################################################
@@ -208,7 +193,6 @@ JPDIR=$(MOUNT_DIR)/jpeg-6b
 SPEEXDIR=$(MOUNT_DIR)/libspeex
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
-Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
 Q3LCCETCDIR=$(MOUNT_DIR)/tools/lcc/etc
 Q3LCCSRCDIR=$(MOUNT_DIR)/tools/lcc/src
 SDLHDIR=$(MOUNT_DIR)/SDL12
@@ -238,6 +222,7 @@ endif
 VERSION_NUMBER=0.9
 
 ifeq ($(USE_SCM_VERSION),1)
+  # For svn
   ifeq ($(wildcard .svn),.svn)
     SVN_REV=$(shell LANG=C svnversion .)
     ifneq ($(SVN_REV),)
@@ -248,13 +233,14 @@ ifeq ($(USE_SCM_VERSION),1)
 
   # For git-svn
   ifeq ($(wildcard .git/svn/.metadata),.git/svn/.metadata)
-    GIT_REV=$(shell LANG=C git-svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
+    GIT_REV=$(shell LANG=C git svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
     ifneq ($(GIT_REV),)
       VERSION=$(VERSION_NUMBER)_R$(GIT_REV)
       USE_GIT=1
     endif
   endif
 
+  # For hg
   ifeq ($(wildcard .hg),.hg)
     HG_REV=$(shell LANG=C hg id -n)
     ifneq ($(HG_REV),)
@@ -295,20 +281,15 @@ ifeq ($(PLATFORM),linux)
   endif
   endif
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe
-
-  ifneq ($(USE_TTY_CLIENT),1)
-    BASE_CFLAGS += -DUSE_ICON
-  else
-    BASE_CFLAGS += -DUSE_TTY_CLIENT
-  endif
-  BASE_CFLAGS += $(shell sdl-config --cflags)
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe \
+    -DUSE_ICON $(shell sdl-config --cflags)
 
   ifeq ($(USE_OPENAL),1)
     BASE_CFLAGS += -DUSE_OPENAL
     ifeq ($(USE_OPENAL_DLOPEN),1)
       BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
     endif
+    TTYC_CFLAGS += -UUSE_OPENAL
   endif
 
   ifeq ($(USE_FREETYPE),1)
@@ -318,6 +299,7 @@ ifeq ($(PLATFORM),linux)
     else
       BASE_CFLAGS += $(shell freetype-config --cflags)
     endif
+    TTYC_CFLAGS += -UBUILD_FREETYPE
   endif
 
   ifeq ($(USE_CURL),1)
@@ -334,6 +316,7 @@ ifeq ($(PLATFORM),linux)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
@@ -344,7 +327,6 @@ ifeq ($(PLATFORM),linux)
       -fstrength-reduce
     # experimental x86_64 jit compiler! you need GNU as
     HAVE_VM_COMPILED = true
-    USE_SSE=2
   else
   ifeq ($(ARCH),x86)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
@@ -361,6 +343,10 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -maltivec
     HAVE_VM_COMPILED=true
   endif
+  ifeq ($(ARCH),sparc)
+    OPTIMIZE += -mtune=ultrasparc3 -mv8plus
+    HAVE_VM_COMPILED=true
+  endif
   endif
   endif
 
@@ -369,6 +355,8 @@ ifeq ($(PLATFORM),linux)
   else
     ifeq ($(USE_SSE),1)
       BASE_CFLAGS += -msse -mfpmath=sse
+    else
+      BASE_CFLAGS += -U__SSE__ -U__SSE2__
     endif
   endif
 
@@ -380,12 +368,12 @@ ifeq ($(PLATFORM),linux)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  THREAD_LIBS=-lpthread
+  BASE_CFLAGS+=-I/usr/X11R6/include
+  THREAD_LDFLAGS=-L/usr/X11R6/$(LIB)
+  THREAD_LIBS=-lpthread -lX11
   LIBS=-ldl -lm
 
-  ifneq ($(USE_TTY_CLIENT),1)
-    CLIENT_LIBS += $(shell sdl-config --libs) -lGL
-  endif
+  CLIENT_LIBS += $(shell sdl-config --libs) -lGL
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -396,6 +384,7 @@ ifeq ($(PLATFORM),linux)
   ifeq ($(USE_CURL),1)
     ifneq ($(USE_CURL_DLOPEN),1)
       CLIENT_LIBS += -lcurl
+      TTYC_LIBS += -lcurl
     endif
   endif
 
@@ -420,8 +409,12 @@ ifeq ($(PLATFORM),linux)
     # linux32 make ...
     BASE_CFLAGS += -m32
   else
+  ifeq ($(ARCH),x86_64)
+    BASE_CFLAGS += -m64
+  else
   ifeq ($(ARCH),ppc64)
     BASE_CFLAGS += -m64
+  endif
   endif
   endif
 
@@ -448,7 +441,7 @@ ifeq ($(PLATFORM),darwin)
     BASE_CFLAGS += -faltivec
   endif
   ifeq ($(ARCH),x86)
-    OPTIMIZE += -march=prescott -mfpmath=sse
+    OPTIMIZE += -march=prescott -mfpmath=sse -U__SSE__ -U__SSE2__
     # x86 vm will crash without -mstackrealign since MMX instructions will be
     # used no matter what and they corrupt the frame pointer in VM calls
     BASE_CFLAGS += -mstackrealign
@@ -463,6 +456,7 @@ ifeq ($(PLATFORM),darwin)
     else
       BASE_CFLAGS += $(shell freetype-config --cflags)
     endif
+    TTYC_CFLAGS += -UBUILD_FREETYPE
   endif
 
   ifeq ($(USE_OPENAL),1)
@@ -472,12 +466,14 @@ ifeq ($(PLATFORM),darwin)
     else
       BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
     endif
+    TTYC_CFLAGS += -UUSE_OPENAL
   endif
 
   ifeq ($(USE_CURL),1)
     BASE_CFLAGS += -DUSE_CURL
     ifneq ($(USE_CURL_DLOPEN),1)
       CLIENT_LIBS += -lcurl
+      TTYC_LIBS += -lcurl
     else
       BASE_CFLAGS += -DUSE_CURL_DLOPEN
     endif
@@ -499,6 +495,7 @@ ifeq ($(PLATFORM),darwin)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
   ifeq ($(USE_CURSES),1)
@@ -508,22 +505,16 @@ ifeq ($(PLATFORM),darwin)
 
   BASE_CFLAGS += -D_THREAD_SAFE=1
 
-  ifneq ($(USE_TTY_CLIENT),1)
-    ifeq ($(USE_LOCAL_HEADERS),1)
-      BASE_CFLAGS += -I$(SDLHDIR)/include
-    endif
-  else
-    BASE_CFLAGS += -DUSE_TTY_CLIENT
+  ifeq ($(USE_LOCAL_HEADERS),1)
+    BASE_CFLAGS += -I$(SDLHDIR)/include
   endif
 
-  ifneq ($(USE_TTY_CLIENT),1)
-    # We copy sdlmain before ranlib'ing it so that subversion doesn't think
-    #  the file has been modified by each build.
-    LIBSDLMAIN=$(B)/libSDLmain.a
-    LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
-    CLIENT_LIBS += -framework Cocoa -framework IOKit -framework OpenGL \
-      $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
-  endif
+  # We copy sdlmain before ranlib'ing it so that subversion doesn't think
+  #  the file has been modified by each build.
+  LIBSDLMAIN=$(B)/libSDLmain.a
+  LIBSDLMAINSRC=$(LIBSDIR)/macosx/libSDLmain.a
+  CLIENT_LIBS += -framework Cocoa -framework IOKit -framework OpenGL \
+    $(LIBSDIR)/macosx/libSDL-1.2.0.dylib
 
   ifeq ($(USE_CODEC_VORBIS),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -571,12 +562,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
-  ifneq ($(USE_TTY_CLIENT),1)
-    BASE_CFLAGS += -DUSE_ICON
-  else
-    BASE_CFLAGS += -DUSE_TTY_CLIENT
-  endif
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON
 
   # In the absence of wspiapi.h, require Windows XP or later
   ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
@@ -591,6 +577,7 @@ ifeq ($(PLATFORM),mingw32)
     else
       CLIENT_LIBS += $(OPENAL_LDFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_OPENAL
   endif
 
   ifeq ($(USE_FREETYPE),1)
@@ -600,6 +587,7 @@ ifeq ($(PLATFORM),mingw32)
     else
       BASE_CFLAGS += $(shell freetype-config --cflags)
     endif
+    TTYC_CFLAGS += -UBUILD_FREETYPE
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -609,6 +597,7 @@ ifeq ($(PLATFORM),mingw32)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
@@ -624,10 +613,8 @@ ifeq ($(PLATFORM),mingw32)
   BINEXT=.exe
 
   LIBS = -lws2_32 -lwinmm
-  ifneq ($(USE_TTY_CLIENT),1)
-    CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
-    CLIENT_LDFLAGS = -mwindows
-  endif  
+  CLIENT_LIBS = -lgdi32 -lole32 -lopengl32
+  CLIENT_LDFLAGS = -mwindows
 
   ifeq ($(USE_FREETYPE),1)
     ifeq ($(USE_LOCAL_HEADERS),1)
@@ -644,8 +631,10 @@ ifeq ($(PLATFORM),mingw32)
       ifeq ($(USE_LOCAL_HEADERS),1)
         BASE_CFLAGS += -DCURL_STATICLIB
         CLIENT_LIBS += $(LIBSDIR)/win32/libcurl.a
+        TTYC_LIBS += $(LIBSDIR)/win32/libcurl.a
       else
         CLIENT_LIBS += $(CURL_LIBS)
+        TTYC_LIBS += $(CURL_LIBS)
       endif
     endif
   endif
@@ -674,19 +663,17 @@ ifeq ($(PLATFORM),mingw32)
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g -O0
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
 
-  ifneq ($(USE_TTY_CLIENT),1)
-    # libmingw32 must be linked before libSDLmain
-    CLIENT_LIBS += -lmingw32
-    ifeq ($(USE_LOCAL_HEADERS),1)
-      BASE_CFLAGS += -I$(SDLHDIR)/include
-      CLIENT_LIBS += $(LIBSDIR)/win32/libSDLmain.a \
-                        $(LIBSDIR)/win32/libSDL.a
-    else
-      BASE_CFLAGS += $(SDL_CFLAGS)
-      CLIENT_LIBS += $(SDL_LIBS)
-    endif
-    CLIENT_LIBS += -ldxguid -ldinput8
-  endif  
+  # libmingw32 must be linked before libSDLmain
+  CLIENT_LIBS += -lmingw32
+  ifeq ($(USE_LOCAL_HEADERS),1)
+    BASE_CFLAGS += -I$(SDLHDIR)/include
+    CLIENT_LIBS += $(LIBSDIR)/win32/libSDLmain.a \
+                      $(LIBSDIR)/win32/libSDL.a
+  else
+    BASE_CFLAGS += $(SDL_CFLAGS)
+    CLIENT_LIBS += $(SDL_LIBS)
+  endif
+  CLIENT_LIBS += -ldxguid -ldinput8
 
 else # ifeq mingw32
 
@@ -711,6 +698,7 @@ ifeq ($(PLATFORM),freebsd)
     ifeq ($(USE_OPENAL_DLOPEN),1)
       BASE_CFLAGS += -DUSE_OPENAL_DLOPEN
     endif
+    TTYC_CFLAGS += -UUSE_OPENAL
   endif
 
   ifeq ($(USE_CODEC_VORBIS),1)
@@ -720,6 +708,12 @@ ifeq ($(PLATFORM),freebsd)
     else
       BASE_CFLAGS += $(OGG_CFLAGS)
     endif
+    TTYC_CFLAGS += -UUSE_CODEC_VORBIS
+  endif
+
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
   endif
 
   ifeq ($(ARCH),axp)
@@ -746,7 +740,7 @@ ifeq ($(PLATFORM),freebsd)
 
   THREAD_LIBS=-lpthread
   # don't need -ldl (FreeBSD)
-  LIBS=-lm
+  LIBS+=-lm
 
   CLIENT_LIBS += $(shell sdl-config --libs) -lGL
 
@@ -886,7 +880,6 @@ ifeq ($(PLATFORM),sunos)
   CC=gcc
   INSTALL=ginstall
   MKDIR=gmkdir
-  COPYDIR="/usr/local/share/games/tremulous"
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86
@@ -951,7 +944,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin
@@ -975,6 +968,10 @@ ifneq ($(BUILD_CLIENT),0)
   endif
 endif
 
+ifneq ($(BUILD_CLIENT_TTY),0)
+  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
+endif
+
 ifneq ($(BUILD_GAME_SO),0)
   TARGETS += \
     $(B)/base/cgame$(ARCH).$(SHLIBEXT) \
@@ -993,6 +990,7 @@ endif
 
 ifeq ($(USE_MUMBLE),1)
   BASE_CFLAGS += -DUSE_MUMBLE
+  TTYC_CFLAGS += -UUSE_MUMBLE
 endif
 
 ifeq ($(USE_VOIP),1)
@@ -1002,6 +1000,7 @@ ifeq ($(USE_VOIP),1)
   else
     CLIENT_LIBS += -lspeex
   endif
+  TTYC_CFLAGS += -UUSE_VOIP
 endif
 
 ifeq ($(USE_INTERNAL_ZLIB),1)
@@ -1043,6 +1042,11 @@ endef
 define DO_SMP_CC
 $(echo_cmd) "SMP_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
+endef
+
+define DO_TTY_CC
+$(echo_cmd) "TTY_CC $<"
+$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
 endef
 
 ifeq ($(GENERATE_DEPENDENCIES),1)
@@ -1114,7 +1118,7 @@ endif
 # an informational message, then start building
 targets: makedirs
 	@echo ""
-	@echo "Building Tremulous in $(B):"
+	@echo "Building Tremfusion in $(B):"
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  ARCH: $(ARCH)"
 	@echo "  VERSION: $(VERSION)"
@@ -1155,6 +1159,7 @@ makedirs:
 	@if [ ! -d $(B) ];then $(MKDIR) $(B);fi
 	@if [ ! -d $(B)/client ];then $(MKDIR) $(B)/client;fi
 	@if [ ! -d $(B)/clientsmp ];then $(MKDIR) $(B)/clientsmp;fi
+	@if [ ! -d $(B)/clienttty ];then $(MKDIR) $(B)/clienttty;fi
 	@if [ ! -d $(B)/ded ];then $(MKDIR) $(B)/ded;fi
 	@if [ ! -d $(B)/base ];then $(MKDIR) $(B)/base;fi
 	@if [ ! -d $(B)/base/cgame ];then $(MKDIR) $(B)/base/cgame;fi
@@ -1166,7 +1171,6 @@ makedirs:
 	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
 	@if [ ! -d $(B)/tools/etc ];then $(MKDIR) $(B)/tools/etc;fi
 	@if [ ! -d $(B)/tools/rcc ];then $(MKDIR) $(B)/tools/rcc;fi
-	@if [ ! -d $(B)/tools/cpp ];then $(MKDIR) $(B)/tools/cpp;fi
 	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
 
 #############################################################################
@@ -1198,7 +1202,6 @@ endef
 LBURG       = $(B)/tools/lburg/lburg$(BINEXT)
 DAGCHECK_C  = $(B)/tools/rcc/dagcheck.c
 Q3RCC       = $(B)/tools/q3rcc$(BINEXT)
-Q3CPP       = $(B)/tools/q3cpp$(BINEXT)
 Q3LCC       = $(B)/tools/q3lcc$(BINEXT)
 Q3ASM       = $(B)/tools/q3asm$(BINEXT)
 
@@ -1258,25 +1261,6 @@ $(Q3RCC): $(Q3RCCOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $^ $(TOOLS_LIBS)
 
-Q3CPPOBJ = \
-	$(B)/tools/cpp/cpp.o \
-	$(B)/tools/cpp/lex.o \
-	$(B)/tools/cpp/nlist.o \
-	$(B)/tools/cpp/tokens.o \
-	$(B)/tools/cpp/macro.o \
-	$(B)/tools/cpp/eval.o \
-	$(B)/tools/cpp/include.o \
-	$(B)/tools/cpp/hideset.o \
-	$(B)/tools/cpp/getopt.o \
-	$(B)/tools/cpp/unix.o
-
-$(B)/tools/cpp/%.o: $(Q3CPPDIR)/%.c
-	$(DO_TOOLS_CC)
-
-$(Q3CPP): $(Q3CPPOBJ)
-	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $^ $(TOOLS_LIBS)
-
 Q3LCCOBJ = \
 	$(B)/tools/etc/lcc.o \
 	$(B)/tools/etc/bytecode.o
@@ -1284,7 +1268,7 @@ Q3LCCOBJ = \
 $(B)/tools/etc/%.o: $(Q3LCCETCDIR)/%.c
 	$(DO_TOOLS_CC)
 
-$(Q3LCC): $(Q3LCCOBJ) $(Q3RCC) $(Q3CPP)
+$(Q3LCC): $(Q3LCCOBJ) $(Q3RCC)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $(Q3LCCOBJ) $(TOOLS_LIBS)
 
@@ -1325,7 +1309,7 @@ $(Q3ASM): $(Q3ASMOBJ)
 # CLIENT/SERVER
 #############################################################################
 
-Q3OBJ = \
+Q3OBJ_ = \
   $(B)/client/cl_cgame.o \
   $(B)/client/cl_cin.o \
   $(B)/client/cl_console.o \
@@ -1396,8 +1380,7 @@ Q3OBJ = \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
 
-ifneq ($(USE_TTY_CLIENT),1)
-Q3OBJ += \
+Q3OBJ = \
   $(B)/client/jcapimin.o \
   $(B)/client/jcapistd.o \
   $(B)/client/jccoefct.o  \
@@ -1467,15 +1450,14 @@ Q3OBJ += \
   $(B)/client/sdl_gamma.o \
   $(B)/client/sdl_input.o \
   $(B)/client/sdl_snd.o
-else
-Q3OBJ += \
-  $(B)/client/null_input.o \
-  $(B)/client/null_snddma.o \
-  $(B)/client/null_renderer.o  
-endif
+
+Q3TOBJ += \
+  $(B)/clienttty/null_input.o \
+  $(B)/clienttty/null_snddma.o \
+  $(B)/clienttty/null_renderer.o
 
 ifeq ($(ARCH),x86)
-  Q3OBJ += \
+  Q3OBJ_ += \
     $(B)/client/snd_mixa.o \
     $(B)/client/matha.o \
     $(B)/client/ftola.o \
@@ -1529,7 +1511,7 @@ endif
 endif
 
 ifeq ($(USE_INTERNAL_ZLIB),1)
-Q3OBJ += \
+Q3OBJ_ += \
   $(B)/client/adler32.o \
   $(B)/client/inffast.o \
   $(B)/client/inflate.o \
@@ -1538,31 +1520,34 @@ Q3OBJ += \
 endif
 
 ifeq ($(USE_CURSES),1)
-  Q3OBJ += $(B)/client/con_curses.o
+  Q3OBJ_ += $(B)/client/con_curses.o
 endif
 
 ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),x86)
-    Q3OBJ += $(B)/client/vm_x86.o
+    Q3OBJ_ += $(B)/client/vm_x86.o
   endif
   ifeq ($(ARCH),x86_64)
-    Q3OBJ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
+    Q3OBJ_ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
   endif
   ifeq ($(ARCH),ppc)
-    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+    Q3OBJ_ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
   endif
   ifeq ($(ARCH),ppc64)
-    Q3OBJ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+    Q3OBJ_ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),sparc)
+    Q3OBJ += $(B)/client/vm_sparc.o
   endif
 endif
 
 ifeq ($(PLATFORM),mingw32)
-  Q3OBJ += \
+  Q3OBJ_ += \
     $(B)/client/win_resource.o \
     $(B)/client/sys_win32.o \
     $(B)/client/con_win32.o
 else
-  Q3OBJ += \
+  Q3OBJ_ += \
     $(B)/client/sys_unix.o \
     $(B)/client/con_tty.o
 endif
@@ -1572,13 +1557,14 @@ ifeq ($(USE_MUMBLE),1)
     $(B)/client/libmumblelink.o
 endif
 
-ifneq ($(USE_TTY_CLIENT),1)
-  Q3POBJ = \
-    $(B)/client/sdl_glimp.o
+Q3POBJ = \
+  $(B)/client/sdl_glimp.o
 
-  Q3POBJ_SMP = \
-    $(B)/clientsmp/sdl_glimp.o
-endif
+Q3POBJ_SMP = \
+  $(B)/clientsmp/sdl_glimp.o
+
+Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
+Q3OBJ += $(Q3OBJ_)
 
 $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
@@ -1589,8 +1575,13 @@ $(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LI
 $(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(THREAD_LDFLAGS) \
-       -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
+       -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
+
+$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
+	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
@@ -1712,6 +1703,9 @@ ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),ppc64)
     Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
   endif
+  ifeq ($(ARCH),sparc)
+    Q3DOBJ += $(B)/ded/vm_sparc.o
+  endif
 endif
 
 ifeq ($(PLATFORM),mingw32)
@@ -1732,7 +1726,7 @@ $(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 
 
 #############################################################################
-## TREMULOUS CGAME
+## TREMFUSION CGAME
 #############################################################################
 
 CGOBJ_ = \
@@ -1784,7 +1778,7 @@ $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMULOUS GAME
+## TREMFUSION GAME
 #############################################################################
 
 GOBJ_ = \
@@ -1833,7 +1827,7 @@ $(B)/base/vm/game.qvm: $(GVMOBJ) $(GDIR)/g_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMULOUS UI
+## TREMFUSION UI
 #############################################################################
 
 UIOBJ_ = \
@@ -1902,6 +1896,31 @@ $(B)/client/%.o: $(SYSDIR)/%.rc
 
 $(B)/client/%.o: $(NDIR)/%.c
 	$(DO_CC)
+
+
+$(B)/clienttty/%.o: $(ASMDIR)/%.s
+	$(DO_AS)
+
+$(B)/clienttty/%.o: $(CDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(SDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(CMDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(ZDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(SYSDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(NDIR)/%.c
+	$(DO_TTY_CC)
+
+$(B)/clienttty/%.o: $(SYSDIR)/%.rc
+	$(DO_WINDRES)
 
 
 $(B)/ded/%.o: $(ASMDIR)/%.s
@@ -1992,10 +2011,10 @@ $(B)/base/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 # MISC
 #############################################################################
 
-OBJ = $(Q3OBJ) $(Q3POBJ) $(Q3POBJ_SMP) $(Q3DOBJ) \
+OBJ = $(Q3OBJ) $(Q3POBJ) $(Q3POBJ_SMP) $(Q3TOBJ) $(Q3DOBJ) \
   $(GOBJ) $(CGOBJ) $(UIOBJ) \
   $(GVMOBJ) $(CGVMOBJ) $(UIVMOBJ)
-TOOLSOBJ = $(LBURGOBJ) $(Q3CPPOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
+TOOLSOBJ = $(LBURGOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
 
 
 clean: clean-debug clean-release
@@ -2004,8 +2023,9 @@ clean: clean-debug clean-release
 clean-debug:
 	@$(MAKE) clean2 B=$(BD)
 
+# Don't clean the release targets, they could be symlinked to and still be in use
 clean-release:
-	@$(MAKE) clean2 B=$(BR)
+	@$(MAKE) clean2 B=$(BR) TARGETS=
 
 clean2:
 	@echo "CLEAN $(B)"
@@ -2025,16 +2045,10 @@ toolsclean2:
 	@echo "TOOLS_CLEAN $(B)"
 	@rm -f $(TOOLSOBJ)
 	@rm -f $(TOOLSOBJ_D_FILES)
-	@rm -f $(LBURG) $(DAGCHECK_C) $(Q3RCC) $(Q3CPP) $(Q3LCC) $(Q3ASM)
+	@rm -f $(LBURG) $(DAGCHECK_C) $(Q3RCC) $(Q3LCC) $(Q3ASM)
 
-distclean: clean toolsclean
+distclean:
 	@rm -rf $(BUILD_DIR)
-
-dist:
-	rm -rf tremulous-$(SCM_VERSION)
-	svn export . tremulous-$(SCM_VERSION)
-	tar --owner=root --group=root --force-local -cjf tremulous-$(SCM_VERSION).tar.bz2 tremulous-$(SCM_VERSION)
-	rm -rf tremulous-$(SCM_VERSION)
 
 #############################################################################
 # DEPENDENCIES
@@ -2045,6 +2059,6 @@ TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
 -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 
 .PHONY: all clean clean2 clean-debug clean-release copyfiles \
-	debug default dist distclean makedirs \
+	debug default distclean makedirs \
 	release targets \
 	toolsclean toolsclean2 toolsclean-debug toolsclean-release

@@ -1,17 +1,13 @@
 {
-  "^3Welcome to MGDev!^7"
+  "^3Welcome to Tremfusion!^7"
   {
     "This mod is under ongoing development. It is probably buggy and new "
     "features will come and go, please be patient and report any bugs you "
     "find!\n\n"
-    "Please visit the Mercenaries Guild at:\n"
-    "http://www.mercenariesguild.net/\n\n"
+    "Please visit us at:\n"
+    "http://www.tremfusion.net/\n\n"
     "We can also be reached on Freenode IRC:\n"
-    "#mercenariesguild"
-  }
-  "^3Release Notes r276^7"
-  {
-    "See source.mercenariesguild.net for details."
+    "#tremfusion"
   }
   "Alien Healing"
   {
@@ -72,9 +68,11 @@
   }
   "Marauder"
   {
-    "The Adv. Marauder now has a simpler, area-effect electric shock attack "
-    "that does not need to be aimed. Use this to attack large groups of Humans "
-    "or Human bases.\n\n"
+    "The Adv. Marauder's electric shock damage is no longer split between its "
+    "targets, making it more effective against large groups of humans and "
+    "buildables. Targets are now chosen slightly differently: instead of "
+    "each new chain section originating from the previous target, it will "
+    "originate from the first target."
   }
   "Mark Deconstruction"
   {
@@ -96,8 +94,7 @@
   }
   "Dretch"
   {
-    "The dretch bounding box and model have both slightly changed to line up "
-    "more closely.\nDretches can now damage any human structure while it "
+    "Dretches are slightly faster and can now damage any human structure while it "
     "is still building, but can no longer damage turrets and teslas that "
     "have been completed."
   }
@@ -126,13 +123,63 @@
   }
   "^3Credits^7"
   {
-    "MGDev is developed and hosted by the Mercenaries Guild. "
-    "Contributing developers:\n\n"
-    "Asa ''Norfenstein'' Kravets\n"
-    "Tony J. White\n"
-    "Michael ''Risujin'' Levin\n"
-    "Ben Millwood (''benmachine'')\n"
-    "Chris ''Lakitu7'' Schwarz\n"
-    "Roman ''kevlarman'' Tetelman\n"
+    "Tremfusion is developed and hosted by the Tremfusion development team.\n\n"
+    "The complete and up-to-date list of contributors can be found at\n"
+    "http://www.tremfusion.net/team"
+  }
+  "Emoticons: Aliens"
+  {
+    "[granger][[granger]\n"
+    "[advgranger][[advgranger]\n"
+    "[dretch][[dretch]\n"
+    "[basilisk][[basilisk]\n"
+    "[advbasilisk][[advbasilisk]\n"
+    "[marauder][[marauder]\n"
+    "[advmarauder][[advmarauder]\n"
+    "[dragoon][[dragoon]\n"
+    "[advdragoon][[advdragoon]\n"
+    "[tyrant][[tyrant]\n"
+  }
+  "Emoticons: Humans"
+  {
+    "[human][[human]\n"
+    "[bsuit][[bsuit]\n"
+  }
+  "Emoticons: Weapons"
+  {
+    "[ckit][[ckit]\n"
+    "[blaster][[blaster]\n"
+    "[rifle][[rifle]\n"
+    "[painsaw][[painsaw]\n"
+    "[shotgun][[shotgun]\n"
+    "[lasgun][[lasgun]\n"
+    "[mdriver][[mdriver]\n"
+    "[chaingun][[chaingun]\n"
+    "[prifle][[prifle]\n"
+    "[flamer][[flamer]\n"
+    "[lcannon][[lcannon]\n"
+    "[grenade][[grenade]\n"
+  }
+  "Emoticons: H Buildables"
+  {
+    "[reactor][[reactor]\n"
+    "[repeater][[repeater]\n"
+    "[telenode][[telenode]\n"
+    "[turret][[turret]\n"
+    "[tesla][[tesla]\n"
+    "[armoury][[armoury]\n"
+    "[defcomp][[defcomp]\n"
+    "[medstat][[medstat]\n"
+  }
+  "Emoticons: A Buildables"
+  {
+    "[overmind][[overmind]\n"
+    "[egg][[egg]\n"
+    "[barricade][[barricade]\n"
+    "[acidtube][[acidtube]\n"
+    "[trapper][[trapper]\n"
+    "[booster][[booster]\n"
+    "[hive][[hive]\n"
+    "[hovel][[hovel]\n"
   }
 }

@@ -339,11 +339,18 @@ static void CG_DrawPlayerCreditsValue( rectDef_t *rect, vec4_t color, qboolean p
 
 static void CG_DrawAttackFeedback( rectDef_t *rect )
 {
+        static qboolean flipAttackFeedback = qfalse;
         int frame = cg.feedbackAnimation;
         qhandle_t shader;
         vec4_t hit_color = { 1, 0, 0, 0.5 };
         vec4_t miss_color = { 0.3, 0.3, 0.3, 0.5 };
         vec4_t teamhit_color = { 0.39, 0.80, 0.00, 0.5 };
+
+
+        if ( frame == 1 )
+        {
+          flipAttackFeedback = !flipAttackFeedback;
+        }
 
         //when a new feedback animation event is received, the fame number is set to 1 - so
         //if it is zero, we don't need to draw anything
@@ -352,19 +359,44 @@ static void CG_DrawAttackFeedback( rectDef_t *rect )
                 return;
         }
         else {
-                shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                switch(cg.feedbackAnimationType)
+                {
+                  case AFEEDBACK_HIT:
+                  case AFEEDBACK_MISS:
+                  case AFEEDBACK_TEAMHIT:
+                    if( flipAttackFeedback )
+                      shader = cgs.media.alienAttackFeedbackShadersFlipped[ frame - 1 ];
+                    else
+                      shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                    break;
+                  case AFEEDBACK_RANGED_HIT:
+                  case AFEEDBACK_RANGED_MISS:
+                  case AFEEDBACK_RANGED_TEAMHIT:
+                    if( flipAttackFeedback )
+                      shader = cgs.media.alienAttackFeedbackShadersFlipped[ frame - 1 ];
+                    else
+                      shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                    break;
+                  default:
+                     shader = cgs.media.alienAttackFeedbackShaders[ frame - 1 ];
+                     break;
+                  
+                }
                 cg.feedbackAnimation++;
                 if(cg.feedbackAnimation > 10)
                         cg.feedbackAnimation = 0;
 
                 switch(cg.feedbackAnimationType) {
                 	case AFEEDBACK_HIT:
+                	case AFEEDBACK_RANGED_HIT:
                         	trap_R_SetColor( hit_color );
                         	break;
                 	case AFEEDBACK_MISS:
+                  case AFEEDBACK_RANGED_MISS:
                         	trap_R_SetColor( miss_color );
                         	break;
                 	case AFEEDBACK_TEAMHIT:
+                  case AFEEDBACK_RANGED_TEAMHIT:
                         	trap_R_SetColor( teamhit_color );
                         	break;
                 }
@@ -402,6 +434,8 @@ static void CG_DrawPlayerStamina( int ownerDraw, rectDef_t *rect,
     case CG_PLAYER_STAMINA_4:
       progress = ( stamina + MAX_STAMINA ) / MAX_STAMINA;
       break;
+    default:
+      return;
   }
 
   if( progress > 1.0f )
@@ -563,38 +597,49 @@ CG_DrawPlayerPoisonBarbs
 */
 static void CG_DrawPlayerPoisonBarbs( rectDef_t *rect, vec4_t color, qhandle_t shader )
 {
-  playerState_t *ps = &cg.snap->ps;
-  int           x = rect->x;
-  int           y = rect->y;
-  int           width = rect->w;
-  int           height = rect->h;
-  qboolean      vertical;
-  int           iconsize, numBarbs, i;
+  qboolean vertical;
+  float    x = rect->x, y = rect->y;
+  float    width = rect->w, height = rect->h;
+  float    diff;
+  int      iconsize, numBarbs, maxBarbs;
 
-  numBarbs = ps->ammo;
+  maxBarbs = BG_Weapon( cg.snap->ps.weapon )->maxAmmo;
+  numBarbs = cg.snap->ps.ammo;
+  if( maxBarbs <= 0 || numBarbs <= 0 )
+    return;
+
+  // adjust these first to ensure the aspect ratio of the barb image is
+  // preserved
+  CG_AdjustFrom640( &x, &y, &width, &height );
 
   if( height > width )
   {
     vertical = qtrue;
     iconsize = width;
+    if( maxBarbs != 1 ) // avoid division by zero
+      diff = ( height - iconsize ) / (float)( maxBarbs - 1 );
+    else
+      diff = 0; // doesn't matter, won't be used
   }
-  else if( height <= width )
+  else
   {
     vertical = qfalse;
-    iconsize = height * cgDC.aspectScale;
+    iconsize = height;
+    if( maxBarbs != 1 )
+      diff = ( width - iconsize ) / (float)( maxBarbs - 1 );
+    else
+      diff = 0;
   }
 
-  if( color[ 3 ] != 0.0 )
-    trap_R_SetColor( color );
+  trap_R_SetColor( color );
 
-  for( i = 0; i < numBarbs; i ++ )
+  for( ; numBarbs > 0; numBarbs-- )
   {
+    trap_R_DrawStretchPic( x, y, iconsize, iconsize, 0, 0, 1, 1, shader );
     if( vertical )
-      y += iconsize;
+      y += diff;
     else
-      x += iconsize;
-
-    CG_DrawPic( x, y, iconsize, iconsize, shader );
+      x += diff;
   }
 
   trap_R_SetColor( NULL );
@@ -660,7 +705,7 @@ static void CG_DrawStack( rectDef_t *rect, vec4_t color, float fill,
   float each;
   int   ival;
   float frac;
-  float nudge;
+  float nudge = 0;
   float fmax = max; // otherwise we'd be (float) casting everywhere
 
   if( val <= 0 || max <= 0 )
@@ -697,6 +742,8 @@ static void CG_DrawStack( rectDef_t *rect, vec4_t color, float fill,
 
     if( fmax > 1 )
       nudge = ( 1 - fill ) / ( fmax - 1 );
+    else
+      return;
     for( i = 0; i < ival; i++ )
     {
       float start;
@@ -2218,6 +2265,7 @@ static void CG_DrawLagometer( rectDef_t *rect, float text_x, float text_y,
   vec4_t  adjustedColor;
   float   vscale;
   vec4_t  white = { 1.0f, 1.0f, 1.0f, 1.0f };
+  char    *ping;
 
   if( cg.snap->ps.pm_type == PM_INTERMISSION )
     return;
@@ -2340,19 +2388,18 @@ static void CG_DrawLagometer( rectDef_t *rect, float text_x, float text_y,
   trap_R_SetColor( NULL );
 
   if( cg_nopredict.integer || cg_synchronousClients.integer )
-    UI_Text_Paint( ax, ay, 0.5, white, "snc", 0, 0, ITEM_TEXTSTYLE_NORMAL );
+    ping = "snc";
   else
-  {
-    char        *s;
+    ping = va( "%d", cg.ping );
+  ax = rect->x + ( rect->w / 2.0f ) -
+       ( UI_Text_Width( ping, scale, 0 ) / 2.0f ) + text_x;
+  ay = rect->y + ( rect->h / 2.0f ) +
+       ( UI_Text_Height( ping, scale, 0 ) / 2.0f ) + text_y;
 
-    s = va( "%d", cg.ping );
-    ax = rect->x + ( rect->w / 2.0f ) - ( UI_Text_Width( s, scale, 0 ) / 2.0f ) + text_x;
-    ay = rect->y + ( rect->h / 2.0f ) + ( UI_Text_Height( s, scale, 0 ) / 2.0f ) + text_y;
-
-    Vector4Copy( textColor, adjustedColor );
-    adjustedColor[ 3 ] = 0.5f;
-    UI_Text_Paint( ax, ay, scale, adjustedColor, s, 0, 0, ITEM_TEXTSTYLE_NORMAL );
-  }
+  Vector4Copy( textColor, adjustedColor );
+  adjustedColor[ 3 ] = 0.5f;
+  UI_Text_Paint( ax, ay, scale, adjustedColor, ping, 0, 0,
+                 ITEM_TEXTSTYLE_NORMAL );
 
   CG_DrawDisconnect( );
 }
@@ -3465,6 +3512,7 @@ static void CG_Draw2D( void )
       ( cg.snap->ps.stats[ STAT_HEALTH ] > 0 ) )
   {
     CG_DrawBuildableStatus( );
+    CG_DrawTeamStatus( );
     if( cg_drawStatus.integer )
       Menu_Paint( menu, qtrue );
 

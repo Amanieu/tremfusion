@@ -48,6 +48,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #endif
 
+#ifdef _WIN32
+#define ALDRIVER_DEFAULT "OpenAL32.dll"
+#define ALDEVICE_DEFAULT "Generic Software"
+#elif defined(MACOS_X)
+#define ALDRIVER_DEFAULT "/System/Library/Frameworks/OpenAL.framework/OpenAL"
+#else
+#define ALDRIVER_DEFAULT "libopenal.so.0"
+#define ALDRIVER_FALLBACK "libopenal.so.1"
+#endif
+
 #ifdef USE_OPENAL_DLOPEN
 extern LPALENABLE qalEnable;
 extern LPALDISABLE qalDisable;

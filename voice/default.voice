@@ -1,0 +1,14 @@
+base
+{
+	"voice/base.wav"
+	{
+		text "^1Base under attack!"
+	}
+}
+rush
+{
+	"voice/rush.wav"
+	{
+		text "^2Rush the enemy!"
+	}
+}

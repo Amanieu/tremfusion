@@ -780,6 +780,11 @@ static qboolean PM_CheckJump( void )
       ( pm->ps->stats[ STAT_STAMINA ] < 0 ) )
     return qfalse;
 
+  //no bunny hopping off a dodge
+  if( pm->ps->stats[ STAT_TEAM ] == TEAM_HUMANS && 
+      pm->ps->pm_time )
+    return qfalse;
+
   if( pm->ps->pm_flags & PMF_RESPAWNED )
     return qfalse;    // don't allow jump until all buttons are up
 
@@ -922,7 +927,7 @@ static qboolean PM_CheckDodge( void )
 
   // Reasons to stop a sprint
   if( pm->cmd.forwardmove <= 0 || pm->cmd.upmove < 0 ||
-      pm->ps->pm_type != PM_NORMAL )
+      pm->ps->pm_type != PM_NORMAL || pm->cmd.buttons & BUTTON_WALKING )
     pm->ps->stats[ STAT_STATE ] &= ~SS_SPEEDBOOST;
 
   // Reasons why we can't start a dodge or sprint
@@ -1985,7 +1990,11 @@ static void PM_GroundClimbTrace( void )
 
     //if we hit something
     if( trace.fraction < 1.0f && !( trace.surfaceFlags & ( SURF_SKY | SURF_SLICK ) ) && 
-        !( trace.entityNum != ENTITYNUM_WORLD && i != 4 ) )
+#ifdef ALIEN_WALLWALK_ENTITIES
+      !( trace.entityNum < MAX_CLIENTS && i != 4 ) )
+#else
+      !( trace.entityNum != ENTITYNUM_WORLD && i != 4 ) )
+#endif
     {
       if( i == 2 || i == 3 )
       {
@@ -3453,7 +3462,21 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
   // circularly clamp the angles with deltas
   for( i = 0; i < 3; i++ )
   {
-    temp[ i ] = cmd->angles[ i ] + ps->delta_angles[ i ];
+    if( i == ROLL ) 
+    {
+      // Guard against speed hack
+      temp[ i ] = ps->delta_angles[ i ];
+
+#ifdef CGAME
+      // Assert here so that if cmd->angles[ i ] becomes non-zero
+      // for a legitimate reason we can tell where and why it's
+      // being ignored
+      assert( cmd->angles[ i ] == 0 );
+#endif
+
+    }
+    else
+      temp[ i ] = cmd->angles[ i ] + ps->delta_angles[ i ];
 
     if( i == PITCH )
     {

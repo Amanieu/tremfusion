@@ -58,7 +58,7 @@ cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates t
 cvar_t	*sv_dequeuePeriod;
 cvar_t	*sv_demoState;
 cvar_t	*sv_autoDemo;
-cvar_t	*sv_restricted;
+cvar_t	*sv_pure;
 
 cvar_t	*sv_minPing;
 /*
@@ -426,9 +426,8 @@ void SVC_Info( netadr_t from ) {
 	Info_SetValueForKey( infostring, "clients", va("%i", count) );
 	Info_SetValueForKey( infostring, "sv_maxclients", 
 		va("%i", sv_maxclients->integer - sv_privateClients->integer - sv_democlients->integer ) );
-	Info_SetValueForKey( infostring, "pure", sv_restricted->string );
+	Info_SetValueForKey( infostring, "pure", sv_pure->string );
 	Info_SetValueForKey( infostring, "unlagged", Cvar_VariableString( "g_unlagged" ) );
-	Info_SetValueForKey( infostring, "gamename", GAMENAME_FOR_MASTER );
 
 #ifdef USE_VOIP
 	if (sv_voip->integer) {

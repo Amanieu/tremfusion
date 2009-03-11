@@ -1300,6 +1300,8 @@ typedef struct
   qhandle_t   humanBleedPS;
 
   qhandle_t alienAttackFeedbackShaders[11];
+  qhandle_t alienAttackFeedbackShadersFlipped[11];
+  qhandle_t alienRangedAttackFeedbackShaders[11];
 
   qhandle_t   teslaZapTS;
   qhandle_t   massDriverTS;
@@ -1564,6 +1566,11 @@ extern  vmCvar_t    cg_debugRandom;
 extern  vmCvar_t    cg_optimizePrediction;
 extern  vmCvar_t    cg_projectileNudge;
 
+extern  vmCvar_t    cg_drawBuildableStatus;
+extern  vmCvar_t    cg_hideHealthyBuildableStatus;
+extern  vmCvar_t    cg_drawTeamStatus;
+extern  vmCvar_t    cg_hideHealthyTeamStatus;
+
 extern  vmCvar_t    cg_drawAlienFeedback;
 
 extern  vmCvar_t    cg_voice;
@@ -1679,9 +1686,11 @@ void        CG_Corpse( centity_t *cent );
 void        CG_ResetPlayerEntity( centity_t *cent );
 void        CG_NewClientInfo( int clientNum );
 void        CG_PrecacheClientInfo( class_t class, char *model, char *skin );
+void        CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci );
 sfxHandle_t CG_CustomSound( int clientNum, const char *soundName );
 void        CG_PlayerDisconnect( vec3_t org );
 void        CG_Bleed( vec3_t origin, vec3_t normal, int entityNum );
+void        CG_DrawTeamStatus( void );
 centity_t   *CG_GetPlayerLocation( void );
 
 //
@@ -1732,6 +1741,7 @@ void        CG_PainEvent( centity_t *cent, int health );
 void        CG_MissileHitEntity( weapon_t weaponNum, weaponMode_t weaponMode,
                 vec3_t origin, vec3_t dir, int entityNum, int charge );
 void        CG_TeamJoinMessage( clientInfo_t *newInfo, clientInfo_t *ci );
+
 
 
 //
@@ -2005,6 +2015,7 @@ void          trap_S_Respatialize( int entityNum, const vec3_t origin, vec3_t ax
 sfxHandle_t   trap_S_RegisterSound( const char *sample, qboolean compressed );    // returns buzz if not found
 void          trap_S_StartBackgroundTrack( const char *intro, const char *loop ); // empty name stops music
 void          trap_S_StopBackgroundTrack( void );
+int           trap_S_SoundDuration( sfxHandle_t handle );
 
 
 void          trap_R_LoadWorldMap( const char *mapname );
@@ -2072,10 +2083,6 @@ qboolean      trap_GetUserCmd( int cmdNumber, usercmd_t *ucmd );
 
 // used for the weapon select and zoom
 void          trap_SetUserCmdValue( int stateValue, float sensitivityScale );
-
-// aids for VM testing
-void          testPrintInt( char *string, int i );
-void          testPrintFloat( char *string, float f );
 
 int           trap_MemoryRemaining( void );
 void          trap_R_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);

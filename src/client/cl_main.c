@@ -90,6 +90,8 @@ cvar_t	*cl_activeAction;
 cvar_t	*cl_motdString;
 
 cvar_t	*cl_allowDownload;
+cvar_t	*cl_downloadPrompt;
+cvar_t	*cl_showdlPrompt;
 cvar_t	*cl_conXOffset;
 cvar_t	*cl_inGameVideo;
 
@@ -941,7 +943,7 @@ void CL_DemoCompleted( void )
 		}
 	}
 
-	CL_Disconnect( qtrue );
+	Com_Error(ERR_DISCONNECT, "End of demo");
 	CL_NextDemo();
 }
 
@@ -1050,6 +1052,7 @@ void CL_PlayDemo_f( void ) {
 	char		*arg, *ext_test;
 	int			protocol, i;
 	char		retry[MAX_OSPATH];
+	fileHandle_t	demofile;
 
 	if (Cmd_Argc() != 2) {
 		Com_Printf ("playdemo <demoname>\n");
@@ -1074,22 +1077,21 @@ void CL_PlayDemo_f( void ) {
 		if (demo_protocols[i])
 		{
 			Com_sprintf (name, sizeof(name), "demos/%s", arg);
-			FS_FOpenFileRead( name, &clc.demofile, qtrue );
+			FS_FOpenFileRead( name, &demofile, qtrue );
 		} else {
 			Com_Printf("Protocol %d not supported for demos\n", protocol);
 			Q_strncpyz(retry, arg, sizeof(retry));
 			retry[strlen(retry)-6] = 0;
-			CL_WalkDemoExt( retry, name, &clc.demofile );
+			CL_WalkDemoExt( retry, name, &demofile );
 		}
 	} else {
-		CL_WalkDemoExt( arg, name, &clc.demofile );
+		CL_WalkDemoExt( arg, name, &demofile );
 	}
 
-	if (!clc.demofile) {
+	if (!demofile) {
 		Com_Error( ERR_DROP, "couldn't open %s", name);
 		return;
 	}
-	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
 
 	// make sure a local server is killed
 	// 2 means don't force disconnect of local client
@@ -1099,7 +1101,9 @@ void CL_PlayDemo_f( void ) {
 
 	Con_Close();
 
+	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
 	cls.state = CA_CONNECTED;
+	clc.demofile = demofile;
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
 
@@ -1731,6 +1735,11 @@ void CL_Rcon_f( void ) {
 	char	message[MAX_RCON_MESSAGE];
 	netadr_t	to;
 
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf ("Usage: rcon <command>\n");
+		return;
+	}
+
 	if ( !rcon_client_password->string ) {
 		Com_Printf ("You must set 'rconpassword' before\n"
 					"issuing an rcon command.\n");
@@ -2082,9 +2091,86 @@ void CL_NextDownload(void) {
 	char *s;
 	char *remoteName, *localName;
 	qboolean useCURL = qfalse;
+	int prompt;
 
 	// We are looking to start a download here
 	if (*clc.downloadList) {
+
+	// Don't show a download prompt for tty clients
+#ifdef BUILD_TTY_CLIENT
+		if( cl_allowDownload->integer & DLF_ENABLE )
+			Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_CURL|DLP_UDP ) );
+		else
+			Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
+#endif
+
+		// Prompt if we do not allow automatic downloads
+		prompt = cl_downloadPrompt->integer;
+		if( !( prompt & DLP_TYPE_MASK ) && cl_showdlPrompt->integer ) {
+		    char files[ MAX_INFO_STRING ], *name, *head, *pure_msg,
+		         *url_msg = "";
+		    int i = 0, others = 0, swap = 0, max_list = 12;
+
+			// Set the download URL message
+			if( ( clc.sv_allowDownload & DLF_ENABLE ) &&
+			    !( clc.sv_allowDownload & DLF_NO_REDIRECT ) ) {
+				url_msg = va("The server redirects to the following URL:\n%s",
+				             clc.sv_dlURL);
+				max_list -= 6;
+			}
+
+			// Make a pretty version of the download list
+		    name = clc.downloadList;
+		    if( *name == '@' )
+		    	name++;
+		    do {
+		    	// Copy remote name
+		    	head = name;
+		    	while( *head && *head != '@' )
+		    		head++;
+		    	swap = *head;
+		    	*head = 0;
+		    	if( i++ < max_list )
+			    	Com_sprintf( files, sizeof( files ), "%s%s%s",
+			    	             files, i > 1 ? ", " : "", name );
+			    else
+			    	others++;
+		    	*head = swap;
+		    	if( !swap )
+		    		break;
+
+		    	// Skip local name
+		    	head++;
+		    	while( *head && *head != '@' )
+		    		head++;
+		    	name = head + 1;
+		    } while( *head );
+		    if( others )
+		    	Com_sprintf( files, sizeof( files ),
+		    	             "%s (%d other file%s)\n", files, others,
+		    	             others > 1 ? "s" : "" );
+
+			// Set the pure message
+			if( !( clc.sv_allowDownload & DLF_ENABLE ) ||
+				( ( clc.sv_allowDownload & DLF_NO_UDP ) &&
+				  ( clc.sv_allowDownload & DLF_NO_REDIRECT ) ) )
+				pure_msg = "You are missing files required by the server. "
+						   "The server does not allow downloading. "
+						   "You must install these files manually:";
+			else
+				pure_msg = "You are missing files provided by the server. "
+						   "You may need to download these files in order to "
+						   "play on the server:";
+
+			Cvar_Set( "cl_downloadPromptText",
+			          va("%s\n\n%s\n\n%s", pure_msg, files, url_msg ) );
+			Cvar_Set( "cl_downloadPrompt", va("%d", DLP_SHOW ) );
+			return;
+		}
+		if( !( prompt & DLP_PROMPTED ) )
+			Cvar_Set( "cl_downloadPrompt", va("%d", prompt | DLP_PROMPTED ) );
+		prompt &= DLP_TYPE_MASK;
+
 		s = clc.downloadList;
 
 		// format is:
@@ -2106,7 +2192,10 @@ void CL_NextDownload(void) {
 		else
 			s = localName + strlen(localName); // point at the nul byte
 #ifdef USE_CURL
-		if(!(cl_allowDownload->integer & DLF_NO_REDIRECT)) {
+		if( ( !cl_showdlPrompt->integer &&
+		      ( cl_allowDownload->integer & DLF_ENABLE ) &&
+		      !( cl_allowDownload->integer & DLF_NO_REDIRECT ) ) ||
+		    ( prompt & DLP_CURL ) ) {
 			char *host = NULL;
 			if(*cl_dlURLOverride->string) {
 				Com_Printf("Overriding sv_dlURL "
@@ -2145,12 +2234,13 @@ void CL_NextDownload(void) {
 		}
 #endif /* USE_CURL */
 		if(!useCURL) {
-			if((cl_allowDownload->integer & DLF_NO_UDP)) {
-				Com_Error(ERR_DROP, "UDP Downloads are "
-					"disabled on your client. "
-					"(cl_allowDownload is %d)",
-					cl_allowDownload->integer);
-				return;	
+			Com_Printf("Trying UDP download: %s; %s\n", localName, remoteName);
+			if( ( !( cl_allowDownload->integer & DLF_ENABLE ) ||
+			      ( cl_allowDownload->integer & DLF_NO_UDP ) ) &&
+			    ( !cl_showdlPrompt->integer || !( prompt & DLP_UDP ) ) ) {
+				Com_Printf("WARNING: UDP downloads are disabled.\n");
+				CL_DownloadsComplete();
+				return;
 			}
 			else {
 				CL_BeginDownload( localName, remoteName );
@@ -2176,34 +2266,15 @@ and determine if we need to download them
 =================
 */
 void CL_InitDownloads(void) {
-  char missingfiles[1024];
-
-  if ( !(cl_allowDownload->integer & DLF_ENABLE) )
-  {
-    // autodownload is disabled on the client
-    // but it's possible that some referenced files on the server are missing
-    if (FS_ComparePaks( missingfiles, sizeof( missingfiles ), qfalse ) )
-    {      
-      // NOTE TTimo I would rather have that printed as a modal message box
-      //   but at this point while joining the game we don't know wether we will successfully join or not
-      Com_Printf( "\nWARNING: You are missing some files referenced by the server:\n%s"
-                  "You might not be able to join the game\n"
-                  "Go to the setting menu to turn on autodownload, or get the file elsewhere\n\n", missingfiles );
-    }
-  }
-  else if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
-
-    Com_Printf("Need paks: %s\n", clc.downloadList );
-
+	if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
+	Com_Printf("Need paks: %s\n", clc.downloadList );
+		Cvar_Set( "cl_downloadPrompt", "0" );
 		if ( *clc.downloadList ) {
-			// if autodownloading is not enabled on the server
 			cls.state = CA_CONNECTED;
 			CL_NextDownload();
 			return;
 		}
-
 	}
-		
 	CL_DownloadsComplete();
 }
 
@@ -2774,6 +2845,30 @@ void CL_Frame ( int msec ) {
 		return;
 	}
 
+	// We may have a download prompt ready
+	if( ( cl_downloadPrompt->integer & DLP_TYPE_MASK ) &&
+	    !( cl_downloadPrompt->integer & DLP_PROMPTED ) ) {
+	  	Com_DPrintf( "Download prompt returned %d\n",
+	  	            cl_downloadPrompt->integer );
+	  	CL_NextDownload( );
+	}
+
+	// If the UI VM does not support the download prompt, we need to catch
+	// the prompt here and replicate regular behavior.
+	// One frame will always run between requesting and showing the prompt.
+	else if( cl_downloadPrompt->integer & DLP_SHOW ) {
+		if( cl_downloadPrompt->integer & DLP_STALE ) {
+			Com_Printf( "WARNING: UI VM does not support download prompt\n" );
+			if( cl_allowDownload->integer & DLF_ENABLE )
+				Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_CURL|DLP_UDP ) );
+			else
+				Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
+			CL_NextDownload( );
+		} else
+			Cvar_Set( "cl_downloadPrompt",
+			          va( "%d", cl_downloadPrompt->integer | DLP_STALE ) );
+	}
+
 #ifdef USE_CURL
 	if(clc.downloadCURLM) {
 		CL_cURL_PerformDownload();
@@ -3141,7 +3236,6 @@ video [filename]
 */
 void CL_Video_f( void )
 {
-#ifndef USE_CLIENT_TTY
   char  filename[ MAX_OSPATH ];
   int   i, last;
 
@@ -3188,7 +3282,6 @@ void CL_Video_f( void )
   }
 
   CL_OpenAVIForWriting( filename );
-#endif
 }
 
 /*
@@ -3312,6 +3405,9 @@ void CL_Init( void ) {
 #ifdef USE_CURL
 	cl_cURLLib = Cvar_Get("cl_cURLLib", DEFAULT_CURL_LIB, CVAR_ARCHIVE);
 #endif
+	cl_downloadPrompt = Cvar_Get ("cl_downloadPrompt", "0", CVAR_TEMP);
+	Cvar_Get("cl_downloadPromptText", "", CVAR_TEMP);
+	cl_showdlPrompt = Cvar_Get("cl_showdlPrompt", "1", CVAR_ARCHIVE);
 
 	cl_clantag = Cvar_Get ("cl_clantag", "", CVAR_ARCHIVE);
 
@@ -3357,7 +3453,7 @@ void CL_Init( void ) {
 	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
 	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "base", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
@@ -3601,6 +3697,7 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 	char	info[MAX_INFO_STRING];
 	char	*infoString;
 	int		prot;
+	int		realmsec = Sys_Milliseconds();
 
 	infoString = MSG_ReadString( msg );
 
@@ -3617,7 +3714,7 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 		if ( cl_pinglist[i].adr.port && !cl_pinglist[i].time && NET_CompareAdr( from, cl_pinglist[i].adr ) )
 		{
 			// calc ping time
-			cl_pinglist[i].time = cls.realtime - cl_pinglist[i].start + 1;
+			cl_pinglist[i].time = realmsec - cl_pinglist[i].start;
 			Com_DPrintf( "ping time %dms from %s\n", cl_pinglist[i].time, NET_AdrToString( from ) );
 
 			// save of info
@@ -4274,7 +4371,7 @@ qboolean CL_UpdateVisiblePings_f(int source) {
 							}
 						}
 						memcpy(&cl_pinglist[j].adr, &server[i].adr, sizeof(netadr_t));
-						cl_pinglist[j].start = cls.realtime;
+						cl_pinglist[j].start = Sys_Milliseconds();
 						cl_pinglist[j].time = 0;
 						NET_OutOfBandPrint( NS_CLIENT, cl_pinglist[j].adr, "getinfo xxx" );
 						slots++;

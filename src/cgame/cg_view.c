@@ -303,10 +303,22 @@ void CG_OffsetThirdPersonView( void )
 
   // If player is dead, we want the player to be between us and the killer
   // so pretend that the player was looking at the killer, then place cam behind them.
-  // FIXME: This still fails to see killer when killer is above/below or killer moves 
-  // out of view (relative to the dead player).
   if( cg.predictedPlayerState.stats[ STAT_HEALTH ] <= 0 )
-    cg.refdefViewAngles[ YAW ] = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+  {
+    int killerEntNum;
+    vec3_t killerPos;
+
+    killerEntNum = cg.predictedPlayerState.stats[ STAT_VIEWLOCK ];
+    
+    // already looking at ourself
+    if( killerEntNum != cg.snap->ps.clientNum )
+    {
+      VectorCopy( cg_entities[ killerEntNum ].lerpOrigin, killerPos );
+
+      VectorSubtract( killerPos, cg.refdef.vieworg, killerPos );
+      vectoangles( killerPos, cg.refdefViewAngles );
+    }
+  }
 
   // get and rangecheck cg_thirdPersonRange
   range = cg_thirdPersonRange.value;
@@ -332,7 +344,6 @@ void CG_OffsetThirdPersonView( void )
     if( fabs(deltaPitch) < 200.0f )
     {
       pitch += deltaPitch;
-      AngleNormalize180( pitch );
     }
 
     mouseInputAngles[ PITCH ] = pitch;
@@ -340,7 +351,7 @@ void CG_OffsetThirdPersonView( void )
     mouseInputAngles[ ROLL ] = 0.0;
 
     for( i = 0; i < 3; i++ )
-      AngleNormalize180( mouseInputAngles[ i ] );
+      mouseInputAngles[ i ] = AngleNormalize180( mouseInputAngles[ i ] );
 
     // Set the rotation angles to be the view angles offset by the mouse input
     // Ignore the original pitch though; it's too jerky otherwise
@@ -349,7 +360,7 @@ void CG_OffsetThirdPersonView( void )
 
     for( i = 0; i < 3; i++ )
     {
-      rotationAngles[ i ] = cg.refdefViewAngles[ i ] + mouseInputAngles[ i ];
+      rotationAngles[ i ] = AngleNormalize180(cg.refdefViewAngles[ i ]) + mouseInputAngles[ i ];
       AngleNormalize180( rotationAngles[ i ] );
     }
 
@@ -374,16 +385,21 @@ void CG_OffsetThirdPersonView( void )
 
     // Convert the new axis back to angles.
     AxisToAngles( rotaxis, rotationAngles );
-
-    for( i = 0; i < 3; i++ )
-      AngleNormalize180( rotationAngles[ i ] );
   }
   else 
   {
-    // If we're playing the game in third person, the viewangles already
-    // take care of our mouselook, so just use them.
-    for( i = 0; i < 3; i++ )
-      rotationAngles[ i ] = cg.refdefViewAngles[ i ];
+    if( cg.predictedPlayerState.stats[ STAT_HEALTH ] > 0 )
+    {
+      // If we're playing the game in third person, the viewangles already
+      // take care of our mouselook, so just use them.
+      for( i = 0; i < 3; i++ )
+        rotationAngles[ i ] = cg.refdefViewAngles[ i ];
+    }
+    else // dead
+    {
+      rotationAngles[ PITCH ] = 20;
+      rotationAngles[ YAW ] = cg.refdefViewAngles[ YAW ];
+    }
   }
 
   // Move the camera range distance back.
@@ -416,8 +432,12 @@ void CG_OffsetThirdPersonView( void )
 
   // The above checks may have moved the camera such that the existing viewangles
   // may not still face the player. Recalculate them to do so.
-  VectorSubtract( focusPoint, cg.refdef.vieworg, focusPoint );
-  vectoangles( focusPoint, cg.refdefViewAngles );
+  // but if we're dead, don't bother because we'd rather see what killed us
+  if( cg.predictedPlayerState.stats[ STAT_HEALTH ] > 0 )
+  {
+    VectorSubtract( focusPoint, cg.refdef.vieworg, focusPoint );
+    vectoangles( focusPoint, cg.refdefViewAngles );
+  }
 }
 
 
@@ -532,10 +552,12 @@ void CG_OffsetShoulderView( void )
 
   // Handle pitch.
   rotationAngles[ PITCH ] = mousePitch;
+
   // Ignore following pitch; it's too jerky otherwise.
   if( cg_thirdPersonPitchFollow.integer ) 
     mousePitch += cg.refdefViewAngles[ PITCH ];
-  AngleNormalize180( rotationAngles[ PITCH ] );
+
+  rotationAngles[ PITCH ] = AngleNormalize180( rotationAngles[ PITCH ] );
   if( rotationAngles [ PITCH ] < -90 ) rotationAngles [ PITCH ] = -90;
   if( rotationAngles [ PITCH ] > 90 ) rotationAngles [ PITCH ] = 90;
 
@@ -550,9 +572,6 @@ void CG_OffsetShoulderView( void )
                       cg.snap->ps.eFlags & EF_WALLCLIMBCEILING ) )
     AxisCopy( axis, rotaxis );
   AxisToAngles( rotaxis, rotationAngles );
-
-  for( i = 0; i < 3; i++ )
-    AngleNormalize180( rotationAngles[ i ] );
 
   // Actually set the viewangles.
   for( i = 0; i < 3; i++ )

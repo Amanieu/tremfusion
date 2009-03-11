@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define id386_sse 0
 #define idppc 0
 #define idppc_altivec 0
+#define idsparc 0
 
 #else
 
@@ -47,8 +48,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #else
 #define id386 0
+#if defined __x86_64__ && !defined(C_ONLY)
+#ifdef __SSE2__
+#define id386_sse 2
+#else
+#ifdef __SSE__
+#define id386_sse 1
+#else
 #define id386_sse 0
 #endif
+#endif
+#else
+#define id386_sse 0
+#endif
+#endif
+
 
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || \
 	defined(__ppc) || defined(__ppc__)) && !defined(C_ONLY)
@@ -68,6 +82,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #else
 #define idppc 0
 #define idppc_altivec 0
+#endif
+
+#if defined(__sparc__) && !defined(C_ONLY)
+#define idsparc 1
+#else
+#define idsparc 0
 #endif
 
 #endif

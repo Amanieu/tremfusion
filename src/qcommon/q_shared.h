@@ -363,8 +363,7 @@ extern	vec4_t		colorDkGrey;
 
 #define Q_COLOR_ESCAPE	'^'
 #define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && isprint(*((p)+1)) && \
-                              *((p)+1) != Q_COLOR_ESCAPE && *((p)+1) != '.' && \
-                              *((p)+1) != '_' && !isspace(*((p)+1)) )
+                              *((p)+1) != Q_COLOR_ESCAPE && !isspace(*((p)+1)) )
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -478,6 +477,7 @@ typedef struct {
 #define VectorClear(a)			((a)[0]=(a)[1]=(a)[2]=0)
 #define VectorNegate(a,b)		((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2])
 #define VectorSet(v, x, y, z)	((v)[0]=(x), (v)[1]=(y), (v)[2]=(z))
+#define Vector2Copy(a,b)		((b)[0]=(a)[0],(b)[1]=(a)[1])
 #define Vector4Copy(a,b)		((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
 #define Vector4Add(a,b,c)    ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2],(c)[3]=(a)[3]+(b)[3])
 #define Vector4Lerp( f, s, e, r ) ((r)[0]=(s)[0]+(f)*((e)[0]-(s)[0]),\
@@ -1372,5 +1372,14 @@ typedef enum {
 
 #define MAX_EMOTICON_NAME_LEN 16
 #define MAX_EMOTICONS 64
+
+// flags for cl_downloadPrompt
+#define DLP_TYPE_MASK 0x0f
+#define DLP_IGNORE    0x01 // don't download anything
+#define DLP_CURL      0x02 // download via HTTP redirect
+#define DLP_UDP       0x04 // download from server
+#define DLP_SHOW      0x10 // prompt needs to be shown
+#define DLP_PROMPTED  0x20 // prompt has been processed by client
+#define DLP_STALE     0x40 // prompt is not being shown by UI VM
 
 #endif	// __Q_SHARED_H

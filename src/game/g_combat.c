@@ -33,7 +33,7 @@ int             g_numArmourRegions[ UP_NUM_UPGRADES ];
 ============
 AddScore
 
-Adds score to both the client and his team
+Adds score to the client
 ============
 */
 void AddScore( gentity_t *ent, int score )
@@ -44,6 +44,15 @@ void AddScore( gentity_t *ent, int score )
   // no scoring during pre-match warmup
   if( level.warmupTime )
     return;
+
+  // make alien and human scores equivalent 
+  if ( ent->client->pers.teamSelection == TEAM_ALIENS )
+  {
+    score = rint( (double) score / 2.0 );
+  }
+
+  // scale values down to fit the scoreboard better
+  score = rint( (double) score / 50.0 );
 
   ent->client->ps.persistant[ PERS_SCORE ] += score;
   CalculateRanks( );
@@ -56,19 +65,13 @@ LookAtKiller
 */
 void LookAtKiller( gentity_t *self, gentity_t *inflictor, gentity_t *attacker )
 {
-  vec3_t    dir;
 
   if ( attacker && attacker != self )
-    VectorSubtract( attacker->s.pos.trBase, self->s.pos.trBase, dir );
+    self->client->ps.stats[ STAT_VIEWLOCK ] = attacker - g_entities;
   else if( inflictor && inflictor != self )
-    VectorSubtract( inflictor->s.pos.trBase, self->s.pos.trBase, dir );
+    self->client->ps.stats[ STAT_VIEWLOCK ] = inflictor - g_entities;
   else
-  {
-    self->client->ps.stats[ STAT_VIEWLOCK ] = self->s.angles[ YAW ];
-    return;
-  }
-
-  self->client->ps.stats[ STAT_VIEWLOCK ] = vectoyaw( dir );
+    self->client->ps.stats[ STAT_VIEWLOCK ] = self - g_entities;
 }
 
 // these are just for logging, the client prints its own messages
@@ -178,13 +181,20 @@ float G_RewardAttackers( gentity_t *self )
     if( !player->client || !self->credits[ i ] ||
         player->client->ps.stats[ STAT_TEAM ] == team )
       continue;
-    G_AddCreditToClient( player->client, num, qtrue );
 
-    // add to stage counters
-    if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
-      trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + stageValue ) );
-    else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
-      trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + stageValue ) );
+    AddScore( player, num );
+
+    // killing buildables earns score, but not credits
+    if( self->s.eType != ET_BUILDABLE )
+    {
+      G_AddCreditToClient( player->client, num, qtrue );
+
+      // add to stage counters
+      if( player->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
+        trap_Cvar_Set( "g_alienCredits", va( "%d", g_alienCredits.integer + stageValue ) );
+      else if( player->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+        trap_Cvar_Set( "g_humanCredits", va( "%d", g_humanCredits.integer + stageValue ) );
+    }
 
     self->credits[ i ] = 0;
   }
@@ -269,23 +279,35 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
     if( attacker == self || OnSameTeam( self, attacker ) )
     {
-      AddScore( attacker, -1 );
 
       //punish team kills and suicides
       if( attacker->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
+      {
         G_AddCreditToClient( attacker->client, -ALIEN_TK_SUICIDE_PENALTY, qtrue );
+        AddScore( attacker, -ALIEN_TK_SUICIDE_PENALTY );
+      }
       else if( attacker->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+      {
         G_AddCreditToClient( attacker->client, -HUMAN_TK_SUICIDE_PENALTY, qtrue );
+        AddScore( attacker, -HUMAN_TK_SUICIDE_PENALTY );
+      }
     }
     else
     {
-      AddScore( attacker, 1 );
-
       attacker->client->lastKillTime = level.time;
     }
   }
   else if( attacker->s.eType != ET_BUILDABLE )
-    AddScore( self, -1 );
+  {
+    if( self->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
+    {
+      AddScore( self, -ALIEN_TK_SUICIDE_PENALTY );
+    }
+    else if( self->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
+    {
+      AddScore( self, -HUMAN_TK_SUICIDE_PENALTY );
+    }
+  }
 
   // give credits for killing this player
   totalDamage = G_RewardAttackers( self );
@@ -873,8 +895,18 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
                        targ->moverState == ROTATOR_POS1 ) )
       targ->use( targ, inflictor, attacker );
     if( attacker->client->pers.teamSelection == TEAM_ALIENS)
-      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
-
+    {
+      if( mod == MOD_LEVEL3_BOUNCEBALL ||
+          mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL4_TRAMPLE    ||
+          mod == MOD_LEVEL4_CRUSH      ||
+          mod == MOD_LEVEL3_POUNCE     ||
+          mod == MOD_LEVEL1_PCLOUD     ||
+          mod == MOD_LEVEL2_ZAP )
+        G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+      else
+        G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    }
     return;
   }
 
@@ -983,11 +1015,31 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
         if( !g_friendlyFireAliens.integer &&
              targ->client->ps.stats[ STAT_TEAM ] == TEAM_ALIENS )
         {
-          G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_TEAMHIT, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_TEAMHIT, targ->s.number );
           return;
         }
         else
-          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+        {
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+        }
       }
     }
 
@@ -996,11 +1048,29 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       if( targ->buildableTeam == attacker->client->pers.teamSelection )
       {
         if( !g_friendlyBuildableFire.integer ) {
-          G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_MISS, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_MISS, targ->s.number );
           return;
         }
         else
-          G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+          if( mod == MOD_LEVEL3_BOUNCEBALL ||
+              mod == MOD_SLOWBLOB          ||
+              mod == MOD_LEVEL4_TRAMPLE    ||
+              mod == MOD_LEVEL4_CRUSH      ||
+              mod == MOD_LEVEL3_POUNCE     ||
+              mod == MOD_LEVEL1_PCLOUD     ||
+              mod == MOD_LEVEL2_ZAP )
+            G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+          else
+            G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
       }
 
       // base is under attack warning if DCC'd
@@ -1092,7 +1162,18 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
   if( take )
   {
     if( attacker->client && attacker->client->pers.teamSelection == TEAM_ALIENS)
-      G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    {
+      if( mod == MOD_LEVEL3_BOUNCEBALL ||
+          mod == MOD_SLOWBLOB          ||
+          mod == MOD_LEVEL4_TRAMPLE    ||
+          mod == MOD_LEVEL4_CRUSH      ||
+          mod == MOD_LEVEL3_POUNCE     ||
+          mod == MOD_LEVEL1_PCLOUD     ||
+          mod == MOD_LEVEL2_ZAP )
+        G_AddEvent( attacker, EV_ALIENRANGED_HIT, targ->s.number );
+      else
+        G_AddEvent( attacker, EV_ALIEN_HIT, targ->s.number );
+    }
 
     targ->health = targ->health - take;
 
@@ -1100,6 +1181,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
       targ->client->ps.stats[ STAT_HEALTH ] = targ->health;
 
     targ->lastDamageTime = level.time;
+    targ->nextRegenTime = level.time + ALIEN_REGEN_DAMAGE_TIME;
 
     // add to the attackers "account" on the target
     if( attacker->client && attacker != targ && !OnSameTeam( targ, attacker ) )

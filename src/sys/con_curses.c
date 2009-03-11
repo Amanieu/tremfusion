@@ -62,6 +62,7 @@ static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
 static WINDOW *scrollwin;
+static WINDOW *clockwin;
 
 static char logbuf[LOG_BUF_SIZE];
 static char *insert = logbuf;
@@ -207,6 +208,22 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 
 /*
 ==================
+CON_UpdateClock
+
+Update the clock
+==================
+*/
+static void CON_UpdateClock(void)
+{
+	qtime_t realtime;
+	Com_RealTime(&realtime);
+	werase(clockwin);
+	CON_ColorPrint(clockwin, va("^0[^3%02d%c%02d^0]^7 ", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min), qtrue);
+	wnoutrefresh(clockwin);
+}
+
+/*
+==================
 CON_Resize
 
 The window has just been resized, move everything back into place
@@ -259,7 +276,6 @@ void CON_Clear_f(void)
 CON_Shutdown
 
 Never exit without calling this, or your terminal will be left in a pretty bad state
-This will also spit out the whole log to the terminal, so that it can be seen even after we close
 ==================
 */
 void CON_Shutdown(void)
@@ -270,9 +286,6 @@ void CON_Shutdown(void)
 	}
 
 	endwin();
-
-	// Dump console to stderr
-	CON_Print_tty(logbuf);
 }
 
 /*
@@ -293,12 +306,18 @@ void CON_Init(void)
 	signal(SIGTTOU, SIG_IGN);
 #endif
 
+	// Make sure we're on a tty
+	if (isatty(STDIN_FILENO) != 1 || isatty(STDOUT_FILENO) != 1 || isatty(STDERR_FILENO) != 1) {
+		CON_Init_tty();
+		return;
+	}
+
 	// Initialize curses and set up the root window
 	if (!curses_on) {
 		SCREEN *test = newterm(NULL, stdout, stdin);
 		if (!test) {
-			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
 			CON_Init_tty();
+			CON_Print_tty("Couldn't initialize curses, falling back to tty\n");
 			return;
 		}
 		endwin();
@@ -355,8 +374,8 @@ void CON_Init(void)
 	mvaddch(LINES - 2, COLS - 1, SCRLBAR_DOWN);
 
 	// Create the input field
-	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT), LINES - 1, Q_PrintStrlen(PROMPT));
-	input_field.widthInChars = COLS - Q_PrintStrlen(PROMPT) - 1;
+	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT) - 8, LINES - 1, Q_PrintStrlen(PROMPT) + 8);
+	input_field.widthInChars = COLS - Q_PrintStrlen(PROMPT) - 9;
 	if (curses_on) {
 		if (input_field.cursor < input_field.scroll)
 			input_field.scroll = input_field.cursor;
@@ -367,10 +386,14 @@ void CON_Init(void)
 	CON_UpdateCursor();
 	wnoutrefresh(inputwin);
 
+	// Create the clock
+	clockwin = newwin(1, 8, LINES - 1, 0);
+	CON_UpdateClock();
+
 	// Display the title and input prompt
 	move(0, (COLS - Q_PrintStrlen(TITLE)) / 2);
 	CON_ColorPrint(stdscr, TITLE, qtrue);
-	move(LINES - 1, 0);
+	move(LINES - 1, 8);
 	CON_ColorPrint(stdscr, PROMPT, qtrue);
 	wnoutrefresh(stdscr);
 	doupdate();
@@ -392,6 +415,7 @@ char *CON_Input(void)
 {
 	int chr, num_chars = 0;
 	static char text[MAX_EDIT_LINE];
+	static int lasttime = -1;
 
 	if (!curses_on)
 		return CON_Input_tty();
@@ -399,6 +423,12 @@ char *CON_Input(void)
 	if (com_ansiColor->modified) {
 		CON_Resize();
 		com_ansiColor->modified = qfalse;
+	}
+
+	if (Com_RealTime(NULL) != lasttime) {
+		lasttime = Com_RealTime(NULL);
+		CON_UpdateClock();
+		num_chars++;
 	}
 
 	while (1) {
@@ -539,8 +569,8 @@ void CON_Print(const char *msg)
 		scrollline = lastline - LOG_LINES;
 		if (scrollline < 0)
 			scrollline = 0;
+		pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 	}
-	pnoutrefresh(logwin, scrollline, 0, 2, 1, LOG_LINES + 1, LOG_COLS + 1);
 
 	// Add the message to the log buffer
 	if (insert + strlen(msg) >= logbuf + sizeof(logbuf)) {

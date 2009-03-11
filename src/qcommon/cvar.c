@@ -328,8 +328,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
-		if ( ( var->flags & CVAR_USER_CREATED ) && !( flags & CVAR_USER_CREATED )
-			&& var_value[0] ) {
+		if ( ( var->flags & CVAR_USER_CREATED ) && var_value[0] ) {
 			var->flags &= ~CVAR_USER_CREATED;
 			Z_Free( var->resetString );
 			var->resetString = CopyString( var_value );
@@ -350,8 +349,10 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			cvar_modifiedFlags |= flags;
 		}
 
-		// if a var is not being created don't let it pretend to be
-		var->flags |= flags & ~(CVAR_USER_CREATED|CVAR_SERVER_CREATED);
+		// mark vars that are created by qvms
+		if ((var->flags & CVAR_VM_CREATED) && !(flags & CVAR_VM_CREATED))
+			flags &= ~CVAR_VM_CREATED;
+		var->flags |= flags;
 		// only allow one non-empty reset string without a warning
 		if ( !var->resetString[0] ) {
 			// we don't have a reset string yet

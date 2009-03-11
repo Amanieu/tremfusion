@@ -97,10 +97,31 @@ Called on a first-time connect
 */
 void G_InitSessionData( gclient_t *client, char *userinfo )
 {
-  client->sess.spectatorState = SPECTATOR_FREE;
-  client->sess.spectatorTime = level.time;
-  client->sess.spectatorClient = -1;
-  memset( &client->sess.ignoreList, 0, sizeof( client->sess.ignoreList ) );
+  clientSession_t  *sess;
+  const char      *value;
+
+  sess = &client->sess;
+
+  // initial team determination
+  value = Info_ValueForKey( userinfo, "team" );
+  if( value[ 0 ] == 's' )
+  {
+    // a willing spectator, not a waiting-in-line
+    sess->spectatorState = SPECTATOR_FREE;
+  }
+  else
+  {
+    if( g_maxGameClients.integer > 0 &&
+      level.numNonSpectatorClients >= g_maxGameClients.integer )
+      sess->spectatorState = SPECTATOR_FREE;
+    else
+      sess->spectatorState = SPECTATOR_NOT;
+  }
+
+  sess->spectatorState = SPECTATOR_FREE;
+  sess->spectatorTime = level.time;
+  sess->spectatorClient = -1;
+  memset( &sess->ignoreList, 0, sizeof( sess->ignoreList ) );
 
   G_WriteClientSessionData( client );
 }

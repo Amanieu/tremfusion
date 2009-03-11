@@ -145,7 +145,7 @@ static qboolean CM_PlaneFromPoints_sse( v4f *plane, v4f a, v4f b, v4f c ) {
 	}
 
 	planeVec = v4fScale( v4fInverseRoot( planeLength ), planeVec );
-	planeVec = v4fMix( planeVec, v4fDotProduct( a, planeVec ), 0,0,0,1 );
+	planeVec = v4fMix( planeVec, v4fDotProduct( a, planeVec ), mixMask0001 );
 	*plane = planeVec;
 	return qtrue;
 }
@@ -1797,7 +1797,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				facet->borderNoAdjust[3] = noAdjust[EN_LEFT];
 				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, -1 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 			} else {
@@ -1817,7 +1817,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				}
  				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 0 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 
@@ -1842,7 +1842,7 @@ static void CM_PatchCollideFromGrid_sse( cGrid_t *grid, patchCollide_t *pf ) {
 				}
 				CM_SetBorderInward_sse( facet, grid, gridPlanes, i, j, 1 );
 				if ( CM_ValidateFacet_sse( facet ) ) {
-					CM_AddFacetBevels( facet );
+					CM_AddFacetBevels_sse( facet );
 					numFacets++;
 				}
 			}

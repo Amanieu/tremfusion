@@ -48,8 +48,6 @@ typedef struct {
 	float	finalFrac;		// 0.0 to 1.0 lines of console to display
 
 	int		vislines;		// in scanlines
-
-	vec4_t	color;
 } console_t;
 
 extern	console_t	con;
@@ -112,11 +110,8 @@ void Con_MessageMode_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -133,11 +128,8 @@ void Con_MessageMode2_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -158,11 +150,8 @@ void Con_MessageMode3_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -183,11 +172,8 @@ void Con_MessageMode4_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -204,11 +190,8 @@ void Con_MessageMode5_f (void) {
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 25;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -253,12 +236,8 @@ void Con_MessageMode6_f (void) {
 	chat_clans = qtrue;
 	prompt.active = qfalse;
 	Field_Clear( &chatField );
-	chatField.widthInChars = 25;
-	if( Cmd_Argc( ) > 1 )
-		chatField.cursor = Q_snprintf( chatField.buffer, sizeof( chatField.buffer ), "%s ", Cmd_Args( ) );
-	else
-		chatField.cursor = 0;
-
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
@@ -618,20 +597,19 @@ void CL_ConsolePrint( char *txt ) {
 	}
 	
 	if (!con.initialized) {
-		con.color[0] = 
-		con.color[1] = 
-		con.color[2] =
-		con.color[3] = 1.0f;
 		con.linewidth = -1;
 		Con_CheckResize ();
 		con.initialized = qtrue;
 	}
 
-	if( !skipnotify && !( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
+	if( !skipnotify ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		Cmd_TokenizeString( txt );
+		if( !com_timestamps || com_timestamps->integer )
+			Cmd_TokenizeString( txt + 16 );
+		else
+			Cmd_TokenizeString( txt );
 		CL_GameConsoleText( );
 
 		Cmd_RestoreCmdContext( );
@@ -702,21 +680,25 @@ Draw the editline after a ] prompt
 */
 void Con_DrawInput (void) {
 	int		y;
-	char	prompt[ MAX_STRING_CHARS ];
+	char	prompt[ MAX_STRING_CHARS ] = "";
+	qtime_t realtime;
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 		return;
 	}
 
+	Com_RealTime( &realtime );
+
 	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
-	re.SetColor( con.color );
+	if ( com_timestamps->integer )
+		Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 ", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min );
 
-	Q_strncpyz( prompt, cl_consolePrompt->string, sizeof( prompt ) );
+	Q_strcat( prompt, sizeof( prompt ), cl_consolePrompt->string );
+
+	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, colorWhite, qfalse, qfalse );
+
 	Q_CleanStr( prompt );
-
-	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, cl_consolePrompt->string, colorWhite, qfalse, qfalse );
-
 	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue );
 }
 

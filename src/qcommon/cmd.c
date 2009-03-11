@@ -52,8 +52,9 @@ typedef enum
 } cmdDelayType_t;
 
 typedef struct
-{ 
-        char    text[MAX_CMD_LINE]; 
+{
+        char    name[MAX_CMD_LINE];
+        char    text[MAX_CMD_LINE];
         int     delay;
         cmdDelayType_t 	type;
 } delayed_cmd_s; 
@@ -211,7 +212,7 @@ void Cbuf_Execute (void)
 		quotes = 0;
 		for (i=0 ; i< cmd_text.cursize ; i++)
 		{
-			if (text[i] == '"')
+			if (text[i] == '"' && (!i || text[i-1] != '\\') )
 				quotes++;
 			if ( !(quotes&1) &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
@@ -464,11 +465,11 @@ void Cmd_Math_f( void ) {
     op = Cmd_Argv( 2 );
     if ( !strcmp( op, "++" ) )
     {
-      Cvar_SetValueLatched( v, ( atof( v ) + 1 ) );
+      Cvar_SetValueLatched( v, Cvar_VariableValue( v ) + 1 );
     }
     else if ( !strcmp( op, "--" ) )
     {
-      Cvar_SetValueLatched( v, ( atof( v ) - 1 ) );
+      Cvar_SetValueLatched( v, Cvar_VariableValue( v ) - 1 );
     }
     else
     {
@@ -694,6 +695,55 @@ void Cmd_Echo_f (void)
 
 /*
 ===============
+Cmd_Undelay_f
+
+Removes a pending delay with a given name
+===============
+*/
+void Cmd_Undelay_f (void)
+{
+	int i;
+	char *find, *limit;
+
+	// Check if the call is valid
+	if(Cmd_Argc () < 1)
+	{
+		Com_Printf ("undelay <name> (command)\nremoves all commands with <name> in them.\nif (command) is specified, the removal will be limited only to delays whose commands contain (command).\n");
+		return;
+	}
+
+	find = Cmd_Argv(1);
+	limit = Cmd_Argv(2);
+
+	for(i=0; (i<MAX_DELAYED_COMMANDS); i++)
+	{
+		if(delayed_cmd[i].delay != CMD_DELAY_UNUSED && strstr(delayed_cmd[i].name, find) && strstr(delayed_cmd[i].text, limit))  // the limit test will always pass if limit is a null string
+		{
+			delayed_cmd[i].delay = CMD_DELAY_UNUSED;
+		}
+	}
+}
+
+
+/*
+===============
+Cmd_UndelayAll_f
+
+Removes all pending delays
+===============
+*/
+void Cmd_UndelayAll_f (void)
+{
+	int i;
+
+	for(i=0; (i<MAX_DELAYED_COMMANDS); i++)
+	{
+		delayed_cmd[i].delay = CMD_DELAY_UNUSED;
+	}
+}
+
+/*
+===============
 Cmd_Delay_f
 
 Delays a comand
@@ -702,17 +752,28 @@ Delays a comand
 void Cmd_Delay_f (void)
 {
 	int i, delay, type, lastchar;
-	char *raw_delay;
+	char *raw_delay, *name, *cmd;
 	qboolean availiable_cmd = qfalse;
 	
 	// Check if the call is valid
 	if(Cmd_Argc () < 2)
 	{
-		Com_Printf ("delay <delay in milliseconds> <command>\ndelay <delay in frames>f <command>\nexecutes <command> after the delay\n");
+		Com_Printf ("delay (name) <delay in milliseconds> <command>\ndelay <delay in frames>f <command>\nexecutes <command> after the delay\n");
 		return;
 	}
 	
 	raw_delay = Cmd_Argv(1);
+	if(!isdigit(raw_delay[0]))
+	{
+		name = raw_delay;
+		raw_delay = Cmd_Argv(2);
+		cmd = Cmd_ArgsFrom(3);
+	}
+	else
+	{
+		name = "";
+		cmd = Cmd_ArgsFrom(2);
+	}
 	delay = atoi(raw_delay);
 	
 	if(delay < 1)
@@ -750,7 +811,8 @@ void Cmd_Delay_f (void)
 	
 	delayed_cmd[i].delay = delay;
 	delayed_cmd[i].type = type;
-	Q_strncpyz(delayed_cmd[i].text, Cmd_ArgsFrom(2), MAX_CMD_LINE);
+	Q_strncpyz(delayed_cmd[i].text, cmd, MAX_CMD_LINE);
+	Q_strncpyz(delayed_cmd[i].name, name, MAX_CMD_LINE);
 }
 
 /*
@@ -826,7 +888,7 @@ void Cmd_WriteAliases(fileHandle_t f)
 	FS_Write(buffer, strlen(buffer), f);
 	while (alias)
 	{
-		Com_sprintf(buffer, sizeof(buffer), "alias %s %s\n", alias->name, Cmd_EscapeString(alias->exec));
+		Com_sprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, Cmd_EscapeString(alias->exec));
 		FS_Write(buffer, strlen(buffer), f);
 		alias = alias->next;
 	}
@@ -932,8 +994,6 @@ void Cmd_Alias_f(void)
 {
 	cmd_alias_t	*alias;
 	const char	*name;
-	char		exec[MAX_STRING_CHARS];
-	int			i;
 
 	// Get args
 	if (Cmd_Argc() < 2)
@@ -954,11 +1014,6 @@ void Cmd_Alias_f(void)
 	// Modify/create an alias
 	if (Cmd_Argc() > 2)
 	{
-		// Get the exec string
-		exec[0] = 0;
-		for (i = 2; i < Cmd_Argc(); i++)
-			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
-
 		// Crude protection from infinite loops
 		if (!strcmp(Cmd_Argv(2), name))
 		{
@@ -971,7 +1026,7 @@ void Cmd_Alias_f(void)
 		{
 			alias = S_Malloc(sizeof(cmd_alias_t));
 			alias->name = CopyString(name);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			alias->next = cmd_aliases;
 			cmd_aliases = alias;
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
@@ -980,7 +1035,7 @@ void Cmd_Alias_f(void)
 		{
 			// Reallocate the exec string
 			Z_Free(alias->exec);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}
@@ -1005,6 +1060,20 @@ void	Cmd_AliasCompletion( void(*callback)(const char *s) ) {
 	
 	for (alias=cmd_aliases ; alias ; alias=alias->next) {
 		callback( alias->name );
+	}
+}
+
+/*
+============
+Cmd_DelayCompletion
+============
+*/
+void	Cmd_DelayCompletion( void(*callback)(const char *s) ) {
+	int i;
+	
+	for (i = 0; i < MAX_DELAYED_COMMANDS; i++) {
+		if (delayed_cmd[i].delay != CMD_DELAY_UNUSED)
+			callback(delayed_cmd[i].name);
 	}
 }
 
@@ -1357,13 +1426,24 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 			}
 		}
 
+		// handle quote escaping
+		if ( !ignoreQuotes && text[0] == '\\' && text[1] == '"' ) {
+			*textOut++ = '"';
+			text += 2;
+			continue;
+		}
+
 		// handle quoted strings
-    // NOTE TTimo this doesn't handle \" escaping
 		if ( !ignoreQuotes && *text == '"' ) {
 			cmd.argv[cmd.argc] = textOut;
 			cmd.argc++;
 			text++;
 			while ( *text && *text != '"' ) {
+				if ( text[0] == '\\' && text[1] == '"' ) {
+					*textOut++ = '"';
+					text += 2;
+					continue;
+				}
 				*textOut++ = *text++;
 			}
 			*textOut++ = 0;
@@ -1380,6 +1460,12 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qbo
 
 		// skip until whitespace, quote, or command
 		while ( *text > ' ' || *text < '\0' ) {
+			if ( !ignoreQuotes && text[0] == '\\' && text[1] == '"' ) {
+				*textOut++ = '"';
+				text += 2;
+				continue;
+			}
+
 			if ( !ignoreQuotes && text[0] == '"' ) {
 				break;
 			}
@@ -1715,13 +1801,24 @@ Cmd_CompleteDelay
 */
 void Cmd_CompleteDelay( char *args, int argNum )
 {
-	if( argNum == 3 )
+	if( argNum == 3 || argNum == 4 )
 	{
 		// Skip "delay "
 		char *p = Com_SkipTokens( args, 1, " " );
 
 		if( p > args )
 			Field_CompleteCommand( p, qtrue, qtrue );
+	}
+}
+
+/*
+==================
+Cmd_CompleteUnDelay
+==================
+*/
+void Cmd_CompleteUnDelay( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteDelay( );
 	}
 }
 
@@ -1755,6 +1852,9 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("clearaliases", Cmd_ClearAliases_f);
 	Cmd_AddCommand ("delay", Cmd_Delay_f);
 	Cmd_SetCommandCompletionFunc( "delay", Cmd_CompleteDelay );
+	Cmd_AddCommand ("undelay", Cmd_Undelay_f);
+	Cmd_SetCommandCompletionFunc( "undelay", Cmd_CompleteUnDelay );
+	Cmd_AddCommand ("undelayAll", Cmd_UndelayAll_f);
 	Cmd_AddCommand ("random", Cmd_Random_f);
 }
 

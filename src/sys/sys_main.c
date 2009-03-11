@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 #	include <SDL.h>
 #	include <SDL_cpuinfo.h>
 #endif
@@ -44,6 +44,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
+static qboolean signalcaught = qfalse;
+#ifdef USE_CURSES
+static qboolean nocurses = qfalse;
+#endif
 
 /*
 =================
@@ -133,7 +137,7 @@ void Sys_Exit( int ex )
 {
 	CON_Shutdown( );
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	SDL_Quit( );
 #endif
 
@@ -166,7 +170,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 {
 	cpuFeatures_t features = 0;
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	if( SDL_HasRDTSC( ) )    features |= CF_RDTSC;
 	if( SDL_HasMMX( ) )      features |= CF_MMX;
 	if( SDL_HasMMXExt( ) )   features |= CF_MMX_EXT;
@@ -290,7 +294,7 @@ void Sys_Error( const char *error, ... )
 
 	Sys_ErrorDialog( string );
 
-	Sys_Exit( 1 );
+	Sys_Exit( !signalcaught );
 }
 
 /*
@@ -348,12 +352,10 @@ void Sys_UnloadDll( void *dllHandle )
 Sys_TryLibraryLoad
 =================
 */
-static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname, char* fqpath )
+static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname)
 {
 	void* libHandle;
 	char* fn;
-
-	*fqpath = 0;
 
 	fn = FS_BuildOSPath( base, gamedir, fname );
 	Com_DPrintf( "Sys_LoadDll(%s)... \n", fn );
@@ -365,8 +367,7 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 		return NULL;
 	}
 
-	Com_Printf ( "Sys_LoadDll(%s): succeeded ...\n", fn );
-	Q_strncpyz ( fqpath , fn , MAX_QPATH ) ;
+	Com_Printf ( "Sys_LoadDll(%s): succeeded ...\n", fn );\
 
 	return libHandle;
 }
@@ -381,7 +382,7 @@ Used to load a development dll instead of a virtual machine
 #3 look in fs_basepath
 =================
 */
-void *Sys_LoadDll( const char *name, char *fqpath ,
+void *Sys_LoadDll( const char *name,
 	intptr_t (**entryPoint)(int, ...),
 	intptr_t (*systemcalls)(intptr_t, ...) )
 {
@@ -405,16 +406,16 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	extrapath = Cvar_VariableString( "fs_extrapath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
-	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
+	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname);
 
 	if(!libHandle && *homepath)
-		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname);
 
 	if(!libHandle && *extrapath)
-		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname);
 
 	if(!libHandle && *basepath)
-		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
+		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname);
 
 	if(!libHandle) {
 		Com_Printf ( "Sys_LoadDll(%s) failed to load library\n", name );
@@ -445,6 +446,8 @@ Sys_ParseArgs
 */
 void Sys_ParseArgs( int argc, char **argv )
 {
+	int i;
+
 	if( argc == 2 )
 	{
 		if( !strcmp( argv[1], "--version" ) ||
@@ -459,6 +462,17 @@ void Sys_ParseArgs( int argc, char **argv )
 			Sys_Exit(0);
 		}
 	}
+
+#ifdef USE_CURSES
+	for (i = 1; i < argc; i++)
+	{
+		if( !strcmp( argv[i], "+nocurses" ) )
+		{
+			nocurses = qtrue;
+			break;
+		}
+	}
+#endif
 }
 
 #ifndef DEFAULT_BASEDIR
@@ -476,8 +490,6 @@ Sys_SigHandler
 */
 void Sys_SigHandler( int signal )
 {
-	static qboolean signalcaught = qfalse;
-
 	if( signalcaught )
 	{
 		fprintf( stderr, "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n",
@@ -486,11 +498,7 @@ void Sys_SigHandler( int signal )
 	else
 	{
 		signalcaught = qtrue;
-		fprintf( stderr, "Received signal %d, exiting...\n", signal );
-#ifndef DEDICATED
-		CL_Shutdown();
-#endif
-		SV_Shutdown( "Signal caught" );
+		Com_Error( ERR_FATAL, "Caught signal %d", signal );
 	}
 
 	Sys_Exit( 0 ); // Exit with 0 to avoid recursive signals
@@ -506,7 +514,7 @@ int main( int argc, char **argv )
 	int   i;
 	char  commandLine[ MAX_STRING_CHARS ] = { 0 };
 
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	// SDL version check
 
 	// Compile time
@@ -534,6 +542,9 @@ int main( int argc, char **argv )
 
 	Sys_PlatformInit( );
 
+	// Set the initial time base
+	Sys_Milliseconds( );
+
 	Sys_ParseArgs( argc, argv );
 	Sys_SetBinaryPath( Sys_Dirname( Sys_ResolveLink( argv[ 0 ] ) ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
@@ -541,11 +552,21 @@ int main( int argc, char **argv )
 	// Concatenate the command line for passing to Com_Init
 	for( i = 1; i < argc; i++ )
 	{
+		if( !strcmp( argv[ i ], "+nocurses" ) )
+			continue;
 		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
+#ifdef USE_CURSES
+	void CON_Init_tty(void);
+	if (nocurses)
+		CON_Init_tty( );
+	else
+		CON_Init( );
+#else
 	CON_Init( );
+#endif
 	Com_Init( commandLine );
 	NET_Init( );
 
@@ -556,11 +577,15 @@ int main( int argc, char **argv )
 
 	while( 1 )
 	{
-#if !DEDICATED && !USE_TTY_CLIENT
+#if !DEDICATED && !BUILD_TTY_CLIENT
 		int appState = SDL_GetAppState( );
 
-		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
+		Cvar_SetValue( "com_unfocused", !( appState & SDL_APPINPUTFOCUS ) );
 		Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
+#else
+		// For minimal cpu usage in tty client
+		Cvar_Set( "com_unfocused", "1" );
+		Cvar_Set( "com_minimized", "1" );
 #endif
 
 		IN_Frame( );
