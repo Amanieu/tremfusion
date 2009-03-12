@@ -822,7 +822,7 @@ void CopyArrayAndAddConstant_sse1(unsigned *dst, unsigned *src, int add, int cou
 
 static ID_INLINE v4f
 vec3_to_v4f(const vec3_t vec) {
-#if 0
+#if 1
 	/* this doesn't load the 4th float, but is probably slower */
 	__m128 v0 = _mm_load_ss(&(vec[0]));
 	__m128 v1 = _mm_load_ss(&(vec[1]));
