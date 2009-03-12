@@ -69,7 +69,13 @@ s4fToFloat(s4f vec) {
 
 static ID_INLINE v4f
 v4fLoadU(const float *adr) {
+#ifdef __GCC__
+	__m128 result;
+	asm("movups %1, %0" : "=x" (result) : "m" (*adr));
+	return result;
+#else
 	return _mm_loadu_ps(adr);
+#endif
 }
 
 static ID_INLINE v4f
@@ -822,7 +828,7 @@ void CopyArrayAndAddConstant_sse1(unsigned *dst, unsigned *src, int add, int cou
 
 static ID_INLINE v4f
 vec3_to_v4f(const vec3_t vec) {
-#if 1
+#if 0
 	/* this doesn't load the 4th float, but is probably slower */
 	__m128 v0 = _mm_load_ss(&(vec[0]));
 	__m128 v1 = _mm_load_ss(&(vec[1]));
