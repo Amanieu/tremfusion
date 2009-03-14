@@ -637,8 +637,7 @@ void SV_Init (void) {
 	sv_lanForceRate = Cvar_Get ("sv_lanForceRate", "1", CVAR_ARCHIVE );
 	sv_dequeuePeriod = Cvar_Get ("sv_dequeuePeriod", "500", CVAR_ARCHIVE );
 	sv_demoState = Cvar_Get ("sv_demoState", "0", CVAR_ROM );
-	sv_autoDemo = Cvar_Get ("sv_autoDemo", "0", CVAR_ARCHIVE );	
-	sv_minPing = Cvar_Get ("sv_minPing", "0", CVAR_ARCHIVE );
+	sv_autoDemo = Cvar_Get ("sv_autoDemo", "0", CVAR_ARCHIVE );
 }
 
 

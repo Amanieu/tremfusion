@@ -1776,7 +1776,7 @@ void CL_Rcon_f( void ) {
 		}
 	}
 	
-	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to, 0);
+	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
 }
 
 /*
@@ -4015,9 +4015,9 @@ void CL_LocalServers_f( void ) {
 			to.port = BigShort( (short)(PORT_SERVER + j) );
 
 			to.type = NA_BROADCAST;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
 			to.type = NA_MULTICAST6;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
 		}
 	}
 }
