@@ -1876,10 +1876,14 @@ void S_AL_SoundList( void )
 void S_AL_InitCapture( qboolean usingAL )
 {
 	// Load QAL if we are called from the base sound driver
-	if( !usingAL && !QAL_Init( s_alDriver->string ) )
+	if( !usingAL )
 	{
-		Com_Printf( "Failed to load library: \"%s\".\n", s_alDriver->string );
-		return;
+		s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE );
+		if( !QAL_Init( s_alDriver->string ) )
+		{
+			Com_Printf( "Failed to load library: \"%s\".\n", s_alDriver->string );
+			return;
+		}
 	}
 
 	// !!! FIXME: some of these alcCaptureOpenDevice() values should be cvars.
@@ -1925,7 +1929,7 @@ void S_AL_InitCapture( qboolean usingAL )
 			// !!! FIXME:  if we like.
 			Com_Printf("OpenAL default capture device is '%s'\n",
 			           qalcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
-			alCaptureDevice = qalcCaptureOpenDevice(NULL, 8000, AL_FORMAT_MONO16, 4096);
+			alCaptureDevice = qalcCaptureOpenDevice(NULL, 8000, AL_FORMAT_MONO16, 1024);
 			Com_Printf( "OpenAL capture device %s.\n",
 			            (alCaptureDevice == NULL) ? "failed to open" : "opened");
 			if( !alCaptureDevice && !usingAL )
