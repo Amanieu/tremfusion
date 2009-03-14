@@ -752,7 +752,7 @@ void Message_Key( int key ) {
 
 			} else {
 				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
-				Hist_Add( buffer );
+				Hist_Add( chatField.buffer );
 			}
 
 			if ( !prompt.active )
