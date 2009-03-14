@@ -43,6 +43,17 @@ scrollInfo_t;
 
 static scrollInfo_t scrollInfo;
 
+#define MAX_DELAYED_COMMANDS 64
+
+typedef struct delayed_cmd_s
+{
+  itemDef_t *item;
+  int time;
+}
+delayed_cmd_t; 
+
+delayed_cmd_t delayed_cmd[ MAX_DELAYED_COMMANDS ]; 
+
 // prevent compiler warnings
 void voidFunction( void *var )
 {
@@ -1887,6 +1898,43 @@ void Script_playLooped( itemDef_t *item, char **args )
   }
 }
 
+void Menu_DelayItemByName( menuDef_t *menu, const char *p, int time )
+{
+  itemDef_t *item;
+  int i, j = 0;
+  int count = Menu_ItemsMatchingGroup( menu, p );
+
+  for( i = 0; i < count; i++ )
+  {
+    item = Menu_GetMatchingItemByNumber( menu, i, p );
+
+    if( item != NULL && item->delayEvent && item->delayEvent[ 0 ] )
+    {
+      for( ; j < MAX_DELAYED_COMMANDS; j++ )
+      {
+        if( !delayed_cmd[ j ].time )
+        {
+          delayed_cmd[ j ].item = item;
+          delayed_cmd[ j ].time = DC->realTime + time;
+          j++;
+          break;
+        }
+      }
+    }
+  }
+}
+
+void Script_Delay( itemDef_t *item, char **args )
+{
+  const char *name;
+  int time;
+
+  if( Int_Parse( args, &time ) && String_Parse( args, &name ) )
+  {
+    Menu_DelayItemByName( item->parent, name, time );
+  }
+}
+
 static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
                                   int *length, qhandle_t *h, int *width )
 {
@@ -2544,11 +2592,12 @@ commandDef_t commandList[] =
     {"setplayermodel", &Script_SetPlayerModel},   // sets this background color to team color
     {"setplayerhead", &Script_SetPlayerHead},     // sets this background color to team color
     {"transition", &Script_Transition},           // group/name
-    {"setcvar", &Script_SetCvar},           // group/name
-    {"exec", &Script_Exec},           // group/name
-    {"play", &Script_Play},           // group/name
+    {"setcvar", &Script_SetCvar},                 // group/name
+    {"exec", &Script_Exec},                       // group/name
+    {"play", &Script_Play},                       // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit},                      // group/name
+    {"orbit", &Script_Orbit},                     // group/name
+    {"delay", &Script_Delay},                     // group/name
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -6214,6 +6263,7 @@ void Item_OwnerDraw_Paint( itemDef_t *item )
 
 void Item_Paint( itemDef_t *item )
 {
+  int i;
   vec4_t red;
   menuDef_t *parent = ( menuDef_t* )item->parent;
   red[0] = red[3] = 1;
@@ -6221,6 +6271,16 @@ void Item_Paint( itemDef_t *item )
 
   if( item == NULL )
     return;
+
+  // check for delays
+  for( i = 0; i < MAX_DELAYED_COMMANDS; i++ )
+  {
+    if( delayed_cmd[ i ].item == item && delayed_cmd[ i ].time && delayed_cmd[ i ].time < DC->realTime )
+    {
+      Item_RunScript( item, item->delayEvent );
+      delayed_cmd[ i ].time = 0;
+    }
+  }
 
   if( item->window.flags & WINDOW_ORBITING )
   {
@@ -7469,6 +7529,14 @@ qboolean ItemParse_onTextEntry( itemDef_t *item, int handle )
   return qtrue;
 }
 
+qboolean ItemParse_delayEvent( itemDef_t *item, int handle )
+{
+  if( !PC_Script_Parse( handle, &item->delayEvent ) )
+    return qfalse;
+
+  return qtrue;
+}
+
 qboolean ItemParse_action( itemDef_t *item, int handle )
 {
   if( !PC_Script_Parse( handle, &item->action ) )
@@ -7832,6 +7900,7 @@ keywordHash_t itemParseKeywords[] = {
   {"mouseEnterText", ItemParse_mouseEnterText, NULL},
   {"mouseExitText", ItemParse_mouseExitText, NULL},
   {"onTextEntry", ItemParse_onTextEntry, NULL},
+  {"delayEvent", ItemParse_delayEvent, NULL},
   {"action", ItemParse_action, NULL},
   {"special", ItemParse_special, NULL},
   {"cvar", ItemParse_cvar, NULL},

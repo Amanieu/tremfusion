@@ -69,7 +69,8 @@ s4fToFloat(s4f vec) {
 
 static ID_INLINE v4f
 v4fLoadU(const float *adr) {
-#ifdef __GCC__
+// workaround for a gcc bug
+#ifdef __GNUC__
 	__m128 result;
 	asm("movups %1, %0" : "=x" (result) : "m" (*adr));
 	return result;
