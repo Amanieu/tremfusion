@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=TremFusion
+Comment=Advanced first-person shooter
+Exec=tremfusion
+Icon=tremfusion
+Terminal=false
+Type=Application
+Categories=Game;ActionGame;
