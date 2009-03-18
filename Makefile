@@ -1,5 +1,5 @@
 #
-# Tremfusion Makefile
+# TremFusion Makefile
 #
 # GNU Make required
 #
@@ -93,6 +93,10 @@ endif
 
 ifndef BUILD_DIR
   BUILD_DIR=build
+endif
+
+ifndef INSTALL_PREFIX
+  INSTALL_PREFIX = "/usr/local"
 endif
 
 ifndef GENERATE_DEPENDENCIES
@@ -1116,7 +1120,7 @@ endif
 # an informational message, then start building
 targets: makedirs
 	@echo ""
-	@echo "Building Tremfusion in $(B):"
+	@echo "Building TremFusion in $(B):"
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  ARCH: $(ARCH)"
 	@echo "  VERSION: $(VERSION)"
@@ -1170,6 +1174,22 @@ makedirs:
 	@if [ ! -d $(B)/tools/etc ];then $(MKDIR) $(B)/tools/etc;fi
 	@if [ ! -d $(B)/tools/rcc ];then $(MKDIR) $(B)/tools/rcc;fi
 	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
+
+#############################################################################
+# INSTALL
+#############################################################################
+
+install: release
+	@echo ""
+	@echo "Installing TremFusion in $(INSTALL_PREFIX):"
+	@if [ ! -d $(INSTALL_PREFIX) ];then $(MKDIR) $(INSTALL_PREFIX);fi
+	@if [ ! -d $(INSTALL_PREFIX)/lib ];then $(MKDIR) $(INSTALL_PREFIX)/lib;fi
+	@if [ ! -d $(INSTALL_PREFIX)/share ];then $(MKDIR) $(INSTALL_PREFIX)/share;fi
+	@if [ ! -d $(INSTALL_PREFIX)/lib/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/lib/tremfusion;fi
+	@if [ ! -d $(INSTALL_PREFIX)/share/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/share/tremfusion;fi
+	@$(Q)$(INSTALL) -v $(BR)/tremulous.$(ARCH)$(BINEXT) $(INSTALL_PREFIX)/lib/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -v transfer_settings.sh $(INSTALL_PREFIX)/share/tremfusion/transfer_settings.sh
+
 
 #############################################################################
 # QVM BUILD TOOLS
