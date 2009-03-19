@@ -682,7 +682,7 @@ Draw the editline after a ] prompt
 */
 void Con_DrawInput (void) {
 	int		y;
-	char	prompt[ MAX_STRING_CHARS ] = "";
+	char	prompt[ MAX_STRING_CHARS ];
 	qtime_t realtime;
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
@@ -693,10 +693,7 @@ void Con_DrawInput (void) {
 
 	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
-	if ( com_timestamps->integer )
-		Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 ", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min );
-
-	Q_strcat( prompt, sizeof( prompt ), cl_consolePrompt->string );
+	Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 %s", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min, cl_consolePrompt->string );
 
 	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, colorWhite, qfalse, qfalse );
 

@@ -190,4 +190,6 @@
 #define UI_CREDITS                        83
 #define UI_SCREEN                         84
 
+#define CG_PLAYER_SCORE                   85
+
 #endif

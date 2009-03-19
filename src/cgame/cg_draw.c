@@ -2625,6 +2625,27 @@ static void CG_DrawLocation( rectDef_t *rect, float scale, int textalign, vec4_t
   trap_R_SetColor( NULL );
 }
 
+
+/*
+=====================
+CG_DrawPlayerScore
+=====================
+*/
+static void CG_DrawPlayerScore( rectDef_t *rect, float scale, int textalign, vec4_t color )
+{
+  const char    *text;
+  float         maxX;
+  float         tx = rect->x, ty = rect->y;
+  maxX = rect->x + rect->w;
+  text = va( "%d", cg.snap->ps.persistant[ PERS_SCORE ] );
+
+  if( UI_Text_Width( text, scale, 0 ) < rect->w ) 
+    CG_AlignText( rect, text, scale, 0.0f, 0.0f, textalign, VALIGN_CENTER, &tx, &ty );
+
+  UI_Text_Paint_Limit( &maxX, tx, ty, scale, color, text, 0, 0);
+  trap_R_SetColor( NULL );
+}
+
 /*
 =====================
 CG_DrawCrosshairNames
@@ -2886,6 +2907,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
       break;
     case CG_PLAYER_CROSSHAIR:
       CG_DrawCrosshair( &rect, foreColor );
+      break;
+    case CG_PLAYER_SCORE:
+      CG_DrawPlayerScore( &rect, scale, textalign, foreColor );
       break;
     case CG_STAGE_REPORT_TEXT:
       CG_DrawStageReport( &rect, text_x, text_y, foreColor, scale, textalign, textvalign, textStyle );

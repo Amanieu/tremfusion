@@ -2506,7 +2506,7 @@ void Com_Init( char *commandLine ) {
 	com_speeds = Cvar_Get ("com_speeds", "0", 0);
 	com_timedemo = Cvar_Get ("timedemo", "0", CVAR_CHEAT);
 	com_cameraMode = Cvar_Get ("com_cameraMode", "0", CVAR_CHEAT);
-	com_timestamps = Cvar_Get ("com_timestamps", "1", CVAR_ARCHIVE);
+	com_timestamps = Cvar_Get ("com_timestamps", "0", CVAR_ARCHIVE);
 
 	cl_paused = Cvar_Get ("cl_paused", "0", CVAR_ROM);
 	sv_paused = Cvar_Get ("sv_paused", "0", CVAR_ROM);
