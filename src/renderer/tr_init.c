@@ -935,12 +935,12 @@ void R_Register( void )
 	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
 	r_minimize = ri.Cvar_Get( "r_minimize", "0", 0 );
-	r_width = ri.Cvar_Get( "r_width", "800", CVAR_ARCHIVE | CVAR_LATCH );
-	r_height = ri.Cvar_Get( "r_height", "600", CVAR_ARCHIVE | CVAR_LATCH );
+	r_width = ri.Cvar_Get( "r_width", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_height = ri.Cvar_Get( "r_height", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	// legacy variables
-	r_mode = ri.Cvar_Get( "r_mode", "4", 0 );
+	r_mode = ri.Cvar_Get( "r_mode", "-1", 0 );
 	ri.Cvar_CheckRange( r_mode, -1, 11, qtrue );
 	r_customwidth = ri.Cvar_Get( "r_customwidth", r_width->string, 0 );
 	r_customheight = ri.Cvar_Get( "r_customheight", r_height->string, 0 );

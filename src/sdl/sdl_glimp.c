@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef SMP
 #	include <SDL_thread.h>
-#	ifdef __linux__
+#	ifdef SDL_VIDEO_DRIVER_X11
 #		include <X11/Xlib.h>
 #	endif
 #endif
@@ -61,7 +61,7 @@ static void GLimp_SetCurrentContext(qboolean enable)
 		CGLSetCurrentContext(NULL);
 }
 #endif
-#elif __linux__
+#elif SDL_VIDEO_DRIVER_X11
 #include <GL/glx.h>
 typedef struct
 {
@@ -300,6 +300,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	int i = 0;
 	SDL_Surface *vidscreen = NULL;
 	Uint32 flags = SDL_OPENGL;
+	static int desktop_w, desktop_h;  // desktop resolution 
 
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL display\n");
 
@@ -307,7 +308,11 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	// by assuming (relatively safely) that it is set at or close to
 	// the display's native aspect ratio
 	videoInfo = SDL_GetVideoInfo();
-	glConfig.displayAspect = (float)videoInfo->current_w / (float)videoInfo->current_h;
+	if( !desktop_w ) { // first time through, resolve desktop resolution
+		desktop_w = videoInfo->current_w;
+		desktop_h = videoInfo->current_h;
+	}
+	glConfig.displayAspect = (float)desktop_w / (float)desktop_h;
 
 	ri.Printf( PRINT_DEVELOPER, "Estimated display aspect: %.3f\n", glConfig.displayAspect );
 
@@ -338,10 +343,9 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		r_height->modified = qfalse;
 		r_pixelAspect->modified = qfalse;
 		r_mode->modified = qfalse;
-		glConfig.vidWidth = r_width->integer;
-		glConfig.vidHeight = r_height->integer;
-		glConfig.windowAspect = r_width->value /
-			( r_height->value * r_pixelAspect->value );
+		glConfig.vidWidth = ( r_width->integer ? r_width->integer : desktop_w );
+		glConfig.vidHeight = ( r_height->integer ? r_height->integer : desktop_h );
+		glConfig.windowAspect = glConfig.vidWidth / ( (float)glConfig.vidHeight * r_pixelAspect->value );
 	}
 	else if( glConfig.vidWidth != R_FAILSAFE_WIDTH &&
 			glConfig.vidHeight != R_FAILSAFE_HEIGHT )
@@ -759,7 +763,7 @@ void GLimp_Init( void )
 
 	Sys_GLimpInit( );
 
-#if defined(SMP) && defined(__linux__)
+#if defined(SMP) && defined(SDL_VIDEO_DRIVER_X11)
 	XInitThreads( );
 #endif
 
@@ -973,7 +977,7 @@ qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
 		warned = qtrue;
 	}
 
-#if !defined(MACOS_X) && !defined(WIN32) && !defined (__linux__)
+#if !defined(MACOS_X) && !defined(WIN32) && !defined (SDL_VIDEO_DRIVER_X11)
 	return qfalse;  /* better safe than sorry for now. */
 #endif
 
