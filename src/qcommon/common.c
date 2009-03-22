@@ -44,7 +44,7 @@ int demo_protocols[] =
 #define MIN_DEDICATED_COMHUNKMEGS 1
 #define MIN_COMHUNKMEGS		128
 #define DEF_COMHUNKMEGS		128
-#define DEF_COMZONEMEGS		24
+#define DEF_COMZONEMEGS		48
 #define XSTRING(x)				STRING(x)
 #define STRING(x)					#x
 #define DEF_COMHUNKMEGS_S	XSTRING(DEF_COMHUNKMEGS)
