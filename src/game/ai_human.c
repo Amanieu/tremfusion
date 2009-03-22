@@ -850,8 +850,18 @@ qboolean HBotFindEnemy(bot_state_t* bs){
   //{
   // go for acid tubes
   if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_ACIDTUBE, Nullcheckfuct ) ) goto gotenemy;
+  // go for barricades
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_BARRICADE, Nullcheckfuct ) ) goto gotenemy;
   // go for eggs
   if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_SPAWN, Nullcheckfuct ) ) goto gotenemy;
+  // go for trappers
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_TRAPPER, Nullcheckfuct ) ) goto gotenemy;
+  // go for boosters
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_BOOSTER, Nullcheckfuct ) ) goto gotenemy;
+  // go for hives
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_HIVE, Nullcheckfuct ) ) goto gotenemy;
+  // go for hovels
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_HOVEL, Nullcheckfuct ) ) goto gotenemy;
   // go for OM
   if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_OVERMIND, Nullcheckfuct ) ) goto gotenemy;
   // haven't returned yet so no enemy found > dont do anything
