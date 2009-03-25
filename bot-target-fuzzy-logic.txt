@@ -1,0 +1,11 @@
+Spawns: +5
+In view: +1
+Directly in view: +3
+Damaging bot: +4
+Trapper: +2
+#### HEALTH ####
+Health 0%-20%: +2
+Health 20%-50%: 0
+Health 51%-99%: -1
+Full health: -2
+
