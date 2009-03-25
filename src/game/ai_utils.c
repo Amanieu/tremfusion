@@ -531,6 +531,8 @@ qboolean BotGoalForClosestBuildable(bot_state_t* bs, bot_goal_t* goal, int bclas
     origin[2] += 5.0;
   if( closesttarget->s.modelindex == BA_H_SPAWN )
     origin[2] += 10.0;
+  if( closesttarget->s.modelindex == BA_A_BOOSTER )
+    origin[2] += 10.0;
   OrgToGoal(origin, goal);
   //Com_Printf( "Goal is at %f, %f, %f\n", goal->origin[0], goal->origin[1], goal->origin[2] );
   VectorCopy( BG_BuildableConfig( ent->s.modelindex)->mins, goal->mins  );
