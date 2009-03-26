@@ -366,11 +366,21 @@ static qboolean ABotFindEnemy(bot_state_t* bs){
   //see if there's an enemy in range, and go for it
   if(BotGoalForEnemy( bs, &bs->goal ) ) goto gotenemy;
   // go for turrets
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_MGTURRET, Nullcheckfuct ) ) goto gotenemy;	
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_MGTURRET, Nullcheckfuct ) ) goto gotenemy;
+  // go for teslagens
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_TESLAGEN, Nullcheckfuct ) ) goto gotenemy;
+  // go for armoury
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_ARMOURY, Nullcheckfuct ) ) goto gotenemy;
+  // go for defence computer
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_DCC, Nullcheckfuct ) ) goto gotenemy;
+  // go for medistation
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_MEDISTAT, Nullcheckfuct ) ) goto gotenemy;
   // go for telenodes
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_SPAWN, Nullcheckfuct ) ) goto gotenemy;	
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_SPAWN, Nullcheckfuct ) ) goto gotenemy;
   // go for reactor
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_REACTOR, Nullcheckfuct ) ) goto gotenemy;	
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_REACTOR, Nullcheckfuct ) ) goto gotenemy;
+  // go for repeater
+  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_H_REPEATER, Nullcheckfuct ) ) goto gotenemy;
   // haven't returned yet so no enemy found > dont do anything
   BotAddInfo(bs, "enemy", "none");
   return qfalse;
