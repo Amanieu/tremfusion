@@ -322,75 +322,56 @@ void Con_Dump_f (void)
 
 /*
 ================
-Con_Grep_f
+Con_Search_f
 
-Find all console lines containing a string
+Scroll up to the first console line containing a string
 ================
 */
-void Con_Grep_f (void)
+void Con_Search_f (void)
 {
-	int		l, x, i;
+	int		l, i, x;
 	short	*line;
-	char	buffer[1024];
-	char	buffer2[1024];
-	char	printbuf[CON_TEXTSIZE];
-	char	*search;
-	char	lastcolor;
+	char	buffer[MAXPRINTMSG];
+	int		direction;
+	int		c = Cmd_Argc();
 
-	if (Cmd_Argc() != 2)
-	{
-		Com_Printf ("usage: grep <string>\n");
+	if (c < 2) {
+		Com_Printf ("usage: %s <string1> <string2> <...>\n", Cmd_Argv(0));
 		return;
 	}
 
-	// skip empty lines
-	for (l = con.current - con.totallines + 1 ; l <= con.current ; l++)
-	{
-		line = con.text + (l%con.totallines)*con.linewidth;
-		for (x=0 ; x<con.linewidth ; x++)
-			if ((line[x] & 0xff) != ' ')
-				break;
-		if (x != con.linewidth)
-			break;
+	if (!Q_stricmp(Cmd_Argv(0), "searchDown")) {
+		direction = 1;
+	} else {
+		direction = -1;
 	}
 
-	// check the remaining lines
+	// check the lines
 	buffer[con.linewidth] = 0;
-	search = Cmd_Argv( 1 );
-	printbuf[0] = '\0';
-	lastcolor = 7;
-	for ( ; l <= con.current ; l++)
-	{
+	for (l = con.display - 1 + direction; l <= con.current && con.current - l < con.totallines; l += direction) {
 		line = con.text + (l%con.totallines)*con.linewidth;
-		for(i=0,x=0; i<con.linewidth; i++)
-		{
-			if (line[i] >> 8 != lastcolor)
-			{
-				lastcolor = line[i] >> 8;
-				buffer[x++] = Q_COLOR_ESCAPE;
-				buffer[x++] = lastcolor + '0';
-			}
-			buffer[x++] = line[i] & 0xff;
-		}
-		for (x=con.linewidth-1 ; x>=0 ; x--)
-		{
+		for (i = 0; i < con.linewidth; i++)
+			buffer[i] = line[i] & 0xff;
+		for (x = con.linewidth - 1 ; x >= 0 ; x--) {
 			if (buffer[x] == ' ')
 				buffer[x] = 0;
 			else
 				break;
 		}
-		strcpy(buffer2, buffer);
-		Q_CleanStr(buffer2);
-		if (Q_stristr(buffer2, search))
-		{
-			strcat( printbuf, buffer );
-			strcat( printbuf, "\n" );
+		// Don't search commands
+		if (!Q_stricmpn(buffer, Q_CleanStr(va("%s", cl_consolePrompt->string)), Q_PrintStrlen(cl_consolePrompt->string)))
+			continue;
+		for (i = 1; i < c; i++) {
+			if (Q_stristr(buffer, Cmd_Argv(i))) {
+				con.display = l + 1;
+				if (con.display > con.current)
+					con.display = con.current;
+				return;
+			}
 		}
 	}
-	if ( printbuf[0] )
-		Com_Printf( "%s", printbuf );
 }
-						
+
 /*
 ================
 Con_ClearNotify
@@ -526,7 +507,8 @@ void Con_Init (void) {
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	Cmd_SetCommandCompletionFunc( "condump", Cmd_CompleteTxtName );
-	Cmd_AddCommand ("grep", Con_Grep_f);
+	Cmd_AddCommand ("search", Con_Search_f);
+	Cmd_AddCommand ("searchDown", Con_Search_f);
 }
 
 
@@ -607,7 +589,7 @@ void CL_ConsolePrint( char *txt ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		if( is_new_line && ( !com_timestamps || com_timestamps->integer ) )
+		if( is_new_line && ( com_timestamps && com_timestamps->integer ) )
 			Cmd_TokenizeString( txt + 16 );
 		else
 			Cmd_TokenizeString( txt );

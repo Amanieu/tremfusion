@@ -153,7 +153,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	static qboolean is_new_line = qtrue;
 
 	// timestamps
-	if (is_new_line && (!com_timestamps || com_timestamps->integer)) {
+	if (is_new_line && (com_timestamps && com_timestamps->integer)) {
 		qtime_t realtime;
 		Com_RealTime(&realtime);
 		Com_sprintf(msg, sizeof(msg), "^0[^3%02d:%02d^0]^7 ", realtime.tm_hour, realtime.tm_min);
