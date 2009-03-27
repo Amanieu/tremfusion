@@ -645,10 +645,9 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 
 	case CG_GETDEMOSTATE:
 		return CL_DemoState( );
+	// unused
 	case CG_GETDEMOPOS:
-		return CL_DemoPos( );
 	case CG_GETDEMONAME:
-		CL_DemoName( VMA(1), args[2] );
 		return 0;
 
 	case CG_KEY_KEYNUMTOSTRINGBUF:

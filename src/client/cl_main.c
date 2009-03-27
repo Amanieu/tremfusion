@@ -1171,36 +1171,6 @@ demoState_t CL_DemoState( void ) {
 	}
 }
 
-/*
-==================
-CL_DemoPos
-
-Returns the current position of the demo
-==================
-*/
-int CL_DemoPos( void ) {
-	if( clc.demoplaying || clc.demorecording ) {
-		return FS_FTell( clc.demofile );
-	} else {
-		return 0;
-	}
-}
-
-/*
-==================
-CL_DemoName
-
-Returns the name of the demo
-==================
-*/
-void CL_DemoName( char *buffer, int size ) {
-	if( clc.demoplaying || clc.demorecording ) {
-		Q_strncpyz( buffer, clc.demoName, size );
-	} else if( size >= 1 ) {
-		buffer[ 0 ] = '\0';
-	}
-}
-
 //======================================================================
 
 /*
