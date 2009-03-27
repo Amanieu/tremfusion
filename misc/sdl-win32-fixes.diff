@@ -1,6 +1,6 @@
 Index: src/video/wincommon/SDL_lowvideo.h
 ===================================================================
---- src/video/wincommon/SDL_lowvideo.h	(revision 4067)
+--- src/video/wincommon/SDL_lowvideo.h	(revision 4474)
 +++ src/video/wincommon/SDL_lowvideo.h	(working copy)
 @@ -51,10 +51,13 @@
  /* Hidden "this" pointer for the video functions */
@@ -41,9 +41,9 @@ Index: src/video/wincommon/SDL_lowvideo.h
  extern LPWSTR SDL_Appname;
 Index: src/video/wincommon/SDL_sysevents.c
 ===================================================================
---- src/video/wincommon/SDL_sysevents.c	(revision 4067)
+--- src/video/wincommon/SDL_sysevents.c	(revision 4474)
 +++ src/video/wincommon/SDL_sysevents.c	(working copy)
-@@ -335,7 +335,6 @@
+@@ -363,7 +363,6 @@
  {
  	SDL_VideoDevice *this = current_video;
  	static int mouse_pressed = 0;
@@ -51,7 +51,7 @@ Index: src/video/wincommon/SDL_sysevents.c
  #ifdef WMMSG_DEBUG
  	fprintf(stderr, "Received windows message:  ");
  	if ( msg > MAX_WMMSG ) {
-@@ -411,62 +410,41 @@
+@@ -439,62 +438,40 @@
  		break;
  
  		case WM_MOUSEMOVE: {
@@ -59,7 +59,7 @@ Index: src/video/wincommon/SDL_sysevents.c
 -			/* Mouse is handled by DirectInput when fullscreen */
 -			if ( SDL_VideoSurface && ! DINPUT_FULLSCREEN() ) {
 -				Sint16 x, y;
- 
+-
 -				/* mouse has entered the window */
 -				if ( ! in_window ) {
  #ifdef WM_MOUSELEAVE
@@ -100,9 +100,9 @@ Index: src/video/wincommon/SDL_sysevents.c
 -						posted = SDL_PrivateMouseMotion(0, 1, x, y);
 -					}
 -				} else {
--#ifdef _WIN32_WCE
--					if (SDL_VideoSurface)
--						GapiTransform(this->hidden->userOrientation, this->hidden->hiresFix, &x, &y);
+-#ifdef SDL_VIDEO_DRIVER_GAPI
+-					if (SDL_VideoSurface && this->hidden->gapiInfo)
+-						GapiTransform(this->hidden->gapiInfo->coordinateTransform, this->hidden->gapiInfo->hiresFix, &x, &y);
 -#endif
 -					posted = SDL_PrivateMouseMotion(0, 0, x, y);
 -				}
@@ -127,7 +127,7 @@ Index: src/video/wincommon/SDL_sysevents.c
  		}
  		return(0);
  #endif /* WM_MOUSELEAVE */
-@@ -480,7 +458,7 @@
+@@ -508,7 +485,7 @@
  		case WM_XBUTTONDOWN:
  		case WM_XBUTTONUP: {
  			/* Mouse is handled by DirectInput when fullscreen */
@@ -136,7 +136,7 @@ Index: src/video/wincommon/SDL_sysevents.c
  				WORD xbuttonval = 0;
  				Sint16 x, y;
  				Uint8 button, state;
-@@ -544,20 +522,8 @@
+@@ -572,20 +549,8 @@
  						mouse_pressed = 0;
  					}
  				}
@@ -147,9 +147,9 @@ Index: src/video/wincommon/SDL_sysevents.c
 -				} else {
 -					x = (Sint16)LOWORD(lParam);
 -					y = (Sint16)HIWORD(lParam);
--#ifdef _WIN32_WCE
--					if (SDL_VideoSurface)
--						GapiTransform(this->hidden->userOrientation, this->hidden->hiresFix, &x, &y);
+-#ifdef SDL_VIDEO_DRIVER_GAPI
+-					if (SDL_VideoSurface && this->hidden->gapiInfo)
+-						GapiTransform(this->hidden->gapiInfo->coordinateTransform, this->hidden->gapiInfo->hiresFix, &x, &y);
 -#endif
 -				}
  				posted = SDL_PrivateMouseButton(
@@ -158,7 +158,7 @@ Index: src/video/wincommon/SDL_sysevents.c
  
  				/*
  				 * MSDN says:
-@@ -578,7 +544,7 @@
+@@ -606,7 +571,7 @@
  
  #if (_WIN32_WINNT >= 0x0400) || (_WIN32_WINDOWS > 0x0400)
  		case WM_MOUSEWHEEL: 
@@ -169,7 +169,7 @@ Index: src/video/wincommon/SDL_sysevents.c
  					Uint8 button;
 Index: src/video/wincommon/SDL_sysmouse.c
 ===================================================================
---- src/video/wincommon/SDL_sysmouse.c	(revision 4067)
+--- src/video/wincommon/SDL_sysmouse.c	(revision 4474)
 +++ src/video/wincommon/SDL_sysmouse.c	(working copy)
 @@ -188,8 +188,7 @@
  {
@@ -235,9 +235,9 @@ Index: src/video/wincommon/SDL_sysmouse.c
  /* Check to see if we need to enter or leave mouse relative mode */
 Index: src/video/windib/SDL_dibevents.c
 ===================================================================
---- src/video/windib/SDL_dibevents.c	(revision 4067)
+--- src/video/windib/SDL_dibevents.c	(revision 4474)
 +++ src/video/windib/SDL_dibevents.c	(working copy)
-@@ -262,6 +262,36 @@
+@@ -271,6 +271,36 @@
  	return(DefWindowProc(hwnd, msg, wParam, lParam));
  }
  
@@ -274,7 +274,7 @@ Index: src/video/windib/SDL_dibevents.c
  void DIB_PumpEvents(_THIS)
  {
  	MSG msg;
-@@ -271,6 +301,10 @@
+@@ -280,6 +310,10 @@
  			DispatchMessage(&msg);
  		}
  	}
@@ -285,18 +285,24 @@ Index: src/video/windib/SDL_dibevents.c
  }
  
  static HKL hLayoutUS = NULL;
-@@ -494,7 +528,7 @@
+@@ -518,8 +552,13 @@
  		Uint16	wchars[2];
  
  		GetKeyboardState(keystate);
 -		if (SDL_ToUnicode((UINT)vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) == 1)
-+		if (SDL_ToUnicode((UINT)vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) > 0)
++		/* Numlock isn't taken into account in ToUnicode, so we catch that case here */
++		if ((keystate[VK_NUMLOCK] & 1) && vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
  		{
++			keysym->sym = keysym->unicode = vkey - VK_NUMPAD0 + '0';
++		}
++		else if (SDL_ToUnicode((UINT)vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) > 0)
++		{
  			keysym->unicode = wchars[0];
  		}
+ #endif /* NO_GETKEYBOARDSTATE */
 Index: src/video/windx5/SDL_dx5events.c
 ===================================================================
---- src/video/windx5/SDL_dx5events.c	(revision 4067)
+--- src/video/windx5/SDL_dx5events.c	(revision 4474)
 +++ src/video/windx5/SDL_dx5events.c	(working copy)
 @@ -143,9 +143,14 @@
  		(DISCL_FOREGROUND|DISCL_NONEXCLUSIVE),
@@ -538,18 +544,24 @@ Index: src/video/windx5/SDL_dx5events.c
  		case WM_KEYUP:
  		case WM_KEYDOWN: {
  			/* Ignore windows keyboard messages */;
-@@ -840,7 +909,7 @@
+@@ -840,8 +909,13 @@
  		keysym->unicode = vkey;
  #else
  		GetKeyboardState(keystate);
 -		if (SDL_ToUnicode(vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) == 1)
-+		if (SDL_ToUnicode(vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) > 0)
++		/* Numlock isn't taken into account in ToUnicode, so we catch that case here */
++		if ((keystate[VK_NUMLOCK] & 1) && vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
  		{
++			keysym->sym = keysym->unicode = vkey - VK_NUMPAD0 + '0';
++		}
++		else if (SDL_ToUnicode(vkey, scancode, keystate, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) > 0)
++		{
  			keysym->unicode = wchars[0];
  		}
+ #endif /* NO_GETKEYBOARDSTATE */
 Index: src/video/windx5/directx.h
 ===================================================================
---- src/video/windx5/directx.h	(revision 4067)
+--- src/video/windx5/directx.h	(revision 4474)
 +++ src/video/windx5/directx.h	(working copy)
 @@ -72,7 +72,7 @@
  /* We need these defines to mark what version of DirectX API we use */
@@ -583,7 +595,7 @@ Index: src/video/windx5/directx.h
  #endif /* _directx_h */
 Index: configure.in
 ===================================================================
---- configure.in	(revision 4067)
+--- configure.in	(revision 4474)
 +++ configure.in	(working copy)
 @@ -2442,7 +2442,7 @@
          # Set up the system libraries we need
