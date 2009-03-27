@@ -2411,10 +2411,10 @@ void FS_TouchFile_f( void ) {
 
 /*
 ============
-FS_Where_f
+FS_Which_f
 ============
 */
-void FS_Where_f( void ) {
+void FS_Which_f( void ) {
 	searchpath_t	*search;
 	char			*netpath;
 	pack_t			*pak;
@@ -2428,7 +2428,7 @@ void FS_Where_f( void ) {
 	filename = Cmd_Argv(1);
 
 	if ( !filename[0] ) {
-		Com_Printf( "Usage: where <file>\n" );
+		Com_Printf( "Usage: which <file>\n" );
 		return;
 	}
 
@@ -2939,7 +2939,7 @@ static void FS_Startup( const char *gameName )
 	Cmd_AddCommand ("dir", FS_Dir_f );
 	Cmd_AddCommand ("fdir", FS_NewDir_f );
 	Cmd_AddCommand ("touchFile", FS_TouchFile_f );
-	Cmd_AddCommand ("where", FS_Where_f );
+	Cmd_AddCommand ("which", FS_Which_f );
 
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=506
 	// reorder the pure pk3 files according to server order
