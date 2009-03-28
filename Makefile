@@ -165,7 +165,7 @@ ifndef USE_FREETYPE
 endif
 
 ifndef USE_OLD_HOMEPATH
-  USE_OLD_HOMEPATH=1
+  USE_OLD_HOMEPATH=0
 endif
 
 ifndef USE_SSE
@@ -958,18 +958,18 @@ endif #SunOS
 TARGETS =
 
 ifneq ($(BUILD_SERVER),0)
-  TARGETS += $(B)/tremded.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremfusionded.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT),0)
-  TARGETS += $(B)/tremulous.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremfusion.$(ARCH)$(BINEXT)
   ifneq ($(BUILD_CLIENT_SMP),0)
-    TARGETS += $(B)/tremulous-smp.$(ARCH)$(BINEXT)
+    TARGETS += $(B)/tremfusion-smp.$(ARCH)$(BINEXT)
   endif
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
-  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremfusion-tty.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_GAME_SO),0)
@@ -1185,8 +1185,8 @@ install: release
 	@if [ ! -d $(INSTALL_PREFIX)/share ];then $(MKDIR) $(INSTALL_PREFIX)/share;fi
 	@if [ ! -d $(INSTALL_PREFIX)/lib/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/lib/tremfusion;fi
 	@if [ ! -d $(INSTALL_PREFIX)/share/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/share/tremfusion;fi
-	@$(Q)$(INSTALL) -v $(BR)/tremulous.$(ARCH)$(BINEXT) $(INSTALL_PREFIX)/lib/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -v transfer_settings.sh $(INSTALL_PREFIX)/share/tremfusion/transfer_settings.sh
+	@$(Q)$(INSTALL) -v $(BR)/tremfusion.$(ARCH)$(BINEXT) $(INSTALL_PREFIX)/lib/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -v misc/transfer_settings.sh $(INSTALL_PREFIX)/share/tremfusion/transfer_settings.sh
 
 
 #############################################################################
@@ -1582,19 +1582,19 @@ Q3POBJ_SMP = \
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremfusion-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(THREAD_LDFLAGS) \
        -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+$(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
@@ -1735,7 +1735,7 @@ else
     $(B)/ded/con_tty.o
 endif
 
-$(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
+$(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 

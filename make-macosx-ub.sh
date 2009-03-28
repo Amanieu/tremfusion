@@ -1,19 +1,19 @@
 #!/bin/sh
 APPBUNDLE=Tremfusion.app
-BINARY=Tremfusion.ub
-DEDBIN=Tremded.ub
+BINARY=Tremfusion
+DEDBIN=Tremfusionded
 PKGINFO=APPLTREMFUSION
 ICNS=misc/Tremfusion.icns
 DESTDIR=build/release-darwin-ub
 BASEDIR=base
 
 BIN_OBJ="
-	build/release-darwin-ppc/tremulous-smp.ppc
-	build/release-darwin-x86/tremulous-smp.x86
+	build/release-darwin-ppc/tremfusion-smp.ppc
+	build/release-darwin-x86/tremfusion-smp.x86
 "
 BIN_DEDOBJ="
-	build/release-darwin-ppc/tremded.ppc
-	build/release-darwin-x86/tremded.x86
+	build/release-darwin-ppc/tremfusionded.ppc
+	build/release-darwin-x86/tremfusionded.x86
 "
 
 cd `dirname $0`
