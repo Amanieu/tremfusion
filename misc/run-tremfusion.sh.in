@@ -8,7 +8,7 @@ QUIET=0
 # Transfer settings if necessary
 
 if [ -d $HOME/.tremfusion ]; then
-	exec @INSTALL_PREFIX@/share/tremfusion/transfer_settings.sh || :
+	exec @INSTALL_PREFIX@/share/tremfusion/transfer_settings.sh >/dev/null 2>&1 || :
 fi
 
 # TremFusion binaries don't understand "regular" command line parameters. Let's
@@ -29,9 +29,9 @@ while [ "$1" != "" ]; do {
 # Ready to rumble!
 
 if [ ${QUIET} -eq 1 ]; then
-	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-beta3 +set cl_defaultUI tremfusion $* >/dev/null 2>&1
+	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-0.99 $* >/dev/null 2>&1
 else
-	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-beta3 +set cl_defaultUI tremfusion $*
+	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-0.99 $*
 fi
 
 exit $?
