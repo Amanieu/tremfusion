@@ -3775,7 +3775,7 @@ void G_LayoutLoad( void )
 {
   fileHandle_t f;
   int len;
-  char *layout;
+  char *layout, *layoutHead;
   char map[ MAX_QPATH ];
   int buildable = BA_NONE;
   vec3_t origin = { 0.0f, 0.0f, 0.0f };
@@ -3796,9 +3796,9 @@ void G_LayoutLoad( void )
     G_Printf( "ERROR: layout %s could not be opened\n", level.layout );
     return;
   }
-  layout = BG_Alloc( len + 1 );
+  layoutHead = layout = BG_Alloc( len + 1 );
   trap_FS_Read( layout, len, f );
-  *( layout + len ) = '\0';
+  layout[ len ] = '\0';
   trap_FS_FCloseFile( f );
   while( *layout )
   {
@@ -3806,7 +3806,7 @@ void G_LayoutLoad( void )
     {
       G_Printf( S_COLOR_RED "ERROR: line overflow in %s before \"%s\"\n",
        va( "layouts/%s/%s.dat", map, level.layout ), line );
-      return;
+      break;
     }
     line[ i++ ] = *layout;
     line[ i ] = '\0';
@@ -3828,6 +3828,7 @@ void G_LayoutLoad( void )
     }
     layout++;
   }
+  BG_Free( layoutHead );
 }
 
 /*

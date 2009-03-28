@@ -1666,6 +1666,29 @@ static void CG_DrawTeamSpectators( rectDef_t *rect, float scale, int textvalign,
   }
 }
 
+#define FOLLOWING_STRING "Following: "
+#define CHASING_STRING "Chasing: "
+/*
+==================
+CG_DrawFollow
+==================
+*/
+static void CG_DrawFollow( rectDef_t *rect, float text_x, float text_y,
+    vec4_t color, float scale, int textalign, int textvalign, int textStyle )
+{
+  float tx, ty;
+  char  *text;
+
+  if( cg.clientNum == cg.snap->ps.clientNum )
+    return; // not following anyone
+
+  text = va( "%s%s", ( cg.chaseFollow ) ? CHASING_STRING : FOLLOWING_STRING,
+             cgs.clientinfo[ cg.snap->ps.clientNum ].name );
+  CG_AlignText( rect, text, scale, 0, 0, textalign, textvalign, &tx, &ty );
+  UI_Text_Paint( text_x + tx, text_y + ty, scale, color, text, 0, 0,
+                 textStyle );
+}
+
 /*
 ==================
 CG_DrawTeamLabel
@@ -2264,7 +2287,6 @@ static void CG_DrawLagometer( rectDef_t *rect, float text_x, float text_y,
   int     color;
   vec4_t  adjustedColor;
   float   vscale;
-  vec4_t  white = { 1.0f, 1.0f, 1.0f, 1.0f };
   char    *ping;
 
   if( cg.snap->ps.pm_type == PM_INTERMISSION )
@@ -2800,9 +2822,6 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
 {
   rectDef_t rect;
 
-  if( cg_drawStatus.integer == 0 )
-    return;
-
   rect.x = x;
   rect.y = y;
   rect.w = w;
@@ -2901,6 +2920,10 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
       break;
     case CG_PLAYER_LOCATION:
       CG_DrawLocation( &rect, scale, textalign, foreColor );
+      break;
+    case CG_FOLLOW:
+      CG_DrawFollow( &rect, text_x, text_y, foreColor, scale,
+                     textalign, textvalign, textStyle );
       break;
     case CG_PLAYER_CROSSHAIRNAMES:
       CG_DrawCrosshairNames( &rect, scale, textStyle );
@@ -3398,46 +3421,12 @@ CG_DrawIntermission
 */
 static void CG_DrawIntermission( void )
 {
-  if( cg_drawStatus.integer )
-    Menu_Paint( Menus_FindByName( "default_hud" ), qtrue );
+  Menu_Paint( Menus_FindByName( "default_hud" ), qtrue );
 
   cg.scoreFadeTime = cg.time;
   cg.scoreBoardShowing = CG_DrawScoreboard( );
 }
 
-#define FOLLOWING_STRING "Following: "
-#define CHASING_STRING "Chasing: "
-
-/*
-=================
-CG_DrawFollow
-=================
-*/
-static qboolean CG_DrawFollow( void )
-{
-  float       w;
-  vec4_t      color;
-  char        buffer[ MAX_STRING_CHARS ];
-
-  if( cg.snap->ps.clientNum == cg.clientNum )
-    return qfalse;
-
-  color[ 0 ] = 1;
-  color[ 1 ] = 1;
-  color[ 2 ] = 1;
-  color[ 3 ] = 1;
-
-  if( !cg.chaseFollow ) 
-    strcpy( buffer, FOLLOWING_STRING );
-  else 
-    strcpy( buffer, CHASING_STRING );
-  strcat( buffer, cgs.clientinfo[ cg.snap->ps.clientNum ].name );
-
-  w = UI_Text_Width( buffer, 0.7f, 0 );
-  UI_Text_Paint( 320 - w / 2, 400, 0.7f, color, buffer, 0, 0, ITEM_TEXTSTYLE_SHADOWED );
-
-  return qtrue;
-}
 
 /*
 =================
@@ -3492,7 +3481,6 @@ static qboolean CG_DrawQueue( void )
 
 //==================================================================================
 
-#define SPECTATOR_STRING "SPECTATOR"
 /*
 =================
 CG_Draw2D
@@ -3500,11 +3488,7 @@ CG_Draw2D
 */
 static void CG_Draw2D( void )
 {
-  vec4_t    color;
-  float     w;
-  menuDef_t *menu = NULL, *defaultMenu;
-
-  color[ 0 ] = color[ 1 ] = color[ 2 ] = color[ 3 ] = 1.0f;
+  menuDef_t *menu = NULL;
 
   // if we are taking a levelshot for the menu, don't draw anything
   if( cg.levelShot )
@@ -3521,32 +3505,24 @@ static void CG_Draw2D( void )
 
   CG_DrawLighting( );
 
+  if( cg.snap->ps.persistant[ PERS_SPECSTATE ] == SPECTATOR_NOT )
+    menu = Menus_FindByName( BG_ClassConfig( cg.predictedPlayerState.stats
+                                                 [ STAT_CLASS ] )->hudName );
+  if( !menu )
+    menu = Menus_FindByName( "default_hud" );
+  if( !menu ) // still couldn't find it
+    CG_Error( "Default HUD could not be found" );
 
-  defaultMenu = Menus_FindByName( "default_hud" );
-
-  if( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
-  {
-    w = UI_Text_Width( SPECTATOR_STRING, 0.7f, 0 );
-    UI_Text_Paint( 320 - w / 2, 440, 0.7f, color, SPECTATOR_STRING, 0, 0, ITEM_TEXTSTYLE_SHADOWED );
-  }
-  else
-    menu = Menus_FindByName( BG_ClassConfig( cg.predictedPlayerState.stats[ STAT_CLASS ] )->hudName );
-
-  if( menu && !( cg.snap->ps.stats[ STAT_STATE ] & SS_HOVELING ) &&
+  if( !( cg.snap->ps.stats[ STAT_STATE ] & SS_HOVELING ) &&
       ( cg.snap->ps.stats[ STAT_HEALTH ] > 0 ) )
   {
     CG_DrawBuildableStatus( );
-    CG_DrawTeamStatus( );
-    if( cg_drawStatus.integer )
-      Menu_Paint( menu, qtrue );
-
   }
-  else if( cg_drawStatus.integer )
-    Menu_Paint( defaultMenu, qtrue );
+
+  Menu_Paint( menu, qtrue );
 
   CG_DrawVote( );
   CG_DrawTeamVote( );
-  CG_DrawFollow( );
   CG_DrawQueue( );
 
   // don't draw center string if scoreboard is up

@@ -1264,7 +1264,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
     // max printable name length for formatting
     for( i = 0; i < MAX_ADMIN_LEVELS && g_admin_levels[ i ]; i++ )
     {
-      len = Q_PrintStrlen( l->name );
+      len = Q_PrintStrlen( g_admin_levels[ i ]->name );
       if( len > admin_level_maxname )
         admin_level_maxname = len;
     }
@@ -1415,11 +1415,6 @@ qboolean G_admin_setlevel( gentity_t *ent, int skiparg )
     return qfalse;
   }
 
-  if( !Q_stricmp( guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ) )
-  {
-    ADMP( va( "^3!setlevel: ^7%s does not have a valid GUID\n", adminname ) );
-    return qfalse;
-  }
   if( ent && !admin_higher_guid( ent->client->pers.guid, guid ) )
   {
     ADMP( "^3!setlevel: ^7sorry, but your intended victim has a higher"
