@@ -736,7 +736,7 @@ static void LerpMeshVertexes_altivec(md3Surface_t *surf, float backlerp)
 		//
 		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
 			newXyz += 4, newNormals += 4,
-		       outXyz = ptrPlusOffset(outXYZ, incXyz),
+		       outXyz = ptrPlusOffset(outXyz, incXyz),
 		       outNormal = ptrPlusOffset(outNormal, incNormal) )
 		{
 			newNormalsLoadPermute = vec_lvsl(0,newXyz);
@@ -816,7 +816,7 @@ static void LerpMeshVertexes_altivec(md3Surface_t *surf, float backlerp)
 
 //			VectorNormalize (outNormal);
 		}
-    	VectorArrayNormalize((vec4_t *)tess->normalPtr + tess.numVertexes, numVerts);
+    	VectorArrayNormalize((vec4_t *)tess.normalPtr + tess.numVertexes, numVerts);
    	}
 }
 #endif
