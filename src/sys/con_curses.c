@@ -235,7 +235,7 @@ static void CON_Resize(void)
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
-	if (winsz.ws_col < 4 || winsz.ws_row < 5)
+	if (winsz.ws_col < 12 || winsz.ws_row < 5)
 		return;
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
