@@ -1707,8 +1707,8 @@ void Script_Close( itemDef_t *item, char **args )
     Menus_CloseByName( name );
 }
 
-void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectFrom, rectDef_t rectTo,
-                                int time, float amt )
+void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectTo,
+                                int time )
 {
   itemDef_t *item;
   int i;
@@ -1720,15 +1720,21 @@ void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectFr
 
     if( item != NULL )
     {
-      item->window.flags |= ( WINDOW_INTRANSITION | WINDOW_VISIBLE );
-      item->window.offsetTime = time;
-      memcpy( &item->window.rectClient, &rectFrom, sizeof( rectDef_t ) );
-      memcpy( &item->window.rectEffects, &rectTo, sizeof( rectDef_t ) );
-      item->window.rectEffects2.x = abs( rectTo.x - rectFrom.x ) / amt;
-      item->window.rectEffects2.y = abs( rectTo.y - rectFrom.y ) / amt;
-      item->window.rectEffects2.w = abs( rectTo.w - rectFrom.w ) / amt;
-      item->window.rectEffects2.h = abs( rectTo.h - rectFrom.h ) / amt;
-      Item_UpdatePosition( item );
+      if (time)
+      {
+        item->window.flags |= WINDOW_INTRANSITION;
+        memcpy( &item->window.rectEffects, &rectTo, sizeof( rectDef_t ) );
+        item->window.offsetTime = DC->realTime;
+        item->window.rectEffects2.x = abs( rectTo.x - item->window.rectClient.x ) / (float)time;
+        item->window.rectEffects2.y = abs( rectTo.y - item->window.rectClient.y ) / (float)time;
+        item->window.rectEffects2.w = abs( rectTo.w - item->window.rectClient.w ) / (float)time;
+        item->window.rectEffects2.h = abs( rectTo.h - item->window.rectClient.h ) / (float)time;
+      }
+      else
+      {
+        memcpy( &item->window.rectClient, &rectTo, sizeof( rectDef_t ) );
+        Item_UpdatePosition( item );
+      }
     }
   }
 }
@@ -1737,16 +1743,14 @@ void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectFr
 void Script_Transition( itemDef_t *item, char **args )
 {
   const char *name;
-  rectDef_t rectFrom, rectTo;
+  rectDef_t rectTo;
   int time;
-  float amt;
 
   if( String_Parse( args, &name ) )
   {
-    if( Rect_Parse( args, &rectFrom ) && Rect_Parse( args, &rectTo ) &&
-        Int_Parse( args, &time ) && Float_Parse( args, &amt ) )
+    if( Rect_Parse( args, &rectTo ) && Int_Parse( args, &time ) )
     {
-      Menu_TransitionItemByName( item->parent, name, rectFrom, rectTo, time, amt );
+      Menu_TransitionItemByName( item->parent, name, rectTo, time );
     }
   }
 }
@@ -1799,13 +1803,13 @@ void Script_SetFocus( itemDef_t *item, char **args )
   const char *name;
   itemDef_t *focusItem;
 
+  Menu_ClearFocus( item->parent );
   if( String_Parse( args, &name ) )
   {
     focusItem = Menu_FindItemByName( item->parent, name );
 
     if( focusItem && !( focusItem->window.flags & WINDOW_DECORATION ) )
     {
-      Menu_ClearFocus( item->parent );
       focusItem->window.flags |= WINDOW_HASFOCUS;
 
       if( focusItem->onFocus )
@@ -4391,7 +4395,6 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
 {
   int i;
   itemDef_t *item = NULL;
-  qboolean inHandler = qfalse;
 
   // KTW: Draggable Windows
   if (key == K_MOUSE1 && down && Rect_ContainsPoint(&menu->window.rect, DC->cursorx, DC->cursory) &&
@@ -4400,12 +4403,9 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   else
       menu->window.flags &= ~WINDOW_DRAG;
 
-  inHandler = qtrue;
-
   if( g_waitingForKey && down )
   {
     Item_Bind_HandleKey( g_bindItem, key, down );
-    inHandler = qfalse;
     return;
   }
 
@@ -4416,7 +4416,6 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
       g_editingField = qfalse;
       Item_RunScript( g_editItem, g_editItem->onTextEntry );
       g_editItem = NULL;
-      inHandler = qfalse;
       return;
     }
     else if( key == K_MOUSE1 || key == K_MOUSE2 || key == K_MOUSE3 )
@@ -4431,10 +4430,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   }
 
   if( menu == NULL )
-  {
-    inHandler = qfalse;
     return;
-  }
 
   // see if the mouse is within the window bounds and if so is this a mouse click
   if( down && !( menu->window.flags & WINDOW_POPUP ) &&
@@ -4447,7 +4443,6 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
       inHandleKey = qtrue;
       Menus_HandleOOBClick( menu, key, down );
       inHandleKey = qfalse;
-      inHandler = qfalse;
       return;
     }
   }
@@ -4464,16 +4459,12 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
     if( Item_HandleKey( item, key, down ) )
     {
       Item_Action( item );
-      inHandler = qfalse;
       return;
     }
   }
 
   if( !down )
-  {
-    inHandler = qfalse;
     return;
-  }
 
   // default handling
   switch( key )
@@ -4586,8 +4577,6 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
 
       break;
   }
-
-  inHandler = qfalse;
 }
 
 void ToWindowCoords( float *x, float *y, windowDef_t *window )
@@ -6307,122 +6296,119 @@ void Item_Paint( itemDef_t *item )
 
   if( item->window.flags & WINDOW_INTRANSITION )
   {
-    if( DC->realTime > item->window.nextTime )
-    {
-      int done = 0;
-      item->window.nextTime = DC->realTime + item->window.offsetTime;
-      // transition the x,y
+    int done = 0;
+    int timePast = DC->realTime - item->window.offsetTime;
+    item->window.offsetTime = DC->realTime;
+    // transition the x,y
 
-      if( item->window.rectClient.x == item->window.rectEffects.x )
-        done++;
+    if( item->window.rectClient.x == item->window.rectEffects.x )
+      done++;
+    else
+    {
+      if( item->window.rectClient.x < item->window.rectEffects.x )
+      {
+        item->window.rectClient.x += item->window.rectEffects2.x * timePast;
+
+        if( item->window.rectClient.x > item->window.rectEffects.x )
+        {
+          item->window.rectClient.x = item->window.rectEffects.x;
+          done++;
+        }
+      }
       else
       {
+        item->window.rectClient.x -= item->window.rectEffects2.x * timePast;
+
         if( item->window.rectClient.x < item->window.rectEffects.x )
         {
-          item->window.rectClient.x += item->window.rectEffects2.x;
-
-          if( item->window.rectClient.x > item->window.rectEffects.x )
-          {
-            item->window.rectClient.x = item->window.rectEffects.x;
-            done++;
-          }
-        }
-        else
-        {
-          item->window.rectClient.x -= item->window.rectEffects2.x;
-
-          if( item->window.rectClient.x < item->window.rectEffects.x )
-          {
-            item->window.rectClient.x = item->window.rectEffects.x;
-            done++;
-          }
+          item->window.rectClient.x = item->window.rectEffects.x;
+          done++;
         }
       }
+    }
 
-      if( item->window.rectClient.y == item->window.rectEffects.y )
-        done++;
+    if( item->window.rectClient.y == item->window.rectEffects.y )
+      done++;
+    else
+    {
+      if( item->window.rectClient.y < item->window.rectEffects.y )
+      {
+        item->window.rectClient.y += item->window.rectEffects2.y * timePast;
+
+        if( item->window.rectClient.y > item->window.rectEffects.y )
+        {
+          item->window.rectClient.y = item->window.rectEffects.y;
+          done++;
+        }
+      }
       else
       {
+        item->window.rectClient.y -= item->window.rectEffects2.y * timePast;
+
         if( item->window.rectClient.y < item->window.rectEffects.y )
         {
-          item->window.rectClient.y += item->window.rectEffects2.y;
-
-          if( item->window.rectClient.y > item->window.rectEffects.y )
-          {
-            item->window.rectClient.y = item->window.rectEffects.y;
-            done++;
-          }
-        }
-        else
-        {
-          item->window.rectClient.y -= item->window.rectEffects2.y;
-
-          if( item->window.rectClient.y < item->window.rectEffects.y )
-          {
-            item->window.rectClient.y = item->window.rectEffects.y;
-            done++;
-          }
+          item->window.rectClient.y = item->window.rectEffects.y;
+          done++;
         }
       }
+    }
 
-      if( item->window.rectClient.w == item->window.rectEffects.w )
-        done++;
+    if( item->window.rectClient.w == item->window.rectEffects.w )
+      done++;
+    else
+    {
+      if( item->window.rectClient.w < item->window.rectEffects.w )
+      {
+        item->window.rectClient.w += item->window.rectEffects2.w * timePast;
+
+        if( item->window.rectClient.w > item->window.rectEffects.w )
+        {
+          item->window.rectClient.w = item->window.rectEffects.w;
+          done++;
+        }
+      }
       else
       {
+        item->window.rectClient.w -= item->window.rectEffects2.w * timePast;
+
         if( item->window.rectClient.w < item->window.rectEffects.w )
         {
-          item->window.rectClient.w += item->window.rectEffects2.w;
-
-          if( item->window.rectClient.w > item->window.rectEffects.w )
-          {
-            item->window.rectClient.w = item->window.rectEffects.w;
-            done++;
-          }
-        }
-        else
-        {
-          item->window.rectClient.w -= item->window.rectEffects2.w;
-
-          if( item->window.rectClient.w < item->window.rectEffects.w )
-          {
-            item->window.rectClient.w = item->window.rectEffects.w;
-            done++;
-          }
+          item->window.rectClient.w = item->window.rectEffects.w;
+          done++;
         }
       }
+    }
 
-      if( item->window.rectClient.h == item->window.rectEffects.h )
-        done++;
+    if( item->window.rectClient.h == item->window.rectEffects.h )
+      done++;
+    else
+    {
+      if( item->window.rectClient.h < item->window.rectEffects.h )
+      {
+        item->window.rectClient.h += item->window.rectEffects2.h * timePast;
+
+        if( item->window.rectClient.h > item->window.rectEffects.h )
+        {
+          item->window.rectClient.h = item->window.rectEffects.h;
+          done++;
+        }
+      }
       else
       {
+        item->window.rectClient.h -= item->window.rectEffects2.h * timePast;
+
         if( item->window.rectClient.h < item->window.rectEffects.h )
         {
-          item->window.rectClient.h += item->window.rectEffects2.h;
-
-          if( item->window.rectClient.h > item->window.rectEffects.h )
-          {
-            item->window.rectClient.h = item->window.rectEffects.h;
-            done++;
-          }
-        }
-        else
-        {
-          item->window.rectClient.h -= item->window.rectEffects2.h;
-
-          if( item->window.rectClient.h < item->window.rectEffects.h )
-          {
-            item->window.rectClient.h = item->window.rectEffects.h;
-            done++;
-          }
+          item->window.rectClient.h = item->window.rectEffects.h;
+          done++;
         }
       }
-
-      Item_UpdatePosition( item );
-
-      if( done == 4 )
-        item->window.flags &= ~WINDOW_INTRANSITION;
-
     }
+
+    Item_UpdatePosition( item );
+
+    if( done == 4 )
+      item->window.flags &= ~WINDOW_INTRANSITION;
   }
 
   if( item->window.ownerDrawFlags && DC->ownerDrawVisible )
@@ -6431,6 +6417,12 @@ void Item_Paint( itemDef_t *item )
       item->window.flags &= ~WINDOW_VISIBLE;
     else
       item->window.flags |= WINDOW_VISIBLE;
+  }
+
+  if( item->window.ownerDraw == UI_SCREEN && DC->hideScreen )
+  {
+    if( DC->hideScreen( item->special ) )
+      item->window.flags &= ~WINDOW_VISIBLE;
   }
 
   if( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) )
@@ -6723,8 +6715,6 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
       if( menu->items[i]->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) &&
           !Item_EnableShowViaCvar( menu->items[i], CVAR_SHOW ) )
         continue;
-
-
 
       if( Rect_ContainsPoint( &menu->items[i]->window.rect, x, y ) )
       {

@@ -401,6 +401,7 @@ typedef struct
                             vec4_t backColor, qhandle_t shader, int textStyle );
   float ( *getValue ) ( int ownerDraw );
   qboolean ( *ownerDrawVisible ) ( int flags );
+  qboolean ( *hideScreen ) ( int modifier );
   void ( *runScript )( char **p );
   void ( *getCVarString )( const char *cvar, char *buffer, int bufsize );
   float ( *getCVarValue )( const char *cvar );

@@ -2021,6 +2021,18 @@ static void UI_DrawScreen( rectDef_t *rect, int modifier )
                     trap_R_RegisterShaderNoMip( va( "screenshots/%s", screenshots[ shotNumber ] ) ) );
 }
 
+static qboolean UI_HideScreen( int modifier )
+{
+  int shotNumber;
+
+  shotNumber = current_screen + modifier;
+
+  if ( shotNumber < 0 || shotNumber >= maxscreens )
+    return qtrue;
+  else
+    return qfalse;
+}
+
 // FIXME: table drive
 //
 static void UI_OwnerDraw( float x, float y, float w, float h,
@@ -2126,85 +2138,66 @@ static qboolean UI_OwnerDrawVisible( int flags )
   team = atoi( Info_ValueForKey( info, "t" ) );
 
 
-  while( flags )
+  if( flags & UI_SHOW_NOTSPECTATING )
   {
-    if( flags & UI_SHOW_NOTSPECTATING )
+    if( team == TEAM_NONE )
+      vis = qfalse;
+  }
+
+  if( flags & UI_SHOW_VOTEACTIVE )
+  {
+    if( !trap_Cvar_VariableValue( "ui_voteActive" ) )
+      vis = qfalse;
+  }
+
+  if( flags & UI_SHOW_CANVOTE )
+  {
+    if( trap_Cvar_VariableValue( "ui_voteActive" ) )
+      vis = qfalse;
+  }
+
+  if( flags & UI_SHOW_TEAMVOTEACTIVE )
+  {
+    if( team == TEAM_ALIENS )
     {
-      if( team == TEAM_NONE )
+      if( !trap_Cvar_VariableValue( "ui_alienTeamVoteActive" ) )
         vis = qfalse;
-
-      flags &= ~UI_SHOW_NOTSPECTATING;
     }
-
-    if( flags & UI_SHOW_VOTEACTIVE )
+    else if( team == TEAM_HUMANS )
     {
-      if( !trap_Cvar_VariableValue( "ui_voteActive" ) )
+      if( !trap_Cvar_VariableValue( "ui_humanTeamVoteActive" ) )
         vis = qfalse;
-
-      flags &= ~UI_SHOW_VOTEACTIVE;
     }
+  }
 
-    if( flags & UI_SHOW_CANVOTE )
+  if( flags & UI_SHOW_CANTEAMVOTE )
+  {
+    if( team == TEAM_ALIENS )
     {
-      if( trap_Cvar_VariableValue( "ui_voteActive" ) )
+      if( trap_Cvar_VariableValue( "ui_alienTeamVoteActive" ) )
         vis = qfalse;
-
-      flags &= ~UI_SHOW_CANVOTE;
     }
-
-    if( flags & UI_SHOW_TEAMVOTEACTIVE )
+    else if( team == TEAM_HUMANS )
     {
-      if( team == TEAM_ALIENS )
-      {
-        if( !trap_Cvar_VariableValue( "ui_alienTeamVoteActive" ) )
-          vis = qfalse;
-      }
-      else if( team == TEAM_HUMANS )
-      {
-        if( !trap_Cvar_VariableValue( "ui_humanTeamVoteActive" ) )
-          vis = qfalse;
-      }
-
-      flags &= ~UI_SHOW_TEAMVOTEACTIVE;
-    }
-
-    if( flags & UI_SHOW_CANTEAMVOTE )
-    {
-      if( team == TEAM_ALIENS )
-      {
-        if( trap_Cvar_VariableValue( "ui_alienTeamVoteActive" ) )
-          vis = qfalse;
-      }
-      else if( team == TEAM_HUMANS )
-      {
-        if( trap_Cvar_VariableValue( "ui_humanTeamVoteActive" ) )
-          vis = qfalse;
-      }
-
-      flags &= ~UI_SHOW_CANTEAMVOTE;
-    }
-
-    if( flags & UI_SHOW_FAVORITESERVERS )
-    {
-      // this assumes you only put this type of display flag on something showing in the proper context
-
-      if( ui_netSource.integer != AS_FAVORITES )
+      if( trap_Cvar_VariableValue( "ui_humanTeamVoteActive" ) )
         vis = qfalse;
-
-      flags &= ~UI_SHOW_FAVORITESERVERS;
     }
+  }
 
-    if( flags & UI_SHOW_NOTFAVORITESERVERS )
-    {
-      // this assumes you only put this type of display flag on something showing in the proper context
+  if( flags & UI_SHOW_FAVORITESERVERS )
+  {
+    // this assumes you only put this type of display flag on something showing in the proper context
 
-      if( ui_netSource.integer == AS_FAVORITES )
-        vis = qfalse;
+    if( ui_netSource.integer != AS_FAVORITES )
+      vis = qfalse;
+  }
 
-      flags &= ~UI_SHOW_NOTFAVORITESERVERS;
-    }
-    else
-      flags = 0;
+  if( flags & UI_SHOW_NOTFAVORITESERVERS )
+  {
+    // this assumes you only put this type of display flag on something showing in the proper context
+
+    if( ui_netSource.integer == AS_FAVORITES )
+      vis = qfalse;
   }
 
   return vis;
@@ -2925,7 +2918,6 @@ static void UI_Update( const char *name )
 
 void UI_ScreenChange( char **args )
 {
-  static int saved_index = 0;
   const char *string;
   int i, modifier;
   char buffer[ 8192 ];
@@ -2974,11 +2966,6 @@ void UI_ScreenChange( char **args )
       if( Int_Parse( args, &modifier ) )
         current_screen = modifier;
     }
-    // Hack for saving the index when switching from multiview to detail view
-    else if( string[0] == '?' )
-      saved_index = current_screen;
-    else if( string[0] == '!' )
-      current_screen = saved_index;
   }
 
   // We don't want it to go below 0 or above the max number of screens
@@ -4159,6 +4146,7 @@ void UI_Init( qboolean inGameLoad )
   uiInfo.uiDC.ownerDrawItem = &UI_OwnerDraw;
   uiInfo.uiDC.getValue = &UI_GetValue;
   uiInfo.uiDC.ownerDrawVisible = &UI_OwnerDrawVisible;
+  uiInfo.uiDC.hideScreen = &UI_HideScreen;
   uiInfo.uiDC.runScript = &UI_RunMenuScript;
   uiInfo.uiDC.setCVar = trap_Cvar_Set;
   uiInfo.uiDC.getCVarString = trap_Cvar_VariableStringBuffer;
