@@ -1,8 +1,8 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=TremFusion
-Comment=Advanced first-person shooter
-Exec=tremfusion
+Comment=Enhanced Tremulous client.
+Exec=tremfusion --quiet
 Icon=tremfusion
 Terminal=false
 Type=Application
