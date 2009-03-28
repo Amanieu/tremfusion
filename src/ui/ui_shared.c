@@ -4609,7 +4609,7 @@ void Item_SetTextExtents( itemDef_t *item, int *width, int *height, const char *
   // as long as the item isn't dynamic content (ownerdraw or cvar), this
   // keeps us from computing the widths and heights more than once
   if( *width == 0 || item->cvar || ( item->type == ITEM_TYPE_OWNERDRAW &&
-      item->textalignment != ALIGN_LEFT ) )
+      item->textalignment != ALIGN_LEFT ) || ( ((menuDef_t*)item->parent)->window.flags & WINDOW_DRAG ) )
   {
     int originalWidth;
 
@@ -4864,9 +4864,9 @@ static void UI_AddCacheEntryLine( const char *text, float x, float y )
   Q_strncpyz( cacheEntry->lines[ cacheEntry->numLines ], text,
               sizeof( cacheEntry->lines[ 0 ] ) );
 
-  cacheEntry->lineCoords[ cacheEntry->numLines ][ 0 ] = x;
+  cacheEntry->lineCoords[ cacheEntry->numLines ][ 0 ] = x - cacheEntry->rect.x;
 
-  cacheEntry->lineCoords[ cacheEntry->numLines ][ 1 ] = y;
+  cacheEntry->lineCoords[ cacheEntry->numLines ][ 1 ] = y - cacheEntry->rect.y;
 
   cacheEntry->numLines++;
 }
@@ -4887,9 +4887,7 @@ static qboolean UI_CheckWrapCache( const char *text, rectDef_t *rect, float scal
     if( Q_stricmp( text, cacheEntry->text ) )
       continue;
 
-    if( rect->x != cacheEntry->rect.x ||
-        rect->y != cacheEntry->rect.y ||
-        rect->w != cacheEntry->rect.w ||
+    if( rect->w != cacheEntry->rect.w ||
         rect->h != cacheEntry->rect.h )
       continue;
 
@@ -4897,6 +4895,9 @@ static qboolean UI_CheckWrapCache( const char *text, rectDef_t *rect, float scal
       continue;
 
     // This is a match
+    cacheEntry->rect.x = rect->x;
+    cacheEntry->rect.y = rect->y;
+
     cacheReadIndex = i;
 
     cacheReadLineNum = 0;
@@ -4917,9 +4918,9 @@ static qboolean UI_NextWrapLine( const char **text, float *x, float *y )
 
   *text = cacheEntry->lines[ cacheReadLineNum ];
 
-  *x    = cacheEntry->lineCoords[ cacheReadLineNum ][ 0 ];
+  *x    = cacheEntry->lineCoords[ cacheReadLineNum ][ 0 ] + cacheEntry->rect.x;
 
-  *y    = cacheEntry->lineCoords[ cacheReadLineNum ][ 1 ];
+  *y    = cacheEntry->lineCoords[ cacheReadLineNum ][ 1 ] + cacheEntry->rect.y;
 
   cacheReadLineNum++;
 
