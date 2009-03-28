@@ -826,7 +826,7 @@ void Cmd_Random_f( void ) {
 	int 	v1;
 	int 	v2;
 
-	if (Cmd_Argc() == 3) {
+	if (Cmd_Argc() == 4) {
 		v1 = atoi(Cmd_Argv(2));
 		v2 = atoi(Cmd_Argv(3));
 		Cvar_SetValueLatched(Cmd_Argv(1), (int)(rand() / (float)RAND_MAX * (MAX(v1, v2) - MIN(v1, v2)) + MIN(v1, v2)));
