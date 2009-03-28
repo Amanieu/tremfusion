@@ -95,6 +95,9 @@ cvar_t	*r_ext_compiled_vertex_array;
 cvar_t	*r_ext_texture_env_add;
 cvar_t	*r_ext_texture_filter_anisotropic;
 cvar_t	*r_ext_max_anisotropy;
+cvar_t	*r_ext_vertex_buffer_object;
+cvar_t	*r_ext_vertex_shader;
+cvar_t  *r_ext_framebuffer_object;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -166,6 +169,8 @@ cvar_t	*r_saveFontData;
 cvar_t	*r_celshadalgo;
 //. next one for enable/disable cel bordering all together.
 cvar_t	*r_celoutline;
+
+cvar_t	*r_flush;
 
 cvar_t	*r_maxpolys;
 int		max_polys;
@@ -916,6 +921,9 @@ void R_Register( void )
 	r_ext_multitexture = ri.Cvar_Get( "r_ext_multitexture", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_ext_texture_env_add = ri.Cvar_Get( "r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_vertex_buffer_object = ri.Cvar_Get( "r_ext_vertex_buffer_object", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_vertex_shader = ri.Cvar_Get( "r_ext_vertex_shader", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_framebuffer_object = ri.Cvar_Get( "r_ext_framebuffer_object", "1", CVAR_ARCHIVE | CVAR_LATCH);
 
 	r_picmip = ri.Cvar_Get ("r_picmip", GENERIC_HW_R_PICMIP_DEFAULT,
 			CVAR_ARCHIVE | CVAR_LATCH );
@@ -1060,6 +1068,8 @@ void R_Register( void )
 	// cel outline option
 	r_celoutline = ri.Cvar_Get("r_celoutline","0", CVAR_ARCHIVE);
 
+	r_flush = ri.Cvar_Get("r_flush","0", 0);
+
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
 	ri.Cmd_AddCommand( "imagelist", R_ImageList_f );
@@ -1196,6 +1206,24 @@ void RE_Shutdown( qboolean destroyWindow ) {
 		R_SyncRenderThread();
 		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
+
+		if ( qglIsBufferARB && tr.numShaders ) {
+			int shader, vbo;
+			
+			GL_VBO( 0, 0 );
+
+			for ( shader = 0; shader < tr.numShaders; shader++ ) {
+				for ( vbo = 0; vbo < MAX_VBOS_PER_SHADER; vbo++ ) {
+					if ( !tr.shaders[shader]->VBOs[vbo].key )
+						break;
+					
+					if ( qglIsBufferARB( tr.shaders[shader]->VBOs[vbo].ibo ) )
+						qglDeleteBuffersARB( 1, &tr.shaders[shader]->VBOs[vbo].ibo );
+					if ( qglIsBufferARB( tr.shaders[shader]->VBOs[vbo].vbo ) )
+						qglDeleteBuffersARB( 1, &tr.shaders[shader]->VBOs[vbo].vbo );
+				}
+			}
+		}
 	}
 
 	R_DoneFreeType();

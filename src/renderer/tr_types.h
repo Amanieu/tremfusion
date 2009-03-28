@@ -212,6 +212,8 @@ typedef struct {
 
 	qboolean				textureFilterAnisotropic;
 	int							maxAnisotropy;
+	qboolean                                vertexBufferObjects;
+	qboolean				vertexShaders;
                 
 } glconfig_t;
 
