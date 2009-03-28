@@ -1,8 +1,8 @@
 #!/bin/sh
 APPBUNDLE=Tremfusion.app
-BINARY=Tremfusion
-DEDBIN=Tremfusionded
-TTYBIN=Tremfusion-tty
+BINARY=Tremfusion.ub
+DEDBIN=Tremfusionded.ub
+TTYBIN=Tremfusion-tty.ub
 PKGINFO=APPLTREMFUSION
 ICNS=misc/Tremfusion.icns
 DESTDIR=build/release-darwin-ub
