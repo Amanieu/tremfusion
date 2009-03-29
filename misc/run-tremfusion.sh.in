@@ -1,14 +1,17 @@
 #!/bin/bash
 
-BINARY=@INSTALL_PREFIX@/lib/tremfusion/$(basename $0)
-BASE_PATH="/usr/share/tremulous"
-EXTRA_PATH="@INSTALL_PREFIX@/share/tremfusion"
+LIBDIR=@LIBDIR@
+DATADIR=@DATADIR@
+
+BINARY=$LIBDIR/tremfusion/$(basename $0)
+BASE_PATH="$DATADIR/tremulous"
+EXTRA_PATH="$DATADIR/tremfusion"
 QUIET=0
 
 # Transfer settings if necessary
 
-if [ -d $HOME/.tremfusion ]; then
-	. @INSTALL_PREFIX@/share/tremfusion/transfer_settings.sh || :
+if [ ! -d $HOME/.tremfusion ]; then
+	. $DATADIR/tremfusion/transfer_settings.sh
 fi
 
 # TremFusion binaries don't understand "regular" command line parameters. Let's

@@ -95,10 +95,6 @@ ifndef BUILD_DIR
   BUILD_DIR=build
 endif
 
-ifndef INSTALL_PREFIX
-  INSTALL_PREFIX = "/usr/local"
-endif
-
 ifndef GENERATE_DEPENDENCIES
   GENERATE_DEPENDENCIES=1
 endif
@@ -264,6 +260,19 @@ LIB=lib
 
 INSTALL=install
 MKDIR=mkdir
+
+ifndef INSTALL_PREFIX
+  INSTALL_PREFIX = "/usr/local"
+endif
+ifndef BINDIR
+  BINDIR = $(INSTALL_PREFIX)/bin
+endif
+ifndef LIBDIR
+  LIBDIR = $(INSTALL_PREFIX)/$(LIB)
+endif
+ifndef DATADIR
+  DATADIR = $(INSTALL_PREFIX)/share
+endif
 
 ifeq ($(PLATFORM),linux)
 
@@ -1177,16 +1186,25 @@ makedirs:
 # INSTALL
 #############################################################################
 
-install: release
+install: release run-tremfusion.sh
 	@echo ""
 	@echo "Installing TremFusion in $(INSTALL_PREFIX):"
-	@if [ ! -d $(INSTALL_PREFIX) ];then $(MKDIR) $(INSTALL_PREFIX);fi
-	@if [ ! -d $(INSTALL_PREFIX)/lib ];then $(MKDIR) $(INSTALL_PREFIX)/lib;fi
-	@if [ ! -d $(INSTALL_PREFIX)/share ];then $(MKDIR) $(INSTALL_PREFIX)/share;fi
-	@if [ ! -d $(INSTALL_PREFIX)/lib/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/lib/tremfusion;fi
-	@if [ ! -d $(INSTALL_PREFIX)/share/tremfusion ];then $(MKDIR) $(INSTALL_PREFIX)/share/tremfusion;fi
-	@$(Q)$(INSTALL) -v $(BR)/tremfusion.$(ARCH)$(BINEXT) $(INSTALL_PREFIX)/lib/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -v misc/transfer_settings.sh $(INSTALL_PREFIX)/share/tremfusion/transfer_settings.sh
+	@if [ ! -d $(INSTALL_PREFIX) ];then $(MKDIR) -p $(INSTALL_PREFIX);fi
+	@if [ ! -d $(BINDIR) ];then $(MKDIR) -p $(BINDIR);fi
+	@if [ ! -d $(LIBDIR)/tremfusion ];then $(MKDIR) -p $(LIBDIR)/tremfusion;fi
+	@if [ ! -d $(DATADIR)/tremfusion ];then $(MKDIR) -p $(DATADIR)/tremfusion;fi
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusionded
+	@$(Q)$(INSTALL) -vpm 755 misc/transfer_settings.sh $(DATADIR)/tremfusion/transfer_settings.sh
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusionded
+
+run-tremfusion.sh:
+	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
+	@sed -ie "s!@LIBDIR@!$(LIBDIR)!" run-tremfusion.sh
+	@sed -ie "s!@DATADIR@!$(DATADIR)!" run-tremfusion.sh
 
 
 #############################################################################
