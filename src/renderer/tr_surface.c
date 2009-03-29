@@ -1203,7 +1203,7 @@ void RB_SurfaceMesh_scalar(md3Surface_t *surface) {
 	tess.numIndexes += indexes;
 
 	texCoords = (float *) ((byte *)surface + surface->ofsSt);
-	texCoordPtr = tess.texCoordPtr + Doug * tess.texCoordInc;
+	texCoordPtr = ptrPlusOffset(tess.texCoordPtr, Doug * tess.texCoordInc);
 
 	numVerts = surface->numVerts;
 	for ( j = 0; j < numVerts; j++ ) {

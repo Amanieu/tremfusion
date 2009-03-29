@@ -161,6 +161,7 @@ static	void R_LoadLightmaps( lump_t *l ) {
 
 	// if we are in r_vertexLight mode, we don't need the lightmaps at all
 	if ( r_vertexLight->integer || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
+		lightmapWidth = lightmapHeight = 1;
 		return;
 	}
 	
@@ -174,7 +175,10 @@ static	void R_LoadLightmaps( lump_t *l ) {
 		lightmapHeight *= 2;
 	}
 	image = Hunk_AllocateTempMemory( lightmapWidth * lightmapHeight *
-					 LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4 );
+	                                 LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4 );
+	Com_Memset( image, 0, lightmapWidth * lightmapHeight *
+	            LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4);
+
 
 	// calculate number of resulting lightmap textures
 	numLightmaps = (tr.numLightmaps + lightmapWidth * lightmapHeight - 1)
