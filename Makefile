@@ -261,6 +261,9 @@ LIB=lib
 INSTALL=install
 MKDIR=mkdir
 
+ifndef BUILDROOT
+  BUILDROOT = ""
+endif
 ifndef INSTALL_PREFIX
   INSTALL_PREFIX = "/usr/local"
 endif
@@ -1188,18 +1191,18 @@ makedirs:
 
 install: release run-tremfusion.sh
 	@echo ""
-	@echo "Installing TremFusion in $(INSTALL_PREFIX):"
-	@if [ ! -d $(INSTALL_PREFIX) ];then $(MKDIR) -p $(INSTALL_PREFIX);fi
-	@if [ ! -d $(BINDIR) ];then $(MKDIR) -p $(BINDIR);fi
-	@if [ ! -d $(LIBDIR)/tremfusion ];then $(MKDIR) -p $(LIBDIR)/tremfusion;fi
-	@if [ ! -d $(DATADIR)/tremfusion ];then $(MKDIR) -p $(DATADIR)/tremfusion;fi
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) -vpm 755 misc/transfer_settings.sh $(DATADIR)/tremfusion/transfer_settings.sh
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BINDIR)/tremfusionded
+	@echo "Installing TremFusion in $(BUILDROOT)$(INSTALL_PREFIX):"
+	@if [ ! -d $(BUILDROOT)$(INSTALL_PREFIX) ];then $(MKDIR) -p $(BUILDROOT)$(INSTALL_PREFIX);fi
+	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
+	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
+	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
+	@$(Q)$(INSTALL) -vpm 755 misc/transfer_settings.sh $(BUILDROOT)$(DATADIR)/tremfusion/transfer_settings.sh
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
 
 run-tremfusion.sh:
 	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
