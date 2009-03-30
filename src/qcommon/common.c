@@ -3159,10 +3159,10 @@ void Field_CompleteDelay( void )
 	matchCount = 0;
 	shortestMatch[ 0 ] = 0;
 
-	Cmd_AliasCompletion( FindMatches );
+	Cmd_DelayCompletion( FindMatches );
 
 	if( !Field_Complete( ) )
-		Cmd_AliasCompletion( PrintMatches );
+		Cmd_DelayCompletion( PrintMatches );
 }
 
 /*
