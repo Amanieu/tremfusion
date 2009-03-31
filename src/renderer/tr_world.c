@@ -166,11 +166,6 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	int			i;
 	dlight_t	*dl;
 
-	if ( !dlightBits ) {
-		face->dlightBits[ tr.smpFrame ] = dlightBits;
-		return dlightBits;
-	}
-
 	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
 		if ( ! ( dlightBits & ( 1 << i ) ) ) {
 			continue;
@@ -194,11 +189,6 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 	int			i;
 	dlight_t	*dl;
-
-	if ( !dlightBits ) {
-		grid->dlightBits[ tr.smpFrame ] = dlightBits;
-		return dlightBits;
-	}
 
 	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
 		if ( ! ( dlightBits & ( 1 << i ) ) ) {
@@ -226,6 +216,10 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 
 
 static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
+	// FIXME: more dlight culling to trisurfs...
+	surf->dlightBits[ tr.smpFrame ] = dlightBits;
+	return dlightBits;
+#if 0
 	int			i;
 	dlight_t	*dl;
 
@@ -234,12 +228,12 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 			continue;
 		}
 		dl = &tr.refdef.dlights[i];
-		if ( dl->origin[0] - dl->radius > surf->bounds[1][0]
-			|| dl->origin[0] + dl->radius < surf->bounds[0][0]
-			|| dl->origin[1] - dl->radius > surf->bounds[1][1]
-			|| dl->origin[1] + dl->radius < surf->bounds[0][1]
-			|| dl->origin[2] - dl->radius > surf->bounds[1][2]
-			|| dl->origin[2] + dl->radius < surf->bounds[0][2] ) {
+		if ( dl->origin[0] - dl->radius > grid->meshBounds[1][0]
+			|| dl->origin[0] + dl->radius < grid->meshBounds[0][0]
+			|| dl->origin[1] - dl->radius > grid->meshBounds[1][1]
+			|| dl->origin[1] + dl->radius < grid->meshBounds[0][1]
+			|| dl->origin[2] - dl->radius > grid->meshBounds[1][2]
+			|| dl->origin[2] + dl->radius < grid->meshBounds[0][2] ) {
 			// dlight doesn't reach the bounds
 			dlightBits &= ~( 1 << i );
 		}
@@ -249,8 +243,9 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 		tr.pc.c_dlightSurfacesCulled++;
 	}
 
-	surf->dlightBits[ tr.smpFrame ] = dlightBits;
+	grid->dlightBits[ tr.smpFrame ] = dlightBits;
 	return dlightBits;
+#endif
 }
 
 /*
@@ -296,14 +291,15 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits ) {
 	// FIXME: bmodel fog?
 
 	// try to cull before dlighting or adding
-	if ( !qglBindBufferARB &&
-	     R_CullSurface( surf->data, surf->shader ) ) {
+	if ( R_CullSurface( surf->data, surf->shader ) ) {
 		return;
 	}
 
 	// check for dlighting
-	dlightBits = R_DlightSurface( surf, dlightBits );
-	dlightBits = ( dlightBits != 0 );
+	if ( dlightBits ) {
+		dlightBits = R_DlightSurface( surf, dlightBits );
+		dlightBits = ( dlightBits != 0 );
+	}
 
 	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, dlightBits );
 }
@@ -371,7 +367,7 @@ static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
 		// if the bounding volume is outside the frustum, nothing
 		// inside can be visible OPTIMIZE: don't do this all the way to leafs?
 
-		if ( !r_nocull->integer && !qglBindBufferARB ) {
+		if ( !r_nocull->integer ) {
 			int		r;
 
 			if ( planeBits & 1 ) {
@@ -627,8 +623,7 @@ static void R_MarkLeaves (void) {
 		}
 
 		// check for door connection
-		if ( !qglBindBufferARB &&
-		    (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
+		if ( (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
 			continue;		// not visible
 		}
 

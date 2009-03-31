@@ -83,20 +83,6 @@ void GL_SelectTexture( int unit )
 		GLimp_LogComment( "glActiveTextureARB( GL_TEXTURE1_ARB )\n" );
 		qglClientActiveTextureARB( GL_TEXTURE1_ARB );
 		GLimp_LogComment( "glClientActiveTextureARB( GL_TEXTURE1_ARB )\n" );
-	}
-	else if ( unit == 2 )
-	{
-		qglActiveTextureARB( GL_TEXTURE2_ARB );
-		GLimp_LogComment( "glActiveTextureARB( GL_TEXTURE2_ARB )\n" );
-		qglClientActiveTextureARB( GL_TEXTURE2_ARB );
-		GLimp_LogComment( "glClientActiveTextureARB( GL_TEXTURE2_ARB )\n" );
-	}
-	else if ( unit == 3 )
-	{
-		qglActiveTextureARB( GL_TEXTURE3_ARB );
-		GLimp_LogComment( "glActiveTextureARB( GL_TEXTURE3_ARB )\n" );
-		qglClientActiveTextureARB( GL_TEXTURE3_ARB );
-		GLimp_LogComment( "glClientActiveTextureARB( GL_TEXTURE3_ARB )\n" );
 	} else {
 		ri.Error( ERR_DROP, "GL_SelectTexture: unit = %i", unit );
 	}
@@ -403,26 +389,6 @@ void GL_State( unsigned long stateBits )
 
 
 /*
-** GL_State
-**
-** This routine is responsible for setting the most commonly changed state
-** in Q3.
-*/
-void GL_VBO( GLuint vbo, GLuint ibo )
-{
-	if ( glState.currentVBO != vbo ) {
-		glState.currentVBO = vbo;
-		qglBindBufferARB (GL_ARRAY_BUFFER_ARB, vbo );
-	}
-
-	if ( glState.currentIBO != ibo ) {
-		glState.currentIBO = ibo;
-		qglBindBufferARB (GL_ELEMENT_ARRAY_BUFFER_ARB, ibo );
-	}
-}
-
-
-/*
 ================
 RB_Hyperspace
 
@@ -544,49 +510,6 @@ void RB_BeginDrawingView (void) {
 }
 
 
-/*
-==================
-findShaderVBO
-==================
-*/
-static int
-findShaderVBO( shader_t *shader, int VBOkey ) {
-	int		i;
-	vboInfo_t	vbo;
-	
-	if ( shader->VBOs[0].key == VBOkey )
-		return qtrue;
-
-	if ( shader->VBOs[0].key == 0 )
-		return qfalse;
-
-	for ( i = 1; i < MAX_VBOS_PER_SHADER; i++ ) {
-		if ( shader->VBOs[i].key == 0 )
-			return qfalse;
-		
-		if ( shader->VBOs[i].key == VBOkey ) {
-			// move found key to front
-			vbo = shader->VBOs[i];
-			memmove( &(shader->VBOs[1]), &(shader->VBOs[0]), sizeof(vboInfo_t) * i );
-			shader->VBOs[0] = vbo;
-			return qtrue;
-		}
-	}
-	return qfalse;
-}
-
-
-static void newShaderVBO( shader_t *shader, int VBOkey )
-{
-	// discard last key
-	if ( shader->VBOs[MAX_VBOS_PER_SHADER - 1].key != 0 ) {
-		// free stored VBO and IBO
-		qglDeleteBuffersARB(1, &shader->VBOs[MAX_VBOS_PER_SHADER - 1].vbo);
-		qglDeleteBuffersARB(1, &shader->VBOs[MAX_VBOS_PER_SHADER - 1].ibo);
-	}
-	memmove( &(shader->VBOs[1]), &(shader->VBOs[0]), sizeof(vboInfo_t) * (MAX_VBOS_PER_SHADER - 1) );
-}
-
 #define	MAC_EVENT_PUMP_MSEC		5
 
 /*
@@ -600,12 +523,11 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	int				entityNum, oldEntityNum;
 	int				dlighted, oldDlighted;
 	qboolean		depthRange, oldDepthRange, isCrosshair, wasCrosshair;
-	int				i, j;
+	int				i;
 	drawSurf_t		*drawSurf;
 	int				oldSort;
 	float			originalTime;
-	int sortMask = -1 << QSORT_ENTITYNUM_SHIFT; // mask out fog and dlight bits
-	
+
 	// save original time for entity shader offsets
 	originalTime = backEnd.refdef.floatTime;
 
@@ -624,23 +546,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	depthRange = qfalse;
 
 	backEnd.pc.c_surfaces += numDrawSurfs;
-
-	tess.indexPtr = tess.indexes;
-	tess.indexInc = sizeof(GLuint);
-	tess.xyzPtr = tess.xyz;
-	tess.xyzInc = sizeof(vec4_t);
-	tess.normalPtr = tess.normal;
-	tess.normalInc = sizeof(vec4_t);
-	tess.texCoordPtr = (vec2_t *)&(tess.texCoords[0][0]);
-	tess.texCoordInc = 2*sizeof(vec2_t);
-	tess.texCoord2Ptr = tess.texCoordPtr + 1;
-	tess.texCoord2Inc = 2*sizeof(vec2_t);
-	tess.vertexColorPtr = tess.vertexColors;
-	tess.vertexColorInc = sizeof(color4ub_t);
-	tess.vertexDlightBitPtr = tess.vertexDlightBits;
-	tess.vertexDlightBitInc = sizeof(int);
-	tess.maxIndexes = SHADER_MAX_INDEXES;
-	tess.maxVertexes = SHADER_MAX_VERTEXES;
 
 	for (i = 0, drawSurf = drawSurfs ; i < numDrawSurfs ; i++, drawSurf++) {
 		if ( drawSurf->sort == oldSort ) {
@@ -761,186 +666,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			oldEntityNum = entityNum;
 		}
 
-		// look if we have a VBO for this shader/entity
-		int VBOkey = 0;
-		
-		if ( shader->useVBO && !dlighted && !fogNum ) {
-			if (entityNum == ENTITYNUM_WORLD) {
-				if ( tr.viewCluster >= 0 ) {
-					VBOkey = VBOKEY_VIS | (tr.viewCluster & VBOKEY_IDXMASK);
-				}
-			} else {
-				trRefEntity_t	*ent = backEnd.currentEntity;
-				if ( ent->e.reType == RT_MODEL ) {
-					model_t *model = R_GetModelByHandle( ent->e.hModel );
-					if ( model->type == MOD_BRUSH ) {
-						VBOkey = VBOKEY_MODEL | (ent->e.hModel & VBOKEY_IDXMASK);
-					} else if ( model->type == MOD_MESH &&
-						ent->e.frame == ent->e.oldframe ) {
-						// combine hModel and frame number into key
-						// allows 65536 models with 256 frames
-						VBOkey = VBOKEY_MD3 | (ent->e.hModel << 8) | ent->e.frame;
-					}
-				}
-			}
-		}
-		
-		if ( VBOkey > 0 ) {
-			if ( !findShaderVBO( shader, VBOkey ) ) {
-				// create new VBO
-				byte *vertexData, *indexData;
-				vboInfo_t *vbo;
-				
-				// count only
-				tess.indexPtr = NULL;
-				for ( j = 0; j < numDrawSurfs - i &&
-					((drawSurf+j)->sort & sortMask) == (oldSort & sortMask); j++ ) {
-					rb_surfaceTable[ *(drawSurf+j)->surface ]( (drawSurf+j)->surface );
-				}
-				
-				if (tess.numVertexes < 32 && tess.numIndexes < 32) {
-					// skip tiny VBOs
-					tess.numVertexes = tess.numIndexes = 0;
-					tess.indexPtr = tess.indexes;
-					tess.indexInc = sizeof(GLuint);
-					rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
-					continue;
-				}
-
-				newShaderVBO( shader, VBOkey );
-				vbo = &(shader->VBOs[0]);
-
-				// allocate VBOs
-				qglGenBuffersARB(1, &vbo->vbo);
-				qglGenBuffersARB(1, &vbo->ibo);
-				
-				GL_VBO( vbo->vbo, vbo->ibo );
-				vbo->vertexSize = sizeof(vec4_t);
-				if ( shader->needsST1 )
-					vbo->vertexSize += sizeof(vec2_t);
-				if ( shader->needsST2 )
-					vbo->vertexSize += sizeof(vec2_t);
-				if ( shader->needsNormal )
-					vbo->vertexSize += sizeof(vec3_t);
-				if ( shader->needsColor )
-					vbo->vertexSize += sizeof(color4ub_t);
-				vbo->vertexSize = (vbo->vertexSize + 31) & -32;
-
-				qglBufferDataARB(GL_ARRAY_BUFFER_ARB,
-						 tess.numVertexes * vbo->vertexSize,
-						 NULL, GL_STATIC_DRAW_ARB);
-				
-				if ( tess.numVertexes > 65536 )
- 					qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB,
-							 sizeof(GLuint) * tess.numIndexes,
-							 NULL, GL_STATIC_DRAW_ARB);
-				else
-					qglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB,
-							 sizeof(GLushort) * tess.numIndexes,
-							 NULL, GL_STATIC_DRAW_ARB);
-				
-				vertexData = qglMapBufferARB(GL_ARRAY_BUFFER_ARB, GL_WRITE_ONLY_ARB);
-				indexData = qglMapBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, GL_WRITE_ONLY_ARB);
-				
-				// setup tess to write into VBO
-				tess.xyzPtr = (vec4_t *)(vertexData);
-				tess.xyzInc = VBO_inc(shader, vbo);
-				vertexData += sizeof(vec4_t);
-				
-				if ( shader->needsST1 ) {
-					tess.texCoordPtr = (vec2_t *)vertexData;
-					tess.texCoordInc = VBO_inc(shader, vbo);
-					vertexData += sizeof(vec2_t);
-				} else {
-					tess.texCoordPtr = (vec2_t *)&vec4Scratch;
-					tess.texCoordInc = 0;
-				}
-				
-				if ( shader->needsST2 ) {
-					tess.texCoord2Ptr = (vec2_t *)vertexData;
-					tess.texCoord2Inc = VBO_inc(shader, vbo);
-					vertexData += sizeof(vec2_t);
-				} else {
-					tess.texCoord2Ptr = (vec2_t *)&vec4Scratch;
-					tess.texCoord2Inc = 0;
-				}
-				
-				if ( shader->needsNormal ) {
-					tess.normalPtr = (vec4_t *)vertexData;
-					tess.normalInc = VBO_inc(shader,vbo);
-					vertexData += sizeof(vec3_t);
-				} else {
-					tess.normalPtr = &vec4Scratch;
-					tess.normalInc = 0;
-				}
-
-				if ( shader->needsColor ) {
-					tess.vertexColorPtr = (color4ub_t *)vertexData;
-					tess.vertexColorInc = VBO_inc(shader,vbo);
-					vertexData += sizeof(color4ub_t);
-				} else {
-					tess.vertexColorPtr = (color4ub_t *)&vec4Scratch;
-					tess.vertexColorInc = 0;
-				}
-
-				tess.vertexDlightBitPtr = (int *)&vec4Scratch;
-				tess.vertexDlightBitInc = 0;
-
-				tess.indexPtr = (GLuint *)(indexData);
-				tess.indexInc = tess.numVertexes > 65536 ? sizeof(GLuint) : sizeof(GLushort);
-				tess.maxIndexes = tess.numIndexes+1;
-				tess.maxVertexes = tess.numVertexes+1;
-
-				tess.numVertexes = tess.numIndexes = 0;
-
-				// ignore change of dlights/fog
-				while ( i < numDrawSurfs &&
-					(drawSurf->sort & sortMask) == (oldSort & sortMask) ) {
-					rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
-					i++, drawSurf++;
-				}
-				
-				qglUnmapBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB);
-				qglUnmapBufferARB(GL_ARRAY_BUFFER_ARB);
-
-				shader->VBOs[0].key = VBOkey;
-				shader->VBOs[0].numVertexes = tess.numVertexes;
-				shader->VBOs[0].numIndexes = tess.numIndexes;
-
-				// setup tess to write into memory
-				tess.indexPtr = tess.indexes;
-				tess.indexInc = sizeof(GLuint);
-				tess.xyzPtr = tess.xyz;
-				tess.xyzInc = sizeof(vec4_t);
-				tess.normalPtr = tess.normal;
-				tess.normalInc = sizeof(vec4_t);
-				tess.texCoordPtr = (vec2_t *)(&tess.texCoords[0][0]);
-				tess.texCoordInc = 2*sizeof(vec2_t);
-				tess.texCoord2Ptr = tess.texCoordPtr + 1;
-				tess.texCoord2Inc = 2*sizeof(vec2_t);
-				tess.vertexColorPtr = tess.vertexColors;
-				tess.vertexColorInc = sizeof(color4ub_t);
-				tess.vertexDlightBitPtr = tess.vertexDlightBits;
-				tess.vertexDlightBitInc = sizeof(int);
-				tess.maxIndexes = SHADER_MAX_INDEXES;
-				tess.maxVertexes = SHADER_MAX_VERTEXES;
-				tess.numIndexes = 0;
-				tess.numVertexes = 0;
-			} else {
-				// VBO exists, skip to next sort key
-				while ( i < numDrawSurfs && drawSurf->sort == oldSort ) {
-					i++;
-					drawSurf++;
-				}
-			}
-			i--; drawSurf--;
-			// add VBO to draw list
-			tess.renderVBO = &(shader->VBOs[0]);
-			continue;
-		} else {
-			// add the triangles for this surface
-			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
-		}
+		// add the triangles for this surface
+		rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 	}
 
 	backEnd.refdef.floatTime = originalTime;
@@ -949,8 +676,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if (oldShader != NULL) {
 		RB_EndSurface();
 	}
-
-	GL_VBO( 0, 0 );
 
 	// go back to the world modelview matrix
 	qglLoadMatrixf( backEnd.viewParms.world.modelMatrix );

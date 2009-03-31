@@ -835,10 +835,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 			}
 			else if ( !Q_stricmp( token, "identityLighting" ) )
 			{
-				if ( r_overBrightBits->integer == 0 )
-					stage->rgbGen = CGEN_IDENTITY;
-				else
-					stage->rgbGen = CGEN_IDENTITY_LIGHTING;
+				stage->rgbGen = CGEN_IDENTITY_LIGHTING;
 			}
 			else if ( !Q_stricmp( token, "entity" ) )
 			{
@@ -1013,35 +1010,6 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 		}
 	}
 
-	// I assume DST_ALPHA is always 1, so I just replace it with GL_ONE
-	if ( blendSrcBits == GLS_SRCBLEND_DST_ALPHA )
-		blendSrcBits = GLS_SRCBLEND_ONE;
-	else if ( blendSrcBits == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA )
-		blendSrcBits = GLS_SRCBLEND_ZERO;
-
-	if ( blendDstBits == GLS_DSTBLEND_DST_ALPHA )
-		blendDstBits = GLS_DSTBLEND_ONE;
-	else if ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_DST_ALPHA )
-		blendDstBits = GLS_DSTBLEND_ZERO;
-
-	// If the image has no (real) alpha channel, we can do the same
-	// for SRC_ALPHA
-	if ( !stage->bundle[0].image[0]->hasAlpha &&
-	     stage->alphaGen == AGEN_IDENTITY) {
-		if ( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA )
-			blendSrcBits = GLS_SRCBLEND_ONE;
-		else if ( blendSrcBits == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA )
-			blendSrcBits = GLS_SRCBLEND_ZERO;
-		
-		if ( blendDstBits == GLS_DSTBLEND_SRC_ALPHA )
-			blendDstBits = GLS_DSTBLEND_ONE;
-		else if ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA )
-			blendDstBits = GLS_DSTBLEND_ZERO;
-
-		// also alphaFunc makes no sense without alpha
-		atestBits = 0;
-	}
-
 	//
 	// if cgen isn't explicitly specified, use either identity or identitylighting
 	//
@@ -1055,6 +1023,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 		}
 	}
 
+
 	//
 	// implicitly assume that a GL_ONE GL_ZERO blend mask disables blending
 	//
@@ -1066,7 +1035,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 	}
 
 	// decide which agens we can skip
-	if ( stage->alphaGen == AGEN_IDENTITY ) {
+	if ( stage->alphaGen == CGEN_IDENTITY ) {
 		if ( stage->rgbGen == CGEN_IDENTITY
 			|| stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
 			stage->alphaGen = AGEN_SKIP;
@@ -1665,11 +1634,6 @@ otherwise set to the generic stage function
 */
 static void ComputeStageIteratorFunc( void )
 {
-	int stage;
-	int units = glConfig.numTextureUnits;
-
-	if (!units) units = 1;
-	
 	shader.optimalStageIteratorFunc = RB_StageIteratorGeneric;
 
 	//
@@ -1680,153 +1644,6 @@ static void ComputeStageIteratorFunc( void )
 		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
 		goto done;
 	}
-
-	shader.needsNormal = qfalse;
-	shader.needsST1 = qfalse;
-	shader.needsST2 = qfalse;
-	shader.needsColor = qfalse;
-	shader.useVBO = qfalse;
-	
-	if ( glConfig.vertexBufferObjects ) {
-		shader.useVBO = qtrue;
-	}
-	
-	// check all deformation stages
-	for ( stage = 0; stage < shader.numDeforms; stage ++ ) {
-		switch ( shader.deforms[stage].deformation ) {
-		case DEFORM_NONE:
-			break;
-		case DEFORM_WAVE:
-		case DEFORM_NORMALS:
-		case DEFORM_BULGE:
-			shader.needsNormal = qtrue;
-			shader.useVBO = qfalse;
-			break;
-		case DEFORM_MOVE:
-		case DEFORM_PROJECTION_SHADOW:
-		case DEFORM_AUTOSPRITE:
-		case DEFORM_AUTOSPRITE2:
-		case DEFORM_TEXT0:
-		case DEFORM_TEXT1:
-		case DEFORM_TEXT2:
-		case DEFORM_TEXT3:
-		case DEFORM_TEXT4:
-		case DEFORM_TEXT5:
-		case DEFORM_TEXT6:
-		case DEFORM_TEXT7:
-			shader.useVBO = qfalse;
-			break;
-		}
-	}
-	
-	// check all shader stages
-	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
-	{
-		shaderStage_t *pStage = &stages[stage];
-		int           bundle;
-		
-		if ( !pStage->active )
-		{
-			break;
-		}
-		
-		switch ( pStage->rgbGen ) {
-		case CGEN_IDENTITY_LIGHTING:
-		case CGEN_IDENTITY:
-		case CGEN_ENTITY:
-		case CGEN_ONE_MINUS_ENTITY:
-		case CGEN_CONST:
-			// constant color, VBO possible
-			break;
-		case CGEN_EXACT_VERTEX:
-		case CGEN_VERTEX:
-			// vertex colors, VBO possible
-			shader.needsColor = qtrue;
-			break;
-		case CGEN_LIGHTING_DIFFUSE:
-			// normals needed, no VBO possible
-			shader.needsNormal = qtrue;
-			shader.useVBO = qfalse;
-			break;
-		case CGEN_ONE_MINUS_VERTEX:
-			// vertex colors needed, no VBO
-			shader.needsColor = qtrue;
-			shader.useVBO = qfalse;
-			break;
-		case CGEN_BAD:
-		case CGEN_WAVEFORM:
-		case CGEN_FOG:
-			// no vertex colors needed, no VBO
-			shader.useVBO = qfalse;
-			break;
-		}
-
-		switch ( pStage->alphaGen ) {
-		case AGEN_SKIP:
-			break;
-		case AGEN_IDENTITY:
-		case AGEN_ENTITY:
-		case AGEN_ONE_MINUS_ENTITY:
-		case AGEN_CONST:
-			if ( pStage->rgbGen == CGEN_VERTEX ||
-			     pStage->rgbGen == CGEN_EXACT_VERTEX ) {
-				// cannot combine const alpha with vertex color
-				shader.useVBO = qfalse;
-			}
-			break;
-		case AGEN_VERTEX:
-			shader.needsColor = qtrue;
-			if ( pStage->rgbGen != CGEN_VERTEX &&
-			     pStage->rgbGen != CGEN_EXACT_VERTEX ) {
-				// cannot combine vertex alpha with const color
-				shader.useVBO = qfalse;
-			}
-			break;
-		case AGEN_ONE_MINUS_VERTEX:
-			shader.useVBO = qfalse;
-			shader.needsColor = qtrue;
-			break;
-		case AGEN_LIGHTING_SPECULAR:
-		case AGEN_PORTAL:
-			shader.useVBO = qfalse;
-			shader.needsNormal = qtrue;
-			break;
-		case AGEN_WAVEFORM:
-			shader.useVBO = qfalse;
-			break;
-		}
-		
-		for ( bundle = 0; bundle < units; bundle++ ) {
-			if ( bundle > 0 && !pStage->bundle[bundle].multitextureEnv )
-				break;
-			
-			switch ( pStage->bundle[bundle].tcGen ) {
-			case TCGEN_BAD:
-				break;
-			case TCGEN_IDENTITY:
-			case TCGEN_VECTOR:
-			case TCGEN_FOG:
-				shader.useVBO = qfalse;
-				break;
-			case TCGEN_LIGHTMAP:
-				shader.needsST2 = qtrue;
-				break;
-			case TCGEN_TEXTURE:
-				shader.needsST1 = qtrue;
-				break;
-			case TCGEN_ENVIRONMENT_MAPPED:
-				shader.needsNormal = qtrue;
-				shader.useVBO = qfalse;
-				break;
-			}
-			if ( pStage->bundle[bundle].numTexMods > 0 )
-				shader.useVBO = qfalse;
-		}
-	}
-
-	// no VBOs for 0-stage shaders (fog)
-	if ( stage == 0 )
-		shader.useVBO = qfalse;
 
 	if ( r_ignoreFastPath->integer )
 	{
@@ -1846,7 +1663,7 @@ static void ComputeStageIteratorFunc( void )
 				{
 					if ( !shader.polygonOffset )
 					{
-						if ( !stages[0].bundle[1].multitextureEnv )
+						if ( !shader.multitextureEnv )
 						{
 							if ( !shader.numDeforms )
 							{
@@ -1874,7 +1691,7 @@ static void ComputeStageIteratorFunc( void )
 				{
 					if ( !shader.numDeforms )
 					{
-						if ( stages[0].bundle[1].multitextureEnv )
+						if ( shader.multitextureEnv )
 						{
 							shader.optimalStageIteratorFunc = RB_StageIteratorLightmappedMultitexture;
 							goto done;
@@ -1932,171 +1749,117 @@ static collapse_t	collapse[] = {
 ================
 CollapseMultitexture
 
-Attempt to combine several stages into a single multitexture stage
+Attempt to combine two stages into a single multitexture stage
 FIXME: I think modulated add + modulated add collapses incorrectly
 =================
 */
-static int CollapseMultitexture( void ) {
-	int stage, bundle;
+static qboolean CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
 
-	stage = 0;
-	bundle = 0;
-
-	while( stages[stage].active ) {
-		if ( bundle + 1 >= glConfig.numTextureUnits ) {
-			// can't add next stage, no more texture units
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		// make sure both stages are active
-		if ( !stages[stage + 1].active ) {
-			// can't add next stage, it doesn't exist
-			stage++;
-			bundle = 0;
-			continue;
-		}
-
-		// on voodoo2, don't combine different tmus
-		if ( glConfig.driverType == GLDRV_VOODOO ) {
-			if ( stages[stage].bundle[0].image[0]->TMU ==
-			     stages[stage + 1].bundle[0].image[0]->TMU ) {
-				stage++;
-				bundle = 0;
-				continue;
-			}
-		}
-
-		abits = stages[stage].stateBits;
-		bbits = stages[stage + 1].stateBits;
-		/*
-		// can't combine if the second stage has an alpha test
-		if ( bbits & GLS_ATEST_BITS ) {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-
-		// can combine alphafunc only if depthwrite is enabled and
-		// the second stage has depthfunc equal
-		if ( abits & GLS_ATEST_BITS ) {
-			if (!((abits & GLS_DEPTHMASK_TRUE) &&
-			      (bbits & GLS_DEPTHFUNC_EQUAL)) ) {
-				stage++;
-				bundle = 0;
-				continue;
-			}
-		} else {
-			if ( (abits & GLS_DEPTHFUNC_EQUAL) !=
-			     (bbits & GLS_DEPTHFUNC_EQUAL) ) {
-				stage++;
-				bundle = 0;
-				continue;
-			}
-		}
-		*/
-		// make sure that both stages have identical state other than blend modes
-		if ( ( abits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) !=
-		     ( bbits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) ) {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		abits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-		bbits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-		
-		// search for a valid multitexture blend function
-		for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
-			if ( abits == collapse[i].blendA
-			     && bbits == collapse[i].blendB ) {
-				break;
-			}
-		}
-		
-		// nothing found
-		if ( collapse[i].blendA == -1 ) {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		// GL_ADD is a separate extension
-		if ( collapse[i].multitextureEnv == GL_ADD && !glConfig.textureEnvAddAvailable ) {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		// make sure waveforms have identical parameters
-		if ( ( stages[stage].rgbGen != stages[stage + 1].rgbGen ) ||
-		     ( stages[stage].alphaGen != stages[stage + 1].alphaGen ) )  {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		// an add collapse can only have identity colors
-		if ( collapse[i].multitextureEnv == GL_ADD && stages[stage].rgbGen != CGEN_IDENTITY ) {
-			stage++;
-			bundle = 0;
-			continue;
-		}
-		
-		if ( stages[stage].rgbGen == CGEN_WAVEFORM )
-		{
-			if ( memcmp( &stages[stage].rgbWave,
-				     &stages[stage + 1].rgbWave,
-				     sizeof( stages[stage].rgbWave ) ) )
-			{
-				stage++;
-				bundle = 0;
-				continue;
-			}
-		}
-		if ( stages[stage].alphaGen == CGEN_WAVEFORM )
-		{
-			if ( memcmp( &stages[stage].alphaWave,
-				     &stages[stage + 1].alphaWave,
-				     sizeof( stages[stage].alphaWave ) ) )
-			{
-				stage++;
-				bundle = 0;
-				continue;
-			}
-		}
-		
-		
-		// make sure that lightmaps are in bundle 1 for 3dfx
-		if ( bundle == 0 && stages[stage].bundle[0].isLightmap )
-		{
-			tmpBundle = stages[stage].bundle[0];
-			stages[stage].bundle[0] = stages[stage + 1].bundle[0];
-			stages[stage].bundle[1] = tmpBundle;
-		}
-		else
-		{
-			stages[stage].bundle[bundle + 1] = stages[stage + 1].bundle[0];
-		}
-		
-		// set the new blend state bits
-		stages[stage].bundle[bundle + 1].multitextureEnv = collapse[i].multitextureEnv;
-		stages[stage].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-		stages[stage].stateBits |= collapse[i].multitextureBlend;
-
-		bundle++;
-
-		//
-		// move down subsequent shaders
-		//
-		memmove( &stages[stage + 1], &stages[stage + 2], sizeof( stages[0] ) * ( MAX_SHADER_STAGES - stage - 2 ) );
-		Com_Memset( &stages[MAX_SHADER_STAGES-1], 0, sizeof( stages[0] ) );
+	if ( !qglActiveTextureARB ) {
+		return qfalse;
 	}
-	return stage;
+
+	// make sure both stages are active
+	if ( !stages[0].active || !stages[1].active ) {
+		return qfalse;
+	}
+
+	// on voodoo2, don't combine different tmus
+	if ( glConfig.driverType == GLDRV_VOODOO ) {
+		if ( stages[0].bundle[0].image[0]->TMU ==
+			 stages[1].bundle[0].image[0]->TMU ) {
+			return qfalse;
+		}
+	}
+
+	abits = stages[0].stateBits;
+	bbits = stages[1].stateBits;
+
+	// make sure that both stages have identical state other than blend modes
+	if ( ( abits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) !=
+		( bbits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) ) {
+		return qfalse;
+	}
+
+	abits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
+	bbits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
+
+	// search for a valid multitexture blend function
+	for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
+		if ( abits == collapse[i].blendA
+			&& bbits == collapse[i].blendB ) {
+			break;
+		}
+	}
+
+	// nothing found
+	if ( collapse[i].blendA == -1 ) {
+		return qfalse;
+	}
+
+	// GL_ADD is a separate extension
+	if ( collapse[i].multitextureEnv == GL_ADD && !glConfig.textureEnvAddAvailable ) {
+		return qfalse;
+	}
+
+	// make sure waveforms have identical parameters
+	if ( ( stages[0].rgbGen != stages[1].rgbGen ) ||
+		( stages[0].alphaGen != stages[1].alphaGen ) )  {
+		return qfalse;
+	}
+
+	// an add collapse can only have identity colors
+	if ( collapse[i].multitextureEnv == GL_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
+		return qfalse;
+	}
+
+	if ( stages[0].rgbGen == CGEN_WAVEFORM )
+	{
+		if ( memcmp( &stages[0].rgbWave,
+					 &stages[1].rgbWave,
+					 sizeof( stages[0].rgbWave ) ) )
+		{
+			return qfalse;
+		}
+	}
+	if ( stages[0].alphaGen == CGEN_WAVEFORM )
+	{
+		if ( memcmp( &stages[0].alphaWave,
+					 &stages[1].alphaWave,
+					 sizeof( stages[0].alphaWave ) ) )
+		{
+			return qfalse;
+		}
+	}
+
+
+	// make sure that lightmaps are in bundle 1 for 3dfx
+	if ( stages[0].bundle[0].isLightmap )
+	{
+		tmpBundle = stages[0].bundle[0];
+		stages[0].bundle[0] = stages[1].bundle[0];
+		stages[0].bundle[1] = tmpBundle;
+	}
+	else
+	{
+		stages[0].bundle[1] = stages[1].bundle[0];
+	}
+
+	// set the new blend state bits
+	shader.multitextureEnv = collapse[i].multitextureEnv;
+	stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
+	stages[0].stateBits |= collapse[i].multitextureBlend;
+
+	//
+	// move down subsequent shaders
+	//
+	memmove( &stages[1], &stages[2], sizeof( stages[0] ) * ( MAX_SHADER_STAGES - 2 ) );
+	Com_Memset( &stages[MAX_SHADER_STAGES-1], 0, sizeof( stages[0] ) );
+
+	return qtrue;
 }
 
 /*
@@ -2514,8 +2277,8 @@ static shader_t *FinishShader( void ) {
 	//
 	// look for multitexture potential
 	//
-	if ( stage > 1 ) {
-		stage = CollapseMultitexture();
+	if ( stage > 1 && CollapseMultitexture() ) {
+		stage--;
 	}
 
 	if ( shader.lightmapIndex >= 0 && !hasLightmapStage ) {
@@ -2572,7 +2335,7 @@ static char *FindShaderInShaderText( const char *shadername ) {
 			return p;
 		}
 	}
-#if 0
+
 	p = s_shaderText;
 
 	if ( !p ) {
@@ -2594,7 +2357,7 @@ static char *FindShaderInShaderText( const char *shadername ) {
 			SkipBracedSection( &p );
 		}
 	}
-#endif
+
 	return NULL;
 }
 
@@ -2726,7 +2489,6 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	shader.needsST1 = qtrue;
 	shader.needsST2 = qtrue;
 	shader.needsColor = qtrue;
-	shader.useVBO = qfalse;
 
 	//
 	// attempt to define shader from an explicit parameter file
@@ -2898,7 +2660,6 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 	shader.needsST1 = qtrue;
 	shader.needsST2 = qtrue;
 	shader.needsColor = qtrue;
-	shader.useVBO = qfalse;
 
 	//
 	// create the default shading commands
@@ -3131,7 +2892,7 @@ A second parameter will cause it to print in sorted order
 ===============
 */
 void	R_ShaderList_f (void) {
-	int			i, j, k;
+	int			i;
 	int			count;
 	shader_t	*shader;
 
@@ -3151,6 +2912,15 @@ void	R_ShaderList_f (void) {
 			ri.Printf (PRINT_ALL, "L ");
 		} else {
 			ri.Printf (PRINT_ALL, "  ");
+		}
+		if ( shader->multitextureEnv == GL_ADD ) {
+			ri.Printf( PRINT_ALL, "MT(a) " );
+		} else if ( shader->multitextureEnv == GL_MODULATE ) {
+			ri.Printf( PRINT_ALL, "MT(m) " );
+		} else if ( shader->multitextureEnv == GL_DECAL ) {
+			ri.Printf( PRINT_ALL, "MT(d) " );
+		} else {
+			ri.Printf( PRINT_ALL, "      " );
 		}
 		if ( shader->explicitlyDefined ) {
 			ri.Printf( PRINT_ALL, "E " );
@@ -3174,21 +2944,6 @@ void	R_ShaderList_f (void) {
 			ri.Printf (PRINT_ALL,  ": %s (DEFAULTED)\n", shader->name);
 		} else {
 			ri.Printf (PRINT_ALL,  ": %s\n", shader->name);
-		}
-		for ( j = 0; j < shader->numUnfoggedPasses; j++ ) {
-			shaderStage_t *stage = shader->stages[j];
-			
-			if ( !stage->active )
-				break;
-
-			ri.Printf (PRINT_DEVELOPER, " %d\n" );
-			
-			for ( k = 0; i < NUM_TEXTURE_BUNDLES; k++ ) {
-				if ( !stage->bundle[k].image[0] )
-					break;
-
-				ri.Printf (PRINT_DEVELOPER, "  %s\n", stage->bundle[k].image[0]->imgName );
-			}
 		}
 		count++;
 	}

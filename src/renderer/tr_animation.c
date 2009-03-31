@@ -62,13 +62,12 @@ void R_AddAnimSurfaces( trRefEntity_t *ent ) {
 RB_SurfaceAnim
 ==============
 */
-void RB_SurfaceAnim( surfaceType_t *surf ) {
-	md4Surface_t		*surface = (md4Surface_t *)surf;
+void RB_SurfaceAnim( md4Surface_t *surface ) {
 	int				i, j, k;
 	float			frontlerp, backlerp;
 	int				*triangles;
 	int				indexes;
-	int				baseVertex;
+	int				baseIndex, baseVertex;
 	int				numVerts;
 	md4Vertex_t		*v;
 	md4Bone_t		bones[MD4_MAX_BONES];
@@ -77,10 +76,7 @@ void RB_SurfaceAnim( surfaceType_t *surf ) {
 	md4Frame_t		*frame;
 	md4Frame_t		*oldFrame;
 	int				frameSize;
-	GLuint			*indexPtr;
-	GLushort		*indexPtrShort;
-	vec4_t			*xyzPtr, *normalPtr;
-	vec2_t			*texCoordPtr;
+
 
 	if (  backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame ) {
 		backlerp = 0;
@@ -98,36 +94,17 @@ void RB_SurfaceAnim( surfaceType_t *surf ) {
 	oldFrame = (md4Frame_t *)((byte *)header + header->ofsFrames + 
 			backEnd.currentEntity->e.oldframe * frameSize );
 
-	if ( !tess.indexPtr ) {
-		/* only calculate number of vertices/indexes */
-		tess.numIndexes += surface->numTriangles * 3;
-		tess.numVertexes += surface->numVerts;
-		return;
-	}
-
 	RB_CheckOverflow( surface->numVerts, surface->numTriangles * 3 );
-
-	indexPtr = ptrPlusOffset(tess.indexPtr, tess.indexInc * tess.numIndexes);
-	xyzPtr = ptrPlusOffset(tess.xyzPtr, tess.xyzInc * tess.numVertexes);
-	normalPtr = ptrPlusOffset(tess.normalPtr, tess.normalInc * tess.numVertexes);
-	texCoordPtr = ptrPlusOffset(tess.texCoordPtr, tess.texCoordInc * tess.numVertexes);
 
 	triangles = (int *) ((byte *)surface + surface->ofsTriangles);
 	indexes = surface->numTriangles * 3;
+	baseIndex = tess.numIndexes;
 	baseVertex = tess.numVertexes;
-
-	if ( tess.indexInc == sizeof(GLushort) ) {
-		indexPtrShort = (GLushort *)indexPtr;
-		for (j = 0 ; j < indexes ; j++) {
-			*indexPtrShort++ = (GLushort)(baseVertex + triangles[j]);
-		}
-	} else {
-		for (j = 0 ; j < indexes ; j++) {
-			*indexPtr++ = baseVertex + triangles[j];
-		}
+	for (j = 0 ; j < indexes ; j++) {
+		tess.indexes[baseIndex + j] = baseIndex + triangles[j];
 	}
 	tess.numIndexes += indexes;
-	
+
 	//
 	// lerp all the needed bones
 	//
@@ -152,11 +129,11 @@ void RB_SurfaceAnim( surfaceType_t *surf ) {
 	//v = (md4Vertex_t *) ((byte *)surface + surface->ofsVerts + 12);
 	v = (md4Vertex_t *) ((byte *)surface + surface->ofsVerts);
 	for ( j = 0; j < numVerts; j++ ) {
-		vec4_t	tempVert, tempNormal;
+		vec3_t	tempVert, tempNormal;
 		md4Weight_t	*w;
 
-		VectorClear( tempVert ); tempVert[3] = 0.0;
-		VectorClear( tempNormal ); tempNormal[3] = 0.0;
+		VectorClear( tempVert );
+		VectorClear( tempNormal );
 		w = v->weights;
 		for ( k = 0 ; k < v->numWeights ; k++, w++ ) {
 			bone = bonePtr + w->boneIndex;
@@ -170,14 +147,16 @@ void RB_SurfaceAnim( surfaceType_t *surf ) {
 			tempNormal[2] += w->boneWeight * DotProduct( bone->matrix[2], v->normal );
 		}
 
-		Vector4Copy( *xyzPtr, tempVert );
-		xyzPtr = ptrPlusOffset(xyzPtr, tess.xyzInc);
+		tess.xyz[baseVertex + j][0] = tempVert[0];
+		tess.xyz[baseVertex + j][1] = tempVert[1];
+		tess.xyz[baseVertex + j][2] = tempVert[2];
 
-		Vector4Copy( *normalPtr, tempNormal );
-		normalPtr = ptrPlusOffset(normalPtr, tess.normalInc);
+		tess.normal[baseVertex + j][0] = tempNormal[0];
+		tess.normal[baseVertex + j][1] = tempNormal[1];
+		tess.normal[baseVertex + j][2] = tempNormal[2];
 
-		Vector2Copy( *texCoordPtr, v->texCoords );
-		texCoordPtr = ptrPlusOffset(texCoordPtr, tess.texCoordInc);
+		tess.texCoords[baseVertex + j][0][0] = v->texCoords[0];
+		tess.texCoords[baseVertex + j][0][1] = v->texCoords[1];
 
 		// FIXME
 		// This makes TFC's skeletons work.  Shouldn't be necessary anymore, but left
@@ -466,9 +445,8 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent ) {
 RB_MDRSurfaceAnim
 ==============
 */
-void RB_MDRSurfaceAnim( surfaceType_t *surf )
+void RB_MDRSurfaceAnim( md4Surface_t *surface )
 {
-	md4Surface_t *surface = (md4Surface_t *) surf;
 	int				i, j, k;
 	float			frontlerp, backlerp;
 	int				*triangles;

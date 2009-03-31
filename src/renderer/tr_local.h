@@ -54,12 +54,6 @@ long myftol( float f );
 //#define MAX_SHADER_STATES 2048
 #define MAX_STATES_PER_SHADER 32
 #define MAX_STATE_NAME 32
-#define MAX_VBOS_PER_SHADER 16
-
-#define NUM_TEXTURE_BUNDLES 4
-
-// add byte offset to pointer
-#define ptrPlusOffset(ptr, off) (typeof(ptr))((byte *)(ptr) + (off))
 
 // can't be increased without changing bit packing for drawsurfs
 
@@ -110,7 +104,6 @@ typedef struct image_s {
 
 	qboolean	mipmap;
 	qboolean	allowPicmip;
-	qboolean        hasAlpha;
 	int			wrapClampMode;		// GL_CLAMP_TO_EDGE or GL_REPEAT
 
 	struct image_s*	next;
@@ -304,8 +297,9 @@ typedef struct {
 	qboolean		isLightmap;
 	qboolean		vertexLightmap;
 	qboolean		isVideoMap;
-	int		multitextureEnv;		// 0, GL_MODULATE, GL_ADD
 } textureBundle_t;
+
+#define NUM_TEXTURE_BUNDLES 2
 
 typedef struct {
 	qboolean		active;
@@ -359,37 +353,6 @@ typedef struct {
 } fogParms_t;
 
 
-typedef byte color4ub_t[4];
-
-#define VBOKEY_TYPEMASK	0x7f000000
-#define VBOKEY_IDXMASK	0x00ffffff
-#define VBOKEY_VIS   	0x01000000
-#define VBOKEY_MODEL 	0x02000000
-#define VBOKEY_MD3 	0x03000000
-
-typedef struct vboInfo_s {
-	int	key;
-	GLuint  vbo;
-	GLuint  ibo;
-	int	numIndexes;
-	int     numVertexes;
-	int     vertexSize;   // number of bytes of one vertex
-} vboInfo_t;
-
-/* calculate VBO offsets for coordinates, normals, etc.
- * all data is interleaved and padded to 32 bytes
- * worst case:  16 byte position + 8 byte texCoord1 + 8 byte texCoord2 +
- *              12 byte normal + 4 byte color = 64 bytes
- * common case: 16 byte position + 8 byte texCoord1 + 8 byte texCoord2 =
- *              32 bytes (lightmapped texture)
- */
-#define VBO_xyz(shader,vbo)	((byte *)NULL)
-#define VBO_tc1(shader,vbo)	(VBO_xyz(shader,vbo) + sizeof(vec4_t))
-#define VBO_tc2(shader,vbo)	(VBO_tc1(shader,vbo) + sizeof(vec2_t) * (shader)->needsST1)
-#define VBO_normals(shader,vbo)	(VBO_tc2(shader,vbo) + sizeof(vec2_t) * (shader)->needsST2)
-#define VBO_colors(shader,vbo)	(VBO_normals(shader,vbo) + sizeof(vec3_t) * (shader)->needsNormal)
-#define VBO_inc(shader,vbo)     ((vbo)->vertexSize)
-
 typedef struct shader_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			lightmapIndex;			// for a shader to match, both name and lightmapIndex must match
@@ -418,6 +381,8 @@ typedef struct shader_s {
 
 	float		portalRange;			// distance to fog out at
 
+	int			multitextureEnv;		// 0, GL_MODULATE, GL_ADD (FIXME: put in stage)
+
 	cullType_t	cullType;				// CT_FRONT_SIDED, CT_BACK_SIDED, or CT_TWO_SIDED
 	qboolean	polygonOffset;			// set for decals and other items that must be offset 
 	qboolean	noMipMaps;				// for console fonts, 2D elements, etc.
@@ -429,7 +394,6 @@ typedef struct shader_s {
 	qboolean	needsST1;
 	qboolean	needsST2;
 	qboolean	needsColor;
-	qboolean        useVBO;
 
 	int			numDeforms;
 	deformStage_t	deforms[MAX_SHADER_DEFORMS];
@@ -451,9 +415,6 @@ typedef struct shader_s {
   struct shader_s *remappedShader;                  // current shader this one is remapped too
 
   int shaderStates[MAX_STATES_PER_SHADER];          // index to valid shader states
-	vboInfo_t VBOs[MAX_VBOS_PER_SHADER];
-
-  GLuint	GLSLprogram;			    // GLSL shader program
 
 	struct	shader_s	*next;
 } shader_t;
@@ -676,11 +637,11 @@ typedef struct {
 	int				*indexes;
 
 	int				numVerts;
-
 	drawVert_t		*verts;
 } srfTriangles_t;
 
-extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(surfaceType_t *);
+
+extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 
 /*
 ==============================================================================
@@ -873,13 +834,12 @@ typedef struct {
 
 // the renderer front end should never modify glstate_t
 typedef struct {
-	int			currenttextures[NUM_TEXTURE_BUNDLES];
+	int			currenttextures[2];
 	int			currenttmu;
 	qboolean	finishCalled;
-	int			texEnv[NUM_TEXTURE_BUNDLES];
+	int			texEnv[2];
 	int			faceCulling;
 	unsigned long	glStateBits;
-	GLuint		currentVBO, currentIBO;
 } glstate_t;
 
 
@@ -1106,9 +1066,6 @@ extern cvar_t	*r_ext_texture_env_add;
 
 extern cvar_t	*r_ext_texture_filter_anisotropic;
 extern cvar_t	*r_ext_max_anisotropy;
-extern cvar_t   *r_ext_vertex_buffer_object;
-extern cvar_t   *r_ext_vertex_shader;
-extern cvar_t   *r_ext_framebuffer_object;
 
 extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
@@ -1173,8 +1130,6 @@ extern	cvar_t	*r_GLlibCoolDownMsec;
 extern	cvar_t	*r_celshadalgo;					// Cell shading, chooses method: 0 = disabled, 1 = kuwahara, 2 = whiteTexture
 extern	cvar_t	*r_celoutline;						//. cel outline. 1 on, 0 off. (maybe other options later)
 
-extern	cvar_t	*r_flush;
-
 //====================================================================
 
 float R_NoiseGet4f( float x, float y, float z, float t );
@@ -1219,7 +1174,6 @@ void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( unsigned long stateVector );
-void	GL_VBO( GLuint vbo, GLuint IBO );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 
@@ -1350,6 +1304,7 @@ TESSELATOR/SHADER DECLARATIONS
 
 ====================================================================
 */
+typedef byte color4ub_t[4];
 
 typedef struct stageVars
 {
@@ -1357,7 +1312,6 @@ typedef struct stageVars
 	vec2_t		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES];
 } stageVars_t;
 
-extern vec4_t vec4Scratch;
 
 typedef struct shaderCommands_s 
 {
@@ -1367,29 +1321,19 @@ typedef struct shaderCommands_s
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2] ALIGNED(16);
 	color4ub_t	vertexColors[SHADER_MAX_VERTEXES] ALIGNED(16);
 	int			vertexDlightBits[SHADER_MAX_VERTEXES] ALIGNED(16);
-	glIndex_t	*indexPtr;
-	vec4_t		*xyzPtr;
-	vec4_t		*normalPtr;
-	vec2_t		*texCoordPtr, *texCoord2Ptr;
-	color4ub_t	*vertexColorPtr;
-	int		*vertexDlightBitPtr;
-	size_t		indexInc, xyzInc, normalInc, texCoordInc, texCoord2Inc,
-			vertexColorInc,	vertexDlightBitInc;
-	int		numIndexes;
-	int		numVertexes;
-	int		maxIndexes;
-	int		maxVertexes;
 
-	int		dlightBits;	// or together of all vertexDlightBits
 	stageVars_t	svars ALIGNED(16);
 
 	color4ub_t	constantColor255[SHADER_MAX_VERTEXES] ALIGNED(16);
 
-	vboInfo_t	*renderVBO;
-
 	shader_t	*shader;
-	float			shaderTime;
+  float   shaderTime;
 	int			fogNum;
+
+	int			dlightBits;	// or together of all vertexDlightBits
+
+	int			numIndexes;
+	int			numVertexes;
 
 	// info extracted from current shader
 	int			numPasses;
@@ -1403,7 +1347,7 @@ void RB_SetGL2D (void);
 void RB_BeginSurface(shader_t *shader, int fogNum );
 void RB_EndSurface(void);
 void RB_CheckOverflow( int verts, int indexes );
-#define RB_CHECKOVERFLOW(v,i) if (tess.numVertexes + (v) >= tess.maxVertexes || tess.numIndexes + (i) >= tess.maxIndexes ) {RB_CheckOverflow(v,i);}
+#define RB_CHECKOVERFLOW(v,i) if (tess.numVertexes + (v) >= SHADER_MAX_VERTEXES || tess.numIndexes + (i) >= SHADER_MAX_INDEXES ) {RB_CheckOverflow(v,i);}
 
 void RB_StageIteratorGeneric( void );
 void RB_StageIteratorSky( void );
@@ -1559,10 +1503,10 @@ ANIMATED MODELS
 
 // void R_MakeAnimModel( model_t *model );      haven't seen this one really, so not needed I guess.
 void R_AddAnimSurfaces( trRefEntity_t *ent );
-void RB_SurfaceAnim( surfaceType_t *surfType );
+void RB_SurfaceAnim( md4Surface_t *surfType );
 #ifdef RAVENMD4
 void R_MDRAddAnimSurfaces( trRefEntity_t *ent );
-void RB_MDRSurfaceAnim( surfaceType_t *surface );
+void RB_MDRSurfaceAnim( md4Surface_t *surface );
 #endif
 
 /*

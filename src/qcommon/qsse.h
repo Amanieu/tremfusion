@@ -824,10 +824,8 @@ v4fRound(v4f vec) {
 
 #if id386_sse >= 2
 void CopyArrayAndAddConstant_sse2(unsigned *dst, unsigned *src, int add, int count);
-void CopyArrayAndAddConstantShort_sse2(unsigned short *dst, unsigned *src, int add, int count);
 #endif
 void CopyArrayAndAddConstant_sse1(unsigned *dst, unsigned *src, int add, int count);
-void CopyArrayAndAddConstantShort_sse1(unsigned short *dst, unsigned *src, int add, int count);
 
 static ID_INLINE v4f
 vec3_to_v4f(const vec3_t vec) {

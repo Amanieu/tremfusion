@@ -504,13 +504,12 @@ Upload32
 */
 extern qboolean charSet;
 static void Upload32( unsigned *data, 
-		      int width, int height, 
-		      qboolean mipmap, 
-		      qboolean picmip, 
-		      qboolean lightMap,
-		      int *format, 
-		      int *pUploadWidth, int *pUploadHeight,
-		      qboolean *hasAlpha )
+						  int width, int height, 
+						  qboolean mipmap, 
+						  qboolean picmip, 
+							qboolean lightMap,
+						  int *format, 
+						  int *pUploadWidth, int *pUploadHeight )
 {
 	int			samples;
 	unsigned	*scaledBuffer = NULL;
@@ -612,7 +611,6 @@ static void Upload32( unsigned *data,
 		// select proper internal format
 		if ( samples == 3 )
 		{
-			*hasAlpha = qfalse;
 			if(r_greyscale->integer)
 			{
 				if(r_texturebits->integer == 16)
@@ -648,7 +646,6 @@ static void Upload32( unsigned *data,
 		}
 		else if ( samples == 4 )
 		{
-			*hasAlpha = qtrue;
 			if(r_greyscale->integer)
 			{
 				if(r_texturebits->integer == 16)
@@ -818,13 +815,12 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	GL_Bind(image);
 
 	Upload32( (unsigned *)pic, image->width, image->height, 
-		  image->mipmap,
-		  allowPicmip,
-		  isLightmap,
-		  &image->internalFormat,
-		  &image->uploadWidth,
-		  &image->uploadHeight,
-		  &image->hasAlpha );
+								image->mipmap,
+								allowPicmip,
+								isLightmap,
+								&image->internalFormat,
+								&image->uploadWidth,
+								&image->uploadHeight );
 
 	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glWrapClampMode );
 	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glWrapClampMode );
