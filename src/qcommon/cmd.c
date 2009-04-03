@@ -1014,10 +1014,20 @@ void Cmd_Alias_f(void)
 	// Modify/create an alias
 	if (Cmd_Argc() > 2)
 	{
+		cmd_function_t	*cmd;
+
 		// Crude protection from infinite loops
 		if (!strcmp(Cmd_Argv(2), name))
 		{
 			Com_Printf("Can't make an alias to itself\n");
+			return;
+		}
+
+		// Don't allow overriding builtin commands
+		cmd = Cmd_FindCommand( name );
+		if (cmd->function != Cmd_RunAlias_f)
+		{
+			Com_Printf("Can't override a builtin function with an alias\n");
 			return;
 		}
 
