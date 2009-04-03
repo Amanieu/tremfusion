@@ -61,6 +61,16 @@ typedef struct
  
 delayed_cmd_s delayed_cmd[MAX_DELAYED_COMMANDS]; 
 
+typedef struct cmd_function_s
+{
+	struct cmd_function_s	*next;
+	char					*name;
+	xcommand_t				function;
+	completionFunc_t	complete;
+} cmd_function_t;
+
+cmd_function_t *Cmd_FindCommand( const char *cmd_name );
+
 //=============================================================================
 
 /*
@@ -1095,15 +1105,6 @@ void	Cmd_DelayCompletion( void(*callback)(const char *s) ) {
 
 =============================================================================
 */
-
-typedef struct cmd_function_s
-{
-	struct cmd_function_s	*next;
-	char					*name;
-	xcommand_t				function;
-	completionFunc_t	complete;
-} cmd_function_t;
-
 
 typedef struct cmdContext_s
 {
