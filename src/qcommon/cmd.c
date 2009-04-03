@@ -1035,7 +1035,7 @@ void Cmd_Alias_f(void)
 
 		// Don't allow overriding builtin commands
 		cmd = Cmd_FindCommand( name );
-		if (cmd->function != Cmd_RunAlias_f)
+		if (cmd && cmd->function != Cmd_RunAlias_f)
 		{
 			Com_Printf("Can't override a builtin function with an alias\n");
 			return;
