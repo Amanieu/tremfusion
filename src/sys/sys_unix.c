@@ -528,6 +528,9 @@ void Sys_ErrorDialog( const char *error )
 	fileHandle_t f;
 	const char *fileName = "crashlog.txt";
 
+	// Shut down now so that the curses console doesn't clear the screen when it's really shut down
+	CON_Shutdown( );
+
 	Sys_Print( va( "%s\n", error ) );
 
 	// Write console log to file and to stderr

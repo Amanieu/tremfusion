@@ -286,6 +286,7 @@ void CON_Shutdown(void)
 	}
 
 	endwin();
+	curses_on = qfalse;
 }
 
 /*
