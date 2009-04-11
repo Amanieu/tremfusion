@@ -1803,13 +1803,13 @@ void Script_SetFocus( itemDef_t *item, char **args )
   const char *name;
   itemDef_t *focusItem;
 
-  Menu_ClearFocus( item->parent );
   if( String_Parse( args, &name ) )
   {
     focusItem = Menu_FindItemByName( item->parent, name );
 
     if( focusItem && !( focusItem->window.flags & WINDOW_DECORATION ) )
     {
+      Menu_ClearFocus( item->parent );
       focusItem->window.flags |= WINDOW_HASFOCUS;
 
       if( focusItem->onFocus )
@@ -5991,20 +5991,20 @@ void Item_ListBox_Paint( itemDef_t *item )
     {
       // draw scrollbar to right side of the window
       x = item->window.rect.x + item->window.rect.w - SCROLLBAR_WIDTH - one;
-      y = item->window.rect.y + 1;
+      y = item->window.rect.y + 2;
       DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarArrowUp );
-      y += SCROLLBAR_HEIGHT - 1;
+      y += SCROLLBAR_HEIGHT;
 
       listPtr->endPos = listPtr->startPos;
       size = item->window.rect.h - ( SCROLLBAR_HEIGHT * 2 );
-      DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, size + 1, DC->Assets.scrollBar );
-      y += size - 1;
+      DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, size -4 , DC->Assets.scrollBar );
+      y += size - 4;
       DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarArrowDown );
       // thumb
       thumb = Item_ListBox_ThumbDrawPosition( item );//Item_ListBox_ThumbPosition(item);
-
-      if( thumb > y - SCROLLBAR_HEIGHT - 1 )
-        thumb = y - SCROLLBAR_HEIGHT - 1;
+      thumb += 1;
+      if( thumb > y - SCROLLBAR_HEIGHT )
+        thumb = y - SCROLLBAR_HEIGHT;
 
       DC->drawHandlePic( x, thumb, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarThumb );
     }

@@ -898,6 +898,8 @@ void SV_UserinfoChanged( client_t *cl ) {
 	// internet public server, assume they don't need a rate choke
 	if ( Sys_IsLANAddress( cl->netchan.remoteAddress ) && com_dedicated->integer != 2 && sv_lanForceRate->integer == 1) {
 		cl->rate = 99999;	// lans should not rate limit
+	} else if ( sv_rateOverride->integer ) {
+		cl->rate = sv_rateOverride->integer;
 	} else {
 		val = Info_ValueForKey (cl->userinfo, "rate");
 		if (strlen(val)) {
