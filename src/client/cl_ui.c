@@ -488,7 +488,6 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 			}
 			break;
 		case SORT_PING:
-		case 4: // Hack to make 1.1 ui work
 			if (server1->ping < server2->ping) {
 				res = -1;
 			}
@@ -1090,16 +1089,6 @@ void CL_ShutdownUI( void ) {
 CL_InitUI
 ====================
 */
-#define UI_OLD_API_VERSION	4
-
-void Con_MessageMode_f(void);
-void Con_MessageMode2_f(void);
-void Con_MessageMode3_f(void);
-void Con_MessageMode4_f(void);
-void Con_MessageMode5_f(void);
-void Con_MessageMode6_f(void);
-void Con_Prompt_f(void);
-
 void CL_InitUI( void ) {
 	int		v;
 	vmInterpret_t		interpret;
@@ -1116,9 +1105,6 @@ void CL_InitUI( void ) {
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 	}
-	
-	// Don't use ui messagemode unless it askes us to
-	Cvar_Set( "ui_useMessagemode", "0" );
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
@@ -1129,43 +1115,6 @@ void CL_InitUI( void ) {
 	else {
 		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
 		cls.uiStarted = qfalse;
-	}
-	
-	// See who gets control of messagemodes
-	if ( !Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
-	{
-		// client messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
-		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
-		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
-		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
-		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
-		Cmd_AddCommand( "messagemode6", Con_MessageMode6_f );
-		Cmd_AddCommand( "prompt", Con_Prompt_f );
-	}
-	else {
-		// ui messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", NULL );
-		Cmd_AddCommand( "messagemode2", NULL );
-		Cmd_AddCommand( "messagemode3", NULL );
-		Cmd_AddCommand( "messagemode4", NULL );
-		Cmd_AddCommand( "messagemode5", NULL );
-		Cmd_AddCommand( "messagemode6", NULL );
-		Cmd_AddCommand( "prompt", NULL );
 	}
 
 	// reset any CVAR_CHEAT cvars registered by ui

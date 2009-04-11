@@ -99,133 +99,6 @@ void Con_ToggleConsole_f (void) {
 
 /*
 ================
-Con_MessageMode_f
-================
-*/
-void Con_MessageMode_f (void) {
-	chat_playerNum = -1;
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 30;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_MessageMode2_f
-================
-*/
-void Con_MessageMode2_f (void) {
-	chat_playerNum = -1;
-	chat_team = qtrue;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 25;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_MessageMode3_f
-================
-*/
-void Con_MessageMode3_f (void) {
-	chat_playerNum = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
-	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
-		chat_playerNum = -1;
-		return;
-	}
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 30;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_MessageMode4_f
-================
-*/
-void Con_MessageMode4_f (void) {
-	chat_playerNum = VM_Call( cgvm, CG_LAST_ATTACKER );
-	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
-		chat_playerNum = -1;
-		return;
-	}
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 30;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_MessageMode5_f
-================
-*/
-void Con_MessageMode5_f (void) {
-	chat_playerNum = -1;
-	chat_team = qfalse;
-	chat_admins = qtrue;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 25;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_Prompt_f
-================
-*/
-void Con_Prompt_f (void) {
-	if (Cmd_Argc() < 3)
-	{
-		Com_Printf ("prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n");
-		return;
-	}
-
-	chat_playerNum = -1;
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qtrue;
-
-	strcpy(prompt.callback, Cmd_Argv(1));
-
-	// copy the rest of the command line
-	Q_strncpyz(prompt.question, Cmd_ArgsFrom(2), sizeof(prompt.question));
-	
-	Field_Clear( &chatField );
-	chatField.widthInChars = 34 - strlen(prompt.question);
-
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
 Con_MessageMode6_f
 ================
 */
@@ -496,14 +369,6 @@ void Con_Init (void) {
 	g_consoleField.widthInChars = g_console_field_width;
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
-	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
-	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
-	Cmd_AddCommand ("messagemode3", Con_MessageMode3_f);
-	Cmd_AddCommand ("messagemode4", Con_MessageMode4_f);
-	Cmd_AddCommand ("messagemode5", Con_MessageMode5_f);
-	Cmd_AddCommand ("messagemode6", Con_MessageMode6_f);
-	Cmd_AddCommand ("prompt", Con_Prompt_f);
-	Cmd_SetCommandCompletionFunc( "prompt", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	Cmd_SetCommandCompletionFunc( "condump", Cmd_CompleteTxtName );
@@ -836,40 +701,6 @@ void Con_DrawConsole( void ) {
 
 	if( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CGAME ) )
 		return;
-
-	// draw the chat line
-	if( Key_GetCatcher( ) & KEYCATCH_MESSAGE )
-	{
-		int skip;
-
-		if( chat_team )
-		{
-			SCR_DrawBigString( 8, 232, "Team Say:", 1.0f, qfalse );
-			skip = 11;
-		}
-		else if( chat_admins )
-		{
-			SCR_DrawBigString( 8, 232, "Admin Say:", 1.0f, qfalse );
-			skip = 11;
-		}
-		else if (prompt.active)
-		{ 
-			SCR_DrawBigString( 8, 232, prompt.question, 1.0f, qfalse );
-			skip = strlen(prompt.question) + 1;	
-		}
-		else if( chat_clans )
-		{
-			SCR_DrawBigString( 8, 232, "Clan Say:", 1.0f, qfalse );
-			skip = 11;
-		}
-		else
-		{ 
-			SCR_DrawBigString( 8, 232, "Say:", 1.0f, qfalse );
-			skip = 5;
-		}
-
-		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232, qtrue, qtrue );
-	}
 }
 
 //================================================================

@@ -2014,7 +2014,6 @@ void          trap_S_Respatialize( int entityNum, const vec3_t origin, vec3_t ax
 sfxHandle_t   trap_S_RegisterSound( const char *sample, qboolean compressed );    // returns buzz if not found
 void          trap_S_StartBackgroundTrack( const char *intro, const char *loop ); // empty name stops music
 void          trap_S_StopBackgroundTrack( void );
-int           trap_S_SoundDuration( sfxHandle_t handle );
 
 
 void          trap_R_LoadWorldMap( const char *mapname );

@@ -160,10 +160,6 @@ ifndef USE_FREETYPE
   USE_FREETYPE=1
 endif
 
-ifndef USE_OLD_HOMEPATH
-  USE_OLD_HOMEPATH=0
-endif
-
 ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
@@ -1036,7 +1032,6 @@ else
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
-BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
 ifeq ($(V),1)
   echo_cmd=@:
@@ -1199,7 +1194,6 @@ install: release run-tremfusion.sh
 	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
 	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
 	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) -vpm 755 misc/transfer_settings.sh $(BUILDROOT)$(DATADIR)/tremfusion/transfer_settings.sh
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded

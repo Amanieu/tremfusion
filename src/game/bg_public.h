@@ -423,7 +423,8 @@ typedef enum
 } buildable_t;
 
 
-#define B_HEALTH_MASK 255
+#define B_HEALTH_BITS       12
+#define B_HEALTH_MASK       ((1<<B_HEALTH_BITS)-1)
 
 // entityState_t->event values
 // entity events are for effects that take place reletive

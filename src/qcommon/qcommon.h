@@ -235,7 +235,7 @@ PROTOCOL
 ==============================================================
 */
 
-#define	PROTOCOL_VERSION	69
+#define	PROTOCOL_VERSION	70
 
 // maintain a list of compatible protocols for demo playing
 // NOTE: that stuff only works with two digits protocols
@@ -243,7 +243,7 @@ extern int demo_protocols[];
 
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.tremulous.net"
+#define MASTER_SERVER_NAME	"master.tremforges.net"
 #endif
 #ifndef MOTD_SERVER_NAME
 #define MOTD_SERVER_NAME	"master.tremforges.net"
@@ -1066,7 +1066,7 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-char	*Sys_DefaultHomePath(char **path2);
+char	*Sys_DefaultHomePath(void);
 const char *Sys_Dirname( char *path );
 const char *Sys_Basename( char *path );
 char *Sys_ConsoleInput(void);
