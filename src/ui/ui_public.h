@@ -177,7 +177,7 @@ typedef enum
   UI_MOUSE_POSITION,
   //  int   UI_MousePosition( void );
 
-  UI_SET_MOUSE_POSITION
+  UI_SET_MOUSE_POSITION,
   //  void  UI_SetMousePosition( int x, int y );
 
   UI_REFRESH,

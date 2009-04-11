@@ -99,23 +99,6 @@ void Con_ToggleConsole_f (void) {
 
 /*
 ================
-Con_MessageMode6_f
-================
-*/
-void Con_MessageMode6_f (void) {
-	chat_playerNum = -1;
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qtrue;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
 Con_Clear_f
 ================
 */
