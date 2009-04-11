@@ -216,7 +216,6 @@ Add continuous entity effects, like local entity emission and lighting
 */
 static void CG_EntityEffects( centity_t *cent )
 {
-  int i;
 
   // update sound origins
   CG_SetEntitySoundPosition( cent );
@@ -818,42 +817,22 @@ static void CG_Lev2ZapChain( centity_t *cent )
 {
   int           i;
   entityState_t *es;
-  centity_t     *source = NULL, *target = NULL;
+  centity_t     *source = NULL, *target = NULL, *attacker = NULL;
+  int           targets[ LEVEL2_AREAZAP_MAX_TARGETS + 1 ];
 
   es = &cent->currentState;
 
-
-  //FIXME: find a better way to send zap targets
-  for( i = 0; i <= 2; i++ )
+  BG_UnpackZapTargets( es, targets, LEVEL2_AREAZAP_MAX_TARGETS + 1 );
+  attacker = &cg_entities[ targets[ 0 ] ];
+  for( i = 1; i < LEVEL2_AREAZAP_MAX_TARGETS + 1; i++ )
   {
-    switch( i )
-    {
-      case 0:
-        if( es->time <= 0 )
-          continue;
-
-        source = &cg_entities[ es->misc ];
-        target = &cg_entities[ es->time ];
-        break;
-
-      case 1:
-        if( es->time2 <= 0 )
-          continue;
-
-        source = &cg_entities[ es->time ];
-        target = &cg_entities[ es->time2 ];
-        break;
-
-      case 2:
-        if( es->constantLight <= 0 )
-          continue;
-
-        source = &cg_entities[ es->time ];
-        target = &cg_entities[ es->constantLight ];
-        break;
-
-    }
-
+    if( i == 1 )
+      source = attacker;
+    else
+      source = &cg_entities[ targets[ 1 ] ];
+    if( targets[ i ] == ENTITYNUM_NONE )
+      continue;
+    target = &cg_entities[ targets[ i ] ];
     if( !CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
       cent->level2ZapTS[ i ] = CG_SpawnNewTrailSystem( cgs.media.level2ZapTS );
 
@@ -1071,7 +1050,7 @@ static void CG_CEntityPVSLeave( centity_t *cent )
   switch( es->eType )
   {
     case ET_LEV2_ZAP_CHAIN:
-      for( i = 0; i <= 2; i++ )
+      for( i = 0; i <= LEVEL2_AREAZAP_MAX_TARGETS; i++ )
       {
         if( CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
           CG_DestroyTrailSystem( &cent->level2ZapTS[ i ] );
