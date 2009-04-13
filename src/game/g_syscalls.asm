@@ -66,8 +66,6 @@ equ atan2                           -106
 equ sqrt                            -107
 equ floor                           -111
 equ ceil                            -112
-equ testPrintInt                    -113
-equ testPrintFloat                  -114
 
 equ trap_BotLibSetup					-201
 equ trap_BotLibShutdown					-202

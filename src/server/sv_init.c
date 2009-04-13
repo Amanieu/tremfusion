@@ -635,6 +635,7 @@ void SV_Init (void) {
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM );
 	sv_pure = Cvar_Get ("sv_pure", "0", CVAR_SYSTEMINFO );
+	sv_rateOverride = Cvar_Get ("sv_rateOverride", "50000", 0 );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
 #ifdef USE_VOIP
 	sv_voip = Cvar_Get ("sv_voip", "1", CVAR_SYSTEMINFO | CVAR_LATCH);
@@ -655,8 +656,6 @@ void SV_Init (void) {
 
 	sv_allowDownload = Cvar_Get ("sv_allowDownload", "1", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_dlURL", "", CVAR_SERVERINFO | CVAR_ARCHIVE);
-	Cvar_Get ("sv_wwwDownload", "1", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
-	Cvar_Get ("sv_wwwBaseURL", "", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
 	sv_master[0] = Cvar_Get ("sv_master1", MASTER_SERVER_NAME, 0 );
 	sv_master[1] = Cvar_Get ("sv_master2", "", CVAR_ARCHIVE );
 	sv_master[2] = Cvar_Get ("sv_master3", "", CVAR_ARCHIVE );
@@ -669,10 +668,8 @@ void SV_Init (void) {
 	sv_mapChecksum = Cvar_Get ("sv_mapChecksum", "", CVAR_ROM);
 	sv_lanForceRate = Cvar_Get ("sv_lanForceRate", "1", CVAR_ARCHIVE );
 	sv_dequeuePeriod = Cvar_Get ("sv_dequeuePeriod", "500", CVAR_ARCHIVE );
-
 	sv_demoState = Cvar_Get ("sv_demoState", "0", CVAR_ROM );
-	sv_autoDemo = Cvar_Get ("sv_autoDemo", "0", CVAR_ARCHIVE );	
-	sv_minPing = Cvar_Get ("sv_minPing", "0", CVAR_ARCHIVE );
+	sv_autoDemo = Cvar_Get ("sv_autoDemo", "0", CVAR_ARCHIVE );
 	
 	// initialize bot cvars so they are listed and can be set before loading the botlib
 	SV_BotInitCvars();

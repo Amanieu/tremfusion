@@ -61,6 +61,16 @@ typedef struct
  
 delayed_cmd_s delayed_cmd[MAX_DELAYED_COMMANDS]; 
 
+typedef struct cmd_function_s
+{
+	struct cmd_function_s	*next;
+	char					*name;
+	xcommand_t				function;
+	completionFunc_t	complete;
+} cmd_function_t;
+
+cmd_function_t *Cmd_FindCommand( const char *cmd_name );
+
 //=============================================================================
 
 /*
@@ -826,7 +836,7 @@ void Cmd_Random_f( void ) {
 	int 	v1;
 	int 	v2;
 
-	if (Cmd_Argc() == 3) {
+	if (Cmd_Argc() == 4) {
 		v1 = atoi(Cmd_Argv(2));
 		v2 = atoi(Cmd_Argv(3));
 		Cvar_SetValueLatched(Cmd_Argv(1), (int)(rand() / (float)RAND_MAX * (MAX(v1, v2) - MIN(v1, v2)) + MIN(v1, v2)));
@@ -888,7 +898,7 @@ void Cmd_WriteAliases(fileHandle_t f)
 	FS_Write(buffer, strlen(buffer), f);
 	while (alias)
 	{
-		Com_sprintf(buffer, sizeof(buffer), "alias %s %s\n", alias->name, Cmd_EscapeString(alias->exec));
+		Com_sprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, Cmd_EscapeString(alias->exec));
 		FS_Write(buffer, strlen(buffer), f);
 		alias = alias->next;
 	}
@@ -994,8 +1004,6 @@ void Cmd_Alias_f(void)
 {
 	cmd_alias_t	*alias;
 	const char	*name;
-	char		exec[MAX_STRING_CHARS];
-	int			i;
 
 	// Get args
 	if (Cmd_Argc() < 2)
@@ -1016,10 +1024,7 @@ void Cmd_Alias_f(void)
 	// Modify/create an alias
 	if (Cmd_Argc() > 2)
 	{
-		// Get the exec string
-		exec[0] = 0;
-		for (i = 2; i < Cmd_Argc(); i++)
-			Q_strcat(exec, sizeof(exec), va("\"%s\" ", Cmd_Argv(i)));
+		cmd_function_t	*cmd;
 
 		// Crude protection from infinite loops
 		if (!strcmp(Cmd_Argv(2), name))
@@ -1028,12 +1033,20 @@ void Cmd_Alias_f(void)
 			return;
 		}
 
+		// Don't allow overriding builtin commands
+		cmd = Cmd_FindCommand( name );
+		if (cmd && cmd->function != Cmd_RunAlias_f)
+		{
+			Com_Printf("Can't override a builtin function with an alias\n");
+			return;
+		}
+
 		// Create/update an alias
 		if (!alias)
 		{
 			alias = S_Malloc(sizeof(cmd_alias_t));
 			alias->name = CopyString(name);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			alias->next = cmd_aliases;
 			cmd_aliases = alias;
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
@@ -1042,7 +1055,7 @@ void Cmd_Alias_f(void)
 		{
 			// Reallocate the exec string
 			Z_Free(alias->exec);
-			alias->exec = CopyString(exec);
+			alias->exec = CopyString(Cmd_ArgsFrom(2));
 			Cmd_AddCommand(name, Cmd_RunAlias_f);
 		}
 	}
@@ -1092,15 +1105,6 @@ void	Cmd_DelayCompletion( void(*callback)(const char *s) ) {
 
 =============================================================================
 */
-
-typedef struct cmd_function_s
-{
-	struct cmd_function_s	*next;
-	char					*name;
-	xcommand_t				function;
-	completionFunc_t	complete;
-} cmd_function_t;
-
 
 typedef struct cmdContext_s
 {

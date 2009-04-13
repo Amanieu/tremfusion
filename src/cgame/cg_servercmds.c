@@ -588,14 +588,14 @@ void CG_Menu( int menu, int arg )
     
     case MN_B_NOROOM:
       longMsg   = "There is no room to build here. Move until the structure turns "
-                  "translucent green indicating a valid build location.";
+                  "translucent green, indicating a valid build location.";
       shortMsg  = "There is no room to build here";
       type      = DT_BUILD;
       break;
 
     case MN_B_NORMAL:
       longMsg   = "Cannot build on this surface. The surface is too steep or "
-                  "unsuitable to build on. Please choose another site for this "
+                  "unsuitable for building. Please choose another site for this "
 	                "structure.";
       shortMsg  = "Cannot build on this surface";
       type      = DT_BUILD;
@@ -763,7 +763,7 @@ void CG_Menu( int menu, int arg )
 
     case MN_A_NOOVMND:
       longMsg   = "There is no Overmind. An Overmind must be built to control "
-                  "the structure you tried to place";
+                  "the structure you tried to place.";
       shortMsg  = "There is no Overmind";
       type      = DT_BUILD;
       break;
@@ -798,9 +798,8 @@ void CG_Menu( int menu, int arg )
 
     case MN_A_TOOCLOSE:
       longMsg   = "This location is too close to the enemy to evolve. Move away "
-                  "until you are no longer aware of the enemy's presence and try "
-	                "again.";
-      shortMsg  = "This location is too close to the enemy to evolve";
+                  "from the enemy's presence and try again.";
+      shortMsg  = "This location is too close to the enemy to evolve\n";
       type      = DT_ARMOURYEVOLVE;
       break;
 

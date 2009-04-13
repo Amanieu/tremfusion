@@ -24,6 +24,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef SMP
 #	include <SDL_thread.h>
+#	ifdef SDL_VIDEO_DRIVER_X11
+#		include <X11/Xlib.h>
+#	endif
 #endif
 
 #include <stdarg.h>
@@ -44,7 +47,7 @@ typedef CGLContextObj QGLContext;
 
 static QGLContext opengl_context;
 
-static void GLimp_GetCurrentContext()
+static void GLimp_GetCurrentContext(void)
 {
 	opengl_context = CGLGetCurrentContext();
 }
@@ -58,20 +61,46 @@ static void GLimp_SetCurrentContext(qboolean enable)
 		CGLSetCurrentContext(NULL);
 }
 #endif
+#elif SDL_VIDEO_DRIVER_X11
+#include <GL/glx.h>
+typedef struct
+{
+	GLXContext      ctx;
+	Display         *dpy;
+	GLXDrawable     drawable;
+} QGLContext_t;
+typedef QGLContext_t QGLContext;
+
+static QGLContext opengl_context;
+
+static void GLimp_GetCurrentContext(void)
+{
+	opengl_context.ctx = glXGetCurrentContext();
+	opengl_context.dpy = glXGetCurrentDisplay();
+	opengl_context.drawable = glXGetCurrentDrawable();
+}
+
+#ifdef SMP
+static void GLimp_SetCurrentContext(qboolean enable)
+{
+	if(enable)
+		glXMakeCurrent(opengl_context.dpy, opengl_context.drawable, opengl_context.ctx);
+	else
+		glXMakeCurrent(opengl_context.dpy, None, NULL);
+}
+#endif
 #elif WIN32
 typedef struct
 {
 	HDC             hDC;		// handle to device context
 	HGLRC           hGLRC;		// handle to GL rendering context
 } QGLContext_t;
-typedef QGLContext_t *QGLContext;
+typedef QGLContext_t QGLContext;
 
 static QGLContext opengl_context;
 
 static void GLimp_GetCurrentContext(void)
 {
-	static QGLContext_t ctx;
-
 	SDL_SysWMinfo info;
 
 	SDL_VERSION(&info.version);
@@ -81,19 +110,17 @@ static void GLimp_GetCurrentContext(void)
 		return;
 	}
 
-	ctx.hDC = GetDC(info.window);
-	ctx.hGLRC = info.hglrc;
-
-	opengl_context = &ctx;
+	opengl_context.hDC = GetDC(info.window);
+	opengl_context.hGLRC = info.hglrc;
 }
 
 #ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable)
 {
 	if(enable)
-		wglMakeCurrent(opengl_context->hDC, opengl_context->hGLRC);
+		wglMakeCurrent(opengl_context.hDC, opengl_context.hGLRC);
 	else
-		wglMakeCurrent(opengl_context->hDC, NULL);
+		wglMakeCurrent(opengl_context.hDC, NULL);
 }
 #endif
 #else
@@ -244,26 +271,6 @@ static void GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
-typedef struct vidmode_s
-{
-	int width, height;
-	float pixelAspect;		// pixel width / height
-} vidmode_t;
-vidmode_t vidModes[] =
-{
-	{ 320,	240,	1 },
-	{ 400,	300,	1 },
-	{ 512,	384,	1 },
-	{ 640,	480,	1 },
-	{ 800,	600,	1 },
-	{ 960,	720,	1 },
-	{ 1024,	768,	1 },
-	{ 1152,	864,	1 },
-	{ 1280,	1024,	1 },
-	{ 1600,	1200,	1 },
-	{ 2048,	1536,	1 },
-	{ 856,	480,	1 }
-};
 static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 {
 	const char*   glstring;
@@ -273,6 +280,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	int i = 0;
 	SDL_Surface *vidscreen = NULL;
 	Uint32 flags = SDL_OPENGL;
+	static int desktop_w, desktop_h;  // desktop resolution 
 
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL display\n");
 
@@ -280,41 +288,19 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	// by assuming (relatively safely) that it is set at or close to
 	// the display's native aspect ratio
 	videoInfo = SDL_GetVideoInfo();
-	glConfig.displayAspect = (float)videoInfo->current_w / (float)videoInfo->current_h;
+	if( !desktop_w ) { // first time through, resolve desktop resolution
+		desktop_w = videoInfo->current_w;
+		desktop_h = videoInfo->current_h;
+	}
+	glConfig.displayAspect = (float)desktop_w / (float)desktop_h;
 
 	ri.Printf( PRINT_DEVELOPER, "Estimated display aspect: %.3f\n", glConfig.displayAspect );
 
 	if( !failSafe )
 	{
-		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
-		{
-			for ( i = 0; i < 12; i++ )
-			{
-				if ( r_width->integer == vidModes[ i ].width &&
-				     r_height->integer == vidModes[ i ].height &&
-				     r_pixelAspect->integer == vidModes[ i ].pixelAspect )
-				{
-					Cvar_SetValue( "r_mode", i );
-					break;
-				}
-			}
-			if ( i == 12 )
-				Cvar_Set( "r_mode", "-1" );
-		}
-		else if ( r_mode->modified && r_mode->integer >= 0 )
-		{
-			Cvar_SetValue( "r_width", vidModes[ r_mode->integer ].width );
-			Cvar_SetValue( "r_height", vidModes[ r_mode->integer ].height );
-			Cvar_SetValue( "r_pixelAspect", vidModes[ r_mode->integer ].pixelAspect );
-		}
-		r_width->modified = qfalse;
-		r_height->modified = qfalse;
-		r_pixelAspect->modified = qfalse;
-		r_mode->modified = qfalse;
-		glConfig.vidWidth = r_width->integer;
-		glConfig.vidHeight = r_height->integer;
-		glConfig.windowAspect = r_width->value /
-			( r_height->value * r_pixelAspect->value );
+		glConfig.vidWidth = ( r_width->integer ? r_width->integer : desktop_w );
+		glConfig.vidHeight = ( r_height->integer ? r_height->integer : desktop_h );
+		glConfig.windowAspect = glConfig.vidWidth / ( (float)glConfig.vidHeight * r_pixelAspect->value );
 	}
 	else if( glConfig.vidWidth != R_FAILSAFE_WIDTH &&
 			glConfig.vidHeight != R_FAILSAFE_HEIGHT )
@@ -732,6 +718,10 @@ void GLimp_Init( void )
 
 	Sys_GLimpInit( );
 
+#if defined(SMP) && defined(SDL_VIDEO_DRIVER_X11)
+	XInitThreads( );
+#endif
+
 	// create the window and set up the context
 	if( !GLimp_StartDriverAndSetMode( qfalse, r_fullscreen->integer ) )
 	{
@@ -916,13 +906,14 @@ GLimp_RenderThreadWrapper
 */
 static int GLimp_RenderThreadWrapper( void *arg )
 {
-	Com_Printf( "Render thread starting\n" );
+	// These printfs cause race conditions which mess up the console output
+	//Com_Printf( "Render thread starting\n" );
 
 	glimpRenderThread();
 
 	GLimp_SetCurrentContext(qfalse);
 
-	Com_Printf( "Render thread terminating\n" );
+	//Com_Printf( "Render thread terminating\n" );
 
 	return 0;
 }
@@ -941,7 +932,7 @@ qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
 		warned = qtrue;
 	}
 
-#if !defined(MACOS_X) && !defined(WIN32)
+#if !defined(MACOS_X) && !defined(WIN32) && !defined (SDL_VIDEO_DRIVER_X11)
 	return qfalse;  /* better safe than sorry for now. */
 #endif
 

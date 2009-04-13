@@ -199,6 +199,8 @@ extern cvar_t *s_doppler;
 
 extern cvar_t *s_testsound;
 
+extern float s_gain;
+
 qboolean S_LoadSound( sfx_t *sfx );
 
 void		SND_free(sndBuffer *v);
@@ -251,3 +253,10 @@ typedef enum
 typedef int srcHandle_t;
 
 qboolean S_AL_Init( soundInterface_t *si );
+
+// So that we can still use OpenAL for capture when using the base driver
+void S_AL_InitCapture( qboolean usingAL );
+void S_AL_StartCapture( void );
+int S_AL_AvailableCaptureSamples( void );
+void S_AL_Capture( int samples, byte *data );
+void S_AL_StopCapture( void );

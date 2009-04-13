@@ -597,6 +597,7 @@ void ClientTimerActions( gentity_t *ent, int msec )
   client = ent->client;
   client->time100 += msec;
   client->time1000 += msec;
+  client->time10000 += msec;
 
   while ( client->time100 >= 100 )
   {
@@ -744,6 +745,21 @@ void ClientTimerActions( gentity_t *ent, int msec )
       client->voiceEnthusiasm -= VOICE_ENTHUSIASM_DECAY;
     else
       client->voiceEnthusiasm = 0.0f;
+  }
+
+  while( client->time10000 >= 10000 )
+  {
+    client->time10000 -= 10000;
+
+    if( ent->client->ps.weapon == WP_ABUILD ||
+        ent->client->ps.weapon == WP_ABUILD2 )
+    {
+      AddScore( ent, ALIEN_BUILDER_SCOREINC );
+    }
+    else if( ent->client->ps.weapon == WP_HBUILD )
+    {
+      AddScore( ent, HUMAN_BUILDER_SCOREINC );
+    }
   }
 
   // Regenerate Adv. Dragoon barbs
@@ -1871,7 +1887,7 @@ void ClientEndFrame( gentity_t *ent )
 
   G_SetClientSound( ent );
 
-  G_UpdateZaps( ent );
+  //G_UpdateZaps( ent );
 
   // set the latest infor
   if( g_smoothClients.integer )

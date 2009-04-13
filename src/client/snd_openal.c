@@ -1439,6 +1439,8 @@ S_AL_StreamDie
 static
 void S_AL_StreamDie( int stream )
 {
+	int		numBuffers;
+
 	if ((stream < 0) || (stream >= MAX_RAW_STREAMS))
 		return;
 
@@ -1447,6 +1449,16 @@ void S_AL_StreamDie( int stream )
 
 	streamPlaying[stream] = qfalse;
 	qalSourceStop(streamSources[stream]);
+
+	// Un-queue any buffers, and delete them
+	qalGetSourcei( streamSources[stream], AL_BUFFERS_PROCESSED, &numBuffers );
+	while( numBuffers-- )
+	{
+		ALuint buffer;
+		qalSourceUnqueueBuffers(streamSources[stream], 1, &buffer);
+		qalDeleteBuffers(1, &buffer);
+	}
+
 	S_AL_FreeStreamChannel(stream);
 }
 
@@ -1873,14 +1885,77 @@ void S_AL_SoundList( void )
 }
 
 #ifdef USE_VOIP
-static
+void S_AL_InitCapture( qboolean usingAL )
+{
+	// Load QAL if we are called from the base sound driver
+	if( !usingAL )
+	{
+		s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE );
+		if( !QAL_Init( s_alDriver->string ) )
+		{
+			Com_Printf( "Failed to load library: \"%s\".\n", s_alDriver->string );
+			return;
+		}
+	}
+
+	// !!! FIXME: some of these alcCaptureOpenDevice() values should be cvars.
+	// !!! FIXME: add support for capture device enumeration.
+	// !!! FIXME: add some better error reporting.
+	s_alCapture = Cvar_Get( "s_alCapture", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	if (!s_alCapture->integer)
+	{
+		Com_Printf("OpenAL capture support disabled by user (set s_alCapture to 1 and execute /snd_restart to enable)\n");
+		if( !usingAL )
+			QAL_Shutdown();
+	}
+#if USE_MUMBLE
+	else if (cl_useMumble->integer)
+	{
+		Com_Printf("OpenAL capture support disabled for Mumble support\n");
+		if( !usingAL )
+			QAL_Shutdown();
+	}
+#endif
+	else
+	{
+#ifdef MACOS_X
+		// !!! FIXME: Apple has a 1.1-compliant OpenAL, which includes
+		// !!! FIXME:  capture support, but they don't list it in the
+		// !!! FIXME:  extension string. We need to check the version string,
+		// !!! FIXME:  then the extension string, but that's too much trouble,
+		// !!! FIXME:  so we'll just check the function pointer for now.
+		if (qalcCaptureOpenDevice == NULL)
+#else
+		if (!qalcIsExtensionPresent(NULL, "ALC_EXT_capture"))
+#endif
+		{
+			Com_Printf("No ALC_EXT_capture support, can't record audio.\n");
+			if( !usingAL )
+				QAL_Shutdown();
+		}
+		else
+		{
+			// !!! FIXME: 8000Hz is what Speex narrowband mode needs, but we
+			// !!! FIXME:  should probably open the capture device after
+			// !!! FIXME:  initializing Speex so we can change to wideband
+			// !!! FIXME:  if we like.
+			Com_Printf("OpenAL default capture device is '%s'\n",
+			           qalcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
+			alCaptureDevice = qalcCaptureOpenDevice(NULL, 8000, AL_FORMAT_MONO16, 1024);
+			Com_Printf( "OpenAL capture device %s.\n",
+			            (alCaptureDevice == NULL) ? "failed to open" : "opened");
+			if( !alCaptureDevice && !usingAL )
+				QAL_Shutdown();
+		}
+	}
+}
+
 void S_AL_StartCapture( void )
 {
 	if (alCaptureDevice != NULL)
 		qalcCaptureStart(alCaptureDevice);
 }
 
-static
 int S_AL_AvailableCaptureSamples( void )
 {
 	int retval = 0;
@@ -1893,7 +1968,6 @@ int S_AL_AvailableCaptureSamples( void )
 	return retval;
 }
 
-static
 void S_AL_Capture( int samples, byte *data )
 {
 	if (alCaptureDevice != NULL)
@@ -2097,48 +2171,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 	qalDopplerVelocity( s_alDopplerSpeed->value );
 
 #ifdef USE_VOIP
-	// !!! FIXME: some of these alcCaptureOpenDevice() values should be cvars.
-	// !!! FIXME: add support for capture device enumeration.
-	// !!! FIXME: add some better error reporting.
-	s_alCapture = Cvar_Get( "s_alCapture", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	if (!s_alCapture->integer)
-	{
-		Com_Printf("OpenAL capture support disabled by user ('+set s_alCapture 1' to enable)\n");
-	}
-#if USE_MUMBLE
-	else if (cl_useMumble->integer)
-	{
-		Com_Printf("OpenAL capture support disabled for Mumble support\n");
-	}
-#endif
-	else
-	{
-#ifdef MACOS_X
-		// !!! FIXME: Apple has a 1.1-compliant OpenAL, which includes
-		// !!! FIXME:  capture support, but they don't list it in the
-		// !!! FIXME:  extension string. We need to check the version string,
-		// !!! FIXME:  then the extension string, but that's too much trouble,
-		// !!! FIXME:  so we'll just check the function pointer for now.
-		if (qalcCaptureOpenDevice == NULL)
-#else
-		if (!qalcIsExtensionPresent(NULL, "ALC_EXT_capture"))
-#endif
-		{
-			Com_Printf("No ALC_EXT_capture support, can't record audio.\n");
-		}
-		else
-		{
-			// !!! FIXME: 8000Hz is what Speex narrowband mode needs, but we
-			// !!! FIXME:  should probably open the capture device after
-			// !!! FIXME:  initializing Speex so we can change to wideband
-			// !!! FIXME:  if we like.
-			Com_Printf("OpenAL default capture device is '%s'\n",
-			           qalcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
-			alCaptureDevice = qalcCaptureOpenDevice(NULL, 8000, AL_FORMAT_MONO16, 4096);
-			Com_Printf( "OpenAL capture device %s.\n",
-			            (alCaptureDevice == NULL) ? "failed to open" : "opened");
-		}
-	}
+	S_AL_InitCapture( qtrue );
 #endif
 
 	si->Shutdown = S_AL_Shutdown;

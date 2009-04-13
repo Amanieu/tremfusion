@@ -167,7 +167,7 @@ void		NET_Shutdown( void );
 void		NET_Restart( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
-void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, int delay);
+void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
 void		QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 void		QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
@@ -222,8 +222,8 @@ typedef struct {
 void Netchan_Init( int qport );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
 
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data, int delay );
-void Netchan_TransmitNextFragment( netchan_t *chan, int delay );
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data );
+void Netchan_TransmitNextFragment( netchan_t *chan );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
 
@@ -236,7 +236,7 @@ PROTOCOL
 ==============================================================
 */
 
-#define	PROTOCOL_VERSION	69
+#define	PROTOCOL_VERSION	70
 
 // maintain a list of compatible protocols for demo playing
 // NOTE: that stuff only works with two digits protocols
@@ -244,7 +244,7 @@ extern int demo_protocols[];
 
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.tremulous.net"
+#define MASTER_SERVER_NAME	"master.tremforges.net"
 #endif
 #ifndef MOTD_SERVER_NAME
 #define MOTD_SERVER_NAME	"master.tremforges.net"
@@ -320,14 +320,8 @@ typedef enum {
 	TRAP_COS,
 	TRAP_ATAN2,
 	TRAP_SQRT,
-	TRAP_MATRIXMULTIPLY,
-	TRAP_ANGLEVECTORS,
-	TRAP_PERPENDICULARVECTOR,
-	TRAP_FLOOR,
-	TRAP_CEIL,
-
-	TRAP_TESTPRINTINT,
-	TRAP_TESTPRINTFLOAT
+	TRAP_FLOOR = 110,
+	TRAP_CEIL
 } sharedTraps_t;
 
 void	VM_Init( void );
@@ -578,6 +572,7 @@ issues.
 #define FS_GENERAL_REF	0x01
 #define FS_UI_REF		0x02
 #define FS_CGAME_REF	0x04
+#define FS_EXTRA_REF	0x08
 
 #define	MAX_FILE_HANDLES	64
 
@@ -732,6 +727,7 @@ typedef struct {
 } field_t;
 
 void Field_Clear( field_t *edit );
+void Field_WordDelete( field_t *edit );
 void Field_AutoComplete( field_t *edit, const char *prompt );
 void Field_CompleteKeyname( void );
 void Field_CompleteFilename( const char *dir,
@@ -824,6 +820,7 @@ extern	cvar_t	*com_buildScript;		// for building release pak files
 extern	cvar_t	*com_journal;
 extern	cvar_t	*com_cameraMode;
 extern	cvar_t	*com_ansiColor;
+extern	cvar_t	*com_timestamps;
 extern	cvar_t	*com_unfocused;
 extern	cvar_t	*com_maxfpsUnfocused;
 extern	cvar_t	*com_minimized;
@@ -1019,18 +1016,9 @@ typedef enum {
 void	Sys_Init (void);
 
 // general development dll loading for virtual machine testing
-void	* QDECL Sys_LoadDll( const char *name, char *fqpath , intptr_t (QDECL **entryPoint)(int, ...),
+void	* QDECL Sys_LoadDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
 				  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
 void	Sys_UnloadDll( void *dllHandle );
-
-void	Sys_UnloadGame( void );
-void	*Sys_GetGameAPI( void *parms );
-
-void	Sys_UnloadCGame( void );
-void	*Sys_GetCGameAPI( void );
-
-void	Sys_UnloadUI( void );
-void	*Sys_GetUIAPI( void );
 
 //bot libraries
 void	Sys_UnloadBotLib( void );
@@ -1077,7 +1065,7 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-char	*Sys_DefaultHomePath(char **path2);
+char	*Sys_DefaultHomePath(void);
 const char *Sys_Dirname( char *path );
 const char *Sys_Basename( char *path );
 char *Sys_ConsoleInput(void);

@@ -804,7 +804,6 @@ CG_SetWeaponLerpFrameAnimation
 may include ANIM_TOGGLEBIT
 ===============
 */
-/* compiler warns that this function is not used until I backport weaponAnim
 static void CG_SetWeaponLerpFrameAnimation( weapon_t weapon, lerpFrame_t *lf, int newAnimation )
 {
   animation_t *anim;
@@ -823,8 +822,6 @@ static void CG_SetWeaponLerpFrameAnimation( weapon_t weapon, lerpFrame_t *lf, in
   if( cg_debugAnim.integer )
     CG_Printf( "Anim: %i\n", newAnimation );
 }
-*/
-
 /*
 ===============
 CG_WeaponAnimation
@@ -832,7 +829,6 @@ CG_WeaponAnimation
 */
 static void CG_WeaponAnimation( centity_t *cent, int *old, int *now, float *backLerp )
 {
-/* FIXME: oh shit.
   lerpFrame_t   *lf = &cent->pe.weapon;
   entityState_t *es = &cent->currentState;
 
@@ -845,7 +841,6 @@ static void CG_WeaponAnimation( centity_t *cent, int *old, int *now, float *back
   *old      = lf->oldFrame;
   *now      = lf->frame;
   *backLerp = lf->backlerp;
-*/
 }
 
 /*

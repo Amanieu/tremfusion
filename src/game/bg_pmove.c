@@ -106,7 +106,6 @@ void PM_StartTorsoAnim( int anim )
 PM_StartWeaponAnim
 ===================
 */
-/* FIXME: need to backport weaponAnim
 static void PM_StartWeaponAnim( int anim )
 {
   if( PM_Paralyzed( pm->ps->pm_type ) )
@@ -115,7 +114,6 @@ static void PM_StartWeaponAnim( int anim )
   pm->ps->weaponAnim = ( ( pm->ps->weaponAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
     | anim;
 }
-*/
 
 
 /*
@@ -190,7 +188,6 @@ static void PM_ContinueTorsoAnim( int anim )
 PM_ContinueWeaponAnim
 ===================
 */
-/* FIXME: weaponAnim needs backporting
 static void PM_ContinueWeaponAnim( int anim )
 {
   if( ( pm->ps->weaponAnim & ~ANIM_TOGGLEBIT ) == anim )
@@ -198,7 +195,6 @@ static void PM_ContinueWeaponAnim( int anim )
 
   PM_StartWeaponAnim( anim );
 }
-*/
 
 /*
 ===================
@@ -2780,7 +2776,7 @@ static void PM_BeginWeaponChange( int weapon )
   if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
   {
     PM_StartTorsoAnim( TORSO_DROP );
-    //PM_StartWeaponAnim( WANIM_DROP );
+    PM_StartWeaponAnim( WANIM_DROP );
   }
 }
 
@@ -2808,7 +2804,7 @@ static void PM_FinishWeaponChange( void )
   if( !( pm->ps->persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
   {
     PM_StartTorsoAnim( TORSO_RAISE );
-    //PM_StartWeaponAnim( WANIM_RAISE );
+    PM_StartWeaponAnim( WANIM_RAISE );
   }
 }
 
@@ -3462,7 +3458,21 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
   // circularly clamp the angles with deltas
   for( i = 0; i < 3; i++ )
   {
-    temp[ i ] = cmd->angles[ i ] + ps->delta_angles[ i ];
+    if( i == ROLL ) 
+    {
+      // Guard against speed hack
+      temp[ i ] = ps->delta_angles[ i ];
+
+#ifdef CGAME
+      // Assert here so that if cmd->angles[ i ] becomes non-zero
+      // for a legitimate reason we can tell where and why it's
+      // being ignored
+      assert( cmd->angles[ i ] == 0 );
+#endif
+
+    }
+    else
+      temp[ i ] = cmd->angles[ i ] + ps->delta_angles[ i ];
 
     if( i == PITCH )
     {

@@ -42,7 +42,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // file full of random crap that gets used to create cl_guid
 #define QKEY_FILE "qkey"
-#define QKEY_FILE_FALLBACK "base/qkey"
 #define QKEY_SIZE 2048
 
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
@@ -473,8 +472,6 @@ void CL_StartDemoLoop( void );
 void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );
 demoState_t CL_DemoState( void );
-int CL_DemoPos( void );
-void CL_DemoName( char *buffer, int size );
 void CL_StopRecord_f( void );
 
 void CL_InitDownloads(void);

@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
-#define GAME_VERSION            "base"
+#define GAME_VERSION            "tremfusion"
 
 #define DEFAULT_GRAVITY         800
 
@@ -225,6 +225,7 @@ typedef enum
   STAT_BUILDABLE, // which ghost model to display for building
   STAT_FALLDIST,  // the distance the player fell
   STAT_VIEWLOCK   // direction to lock the view in
+  // netcode has space for 1 more
 } statIndex_t;
 
 #define SCA_WALLCLIMBER         0x00000001
@@ -271,6 +272,7 @@ typedef enum
   PERS_CREDIT,    // human credit
   PERS_QUEUEPOS,  // position in the spawn queue
   PERS_NEWWEAPON  // weapon to switch to
+  // netcode has space for 5 more
 } persEnum_t;
 
 #define PS_WALLCLIMBINGFOLLOW   0x00000001
@@ -422,7 +424,8 @@ typedef enum
 } buildable_t;
 
 
-#define B_HEALTH_MASK 255
+#define B_HEALTH_BITS       12
+#define B_HEALTH_MASK       ((1<<B_HEALTH_BITS)-1)
 
 // entityState_t->event values
 // entity events are for effects that take place reletive
@@ -1112,6 +1115,9 @@ int       BG_PlayerPoisonCloudTime( playerState_t *ps );
 weapon_t  BG_GetPlayerWeapon( playerState_t *ps );
 qboolean  BG_HasEnergyWeapon( playerState_t *ps );
 qboolean  BG_PlayerCanChangeWeapon( playerState_t *ps );
+
+void BG_PackZapTargets( entityState_t *es, int *entityNums, int count );
+void BG_UnpackZapTargets( entityState_t *es, int *entityNums, int count );
 
 const buildableAttributes_t *BG_BuildableByName( const char *name );
 const buildableAttributes_t *BG_BuildableByEntityName( const char *name );

@@ -216,7 +216,6 @@ Add continuous entity effects, like local entity emission and lighting
 */
 static void CG_EntityEffects( centity_t *cent )
 {
-  int i;
 
   // update sound origins
   CG_SetEntitySoundPosition( cent );
@@ -270,7 +269,7 @@ static void CG_EntityEffects( centity_t *cent )
   }
 
 
-  if( cent->currentState.eType == ET_PLAYER )
+  /*if( cent->currentState.eType == ET_PLAYER )
   {
     centity_t *pcent = cent;
 
@@ -291,10 +290,10 @@ static void CG_EntityEffects( centity_t *cent )
            Distance( front, back ) > LEVEL2_AREAZAP_CUTOFF )
         {
           CG_DestroyTrailSystem( &pcent->level2ZapTS[ i ] );
-}
+        }
       }
     }
-  }    
+  } */
 }
 
 
@@ -811,6 +810,44 @@ static void CG_LightFlare( centity_t *cent )
 
 /*
 =========================
+CG_Lev2ZapChain
+=========================
+*/
+static void CG_Lev2ZapChain( centity_t *cent )
+{
+  int           i;
+  entityState_t *es;
+  centity_t     *source = NULL, *target = NULL, *attacker = NULL;
+  int           targets[ LEVEL2_AREAZAP_MAX_TARGETS + 1 ];
+
+  es = &cent->currentState;
+
+  BG_UnpackZapTargets( es, targets, LEVEL2_AREAZAP_MAX_TARGETS + 1 );
+  attacker = &cg_entities[ targets[ 0 ] ];
+  for( i = 1; i < LEVEL2_AREAZAP_MAX_TARGETS + 1; i++ )
+  {
+    if( i == 1 )
+      source = attacker;
+    else
+      source = &cg_entities[ targets[ 1 ] ];
+    if( targets[ i ] == ENTITYNUM_NONE )
+      continue;
+    target = &cg_entities[ targets[ i ] ];
+    if( !CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
+      cent->level2ZapTS[ i ] = CG_SpawnNewTrailSystem( cgs.media.level2ZapTS );
+
+    if( CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
+    {
+      CG_SetAttachmentCent( &cent->level2ZapTS[ i ]->frontAttachment, source );
+      CG_SetAttachmentCent( &cent->level2ZapTS[ i ]->backAttachment, target );
+      CG_AttachToCent( &cent->level2ZapTS[ i ]->frontAttachment );
+      CG_AttachToCent( &cent->level2ZapTS[ i ]->backAttachment );
+    }
+  }
+}
+
+/*
+=========================
 CG_AdjustPositionForMover
 
 Also called by client movement prediction code
@@ -1005,8 +1042,21 @@ CG_CEntityPVSLeave
 */
 static void CG_CEntityPVSLeave( centity_t *cent )
 {
+  int           i;
+  entityState_t *es = &cent->currentState;
+
   if( cg_debugPVS.integer )
     CG_Printf( "Entity %d left PVS\n", cent->currentState.number );
+  switch( es->eType )
+  {
+    case ET_LEV2_ZAP_CHAIN:
+      for( i = 0; i <= LEVEL2_AREAZAP_MAX_TARGETS; i++ )
+      {
+        if( CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
+          CG_DestroyTrailSystem( &cent->level2ZapTS[ i ] );
+      }
+      break;
+  }
 }
 
 
@@ -1089,6 +1139,9 @@ static void CG_AddCEntity( centity_t *cent )
 
     case ET_LIGHTFLARE:
       CG_LightFlare( cent );
+      break;
+    case ET_LEV2_ZAP_CHAIN:
+      CG_Lev2ZapChain( cent );
       break;
     case ET_LOCATION:
       CG_LinkLocation( cent );

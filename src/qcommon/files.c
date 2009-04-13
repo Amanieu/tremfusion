@@ -485,18 +485,19 @@ static qboolean FS_CreatePath (char *OSPath) {
 
 /*
 =================
-FS_FilenameIsExecutable
+FS_CheckFilenameIsNotExecutable
 
 ERR_FATAL if trying to maniuplate a file with the platform library extension
 =================
  */
-static void FS_FilenameIsExecutable( const char *filename, const char *function )
+static void FS_CheckFilenameIsNotExecutable( const char *filename,
+		const char *function )
 {
 	// Check if the filename ends with the library extension
-	if( !Q_stricmp( filename + strlen( filename ) - strlen( DLL_EXT ), DLL_EXT ) )
+	if( !Q_stricmp( COM_GetExtension( filename ), DLL_EXT ) )
 	{
-		Com_Error( ERR_FATAL, "%s: Not allowed to write '%s' due to %s extension\n",
-			function, filename, DLL_EXT );
+		Com_Error( ERR_FATAL, "%s: Not allowed to manipulate '%s' due "
+			"to %s extension\n", function, filename, DLL_EXT );
 	}
 }
 
@@ -515,7 +516,7 @@ static void FS_CopyFile( char *fromOSPath, char *toOSPath ) {
 
 	Com_Printf( "copy %s to %s\n", fromOSPath, toOSPath );
 
-	FS_FilenameIsExecutable( toOSPath, __func__ );
+	FS_CheckFilenameIsNotExecutable( toOSPath, __func__ );
 
 	if (strstr(fromOSPath, "journal.dat") || strstr(fromOSPath, "journaldata.dat")) {
 		Com_Printf( "Ignoring journal files\n");
@@ -558,7 +559,7 @@ FS_Remove
 ===========
 */
 void FS_Remove( const char *osPath ) {
-	FS_FilenameIsExecutable( osPath, __func__ );
+	FS_CheckFilenameIsNotExecutable( osPath, __func__ );
 
 	remove( osPath );
 }
@@ -570,7 +571,7 @@ FS_HomeRemove
 ===========
 */
 void FS_HomeRemove( const char *homePath ) {
-	FS_FilenameIsExecutable( homePath, __func__ );
+	FS_CheckFilenameIsNotExecutable( homePath, __func__ );
 
 	remove( FS_BuildOSPath( fs_homepath->string,
 			fs_gamedir, homePath ) );
@@ -648,7 +649,7 @@ fileHandle_t FS_SV_FOpenFileWrite( const char *filename ) {
 		Com_Printf( "FS_SV_FOpenFileWrite: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -776,7 +777,7 @@ void FS_SV_Rename( const char *from, const char *to ) {
 		Com_Printf( "FS_SV_Rename: %s --> %s\n", from_ospath, to_ospath );
 	}
 
-	FS_FilenameIsExecutable( to_ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( to_ospath, __func__ );
 
 	if (rename( from_ospath, to_ospath )) {
 		// Failed, try copying it and deleting the original
@@ -810,7 +811,7 @@ void FS_Rename( const char *from, const char *to ) {
 		Com_Printf( "FS_Rename: %s --> %s\n", from_ospath, to_ospath );
 	}
 
-	FS_FilenameIsExecutable( to_ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( to_ospath, __func__ );
 
 	if (rename( from_ospath, to_ospath )) {
 		// Failed, try copying it and deleting the original
@@ -873,7 +874,7 @@ fileHandle_t FS_FOpenFileWrite( const char *filename ) {
 		Com_Printf( "FS_FOpenFileWrite: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -921,7 +922,7 @@ fileHandle_t FS_FOpenFileAppend( const char *filename ) {
 		Com_Printf( "FS_FOpenFileAppend: %s\n", ospath );
 	}
 
-	FS_FilenameIsExecutable( ospath, __func__ );
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
 
 	if( FS_CreatePath( ospath ) ) {
 		return 0;
@@ -1000,6 +1001,23 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
 	}
 
+	if ( !filename ) {
+		Com_Error( ERR_FATAL, "FS_FOpenFileRead: NULL 'filename' parameter passed\n" );
+	}
+
+	// qpaths are not supposed to have a leading slash
+	if ( filename[0] == '/' || filename[0] == '\\' ) {
+		filename++;
+	}
+
+	// make absolutely sure that it can't back up the path.
+	// The searchpaths do guarantee that something will always
+	// be prepended, so we don't need to worry about "c:" or "//limbo" 
+	if ( strstr( filename, ".." ) || strstr( filename, "::" ) ) {
+		*file = 0;
+		return -1;
+	}
+
 	if ( file == NULL ) {
 		// just wants to see if file is there
 		for ( search = fs_searchpaths ; search ; search = search->next ) {
@@ -1035,23 +1053,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		return qfalse;
 	}
 
-	if ( !filename ) {
-		Com_Error( ERR_FATAL, "FS_FOpenFileRead: NULL 'filename' parameter passed\n" );
-	}
-
 	Com_sprintf (demoExt, sizeof(demoExt), ".dm_%d",PROTOCOL_VERSION );
-	// qpaths are not supposed to have a leading slash
-	if ( filename[0] == '/' || filename[0] == '\\' ) {
-		filename++;
-	}
-
-	// make absolutely sure that it can't back up the path.
-	// The searchpaths do guarantee that something will always
-	// be prepended, so we don't need to worry about "c:" or "//limbo" 
-	if ( strstr( filename, ".." ) || strstr( filename, "::" ) ) {
-		*file = 0;
-		return -1;
-	}
 
 	//
 	// search through the path, one element at a time
@@ -2407,6 +2409,71 @@ void FS_TouchFile_f( void ) {
 	}
 }
 
+/*
+============
+FS_Which_f
+============
+*/
+void FS_Which_f( void ) {
+	searchpath_t	*search;
+	char			*netpath;
+	pack_t			*pak;
+	fileInPack_t	*pakFile;
+	directory_t		*dir;
+	long			hash;
+	FILE			*temp;
+	char			*filename;
+
+	hash = 0;
+	filename = Cmd_Argv(1);
+
+	if ( !filename[0] ) {
+		Com_Printf( "Usage: which <file>\n" );
+		return;
+	}
+
+	// qpaths are not supposed to have a leading slash
+	if ( filename[0] == '/' || filename[0] == '\\' ) {
+		filename++;
+	}
+
+	// just wants to see if file is there
+	for ( search = fs_searchpaths ; search ; search = search->next ) {
+		//
+		if ( search->pack ) {
+			hash = FS_HashFileName(filename, search->pack->hashSize);
+		}
+		// is the element a pak file?
+		if ( search->pack && search->pack->hashTable[hash] ) {
+			// look through all the pak file elements
+			pak = search->pack;
+			pakFile = pak->hashTable[hash];
+			do {
+				// case and separator insensitive comparisons
+				if ( !FS_FilenameCompare( pakFile->name, filename ) ) {
+					// found it!
+					Com_Printf( "File \"%s\" found in \"%s\"\n", filename, pak->pakFilename );
+					return;
+				}
+				pakFile = pakFile->next;
+			} while(pakFile != NULL);
+		} else if ( search->dir ) {
+			dir = search->dir;
+		
+			netpath = FS_BuildOSPath( dir->path, dir->gamedir, filename );
+			temp = fopen (netpath, "rb");
+			if ( !temp ) {
+				continue;
+			}
+			fclose(temp);
+			Com_Printf( "File \"%s\" found at \"%s/%s\"\n", filename, dir->path, dir->gamedir );
+			return;
+		}
+	}
+	Com_Printf( "File not found: \"%s\"\n", filename );
+	return;
+}
+
 //===========================================================================
 
 
@@ -2658,6 +2725,7 @@ void FS_Shutdown( qboolean closemfp ) {
 	Cmd_RemoveCommand( "dir" );
 	Cmd_RemoveCommand( "fdir" );
 	Cmd_RemoveCommand( "touchFile" );
+	Cmd_RemoveCommand( "which" );
 }
 
 /*
@@ -2767,11 +2835,11 @@ static void FS_ReorderExtraPaks( void )
 				// increment insert list
 				p_insert_index = &s->next;
 
-				if (s->dir) {
+				if (s->dir)
 					fs_unpureAllowed = qtrue;
-				} else {
-					break; // iterate to next server pack
-				}
+				else
+					s->pack->referenced |= FS_EXTRA_REF;
+				break; // iterate to next server pack
 			}
 			p_previous = &s->next;
 		}
@@ -2785,26 +2853,20 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-	char *homePath, *extraPath;
+	char *homePath;
 
 	Com_Printf( "----- FS_Startup -----\n" );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	homePath = Sys_DefaultHomePath(&extraPath);
+	homePath = Sys_DefaultHomePath();
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
 	}
 	FS_CreatePath(homePath);
-	if (!extraPath) {
-		extraPath = "";
-	}
-	if (extraPath[0]) {
-		FS_CreatePath(extraPath);
-	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
-	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
+	fs_extrapath = Cvar_Get ("fs_extrapath", "", CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE|CVAR_VM_CREATED );
 	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
@@ -2872,6 +2934,7 @@ static void FS_Startup( const char *gameName )
 	Cmd_AddCommand ("dir", FS_Dir_f );
 	Cmd_AddCommand ("fdir", FS_NewDir_f );
 	Cmd_AddCommand ("touchFile", FS_TouchFile_f );
+	Cmd_AddCommand ("which", FS_Which_f );
 
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=506
 	// reorder the pure pk3 files according to server order

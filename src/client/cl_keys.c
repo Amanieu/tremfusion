@@ -29,14 +29,6 @@ key up events are sent even if in console mode
 */
 
 field_t		g_consoleField;
-field_t		chatField;
-qboolean	chat_team;
-qboolean	chat_admins;
-qboolean	chat_clans;
-
-int			chat_playerNum;
-
-cmdPrompt_t prompt = {qfalse, "\0", "\0"};
 
 qboolean	key_overstrikeMode;
 
@@ -397,8 +389,9 @@ Field_Paste
 ================
 */
 void Field_Paste( field_t *edit ) {
+	void Console_Key (int key);
 	char	*cbd;
-	int		pasteLen, i;
+	int		pasteLen, i, lineCounter = 0;
 
 	cbd = Sys_GetClipboardData();
 
@@ -409,8 +402,15 @@ void Field_Paste( field_t *edit ) {
 	// send as if typed, so insert / overstrike works properly
 	pasteLen = strlen( cbd );
 	for ( i = 0 ; i < pasteLen ; i++ ) {
-		Field_CharEvent( edit, cbd[i] );
+		// dont press enter if theres nothing after
+		if ( cbd[i] == '\n' && (i+1) < pasteLen ) {
+			Console_Key( '\n' );
+			lineCounter++;
+		} else
+			Field_CharEvent( edit, cbd[i] );
 	}
+	if ( lineCounter )
+		Console_Key( '\n' );
 
 	Z_Free( cbd );
 }
@@ -526,6 +526,11 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
+	if ( ch == 'e' - 'a' + 1 ) {	// ctrl-w deletes the last word
+		Field_WordDelete( edit );
+		return;
+	}
+
 	//
 	// ignore any other non printable chars
 	//
@@ -603,9 +608,9 @@ void Console_Key (int key) {
 			if ( !g_consoleField.buffer[0] ) {
 				return;	// empty lines just scroll the console without adding to history
 			} else {
-				Cbuf_AddText ("cmd say ");
+				Cbuf_AddText ("say \""); // use say instead of cmd say to allow printing URLs
 				Cbuf_AddText( g_consoleField.buffer );
-				Cbuf_AddText ("\n");
+				Cbuf_AddText ("\"\n");
 			}
 		}
 
@@ -686,80 +691,6 @@ void Console_Key (int key) {
 
 	// pass to the normal editline routine
 	Field_KeyDownEvent( &g_consoleField, key );
-}
-
-//============================================================================
-
-
-/*
-================
-Message_Key
-
-In game talk message
-================
-*/
-void Message_Key( int key ) {
-
-	char	buffer[MAX_STRING_CHARS];
-
-
-	if (key == K_ESCAPE) {
-		Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
-		Field_Clear( &chatField );
-		return;
-	}
-
-	if ( key == K_ENTER || key == K_KP_ENTER )
-	{
-		if ( chatField.buffer[0] && cls.state == CA_ACTIVE ) {
-			if (chat_playerNum != -1 )
-
-				Com_sprintf( buffer, sizeof( buffer ), "tell %i \"%s\"\n", chat_playerNum, chatField.buffer );
-
-			else if (chat_team)
-
-				Com_sprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", chatField.buffer );
-
-			else if (chat_admins)
-
-				Com_sprintf( buffer, sizeof( buffer ), "say_admins \"%s\"\n", chatField.buffer );
-
-			else if (chat_clans) {
-
-				char clantagDecolored[ 32 ];
-				Q_strncpyz(clantagDecolored, cl_clantag->string, sizeof( clantagDecolored ) );
-				Q_CleanStr(clantagDecolored);
-
-				if( strlen(clantagDecolored) > 2 && strlen(clantagDecolored) < 11 ) {
-					Com_sprintf( buffer, sizeof( buffer ), "m \"%s\" \"%s\"\n", clantagDecolored, chatField.buffer );
-				} else {
-					//string isnt long enough
-					Com_Printf ( "^3Error: Your clantag has to be between 3 and 10 chars long. Current value is:^7 %s^7\n", clantagDecolored );
-					Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
-					Field_Clear( &chatField );
-					return;
-				}
-
-			} else if (prompt.active) {
-
-				Cvar_SetLatched( "ui_sayBuffer", chatField.buffer );
-				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
-				Cbuf_ExecuteText( EXEC_NOW, buffer);
-
-			} else {
-				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
-				Hist_Add( buffer );
-			}
-
-			if ( !prompt.active )
-				CL_AddReliableCommand( buffer );
-		}
-		Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
-		Field_Clear( &chatField );
-		return;
-	}
-
-	Field_KeyDownEvent( &chatField, key );
 }
 
 //============================================================================
@@ -1213,12 +1144,6 @@ void CL_KeyDownEvent( int key, unsigned time )
 
 	// escape is always handled special
 	if ( key == K_ESCAPE ) {
-		if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) {
-			// clear message mode
-			Message_Key( key );
-			return;
-		}
-
 		// escape always gets out of CGAME stuff
 		if (Key_GetCatcher( ) & KEYCATCH_CGAME) {
 			Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
@@ -1252,9 +1177,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 	} else if ( Key_GetCatcher( ) & KEYCATCH_CGAME ) {
 		if ( cgvm ) {
 			VM_Call( cgvm, CG_KEY_EVENT, key, qtrue );
-		} 
-	} else if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) {
-		Message_Key( key );
+		}
 	} else if ( cls.state == CA_DISCONNECTED ) {
 		Console_Key( key );
 	} else {
@@ -1336,10 +1259,6 @@ void CL_CharEvent( int key ) {
 	else if ( Key_GetCatcher( ) & KEYCATCH_UI )
 	{
 		VM_Call( uivm, UI_KEY_EVENT, key | K_CHAR_FLAG, qtrue );
-	}
-	else if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) 
-	{
-		Field_CharEvent( &chatField, key );
 	}
 	else if ( cls.state == CA_DISCONNECTED )
 	{

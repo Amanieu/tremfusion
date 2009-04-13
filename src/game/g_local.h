@@ -410,6 +410,7 @@ struct gclient_s
 
   int                 time100;          // timer for 100ms interval events
   int                 time1000;         // timer for one second interval events
+  int                 time10000;        // timer for ten second interval events
 
   char                *areabits;
 
@@ -695,6 +696,7 @@ void      G_ToggleFollow( gentity_t *ent );
 void      G_MatchOnePlayer( int *plist, int num, char *err, int len );
 int       G_ClientNumberFromString( char *s );
 int       G_ClientNumbersFromString( char *s, int *plist, int max );
+void      G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText );
 int       G_SayArgc( void );
 qboolean  G_SayArgv( int n, char *buffer, int bufferLength );
 char      *G_SayConcatArgs( int start );
@@ -908,7 +910,7 @@ qboolean  CheckPounceAttack( gentity_t *ent );
 void      CheckCkitRepair( gentity_t *ent );
 void      G_ChargeAttack( gentity_t *ent, gentity_t *victim );
 void      G_CrushAttack( gentity_t *ent, gentity_t *victim );
-void      G_UpdateZaps( gentity_t *ent );
+void      G_UpdateZaps( int msec );
 
 
 //
@@ -1080,6 +1082,7 @@ qboolean  G_StartMapRotation( char *name, qboolean changeMap );
 void      G_StopMapRotation( void );
 qboolean  G_MapRotationActive( void );
 void      G_InitMapRotations( void );
+qboolean  G_MapExists( char *name );
 
 //
 // g_ptr.c
@@ -1184,6 +1187,7 @@ extern  vmCvar_t  g_markDeconstruct;
 extern  vmCvar_t  g_debugMapRotation;
 extern  vmCvar_t  g_currentMapRotation;
 extern  vmCvar_t  g_currentMap;
+extern  vmCvar_t  g_nextMap;
 extern  vmCvar_t  g_initialMapRotation;
 extern  vmCvar_t  g_chatTeamPrefix;
 extern  vmCvar_t  g_sayAreaRange;
@@ -1208,10 +1212,12 @@ extern  vmCvar_t  g_adminLog;
 extern  vmCvar_t  g_adminParseSay;
 extern  vmCvar_t  g_adminNameProtect;
 extern  vmCvar_t  g_adminTempBan;
+extern  vmCvar_t  g_adminMaxBan;
 
 extern  vmCvar_t  g_dretchPunt;
 
 extern  vmCvar_t  g_privateMessages;
+extern  vmCvar_t  g_specChat;
 extern  vmCvar_t  g_publicAdminMessages;
 
 

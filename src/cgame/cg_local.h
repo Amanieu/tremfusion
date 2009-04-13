@@ -675,7 +675,7 @@ typedef struct centity_s
   particleSystem_t      *entityPS;
   qboolean              entityPSMissing;
 
-  trailSystem_t         *level2ZapTS[ 3 ];
+  trailSystem_t         *level2ZapTS[ LEVEL2_AREAZAP_MAX_TARGETS ];
   int                   level2ZapTime;
 
   trailSystem_t         *muzzleTS; //used for the tesla and reactor
@@ -1454,7 +1454,6 @@ extern  buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
 extern  markPoly_t      cg_markPolys[ MAX_MARK_POLYS ];
 
-extern  vmCvar_t    cg_version;
 extern  vmCvar_t    cg_teslaTrailTime;
 extern  vmCvar_t    cg_centertime;
 extern  vmCvar_t    cg_runpitch;
@@ -1473,7 +1472,6 @@ extern  vmCvar_t    cg_drawCrosshairNames;
 extern  vmCvar_t    cg_crosshairSize;
 extern  vmCvar_t    cg_drawAmmoStack;
 extern  vmCvar_t    cg_draw2D;
-extern  vmCvar_t    cg_drawStatus;
 extern  vmCvar_t    cg_animSpeed;
 extern  vmCvar_t    cg_debugAnim;
 extern  vmCvar_t    cg_debugPosition;
@@ -2015,7 +2013,6 @@ void          trap_S_Respatialize( int entityNum, const vec3_t origin, vec3_t ax
 sfxHandle_t   trap_S_RegisterSound( const char *sample, qboolean compressed );    // returns buzz if not found
 void          trap_S_StartBackgroundTrack( const char *intro, const char *loop ); // empty name stops music
 void          trap_S_StopBackgroundTrack( void );
-int           trap_S_SoundDuration( sfxHandle_t handle );
 
 
 void          trap_R_LoadWorldMap( const char *mapname );
@@ -2083,10 +2080,6 @@ qboolean      trap_GetUserCmd( int cmdNumber, usercmd_t *ucmd );
 
 // used for the weapon select and zoom
 void          trap_SetUserCmdValue( int stateValue, float sensitivityScale );
-
-// aids for VM testing
-void          testPrintInt( char *string, int i );
-void          testPrintFloat( char *string, float f );
 
 int           trap_MemoryRemaining( void );
 void          trap_R_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);

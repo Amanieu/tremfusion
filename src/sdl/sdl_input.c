@@ -315,6 +315,9 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 	{
 		unsigned char ch = (unsigned char)keysym->unicode & 0xFF;
 
+		if( ch >= '0' && ch <= '9' )
+			*key = ch;
+
 		switch( ch )
 		{
 			case 127: // ASCII delete
@@ -391,9 +394,6 @@ static void IN_GobbleMotionEvents( void )
 {
 	SDL_Event dummy[ 1 ];
 
-	if ( !uivm || VM_Call( uivm, UI_MOUSE_POSITION ) == -1 )
-		return;
-
 	// Gobble any mouse motion events
 	SDL_PumpEvents( );
 	while( SDL_PeepEvents( dummy, 1, SDL_GETEVENT,
@@ -410,12 +410,6 @@ static void IN_GetUIMousePosition( int *x, int *y )
 	if( uivm )
 	{
 		int pos = VM_Call( uivm, UI_MOUSE_POSITION );
-		if( pos == -1 )
-		{
-			*x = glConfig.vidWidth / 2;
-			*y = glConfig.vidHeight / 2;
-			return;
-		}
 		*x = pos & 0xFFFF;
 		*y = ( pos >> 16 ) & 0xFFFF;
 
@@ -535,8 +529,7 @@ void IN_DeactivateMouse( void )
 	if( !r_fullscreen->integer )
 	{
 		if( ( Key_GetCatcher( ) == KEYCATCH_UI ) &&
-				( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) ) == (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) &&
-				uivm && VM_Call( uivm, UI_MOUSE_POSITION ) != -1 )
+				( SDL_GetAppState( ) & (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) ) == (SDL_APPMOUSEFOCUS|SDL_APPINPUTFOCUS) )
 			SDL_ShowCursor( 0 );
 		else
 			SDL_ShowCursor( 1 );
@@ -989,8 +982,7 @@ void IN_Frame( void )
 
 	// If not DISCONNECTED (main menu) or ACTIVE (in game), we're loading
 	loading = !!( cls.state != CA_DISCONNECTED && cls.state != CA_ACTIVE );
-	cursorShowing = ( Key_GetCatcher( ) == KEYCATCH_UI && uivm &&
-	                  VM_Call( uivm, UI_MOUSE_POSITION ) != -1 );
+	cursorShowing = Key_GetCatcher( ) & KEYCATCH_UI;
 
 	if( !r_fullscreen->integer && ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) )
 	{
@@ -1020,7 +1012,7 @@ void IN_Frame( void )
 	else
 		IN_ActivateMouse( );
 
-	if( !mouseActive && cursorShowing )
+	if( !mouseActive )
 	{
 		SDL_GetMouseState( &x, &y );
 		IN_SetUIMousePosition( x, y );
