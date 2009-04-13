@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
-#define GAME_VERSION            "tremfusion"
+#define GAME_VERSION            "base"
 
 #define DEFAULT_GRAVITY         800
 
@@ -423,8 +423,7 @@ typedef enum
 } buildable_t;
 
 
-#define B_HEALTH_BITS       12
-#define B_HEALTH_MASK       ((1<<B_HEALTH_BITS)-1)
+#define B_HEALTH_MASK 255
 
 // entityState_t->event values
 // entity events are for effects that take place reletive
