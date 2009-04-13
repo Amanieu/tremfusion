@@ -3053,8 +3053,12 @@ static void PM_Weapon( void )
         PM_ContinueTorsoAnim( TORSO_STAND );
     }
 
+    PM_ContinueWeaponAnim( WANIM_IDLE );
+
     return;
   }
+
+  // start the animation even if out of ammo
 
   maxClips = BG_Weapon( pm->ps->weapon )->maxClips;
 
@@ -3106,6 +3110,7 @@ static void PM_Weapon( void )
 
     //drop the weapon
     PM_StartTorsoAnim( TORSO_DROP );
+    PM_StartWeaponAnim( WANIM_RELOAD );
 
     pm->ps->weaponTime += BG_Weapon( pm->ps->weapon )->reloadTime;
     return;
@@ -3280,40 +3285,78 @@ static void PM_Weapon( void )
         if( pm->ps->weaponstate == WEAPON_READY )
         {
           PM_StartTorsoAnim( TORSO_ATTACK );
+          PM_StartWeaponAnim( WANIM_ATTACK1 );
         }
         break;
 
       case WP_BLASTER:
         PM_StartTorsoAnim( TORSO_ATTACK2 );
+        PM_StartWeaponAnim( WANIM_ATTACK1 );
         break;
 
       default:
         PM_StartTorsoAnim( TORSO_ATTACK );
+        PM_StartWeaponAnim( WANIM_ATTACK1 );
         break;
     }
   }
   else
   {
-    if( pm->ps->weapon == WP_ALEVEL4 )
-    {
-      //hack to get random attack animations
-      int num = abs( pm->ps->commandTime ) % 3;
+    //hack to get random attack animations
+    int num = abs( pm->ps->commandTime ) % 3;
 
-      if( num == 0 )
-        PM_ForceLegsAnim( NSPA_ATTACK1 );
-      else if( num == 1 )
-        PM_ForceLegsAnim( NSPA_ATTACK2 );
-      else if( num == 2 )
-        PM_ForceLegsAnim( NSPA_ATTACK3 );
-    }
-    else
+    //FIXME: it would be nice to have these hard coded policies in
+    //       weapon.cfg
+    switch( pm->ps->weapon )
     {
-      if( attack1 )
-        PM_ForceLegsAnim( NSPA_ATTACK1 );
-      else if( attack2 )
-        PM_ForceLegsAnim( NSPA_ATTACK2 );
-      else if( attack3 )
-        PM_ForceLegsAnim( NSPA_ATTACK3 );
+      case WP_ALEVEL1_UPG:
+      case WP_ALEVEL1:
+        if( attack1 )
+        {
+          num %= 6;
+          PM_ForceLegsAnim( NSPA_ATTACK1 );
+          PM_StartWeaponAnim( WANIM_ATTACK1 + num );
+        }
+        break;
+
+      case WP_ALEVEL2_UPG:
+        if( attack2 )
+        {
+          PM_ForceLegsAnim( NSPA_ATTACK2 );
+          PM_StartWeaponAnim( WANIM_ATTACK7 );
+        }
+      case WP_ALEVEL2:
+        if( attack1 )
+        {
+          num %= 6;
+          PM_ForceLegsAnim( NSPA_ATTACK1 );
+          PM_StartWeaponAnim( WANIM_ATTACK1 + num );
+        }
+        break;
+
+      case WP_ALEVEL4:
+        num %= 3;
+        PM_ForceLegsAnim( NSPA_ATTACK1 + num );
+        PM_StartWeaponAnim( WANIM_ATTACK1 + num );
+        break;
+
+      default:
+        if( attack1 )
+        {
+          PM_ForceLegsAnim( NSPA_ATTACK1 );
+          PM_StartWeaponAnim( WANIM_ATTACK1 );
+        }
+        else if( attack2 )
+        {
+          PM_ForceLegsAnim( NSPA_ATTACK2 );
+          PM_StartWeaponAnim( WANIM_ATTACK2 );
+        }
+        else if( attack3 )
+        {
+          PM_ForceLegsAnim( NSPA_ATTACK3 );
+          PM_StartWeaponAnim( WANIM_ATTACK3 );
+        }
+        break;
     }
 
     pm->ps->torsoTimer = TIMER_ATTACK;
