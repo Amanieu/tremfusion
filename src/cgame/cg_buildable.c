@@ -633,7 +633,7 @@ static void CG_BuildableParticleEffects( centity_t *cent )
 {
   entityState_t   *es = &cent->currentState;
   team_t          team = BG_Buildable( es->modelindex )->team;
-  int             health = es->generic1 & B_HEALTH_MASK;
+  int             health = es->generic1;
   float           healthFrac = (float)health / B_HEALTH_MASK;
 
   if( !( es->eFlags & EF_B_SPAWNED ) )
@@ -927,7 +927,7 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
       visible = qfalse;
   }
 
-  health = (unsigned char)es->generic1;
+  health = es->generic1;
   healthScale = (float)health / B_HEALTH_MASK;
 
   if( healthScale < 0.0f )
@@ -1427,7 +1427,7 @@ void CG_Buildable( centity_t *cent )
       trap_S_AddLoopingSound( es->number, cent->lerpOrigin, vec3_origin, weapon->readySound );
   }
 
-  health = (unsigned char)es->generic1;
+  health = es->generic1;
   healthScale = (float)health / B_HEALTH_MASK;
 
   if( healthScale < cent->lastBuildableHealthScale &&
