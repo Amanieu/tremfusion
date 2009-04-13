@@ -3412,7 +3412,7 @@ void CL_Init( void ) {
 	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
 	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
