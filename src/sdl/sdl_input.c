@@ -315,6 +315,9 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 	{
 		unsigned char ch = (unsigned char)keysym->unicode & 0xFF;
 
+		if( ch >= '0' && ch <= '9' )
+			*key = ch;
+
 		switch( ch )
 		{
 			case 127: // ASCII delete
