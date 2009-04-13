@@ -575,8 +575,6 @@ issues.
 
 #define	MAX_FILE_HANDLES	64
 
-#define BASEGAME "tremfusion"
-
 #ifdef DEDICATED
 #	define Q3CONFIG_CFG "autogen_server.cfg"
 #else
