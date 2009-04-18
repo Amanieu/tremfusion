@@ -271,6 +271,26 @@ static void GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
+typedef struct vidmode_s
+{
+	int width, height;
+	float pixelAspect;		// pixel width / height
+} vidmode_t;
+vidmode_t vidModes[] =
+{
+	{ 320,	240,	1 },
+	{ 400,	300,	1 },
+	{ 512,	384,	1 },
+	{ 640,	480,	1 },
+	{ 800,	600,	1 },
+	{ 960,	720,	1 },
+	{ 1024,	768,	1 },
+	{ 1152,	864,	1 },
+	{ 1280,	1024,	1 },
+	{ 1600,	1200,	1 },
+	{ 2048,	1536,	1 },
+	{ 856,	480,	1 }
+};
 static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 {
 	const char*   glstring;
@@ -298,6 +318,31 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	if( !failSafe )
 	{
+		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
+		{
+			for ( i = 0; i < 12; i++ )
+			{
+				if ( r_width->integer == vidModes[ i ].width &&
+				     r_height->integer == vidModes[ i ].height &&
+				     r_pixelAspect->integer == vidModes[ i ].pixelAspect )
+				{
+					Cvar_SetValue( "r_mode", i );
+					break;
+				}
+			}
+			if ( i == 12 )
+				Cvar_Set( "r_mode", "-1" );
+		}
+		else if ( r_mode->modified && r_mode->integer >= 0 )
+		{
+			Cvar_SetValue( "r_width", vidModes[ r_mode->integer ].width );
+			Cvar_SetValue( "r_height", vidModes[ r_mode->integer ].height );
+			Cvar_SetValue( "r_pixelAspect", vidModes[ r_mode->integer ].pixelAspect );
+		}
+		r_width->modified = qfalse;
+		r_height->modified = qfalse;
+		r_pixelAspect->modified = qfalse;
+		r_mode->modified = qfalse;
 		glConfig.vidWidth = ( r_width->integer ? r_width->integer : desktop_w );
 		glConfig.vidHeight = ( r_height->integer ? r_height->integer : desktop_h );
 		glConfig.windowAspect = glConfig.vidWidth / ( (float)glConfig.vidHeight * r_pixelAspect->value );
