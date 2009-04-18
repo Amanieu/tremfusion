@@ -770,8 +770,8 @@ else # ifeq freebsd
 
 ifeq ($(PLATFORM),openbsd)
 
-  #default to i386, no tests done on anything else
-  ARCH=i386
+  #default to x86, no tests done on anything else
+  ARCH=x86
 
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
@@ -828,10 +828,6 @@ else # ifeq openbsd
 #############################################################################
 
 ifeq ($(PLATFORM),netbsd)
-
-  ifeq ($(shell uname -m),i386)
-    ARCH=x86
-  endif
 
   LIBS=-lm
   SHLIBEXT=so
