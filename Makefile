@@ -342,7 +342,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_PYTHON),1)
-    BASE_CFLAGS += -DUSE_PYTHON -I/usr/include/python2.5
+    BASE_CFLAGS += -DUSE_PYTHON $(shell python-config --include)
   endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
@@ -426,7 +426,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_PYTHON),1)
-    LIBS += -lpython2.5
+    LIBS += $(shell python-config --ldflags)
   endif
 
   ifeq ($(ARCH),x86)
