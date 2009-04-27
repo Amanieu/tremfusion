@@ -243,10 +243,7 @@ extern int demo_protocols[];
 
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.tremforges.net"
-#endif
-#ifndef MOTD_SERVER_NAME
-#define MOTD_SERVER_NAME	"master.tremforges.net"
+#define MASTER_SERVER_NAME	"master.tremfusion.net"
 #endif
 
 #define	PORT_MASTER			30710

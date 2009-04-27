@@ -1307,16 +1307,15 @@ static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
 	int len;
-	//get the length of both files
+
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
-	//check lengths and set cl_guid accordinally
-	if( len == QKEY_SIZE ) {
-		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
-	} else {
-		Cvar_Set( "cl_guid", "" );
-	}
 
+	if( len != QKEY_SIZE ) 
+		Cvar_Set( "cl_guid", "" );
+	else
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
+			prefix, prefix_len ) );
 }
 
 
@@ -1468,13 +1467,13 @@ CL_GetMotd_f
 void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
-	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
-	if ( !NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
+	Com_DPrintf( "Resolving %s\n", MASTER_SERVER_NAME );
+	if ( !NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
 		return;
 	}
 	cls.updateServer.port = BigShort( PORT_MASTER );
-	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MOTD_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
 		cls.updateServer.ip[0], cls.updateServer.ip[1],
 		cls.updateServer.ip[2], cls.updateServer.ip[3],
 		BigShort( cls.updateServer.port ) );
