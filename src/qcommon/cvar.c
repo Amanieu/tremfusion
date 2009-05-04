@@ -111,6 +111,7 @@ float Cvar_VariableValue( const char *var_name ) {
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return 0;
+	if ( var->update_fuction ) var->update_fuction( var->name );
 	return var->value;
 }
 
@@ -126,6 +127,7 @@ int Cvar_VariableIntegerValue( const char *var_name ) {
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return 0;
+	if ( var->update_fuction ) var->update_fuction( var->name );
 	return var->integer;
 }
 
@@ -141,6 +143,7 @@ char *Cvar_VariableString( const char *var_name ) {
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return "";
+	if (var->update_fuction) var->update_fuction( var->name );
 	return var->string;
 }
 
@@ -154,6 +157,7 @@ void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 	cvar_t *var;
 	
 	var = Cvar_FindVar (var_name);
+	if (var && var->update_fuction ) var->update_fuction( var->name );
 	if (!var) {
 		*buffer = 0;
 	}
@@ -325,6 +329,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var = Cvar_FindVar (var_name);
 	if ( var ) {
 		var_value = Cvar_Validate( var, var_value, qfalse );
+		if ( var->update_fuction ) var->update_fuction( var->name );
 
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
@@ -414,6 +419,7 @@ Prints the value, default, and latched string of the given variable
 ============
 */
 void Cvar_Print( cvar_t *v ) {
+        if ( v->update_fuction ) v->update_fuction( v->name );
 	Com_Printf ("\"%s\" is:\"%s" S_COLOR_WHITE "\"",
 			v->name, v->string );
 
@@ -1156,6 +1162,21 @@ void Cvar_CompleteCvarName( char *args, int argNum )
 	}
 }
 
+void Cvar_SetUpdateFunction( char *var_name, cvar_update_function function )
+{
+        cvar_t *var;
+        var = Cvar_Set2( var_name, "None", qfalse);
+        var->update_fuction = function;
+}
+
+static int test_value = 0; 
+
+void test_update_function( char *var_name )
+{
+        Com_Printf("test_update_function called\n");
+        Cvar_Set( var_name, va("%d", test_value++));
+}
+
 /*
 ============
 Cvar_Init
@@ -1182,4 +1203,6 @@ void Cvar_Init (void) {
 	Cmd_SetCommandCompletionFunc( "reset", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("cvarlist", Cvar_List_f);
 	Cmd_AddCommand ("cvar_restart", Cvar_Restart_f);
+	Cvar_SetUpdateFunction( "test_update_var", &test_update_function);
+	
 }

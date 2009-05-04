@@ -874,8 +874,11 @@ default values.
 #define CVAR_PROTECTED		8192	// prevent modifying this var from VMs or the server
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
+typedef struct cvar_s cvar_t;
+typedef  void (*cvar_update_function)( char *); 
+
 // nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s {
+struct cvar_s {
 	char			*name;
 	char			*string;
 	char			*resetString;		// cvar_restart will reset to this value
@@ -891,7 +894,8 @@ typedef struct cvar_s {
 	float			max;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
-} cvar_t;
+	cvar_update_function update_fuction;
+};
 
 #define	MAX_CVAR_VALUE_STRING	256
 
