@@ -242,7 +242,7 @@ PROTOCOL
 extern int demo_protocols[];
 
 // override on command line, config files etc.
-#ifndef MASTER_SERVER_NAME\
+#ifndef MASTER_SERVER_NAME
 #define MASTER_SERVER_NAME	"master.tremulous.net"
 #endif
 #ifndef MOTD_SERVER_NAME
