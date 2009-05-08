@@ -165,6 +165,12 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	va_end (argptr);
 	is_new_line = msg[strlen(msg) - 1] == '\n';
 
+	// hack to get skipnotify working with timestamps
+	if ( buf != msg && !Q_strncmp( buf, "[skipnotify]", 12 ) ) {
+		memmove(msg + 12, msg, 16);
+		memcpy(msg, "[skipnotify]", 12);
+	}
+
 	if ( rd_buffer ) {
 		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
 			rd_flush(rd_buffer);
@@ -182,7 +188,10 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 #endif
 
 	// echo to dedicated console and early console
-	Sys_Print( msg );
+	if ( !Q_strncmp( msg, "[skipnotify]", 12 ) )
+		Sys_Print( msg + 12 );
+	else
+		Sys_Print( msg );
 
 	// logfile
 	if ( com_logfile && com_logfile->integer ) {
@@ -219,7 +228,10 @@ void QDECL Com_Printf( const char *fmt, ... ) {
       opening_qconsole = qfalse;
 		}
 		if ( logfile && FS_Initialized()) {
-			FS_Write(msg, strlen(msg), logfile);
+			if ( !Q_strncmp( msg, "[skipnotify]", 12 ) )
+				FS_Write(msg + 12, strlen(msg + 12), logfile);
+			else
+				FS_Write(msg, strlen(msg), logfile);
 		}
 	}
 }

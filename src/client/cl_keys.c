@@ -605,7 +605,7 @@ void Console_Key (int key) {
 			g_consoleField.cursor++;
 		}
 
-		Com_Printf ( "%s^7%s\n", cl_consolePrompt->string, g_consoleField.buffer );
+		Com_Printf ( "[skipnotify]%s^7%s\n", cl_consolePrompt->string, g_consoleField.buffer );
 
 		// leading slash is an explicit command
 		if ( g_consoleField.buffer[0] == '\\' || g_consoleField.buffer[0] == '/' ) {
