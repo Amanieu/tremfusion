@@ -1161,18 +1161,17 @@ static void G_UpdateZapEffect( zap_t *zap )
 {
   int       j;
   gentity_t *effect = zap->effectChannel;
-  int       targets[MAX_ZAP_TARGETS + 1];
+  int       targets[MAX_ZAP_TARGETS];
 
   effect->s.eType = ET_LEV2_ZAP_CHAIN;
   effect->classname = "lev2zapchain";
   G_SetOrigin( effect, zap->creator->s.origin );
-  targets[ 0 ] = zap->creator->s.number;
   for( j = 0; j < zap->numTargets; j++ )
   {
     int number = zap->targets[ j ]->s.number;
-    targets[ j + 1 ] = number;
+    targets[ j ] = number;
   }
-  BG_PackZapTargets( &effect->s, targets, zap->numTargets  );
+  BG_PackZapTargets( &effect->s, zap->creator->s.number, targets, zap->numTargets);
   trap_LinkEntity( effect );
 }
 
@@ -1201,13 +1200,18 @@ static void G_CreateNewZap( gentity_t *creator, gentity_t *target )
 
       zap->targets[ 0 ] = target;
       zap->numTargets = 1;
-
-      for( j = 1; j < MAX_ZAP_TARGETS && zap->targets[ j - 1 ]; j++ )
+      G_Damage( target, creator , zap->creator, forward, target->s.origin,
+                LEVEL2_AREAZAP_DMG, DAMAGE_NO_KNOCKBACK | DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP );        
+      for( j = 1; j < MAX_ZAP_TARGETS; j++ )
       {
         zap->targets[ j ] = G_FindNewZapTarget( zap->targets[ 0 ] );
 
         if( zap->targets[ j ] )
+        {
           zap->numTargets++;
+          G_Damage( zap->targets[ j ], zap->targets[ 0 ] , zap->creator, forward, target->s.origin,
+                    LEVEL2_AREAZAP_DMG, DAMAGE_NO_KNOCKBACK | DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP );        
+        }
       }
 
       zap->effectChannel = G_Spawn( );
@@ -1254,7 +1258,7 @@ void G_UpdateZaps( int msec )
 
         }
       }
-
+      /*
       if( zap->numTargets )
       {
         damage = ceil( ( (float)msec / LEVEL2_AREAZAP_TIME ) *
@@ -1287,7 +1291,7 @@ void G_UpdateZaps( int msec )
           }
         }
       }
-
+      */
       G_UpdateZapEffect( zap );
 
       zap->timeToLive -= msec;
