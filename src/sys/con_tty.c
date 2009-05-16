@@ -178,7 +178,6 @@ void CON_Shutdown( void )
 
   // Restore blocking to stdin reads
   fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) & ~O_NONBLOCK );
-  ttycon_on = qfalse;
 }
 
 /*

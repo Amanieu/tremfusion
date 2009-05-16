@@ -921,7 +921,7 @@ void S_PaintChannels( int endtime ) {
 	int		ltime, count;
 	int		sampleOffset;
 
-	snd_vol = s_volume->value*s_gain*255;
+	snd_vol = s_volume->value*255;
 
 //Com_Printf ("%i to %i\n", s_paintedtime, endtime);
 	while ( s_paintedtime < endtime ) {

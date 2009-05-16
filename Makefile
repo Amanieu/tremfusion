@@ -1,5 +1,5 @@
 #
-# TremFusion Makefile
+# Tremfusion Makefile
 #
 # GNU Make required
 #
@@ -40,12 +40,10 @@ ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
 endif
 
-# SMP only works on Mac, Linux and Windows
+# SMP only works on Mac and Windows
 ifneq ($(PLATFORM),darwin)
 ifneq ($(PLATFORM),mingw32)
-ifneq ($(PLATFORM),linux)
   BUILD_CLIENT_SMP = 0
-endif
 endif
 endif
 
@@ -86,6 +84,10 @@ else
   endif
 endif
 export CROSS_COMPILING
+
+ifndef COPYDIR
+  COPYDIR="/usr/local/games/tremulous"
+endif
 
 ifndef MOUNT_DIR
   MOUNT_DIR=src
@@ -164,6 +166,10 @@ ifndef USE_FREETYPE
   USE_FREETYPE=1
 endif
 
+ifndef USE_OLD_HOMEPATH
+  USE_OLD_HOMEPATH=1
+endif
+
 ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
@@ -218,7 +224,7 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
 endif
 
 # version info
-VERSION_NUMBER=0.99
+VERSION_NUMBER=0.9
 
 ifeq ($(USE_SCM_VERSION),1)
   # For svn
@@ -261,22 +267,6 @@ LIB=lib
 
 INSTALL=install
 MKDIR=mkdir
-
-ifndef BUILDROOT
-  BUILDROOT = ""
-endif
-ifndef INSTALL_PREFIX
-  INSTALL_PREFIX = "/usr/local"
-endif
-ifndef BINDIR
-  BINDIR = $(INSTALL_PREFIX)/bin
-endif
-ifndef LIBDIR
-  LIBDIR = $(INSTALL_PREFIX)/$(LIB)
-endif
-ifndef DATADIR
-  DATADIR = $(INSTALL_PREFIX)/share
-endif
 
 ifeq ($(PLATFORM),linux)
 
@@ -358,10 +348,6 @@ ifeq ($(PLATFORM),linux)
     BASE_CFLAGS += -maltivec
     HAVE_VM_COMPILED=true
   endif
-  ifeq ($(ARCH),sparc)
-    OPTIMIZE += -mtune=ultrasparc3 -mv8plus
-    HAVE_VM_COMPILED=true
-  endif
   endif
   endif
 
@@ -370,6 +356,8 @@ ifeq ($(PLATFORM),linux)
   else
     ifeq ($(USE_SSE),1)
       BASE_CFLAGS += -msse -mfpmath=sse
+    else
+      BASE_CFLAGS += -U__SSE__ -U__SSE2__
     endif
   endif
 
@@ -381,9 +369,7 @@ ifeq ($(PLATFORM),linux)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  BASE_CFLAGS+=-I/usr/X11R6/include
-  THREAD_LDFLAGS=-L/usr/X11R6/$(LIB)
-  THREAD_LIBS=-lpthread -lX11
+  THREAD_LIBS=-lpthread
   LIBS=-ldl -lm
 
   CLIENT_LIBS += $(shell sdl-config --libs) -lGL
@@ -893,6 +879,7 @@ ifeq ($(PLATFORM),sunos)
   CC=gcc
   INSTALL=ginstall
   MKDIR=gmkdir
+  COPYDIR="/usr/local/share/games/tremulous"
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86
@@ -959,7 +946,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared  --no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin
@@ -973,18 +960,18 @@ endif #SunOS
 TARGETS =
 
 ifneq ($(BUILD_SERVER),0)
-  TARGETS += $(B)/tremfusionded.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremded.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT),0)
-  TARGETS += $(B)/tremfusion.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous.$(ARCH)$(BINEXT)
   ifneq ($(BUILD_CLIENT_SMP),0)
-    TARGETS += $(B)/tremfusion-smp.$(ARCH)$(BINEXT)
+    TARGETS += $(B)/tremulous-smp.$(ARCH)$(BINEXT)
   endif
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
-  TARGETS += $(B)/tremfusion-tty.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_GAME_SO),0)
@@ -1045,6 +1032,7 @@ ifeq ($(USE_NEURAL_NET),1)
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
+BASE_CFLAGS += -DUSE_OLD_HOMEPATH=$(USE_OLD_HOMEPATH)
 
 ifeq ($(V),1)
   echo_cmd=@:
@@ -1143,7 +1131,7 @@ endif
 # an informational message, then start building
 targets: makedirs
 	@echo ""
-	@echo "Building TremFusion in $(B):"
+	@echo "Building Tremulous in $(B):"
 	@echo "  PLATFORM: $(PLATFORM)"
 	@echo "  ARCH: $(ARCH)"
 	@echo "  VERSION: $(VERSION)"
@@ -1197,30 +1185,6 @@ makedirs:
 	@if [ ! -d $(B)/tools/etc ];then $(MKDIR) $(B)/tools/etc;fi
 	@if [ ! -d $(B)/tools/rcc ];then $(MKDIR) $(B)/tools/rcc;fi
 	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
-
-#############################################################################
-# INSTALL
-#############################################################################
-
-install: release run-tremfusion.sh
-	@echo ""
-	@echo "Installing TremFusion in $(BUILDROOT)$(INSTALL_PREFIX):"
-	@if [ ! -d $(BUILDROOT)$(INSTALL_PREFIX) ];then $(MKDIR) -p $(BUILDROOT)$(INSTALL_PREFIX);fi
-	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
-	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
-	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
-
-run-tremfusion.sh:
-	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
-	@sed -ie "s!@LIBDIR@!$(LIBDIR)!" run-tremfusion.sh
-	@sed -ie "s!@DATADIR@!$(DATADIR)!" run-tremfusion.sh
-
 
 #############################################################################
 # QVM BUILD TOOLS
@@ -1615,9 +1579,6 @@ ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),ppc64)
     Q3OBJ_ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
   endif
-  ifeq ($(ARCH),sparc)
-    Q3OBJ += $(B)/client/vm_sparc.o
-  endif
 endif
 
 ifeq ($(PLATFORM),mingw32)
@@ -1645,19 +1606,19 @@ Q3POBJ_SMP = \
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremfusion-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremulous-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(THREAD_LDFLAGS) \
-       -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
+       -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
@@ -1812,9 +1773,6 @@ ifeq ($(HAVE_VM_COMPILED),true)
   ifeq ($(ARCH),ppc64)
     Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
   endif
-  ifeq ($(ARCH),sparc)
-    Q3DOBJ += $(B)/ded/vm_sparc.o
-  endif
 endif
 
 ifeq ($(PLATFORM),mingw32)
@@ -1828,14 +1786,14 @@ else
     $(B)/ded/con_tty.o
 endif
 
-$(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
+$(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
 
 
 #############################################################################
-## TREMFUSION CGAME
+## TREMULOUS CGAME
 #############################################################################
 
 CGOBJ_ = \
@@ -1887,7 +1845,7 @@ $(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMFUSION GAME
+## TREMULOUS GAME
 #############################################################################
 
 GOBJ_ = \
@@ -1950,7 +1908,7 @@ $(B)/base/vm/game.qvm: $(GVMOBJ) $(GDIR)/g_syscalls.asm $(Q3ASM)
 
 
 #############################################################################
-## TREMFUSION UI
+## TREMULOUS UI
 #############################################################################
 
 UIOBJ_ = \
@@ -2182,6 +2140,12 @@ toolsclean2:
 distclean:
 	@rm -rf $(BUILD_DIR)
 
+dist:
+	rm -rf tremulous-$(SCM_VERSION)
+	svn export . tremulous-$(SCM_VERSION)
+	tar --owner=root --group=root --force-local -cjf tremulous-$(SCM_VERSION).tar.bz2 tremulous-$(SCM_VERSION)
+	rm -rf tremulous-$(SCM_VERSION)
+
 #############################################################################
 # DEPENDENCIES
 #############################################################################
@@ -2191,6 +2155,6 @@ TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
 -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 
 .PHONY: all clean clean2 clean-debug clean-release copyfiles \
-	debug default distclean makedirs \
+	debug default dist distclean makedirs \
 	release targets \
 	toolsclean toolsclean2 toolsclean-debug toolsclean-release

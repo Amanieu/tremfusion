@@ -42,7 +42,6 @@ void S_Update_( void );
 void S_Base_StopAllSounds(void);
 void S_Base_StopBackgroundTrack( void );
 
-float			s_gain;
 snd_stream_t	*s_backgroundStream = NULL;
 static char		s_backgroundLoop[MAX_QPATH];
 //static char		s_backgroundMusic[MAX_QPATH]; //TTimo: unused
@@ -126,41 +125,32 @@ void S_Base_SoundInfo(void) {
 static
 void S_Base_StartCapture( void )
 {
-#ifdef USE_OPENAL
-	S_AL_StartCapture();
-#endif
+	// !!! FIXME: write me.
 }
 
 static
 int S_Base_AvailableCaptureSamples( void )
 {
-#ifdef USE_OPENAL
-	return S_AL_AvailableCaptureSamples();
-#else
+	// !!! FIXME: write me.
 	return 0;
-#endif
 }
 
 static
 void S_Base_Capture( int samples, byte *data )
 {
-#ifdef USE_OPENAL
-	S_AL_Capture( samples, data );
-#endif
+	// !!! FIXME: write me.
 }
 
 static
 void S_Base_StopCapture( void )
 {
-#ifdef USE_OPENAL
-	S_AL_StopCapture();
-#endif
+	// !!! FIXME: write me.
 }
 
 static
 void S_Base_MasterGain( float val )
 {
-	s_gain = val;
+	// !!! FIXME: write me.
 }
 #endif
 
@@ -1516,7 +1506,6 @@ qboolean S_Base_Init( soundInterface_t *si ) {
 	if ( r ) {
 		s_soundStarted = 1;
 		s_soundMuted = 1;
-		s_gain = 1.0f;
 //		s_numSfx = 0;
 
 		Com_Memset(sfxHash, 0, sizeof(sfx_t *)*LOOP_HASH);
@@ -1552,9 +1541,6 @@ qboolean S_Base_Init( soundInterface_t *si ) {
 	si->SoundList = S_Base_SoundList;
 
 #ifdef USE_VOIP
-#ifdef USE_OPENAL
-	S_AL_InitCapture( qfalse );
-#endif
 	si->StartCapture = S_Base_StartCapture;
 	si->AvailableCaptureSamples = S_Base_AvailableCaptureSamples;
 	si->Capture = S_Base_Capture;

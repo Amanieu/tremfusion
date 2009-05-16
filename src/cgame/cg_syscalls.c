@@ -442,6 +442,16 @@ void    trap_SetUserCmdValue( int stateValue, float sensitivityScale )
   syscall( CG_SETUSERCMDVALUE, stateValue, PASSFLOAT( sensitivityScale ) );
 }
 
+void    testPrintInt( char *string, int i )
+{
+  syscall( CG_TESTPRINTINT, string, i );
+}
+
+void    testPrintFloat( char *string, float f )
+{
+  syscall( CG_TESTPRINTFLOAT, string, PASSFLOAT(f) );
+}
+
 int trap_MemoryRemaining( void )
 {
   return syscall( CG_MEMORY_REMAINING );

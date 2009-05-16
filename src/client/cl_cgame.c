@@ -645,9 +645,10 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 
 	case CG_GETDEMOSTATE:
 		return CL_DemoState( );
-	// unused
 	case CG_GETDEMOPOS:
+		return CL_DemoPos( );
 	case CG_GETDEMONAME:
+		CL_DemoName( VMA(1), args[2] );
 		return 0;
 
 	case CG_KEY_KEYNUMTOSTRINGBUF:
@@ -698,6 +699,8 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return FloatAsInt( floor( VMF(1) ) );
 	case CG_CEIL:
 		return FloatAsInt( ceil( VMF(1) ) );
+	case CG_ACOS:
+		return FloatAsInt( Q_acos( VMF(1) ) );
 
 	case CG_S_STOPBACKGROUNDTRACK:
 		S_StopBackgroundTrack();

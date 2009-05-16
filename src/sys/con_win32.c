@@ -120,10 +120,6 @@ CON_Shutdown
 */
 void CON_Shutdown( void )
 {
-	static qboolean shutdown = qfalse;
-	if (shutdown)
-		return;
-	shutdown = qtrue;
 	SetConsoleMode( qconsole_hin, qconsole_orig_mode );
 	SetConsoleCursorInfo( qconsole_hout, &qconsole_orig_cursorinfo );
 	CloseHandle( qconsole_hout );

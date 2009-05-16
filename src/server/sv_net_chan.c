@@ -133,7 +133,23 @@ SV_Netchan_TransmitNextFragment
 =================
 */
 void SV_Netchan_TransmitNextFragment( client_t *client ) {
-	Netchan_TransmitNextFragment( &client->netchan );
+
+	int delay = 0;
+	
+	if( client->ping < sv_minPing->integer && client->lastCheck <= svs.time  )
+	{
+		client->delayRate += 5;
+		client->lastCheck = svs.time + 750;
+	}
+	else if( client->ping >= sv_minPing->integer && client->delayRate != 0  && client->lastCheck <= svs.time )
+	{
+		client->delayRate -= 5;
+		client->lastCheck = svs.time + 750;
+	}
+	
+	delay = client->delayRate;
+	
+	Netchan_TransmitNextFragment( &client->netchan, delay );
 	if (!client->netchan.unsentFragments)
 	{
 		// make sure the netchan queue has been properly initialized (you never know)
@@ -146,7 +162,7 @@ void SV_Netchan_TransmitNextFragment( client_t *client ) {
 			Com_DPrintf("#462 Netchan_TransmitNextFragment: popping a queued message for transmit\n");
 			netbuf = client->netchan_start_queue;
 			SV_Netchan_Encode( client, &netbuf->msg );
-			Netchan_Transmit( &client->netchan, netbuf->msg.cursize, netbuf->msg.data );
+			Netchan_Transmit( &client->netchan, netbuf->msg.cursize, netbuf->msg.data, delay );
 			// pop from queue
 			client->netchan_start_queue = netbuf->next;
 			if (!client->netchan_start_queue) {
@@ -173,6 +189,22 @@ then buffer them and make sure they get sent in correct order
 */
 
 void SV_Netchan_Transmit( client_t *client, msg_t *msg) {	//int length, const byte *data ) {
+
+	int delay = 0;
+	
+	if( client->ping < sv_minPing->integer && client->lastCheck <= svs.time  )
+	{
+		client->delayRate += 5;
+		client->lastCheck = svs.time + 750;
+	}
+	else if( client->ping >= sv_minPing->integer && client->delayRate != 0  && client->lastCheck <= svs.time )
+	{
+		client->delayRate -= 5;
+		client->lastCheck = svs.time + 750;
+	}
+	
+	delay = client->delayRate;
+	
 	MSG_WriteByte( msg, svc_EOF );
 	if (client->netchan.unsentFragments) {
 		netchan_buffer_t *netbuf;
@@ -186,10 +218,10 @@ void SV_Netchan_Transmit( client_t *client, msg_t *msg) {	//int length, const by
 		*client->netchan_end_queue = netbuf;
 		client->netchan_end_queue = &(*client->netchan_end_queue)->next;
 		// emit the next fragment of the current message for now
-		Netchan_TransmitNextFragment(&client->netchan);
+		Netchan_TransmitNextFragment(&client->netchan, delay);
 	} else {
 		SV_Netchan_Encode( client, msg );
-		Netchan_Transmit( &client->netchan, msg->cursize, msg->data );
+		Netchan_Transmit( &client->netchan, msg->cursize, msg->data, delay );
 	}
 }
 

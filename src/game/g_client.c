@@ -853,8 +853,27 @@ static void G_ClientCleanName( const char *in, char *out, int outSize )
     if( *in < ' ' || *in > '}' || *in == '`' )
       continue;
 
-    // check emoticons
-    if( !g_emoticonsAllowedInNames.integer && G_IsEmoticon( in, &escaped ) )
+    // check colors
+    if( Q_IsColorString( in ) )
+    {
+      in++;
+
+      // make sure room in dest for both chars
+      if( len > outSize - 2 )
+        break;
+
+      *out++ = Q_COLOR_ESCAPE;
+
+      // don't allow black in a name, period
+      if( ColorIndex( *in ) == 0 )
+        *out++ = COLOR_WHITE;
+      else
+        *out++ = *in;
+
+      len += 2;
+      continue;
+    }
+    else if( !g_emoticonsAllowedInNames.integer && G_IsEmoticon( in, &escaped ) )
     {
       // make sure room in dest for both chars
       if( len > outSize - 2 )
@@ -1202,8 +1221,8 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   gentity_t *ent;
+  char      guid[ 33 ];
   char      reason[ MAX_STRING_CHARS ] = {""};
-  int       i;
 
   ent = &g_entities[ clientNum ];
   client = &level.clients[ clientNum ];
@@ -1213,7 +1232,7 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot )
   trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
   value = Info_ValueForKey( userinfo, "cl_guid" );
-  Q_strncpyz( client->pers.guid, value, sizeof( client->pers.guid ) );
+  Q_strncpyz( guid, value, sizeof( guid ) );
 
   // check for admin ban
   if( G_admin_ban_check( userinfo, reason, sizeof( reason ) ) )
@@ -1229,23 +1248,14 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot )
     return "Invalid password";
 
   // add guid to session so we don't have to keep parsing userinfo everywhere
-  for( i = 0; i < sizeof( client->pers.guid ) - 1 &&
-              isxdigit( client->pers.guid[ i ] ); i++ );
-  if( i < sizeof( client->pers.guid ) - 1 )
-    return "Invalid GUID";
-  for( i = 0; i < level.maxclients; i++ )
+  if( !guid[0] )
   {
-    if( level.clients[ i ].pers.connected == CON_DISCONNECTED )
-      continue;
-    if( !Q_stricmp( client->pers.guid, level.clients[ i ].pers.guid ) )
-    {
-      if( !G_ClientIsLagging( level.clients + i ) )
-      {
-        trap_SendServerCommand( i, "cp \"Your GUID is not secure\"" );
-        return "Duplicate GUID";
-      }
-      trap_DropClient( i, "Ghost" );
-    }
+    Q_strncpyz( client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      sizeof( client->pers.guid ) );
+  }
+  else
+  {
+    Q_strncpyz( client->pers.guid, guid, sizeof( client->pers.guid ) );
   }
 
   // save ip
@@ -1303,6 +1313,16 @@ void ClientBegin( int clientNum )
   gclient_t *client;
   char      userinfo[ MAX_INFO_STRING ];
   int       flags;
+
+  trap_GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
+
+  if ( Q_stricmp( Info_ValueForKey( userinfo, "cg_version" ), PRODUCT_NAME ) ) {
+    trap_SendServerCommand( clientNum, "disconnect \"Your client is missing files.\n\n"
+      "To enjoy our games in full colour and detail you need to enable autodownload (cl_allowDownload 1).\n"
+      "For a client with fast http-download visit tremfusion.tremforges.net\n\n"
+      "Open your console and enter: /cl_allowDownload 1\n\"" );
+    return;
+  }
 
   ent = g_entities + clientNum;
 

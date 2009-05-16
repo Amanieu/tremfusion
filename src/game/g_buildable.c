@@ -2131,17 +2131,27 @@ void HMGTurret_Think( gentity_t *self )
   // If not powered droop forward
   if( !( self->powered = G_FindPower( self ) ) )
   {
-    // unpowered turret barrel falls to bottom of range
-    float droop;
-    droop = AngleNormalize180( self->s.angles2[ PITCH ] );
-    if( droop < MGTURRET_VERTICALCAP )
+    //unwind the turret pitch
+    temp = fabs(self->s.angles2[ PITCH ]);
+    if( temp > 180 )
+      temp -= 360;
+
+    //pitch down a little
+    if( temp < MGTURRET_VERTICALCAP )
+      temp += MGTURRET_DROOP_RATE;
+
+    //are we already aimed all the way down?
+    if( temp >= MGTURRET_VERTICALCAP )
     {
-      droop +=  MGTURRET_DROOPSCALE;
-      if( droop > MGTURRET_VERTICALCAP )
-        droop = MGTURRET_VERTICALCAP;
-      self->s.angles2[ PITCH ] = droop;
-      return;
+      //we are all the way down
+      self->s.angles2[ PITCH ] = MGTURRET_VERTICALCAP;
+      self->nextthink = level.time + POWER_REFRESH_TIME;
     }
+    else
+    {
+      self->s.angles2[ PITCH ] = temp;
+    }
+    return;
   }
   // If the current target is not valid find a new enemy
   if( !HMGTurret_CheckTarget( self, self->enemy, qtrue ) )
@@ -3775,7 +3785,7 @@ void G_LayoutLoad( void )
 {
   fileHandle_t f;
   int len;
-  char *layout, *layoutHead;
+  char *layout;
   char map[ MAX_QPATH ];
   int buildable = BA_NONE;
   vec3_t origin = { 0.0f, 0.0f, 0.0f };
@@ -3796,9 +3806,9 @@ void G_LayoutLoad( void )
     G_Printf( "ERROR: layout %s could not be opened\n", level.layout );
     return;
   }
-  layoutHead = layout = BG_Alloc( len + 1 );
+  layout = BG_Alloc( len + 1 );
   trap_FS_Read( layout, len, f );
-  layout[ len ] = '\0';
+  *( layout + len ) = '\0';
   trap_FS_FCloseFile( f );
   while( *layout )
   {
@@ -3806,7 +3816,7 @@ void G_LayoutLoad( void )
     {
       G_Printf( S_COLOR_RED "ERROR: line overflow in %s before \"%s\"\n",
        va( "layouts/%s/%s.dat", map, level.layout ), line );
-      break;
+      return;
     }
     line[ i++ ] = *layout;
     line[ i ] = '\0';
@@ -3828,7 +3838,6 @@ void G_LayoutLoad( void )
     }
     layout++;
   }
-  BG_Free( layoutHead );
 }
 
 /*

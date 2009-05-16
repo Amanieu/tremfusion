@@ -48,6 +48,8 @@ typedef struct {
 	float	finalFrac;		// 0.0 to 1.0 lines of console to display
 
 	int		vislines;		// in scanlines
+
+	vec4_t	color;
 } console_t;
 
 extern	console_t	con;
@@ -95,6 +97,150 @@ void Con_ToggleConsole_f (void) {
 	g_consoleField.widthInChars = g_console_field_width;
 
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_CONSOLE );
+}
+
+/*
+================
+Con_MessageMode_f
+================
+*/
+void Con_MessageMode_f (void) {
+	chat_playerNum = -1;
+	chat_team = qfalse;
+	chat_admins = qfalse;
+	chat_clans = qfalse;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	chatField.widthInChars = 30;
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_MessageMode2_f
+================
+*/
+void Con_MessageMode2_f (void) {
+	chat_playerNum = -1;
+	chat_team = qtrue;
+	chat_admins = qfalse;
+	chat_clans = qfalse;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	chatField.widthInChars = 25;
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_MessageMode3_f
+================
+*/
+void Con_MessageMode3_f (void) {
+	chat_playerNum = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
+		chat_playerNum = -1;
+		return;
+	}
+	chat_team = qfalse;
+	chat_admins = qfalse;
+	chat_clans = qfalse;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	chatField.widthInChars = 30;
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_MessageMode4_f
+================
+*/
+void Con_MessageMode4_f (void) {
+	chat_playerNum = VM_Call( cgvm, CG_LAST_ATTACKER );
+	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
+		chat_playerNum = -1;
+		return;
+	}
+	chat_team = qfalse;
+	chat_admins = qfalse;
+	chat_clans = qfalse;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	chatField.widthInChars = 30;
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_MessageMode5_f
+================
+*/
+void Con_MessageMode5_f (void) {
+	chat_playerNum = -1;
+	chat_team = qfalse;
+	chat_admins = qtrue;
+	chat_clans = qfalse;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	chatField.widthInChars = 25;
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_Prompt_f
+================
+*/
+void Con_Prompt_f (void) {
+	if (Cmd_Argc() < 3)
+	{
+		Com_Printf ("prompt <callback> [prompt]: Opens the chatbox, store the text in ui_sayBuffer and then vstr callback\n");
+		return;
+	}
+
+	chat_playerNum = -1;
+	chat_team = qfalse;
+	chat_admins = qfalse;
+	chat_clans = qfalse;
+	prompt.active = qtrue;
+
+	strcpy(prompt.callback, Cmd_Argv(1));
+
+	// copy the rest of the command line
+	Q_strncpyz(prompt.question, Cmd_ArgsFrom(2), sizeof(prompt.question));
+	
+	Field_Clear( &chatField );
+	chatField.widthInChars = 34 - strlen(prompt.question);
+
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
+}
+
+/*
+================
+Con_MessageMode6_f
+================
+*/
+void Con_MessageMode6_f (void) {
+	chat_playerNum = -1;
+	chat_team = qfalse;
+	chat_admins = qfalse;
+	chat_clans = qtrue;
+	prompt.active = qfalse;
+	Field_Clear( &chatField );
+	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
+	chatField.cursor = strlen( chatField.buffer );
+	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
 }
 
 /*
@@ -178,56 +324,75 @@ void Con_Dump_f (void)
 
 /*
 ================
-Con_Search_f
+Con_Grep_f
 
-Scroll up to the first console line containing a string
+Find all console lines containing a string
 ================
 */
-void Con_Search_f (void)
+void Con_Grep_f (void)
 {
-	int		l, i, x;
+	int		l, x, i;
 	short	*line;
-	char	buffer[MAXPRINTMSG];
-	int		direction;
-	int		c = Cmd_Argc();
+	char	buffer[1024];
+	char	buffer2[1024];
+	char	printbuf[CON_TEXTSIZE];
+	char	*search;
+	char	lastcolor;
 
-	if (c < 2) {
-		Com_Printf ("usage: %s <string1> <string2> <...>\n", Cmd_Argv(0));
+	if (Cmd_Argc() != 2)
+	{
+		Com_Printf ("usage: grep <string>\n");
 		return;
 	}
 
-	if (!Q_stricmp(Cmd_Argv(0), "searchDown")) {
-		direction = 1;
-	} else {
-		direction = -1;
+	// skip empty lines
+	for (l = con.current - con.totallines + 1 ; l <= con.current ; l++)
+	{
+		line = con.text + (l%con.totallines)*con.linewidth;
+		for (x=0 ; x<con.linewidth ; x++)
+			if ((line[x] & 0xff) != ' ')
+				break;
+		if (x != con.linewidth)
+			break;
 	}
 
-	// check the lines
+	// check the remaining lines
 	buffer[con.linewidth] = 0;
-	for (l = con.display - 1 + direction; l <= con.current && con.current - l < con.totallines; l += direction) {
+	search = Cmd_Argv( 1 );
+	printbuf[0] = '\0';
+	lastcolor = 7;
+	for ( ; l <= con.current ; l++)
+	{
 		line = con.text + (l%con.totallines)*con.linewidth;
-		for (i = 0; i < con.linewidth; i++)
-			buffer[i] = line[i] & 0xff;
-		for (x = con.linewidth - 1 ; x >= 0 ; x--) {
+		for(i=0,x=0; i<con.linewidth; i++)
+		{
+			if (line[i] >> 8 != lastcolor)
+			{
+				lastcolor = line[i] >> 8;
+				buffer[x++] = Q_COLOR_ESCAPE;
+				buffer[x++] = lastcolor + '0';
+			}
+			buffer[x++] = line[i] & 0xff;
+		}
+		for (x=con.linewidth-1 ; x>=0 ; x--)
+		{
 			if (buffer[x] == ' ')
 				buffer[x] = 0;
 			else
 				break;
 		}
-		// Don't search commands
-		if (!Q_stricmpn(buffer, Q_CleanStr(va("%s", cl_consolePrompt->string)), Q_PrintStrlen(cl_consolePrompt->string)))
-			continue;
-		for (i = 1; i < c; i++) {
-			if (Q_stristr(buffer, Cmd_Argv(i))) {
-				con.display = l + 1;
-				if (con.display > con.current)
-					con.display = con.current;
-				return;
-			}
+		strcpy(buffer2, buffer);
+		Q_CleanStr(buffer2);
+		if (Q_stristr(buffer2, search))
+		{
+			strcat( printbuf, buffer );
+			strcat( printbuf, "\n" );
 		}
 	}
+	if ( printbuf[0] )
+		Com_Printf( "%s", printbuf );
 }
-
+						
 /*
 ================
 Con_ClearNotify
@@ -352,11 +517,18 @@ void Con_Init (void) {
 	g_consoleField.widthInChars = g_console_field_width;
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
+	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
+	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
+	Cmd_AddCommand ("messagemode3", Con_MessageMode3_f);
+	Cmd_AddCommand ("messagemode4", Con_MessageMode4_f);
+	Cmd_AddCommand ("messagemode5", Con_MessageMode5_f);
+	Cmd_AddCommand ("messagemode6", Con_MessageMode6_f);
+	Cmd_AddCommand ("prompt", Con_Prompt_f);
+	Cmd_SetCommandCompletionFunc( "prompt", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	Cmd_SetCommandCompletionFunc( "condump", Cmd_CompleteTxtName );
-	Cmd_AddCommand ("search", Con_Search_f);
-	Cmd_AddCommand ("searchDown", Con_Search_f);
+	Cmd_AddCommand ("grep", Con_Grep_f);
 }
 
 
@@ -391,7 +563,6 @@ void CL_ConsolePrint( char *txt ) {
 	int		c, l;
 	int		color;
 	qboolean skipnotify = qfalse;		// NERVE - SMF
-	static qboolean is_new_line = qtrue;
 	
 	CL_WriteClientChatLog( txt );
 	
@@ -428,19 +599,20 @@ void CL_ConsolePrint( char *txt ) {
 	}
 	
 	if (!con.initialized) {
+		con.color[0] = 
+		con.color[1] = 
+		con.color[2] =
+		con.color[3] = 1.0f;
 		con.linewidth = -1;
 		Con_CheckResize ();
 		con.initialized = qtrue;
 	}
 
-	if( !skipnotify ) {
+	if( !skipnotify && !( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
-		if( is_new_line && ( com_timestamps && com_timestamps->integer ) )
-			Cmd_TokenizeString( txt + 16 );
-		else
-			Cmd_TokenizeString( txt );
+		Cmd_TokenizeString( txt );
 		CL_GameConsoleText( );
 
 		Cmd_RestoreCmdContext( );
@@ -490,7 +662,6 @@ void CL_ConsolePrint( char *txt ) {
 			break;
 		}
 	}
-	is_new_line = txt[strlen(txt) - 1] == '\n';
 }
 
 
@@ -513,21 +684,20 @@ Draw the editline after a ] prompt
 void Con_DrawInput (void) {
 	int		y;
 	char	prompt[ MAX_STRING_CHARS ];
-	qtime_t realtime;
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
 		return;
 	}
 
-	Com_RealTime( &realtime );
-
 	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
-	Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 %s", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min, cl_consolePrompt->string );
+	re.SetColor( con.color );
 
-	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, colorWhite, qfalse, qfalse );
-
+	Q_strncpyz( prompt, cl_consolePrompt->string, sizeof( prompt ) );
 	Q_CleanStr( prompt );
+
+	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, cl_consolePrompt->string, colorWhite, qfalse, qfalse );
+
 	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue );
 }
 
@@ -684,6 +854,40 @@ void Con_DrawConsole( void ) {
 
 	if( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CGAME ) )
 		return;
+
+	// draw the chat line
+	if( Key_GetCatcher( ) & KEYCATCH_MESSAGE )
+	{
+		int skip;
+
+		if( chat_team )
+		{
+			SCR_DrawBigString( 8, 232, "Team Say:", 1.0f, qfalse );
+			skip = 11;
+		}
+		else if( chat_admins )
+		{
+			SCR_DrawBigString( 8, 232, "Admin Say:", 1.0f, qfalse );
+			skip = 11;
+		}
+		else if (prompt.active)
+		{ 
+			SCR_DrawBigString( 8, 232, prompt.question, 1.0f, qfalse );
+			skip = strlen(prompt.question) + 1;	
+		}
+		else if( chat_clans )
+		{
+			SCR_DrawBigString( 8, 232, "Clan Say:", 1.0f, qfalse );
+			skip = 11;
+		}
+		else
+		{ 
+			SCR_DrawBigString( 8, 232, "Say:", 1.0f, qfalse );
+			skip = 5;
+		}
+
+		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232, qtrue, qtrue );
+	}
 }
 
 //================================================================

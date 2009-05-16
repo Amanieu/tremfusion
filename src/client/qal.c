@@ -159,7 +159,7 @@ qboolean QAL_Init(const char *libname)
 		if( (OpenALLib = Sys_LoadLibrary(fn)) == 0 )
 		{
 #ifdef ALDRIVER_FALLBACK
-			// On some linux distributions there is no libopenal.so.1, but only libopenal.so.0. That one works too.
+			// On some linux distributions there is no libopenal.so.0, but only libopenal.so.1. That one works too.
 			if( (OpenALLib = Sys_LoadLibrary(ALDRIVER_FALLBACK)) == 0 )
 			{
 				return qfalse;

@@ -935,7 +935,7 @@ qboolean CheckVenomAttack( gentity_t *ent )
   if( traceEnt->health <= 0 )
       return qfalse;
 
-  if( !traceEnt->client && !( traceEnt->s.eType == ET_BUILDABLE ) )
+  if( !traceEnt->client && !traceEnt->s.eType == ET_BUILDABLE )
     return qfalse;
 
   // only allow bites to work against buildings as they are constructing
@@ -1084,23 +1084,50 @@ LEVEL2
 
 ======================================================================
 */
-#define MAX_ZAPS  64
 
-static zap_t  zaps[ MAX_CLIENTS ];
+static vec3_t sortReference;
+static int QDECL G_SortDistance( const void *a, const void *b )
+{
+  gentity_t    *aent, *bent;
+  float        adist, bdist;
+
+  aent = &g_entities[ *(int *)a ];
+  bent = &g_entities[ *(int *)b ];
+  adist = Distance( sortReference, aent->s.origin );
+  bdist = Distance( sortReference, bent->s.origin );
+  if( adist > bdist )
+    return -1;
+  else if( adist < bdist )
+    return 1;
+  else
+    return 0;
+}
 
 /*
 ===============
-G_FindNewZapTarget
+G_UpdateZaps
 ===============
 */
-static gentity_t *G_FindNewZapTarget( gentity_t *ent )
+void G_UpdateZaps( gentity_t *ent )
 {
   int       entityList[ MAX_GENTITIES ];
-  vec3_t    range = { LEVEL2_AREAZAP_RANGE, LEVEL2_AREAZAP_RANGE, LEVEL2_AREAZAP_RANGE };
+  int       hitList[ MAX_GENTITIES ];
+  vec3_t    range = { LEVEL2_AREAZAP_CUTOFF,
+                      LEVEL2_AREAZAP_CUTOFF,
+                      LEVEL2_AREAZAP_CUTOFF };
   vec3_t    mins, maxs;
-  int       i, j, k, num;
+  int       i, j;
+  int       hit = 0;
+  int       num;
   gentity_t *enemy;
+  gentity_t *effect;
   trace_t   tr;
+  qboolean  alreadyTargeted = qfalse;
+  int       damage;
+
+
+  if( !ent->zapping || ent->health <= 0 )
+    return;
 
   VectorScale( range, 1.0f / M_ROOT3, range );
   VectorAdd( ent->s.origin, range, maxs );
@@ -1112,218 +1139,88 @@ static gentity_t *G_FindNewZapTarget( gentity_t *ent )
   {
     enemy = &g_entities[ entityList[ i ] ];
 
-    if( ( ( enemy->client && enemy->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS ) ||
+    if( ( ( enemy->client &&
+            enemy->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS ) ||
         ( enemy->s.eType == ET_BUILDABLE &&
-          BG_Buildable( enemy->s.modelindex )->team == TEAM_HUMANS ) ) && enemy->health > 0 )
+          BG_Buildable( enemy->s.modelindex )->team == TEAM_HUMANS ) ) &&
+        enemy->health > 0 )
     {
-      qboolean foundOldTarget = qfalse;
 
-      trap_Trace( &tr, muzzle, NULL, NULL, enemy->s.origin, ent->s.number, MASK_SHOT );
-
-      //can't see target from here
-      if( tr.entityNum == ENTITYNUM_WORLD )
-        continue;
-
-      for( j = 0; j < MAX_ZAPS; j++ )
+      alreadyTargeted = qfalse;
+      for( j = 0; j < LEVEL2_AREAZAP_MAX_TARGETS; j++ )
       {
-        zap_t *zap = &zaps[ j ];
-
-        for( k = 0; k < zap->numTargets; k++ )
+        if( ent->zapTargets[ j ] == entityList[ i ] )
         {
-          if( zap->targets[ k ] == enemy )
-          {
-            foundOldTarget = qtrue;
+          alreadyTargeted = qtrue;
             break;
-          }
         }
-
-        if( foundOldTarget )
-          break;
       }
 
-      // enemy is already targetted
-      if( foundOldTarget )
+      if( !alreadyTargeted &&
+          Distance( ent->s.origin, enemy->s.origin ) > LEVEL2_AREAZAP_RANGE )
+      {
         continue;
+      }
 
-      return enemy;
+      trap_Trace( &tr, ent->s.origin, NULL, NULL, enemy->s.origin,
+        ent-g_entities, MASK_SHOT );
+      if( tr.entityNum == enemy-g_entities )
+        hitList[ hit++ ] = tr.entityNum;
     }
   }
 
-  return &g_entities[ ENTITYNUM_NONE ];
-}
+  for( i = 0; i < LEVEL2_AREAZAP_MAX_TARGETS; i++ )
+    ent->zapTargets[ i ] = -1;
 
+  if( !hit )
+    return;
+
+  ent->zapDmg += ( (float)( level.time - level.previousTime ) / 1000.0f )
+                     * LEVEL2_AREAZAP_DMG;
+  damage = (int)ent->zapDmg;
+  // wait until we've accumulated enough damage for bsuit to take at
+  // least 1 HP
+  if( damage < 5 )
+    damage = 0;
+  else
+    ent->zapDmg -= (int)damage;
 /*
-===============
-G_UpdateZapEffect
-===============
-*/
-static void G_UpdateZapEffect( zap_t *zap )
-{
-  int       j;
-  gentity_t *effect = zap->effectChannel;
-  int       targets[MAX_ZAP_TARGETS + 1];
-
   effect->s.eType = ET_LEV2_ZAP_CHAIN;
   effect->classname = "lev2zapchain";
   G_SetOrigin( effect, zap->creator->s.origin );
-  targets[ 0 ] = zap->creator->s.number;
-  for( j = 0; j < zap->numTargets; j++ )
-  {
-    int number = zap->targets[ j ]->s.number;
-    targets[ j + 1 ] = number;
-  }
-  BG_PackZapTargets( &effect->s, targets, zap->numTargets  );
-  trap_LinkEntity( effect );
-}
-
-/*
-===============
-G_CreateNewZap
-===============
+  effect->s.misc = zap->creator->s.number;
 */
-static void G_CreateNewZap( gentity_t *creator, gentity_t *target )
-{
-  int       i, j;
-  zap_t     *zap;
 
-  for( i = 0; i < MAX_ZAPS; i++ )
+  VectorCopy( ent->s.origin, sortReference );
+  qsort( hitList, hit, sizeof( int ), G_SortDistance );
+
+  effect = G_TempEntity( ent->s.origin, EV_LEV2_ZAP );
+  effect->s.misc = ent-g_entities;
+  effect->s.time = effect->s.time2 = effect->s.constantLight = -1;
+  for( i = 0; i < hit; i++ )
   {
-    zap = &zaps[ i ];
+    if( i >= LEVEL2_AREAZAP_MAX_TARGETS )
+      break;
 
-    if( !zap->used )
+    ent->zapTargets[ i ] = hitList[ i ];
+
+    enemy = &g_entities[ hitList[ i ] ];
+
+
+    if( damage > 0 )
     {
-      zap->used = qtrue;
-
-      zap->timeToLive = LEVEL2_AREAZAP_TIME;
-      zap->damageUsed = 0;
-
-      zap->creator = creator;
-
-      zap->targets[ 0 ] = target;
-      zap->numTargets = 1;
-
-      for( j = 1; j < MAX_ZAP_TARGETS && zap->targets[ j - 1 ]; j++ )
-      {
-        zap->targets[ j ] = G_FindNewZapTarget( zap->targets[ 0 ] );
-
-        if( zap->targets[ j ] )
-          zap->numTargets++;
-      }
-
-      zap->effectChannel = G_Spawn( );
-      G_UpdateZapEffect( zap );
-
-      return;
-    }
-  }
-}
-
-
-/*
-===============
-G_UpdateZaps
-===============
-*/
-void G_UpdateZaps( int msec )
-{
-  int   i, j;
-  zap_t *zap;
-  int   damage;
-
-  for( i = 0; i < MAX_ZAPS; i++ )
-  {
-    zap = &zaps[ i ];
-
-    if( zap->used )
-    {
-      //check each target is valid
-      for( j = 0; j < zap->numTargets; j++ )
-      {
-        gentity_t *source;
-        gentity_t *target = zap->targets[ j ];
-
-        if( j == 0 )
-          source = zap->creator;
-        else
-          source = zap->targets[ 0 ];
-
-        if( target->health <= 0 || !target->inuse || //early out
-            Distance( source->s.origin, target->s.origin ) > LEVEL2_AREAZAP_RANGE )
-        {
-          target = zap->targets[ j ] = G_FindNewZapTarget( source );
-
-        }
-      }
-
-      if( zap->numTargets )
-      {
-        damage = ceil( ( (float)msec / LEVEL2_AREAZAP_TIME ) *
-            LEVEL2_AREAZAP_DMG );
-        // don't let a high msec value inflate the total damage
-        if( damage + zap->damageUsed > LEVEL2_AREAZAP_DMG )
-          damage = LEVEL2_AREAZAP_DMG - zap->damageUsed;
-
-        for( j = 0; j < zap->numTargets; j++ )
-        {
-          gentity_t *source;
-          gentity_t *target = zap->targets[ j ];
-          vec3_t    forward;
-          
-          if( j == 0 )
-            source = zap->creator;
-          else
-            source = zap->targets[ 0 ];
-          
-
-          
-          VectorSubtract( target->s.origin, source->s.origin, forward );
-          VectorNormalize( forward );
-
-          //do the damage
-          if( damage )
-          {
-            G_Damage( target, source, zap->creator, forward, target->s.origin,
+      G_Damage( enemy, ent, ent, NULL, enemy->s.origin,
                     damage, DAMAGE_NO_KNOCKBACK | DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP );
-          }
-        }
-      }
-
-      G_UpdateZapEffect( zap );
-
-      zap->timeToLive -= msec;
-
-      if( zap->timeToLive <= 0 || zap->numTargets == 0 || zap->creator->health <= 0 )
-      {
-        zap->used = qfalse;
-        G_FreeEntity( zap->effectChannel );
-      }
+    }
+    switch( i )
+    {
+      case 0: effect->s.time = hitList[ i ];          break;
+      case 1: effect->s.time2 = hitList[ i ];         break;
+      case 2: effect->s.constantLight = hitList[ i ]; break;
+      default:                                        break;
     }
   }
 }
-
-/*
-===============
-areaZapFire
-===============
-*/
-void areaZapFire( gentity_t *ent )
-{
-  trace_t   tr;
-  gentity_t *traceEnt;
-
-  G_WideTrace( &tr, ent, LEVEL2_AREAZAP_RANGE, LEVEL2_AREAZAP_WIDTH, LEVEL2_AREAZAP_WIDTH, &traceEnt );
-
-  if( traceEnt == NULL )
-    return;
-
-  if( ( ( traceEnt->client && traceEnt->client->ps.stats[ STAT_TEAM ] == TEAM_HUMANS ) ||
-      ( traceEnt->s.eType == ET_BUILDABLE &&
-        BG_Buildable( traceEnt->s.modelindex )->team == TEAM_HUMANS ) ) && traceEnt->health > 0 )
-  {
-    G_CreateNewZap( ent, traceEnt );
-  }
-}
-
 
 /*
 ======================================================================
@@ -1567,10 +1464,6 @@ void FireWeapon2( gentity_t *ent )
 
     case WP_LUCIFER_CANNON:
       LCChargeFire( ent, qtrue );
-      break;
-
-    case WP_ALEVEL2_UPG:
-      areaZapFire( ent );
       break;
 
     case WP_ABUILD:

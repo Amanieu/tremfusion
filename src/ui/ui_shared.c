@@ -43,17 +43,6 @@ scrollInfo_t;
 
 static scrollInfo_t scrollInfo;
 
-#define MAX_DELAYED_COMMANDS 64
-
-typedef struct delayed_cmd_s
-{
-  itemDef_t *item;
-  int time;
-}
-delayed_cmd_t; 
-
-delayed_cmd_t delayed_cmd[ MAX_DELAYED_COMMANDS ]; 
-
 // prevent compiler warnings
 void voidFunction( void *var )
 {
@@ -1187,8 +1176,8 @@ void Item_SetScreenCoords( itemDef_t *item, float x, float y )
   item->window.rect.h = item->window.rectClient.h;
 
   // force the text rects to recompute
-  //item->textRect.w = 0;
-  //item->textRect.h = 0;
+  item->textRect.w = 0;
+  item->textRect.h = 0;
 }
 
 // FIXME: consolidate this with nearby stuff
@@ -1707,8 +1696,8 @@ void Script_Close( itemDef_t *item, char **args )
     Menus_CloseByName( name );
 }
 
-void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectTo,
-                                int time )
+void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectFrom, rectDef_t rectTo,
+                                int time, float amt )
 {
   itemDef_t *item;
   int i;
@@ -1720,21 +1709,15 @@ void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectTo
 
     if( item != NULL )
     {
-      if (time)
-      {
-        item->window.flags |= WINDOW_INTRANSITION;
-        memcpy( &item->window.rectEffects, &rectTo, sizeof( rectDef_t ) );
-        item->window.offsetTime = DC->realTime;
-        item->window.rectEffects2.x = abs( rectTo.x - item->window.rectClient.x ) / (float)time;
-        item->window.rectEffects2.y = abs( rectTo.y - item->window.rectClient.y ) / (float)time;
-        item->window.rectEffects2.w = abs( rectTo.w - item->window.rectClient.w ) / (float)time;
-        item->window.rectEffects2.h = abs( rectTo.h - item->window.rectClient.h ) / (float)time;
-      }
-      else
-      {
-        memcpy( &item->window.rectClient, &rectTo, sizeof( rectDef_t ) );
-        Item_UpdatePosition( item );
-      }
+      item->window.flags |= ( WINDOW_INTRANSITION | WINDOW_VISIBLE );
+      item->window.offsetTime = time;
+      memcpy( &item->window.rectClient, &rectFrom, sizeof( rectDef_t ) );
+      memcpy( &item->window.rectEffects, &rectTo, sizeof( rectDef_t ) );
+      item->window.rectEffects2.x = abs( rectTo.x - rectFrom.x ) / amt;
+      item->window.rectEffects2.y = abs( rectTo.y - rectFrom.y ) / amt;
+      item->window.rectEffects2.w = abs( rectTo.w - rectFrom.w ) / amt;
+      item->window.rectEffects2.h = abs( rectTo.h - rectFrom.h ) / amt;
+      Item_UpdatePosition( item );
     }
   }
 }
@@ -1743,14 +1726,16 @@ void Menu_TransitionItemByName( menuDef_t *menu, const char *p, rectDef_t rectTo
 void Script_Transition( itemDef_t *item, char **args )
 {
   const char *name;
-  rectDef_t rectTo;
+  rectDef_t rectFrom, rectTo;
   int time;
+  float amt;
 
   if( String_Parse( args, &name ) )
   {
-    if( Rect_Parse( args, &rectTo ) && Int_Parse( args, &time ) )
+    if( Rect_Parse( args, &rectFrom ) && Rect_Parse( args, &rectTo ) &&
+        Int_Parse( args, &time ) && Float_Parse( args, &amt ) )
     {
-      Menu_TransitionItemByName( item->parent, name, rectTo, time );
+      Menu_TransitionItemByName( item->parent, name, rectFrom, rectTo, time, amt );
     }
   }
 }
@@ -1899,43 +1884,6 @@ void Script_playLooped( itemDef_t *item, char **args )
   {
     DC->stopBackgroundTrack();
     DC->startBackgroundTrack( val, val );
-  }
-}
-
-void Menu_DelayItemByName( menuDef_t *menu, const char *p, int time )
-{
-  itemDef_t *item;
-  int i, j = 0;
-  int count = Menu_ItemsMatchingGroup( menu, p );
-
-  for( i = 0; i < count; i++ )
-  {
-    item = Menu_GetMatchingItemByNumber( menu, i, p );
-
-    if( item != NULL && item->delayEvent && item->delayEvent[ 0 ] )
-    {
-      for( ; j < MAX_DELAYED_COMMANDS; j++ )
-      {
-        if( !delayed_cmd[ j ].time )
-        {
-          delayed_cmd[ j ].item = item;
-          delayed_cmd[ j ].time = DC->realTime + time;
-          j++;
-          break;
-        }
-      }
-    }
-  }
-}
-
-void Script_Delay( itemDef_t *item, char **args )
-{
-  const char *name;
-  int time;
-
-  if( Int_Parse( args, &time ) && String_Parse( args, &name ) )
-  {
-    Menu_DelayItemByName( item->parent, name, time );
   }
 }
 
@@ -2596,12 +2544,11 @@ commandDef_t commandList[] =
     {"setplayermodel", &Script_SetPlayerModel},   // sets this background color to team color
     {"setplayerhead", &Script_SetPlayerHead},     // sets this background color to team color
     {"transition", &Script_Transition},           // group/name
-    {"setcvar", &Script_SetCvar},                 // group/name
-    {"exec", &Script_Exec},                       // group/name
-    {"play", &Script_Play},                       // group/name
+    {"setcvar", &Script_SetCvar},           // group/name
+    {"exec", &Script_Exec},           // group/name
+    {"play", &Script_Play},           // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit},                     // group/name
-    {"delay", &Script_Delay},                     // group/name
+    {"orbit", &Script_Orbit},                      // group/name
   };
 
 int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
@@ -3703,43 +3650,6 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
         DC->setCVar( item->cvar, buff );
       }
-      else if( key == 'c' - 'a' + 1 )
-      {
-        // ctrl-c clears the field
-
-        item->cursorPos = 0;
-        DC->setCVar( item->cvar, "" );
-      }
-      else if( key == 'a' - 'a' + 1 )
-      {
-        // ctrl-a is home
-
-        item->cursorPos = 0;
-      }
-      else if( key == 'e' - 'a' + 1 )
-      {
-        // ctrl-e is end
-
-        item->cursorPos = strlen( buff ) - 1;
-      }
-      else if( key == 'w' - 'a' + 1 )
-      {
-        // ctrl-w deletes the last word
-
-        while ( item->cursorPos )
-        {
-          if ( buff[ item->cursorPos - 1 ] != ' ' ) {
-            buff[ item->cursorPos - 1 ] = 0;
-            item->cursorPos--;
-          } else {
-            item->cursorPos--;
-            if ( buff[ item->cursorPos - 1 ] != ' ' )
-              break;
-          }
-        }
-
-        DC->setCVar( item->cvar, buff );
-      }
       else if( ( key < 32 && key >= 0 ) || !item->cvar )
       {
         // Ignore any non printable chars
@@ -4395,6 +4305,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
 {
   int i;
   itemDef_t *item = NULL;
+  qboolean inHandler = qfalse;
 
   // KTW: Draggable Windows
   if (key == K_MOUSE1 && down && Rect_ContainsPoint(&menu->window.rect, DC->cursorx, DC->cursory) &&
@@ -4403,9 +4314,12 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   else
       menu->window.flags &= ~WINDOW_DRAG;
 
+  inHandler = qtrue;
+
   if( g_waitingForKey && down )
   {
     Item_Bind_HandleKey( g_bindItem, key, down );
+    inHandler = qfalse;
     return;
   }
 
@@ -4416,6 +4330,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
       g_editingField = qfalse;
       Item_RunScript( g_editItem, g_editItem->onTextEntry );
       g_editItem = NULL;
+      inHandler = qfalse;
       return;
     }
     else if( key == K_MOUSE1 || key == K_MOUSE2 || key == K_MOUSE3 )
@@ -4430,7 +4345,10 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
   }
 
   if( menu == NULL )
+  {
+    inHandler = qfalse;
     return;
+  }
 
   // see if the mouse is within the window bounds and if so is this a mouse click
   if( down && !( menu->window.flags & WINDOW_POPUP ) &&
@@ -4443,6 +4361,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
       inHandleKey = qtrue;
       Menus_HandleOOBClick( menu, key, down );
       inHandleKey = qfalse;
+      inHandler = qfalse;
       return;
     }
   }
@@ -4459,12 +4378,16 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
     if( Item_HandleKey( item, key, down ) )
     {
       Item_Action( item );
+      inHandler = qfalse;
       return;
     }
   }
 
   if( !down )
+  {
+    inHandler = qfalse;
     return;
+  }
 
   // default handling
   switch( key )
@@ -4577,6 +4500,8 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
 
       break;
   }
+
+  inHandler = qfalse;
 }
 
 void ToWindowCoords( float *x, float *y, windowDef_t *window )
@@ -4606,15 +4531,15 @@ void Item_SetTextExtents( itemDef_t *item, int *width, int *height, const char *
   *width = item->textRect.w;
   *height = item->textRect.h;
 
-  // as long as the item isn't dynamic content (ownerdraw or cvar), this
   // keeps us from computing the widths and heights more than once
-  if( *width == 0 || item->cvar || ( item->type == ITEM_TYPE_OWNERDRAW &&
-      item->textalignment != ALIGN_LEFT ) || ( ((menuDef_t*)item->parent)->window.flags & WINDOW_DRAG ) )
+
+  if( *width == 0 || ( item->type == ITEM_TYPE_OWNERDRAW && item->textalignment == ALIGN_CENTER ) )
   {
     int originalWidth;
 
-    if( item->cvar && item->textalignment != ALIGN_LEFT )
+    if( item->type == ITEM_TYPE_EDITFIELD && item->textalignment == ALIGN_CENTER && item->cvar )
     {
+      //FIXME: this will only be called once?
       char buff[256];
       DC->getCVarString( item->cvar, buff, 256 );
       originalWidth = UI_Text_Width( item->text, item->textscale, 0 ) +
@@ -4864,9 +4789,9 @@ static void UI_AddCacheEntryLine( const char *text, float x, float y )
   Q_strncpyz( cacheEntry->lines[ cacheEntry->numLines ], text,
               sizeof( cacheEntry->lines[ 0 ] ) );
 
-  cacheEntry->lineCoords[ cacheEntry->numLines ][ 0 ] = x - cacheEntry->rect.x;
+  cacheEntry->lineCoords[ cacheEntry->numLines ][ 0 ] = x;
 
-  cacheEntry->lineCoords[ cacheEntry->numLines ][ 1 ] = y - cacheEntry->rect.y;
+  cacheEntry->lineCoords[ cacheEntry->numLines ][ 1 ] = y;
 
   cacheEntry->numLines++;
 }
@@ -4887,7 +4812,9 @@ static qboolean UI_CheckWrapCache( const char *text, rectDef_t *rect, float scal
     if( Q_stricmp( text, cacheEntry->text ) )
       continue;
 
-    if( rect->w != cacheEntry->rect.w ||
+    if( rect->x != cacheEntry->rect.x ||
+        rect->y != cacheEntry->rect.y ||
+        rect->w != cacheEntry->rect.w ||
         rect->h != cacheEntry->rect.h )
       continue;
 
@@ -4895,9 +4822,6 @@ static qboolean UI_CheckWrapCache( const char *text, rectDef_t *rect, float scal
       continue;
 
     // This is a match
-    cacheEntry->rect.x = rect->x;
-    cacheEntry->rect.y = rect->y;
-
     cacheReadIndex = i;
 
     cacheReadLineNum = 0;
@@ -4918,9 +4842,9 @@ static qboolean UI_NextWrapLine( const char **text, float *x, float *y )
 
   *text = cacheEntry->lines[ cacheReadLineNum ];
 
-  *x    = cacheEntry->lineCoords[ cacheReadLineNum ][ 0 ] + cacheEntry->rect.x;
+  *x    = cacheEntry->lineCoords[ cacheReadLineNum ][ 0 ];
 
-  *y    = cacheEntry->lineCoords[ cacheReadLineNum ][ 1 ] + cacheEntry->rect.y;
+  *y    = cacheEntry->lineCoords[ cacheReadLineNum ][ 1 ];
 
   cacheReadLineNum++;
 
@@ -5031,7 +4955,6 @@ void Item_Text_Wrapped_Paint( itemDef_t *item )
         itemDef_t   lineItem;
         int         width, height;
 
-        memset( &lineItem, 0, sizeof( itemDef_t ) );
         strncpy( buff, p, lineLength );
         buff[ lineLength ] = '\0';
         p = &textPtr[ i + 1 ];
@@ -5991,20 +5914,20 @@ void Item_ListBox_Paint( itemDef_t *item )
     {
       // draw scrollbar to right side of the window
       x = item->window.rect.x + item->window.rect.w - SCROLLBAR_WIDTH - one;
-      y = item->window.rect.y + 2;
+      y = item->window.rect.y + 1;
       DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarArrowUp );
-      y += SCROLLBAR_HEIGHT;
+      y += SCROLLBAR_HEIGHT - 1;
 
       listPtr->endPos = listPtr->startPos;
       size = item->window.rect.h - ( SCROLLBAR_HEIGHT * 2 );
-      DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, size -4 , DC->Assets.scrollBar );
-      y += size - 4;
+      DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, size + 1, DC->Assets.scrollBar );
+      y += size - 1;
       DC->drawHandlePic( x, y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarArrowDown );
       // thumb
       thumb = Item_ListBox_ThumbDrawPosition( item );//Item_ListBox_ThumbPosition(item);
-      thumb += 1;
-      if( thumb > y - SCROLLBAR_HEIGHT )
-        thumb = y - SCROLLBAR_HEIGHT;
+
+      if( thumb > y - SCROLLBAR_HEIGHT - 1 )
+        thumb = y - SCROLLBAR_HEIGHT - 1;
 
       DC->drawHandlePic( x, thumb, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT, DC->Assets.scrollBarThumb );
     }
@@ -6253,7 +6176,6 @@ void Item_OwnerDraw_Paint( itemDef_t *item )
 
 void Item_Paint( itemDef_t *item )
 {
-  int i;
   vec4_t red;
   menuDef_t *parent = ( menuDef_t* )item->parent;
   red[0] = red[3] = 1;
@@ -6261,16 +6183,6 @@ void Item_Paint( itemDef_t *item )
 
   if( item == NULL )
     return;
-
-  // check for delays
-  for( i = 0; i < MAX_DELAYED_COMMANDS; i++ )
-  {
-    if( delayed_cmd[ i ].item == item && delayed_cmd[ i ].time && delayed_cmd[ i ].time < DC->realTime )
-    {
-      Item_RunScript( item, item->delayEvent );
-      delayed_cmd[ i ].time = 0;
-    }
-  }
 
   if( item->window.flags & WINDOW_ORBITING )
   {
@@ -6297,119 +6209,122 @@ void Item_Paint( itemDef_t *item )
 
   if( item->window.flags & WINDOW_INTRANSITION )
   {
-    int done = 0;
-    int timePast = DC->realTime - item->window.offsetTime;
-    item->window.offsetTime = DC->realTime;
-    // transition the x,y
-
-    if( item->window.rectClient.x == item->window.rectEffects.x )
-      done++;
-    else
+    if( DC->realTime > item->window.nextTime )
     {
-      if( item->window.rectClient.x < item->window.rectEffects.x )
-      {
-        item->window.rectClient.x += item->window.rectEffects2.x * timePast;
+      int done = 0;
+      item->window.nextTime = DC->realTime + item->window.offsetTime;
+      // transition the x,y
 
-        if( item->window.rectClient.x > item->window.rectEffects.x )
-        {
-          item->window.rectClient.x = item->window.rectEffects.x;
-          done++;
-        }
-      }
+      if( item->window.rectClient.x == item->window.rectEffects.x )
+        done++;
       else
       {
-        item->window.rectClient.x -= item->window.rectEffects2.x * timePast;
-
         if( item->window.rectClient.x < item->window.rectEffects.x )
         {
-          item->window.rectClient.x = item->window.rectEffects.x;
-          done++;
+          item->window.rectClient.x += item->window.rectEffects2.x;
+
+          if( item->window.rectClient.x > item->window.rectEffects.x )
+          {
+            item->window.rectClient.x = item->window.rectEffects.x;
+            done++;
+          }
         }
-      }
-    }
-
-    if( item->window.rectClient.y == item->window.rectEffects.y )
-      done++;
-    else
-    {
-      if( item->window.rectClient.y < item->window.rectEffects.y )
-      {
-        item->window.rectClient.y += item->window.rectEffects2.y * timePast;
-
-        if( item->window.rectClient.y > item->window.rectEffects.y )
+        else
         {
-          item->window.rectClient.y = item->window.rectEffects.y;
-          done++;
+          item->window.rectClient.x -= item->window.rectEffects2.x;
+
+          if( item->window.rectClient.x < item->window.rectEffects.x )
+          {
+            item->window.rectClient.x = item->window.rectEffects.x;
+            done++;
+          }
         }
       }
+
+      if( item->window.rectClient.y == item->window.rectEffects.y )
+        done++;
       else
       {
-        item->window.rectClient.y -= item->window.rectEffects2.y * timePast;
-
         if( item->window.rectClient.y < item->window.rectEffects.y )
         {
-          item->window.rectClient.y = item->window.rectEffects.y;
-          done++;
+          item->window.rectClient.y += item->window.rectEffects2.y;
+
+          if( item->window.rectClient.y > item->window.rectEffects.y )
+          {
+            item->window.rectClient.y = item->window.rectEffects.y;
+            done++;
+          }
         }
-      }
-    }
-
-    if( item->window.rectClient.w == item->window.rectEffects.w )
-      done++;
-    else
-    {
-      if( item->window.rectClient.w < item->window.rectEffects.w )
-      {
-        item->window.rectClient.w += item->window.rectEffects2.w * timePast;
-
-        if( item->window.rectClient.w > item->window.rectEffects.w )
+        else
         {
-          item->window.rectClient.w = item->window.rectEffects.w;
-          done++;
+          item->window.rectClient.y -= item->window.rectEffects2.y;
+
+          if( item->window.rectClient.y < item->window.rectEffects.y )
+          {
+            item->window.rectClient.y = item->window.rectEffects.y;
+            done++;
+          }
         }
       }
+
+      if( item->window.rectClient.w == item->window.rectEffects.w )
+        done++;
       else
       {
-        item->window.rectClient.w -= item->window.rectEffects2.w * timePast;
-
         if( item->window.rectClient.w < item->window.rectEffects.w )
         {
-          item->window.rectClient.w = item->window.rectEffects.w;
-          done++;
+          item->window.rectClient.w += item->window.rectEffects2.w;
+
+          if( item->window.rectClient.w > item->window.rectEffects.w )
+          {
+            item->window.rectClient.w = item->window.rectEffects.w;
+            done++;
+          }
         }
-      }
-    }
-
-    if( item->window.rectClient.h == item->window.rectEffects.h )
-      done++;
-    else
-    {
-      if( item->window.rectClient.h < item->window.rectEffects.h )
-      {
-        item->window.rectClient.h += item->window.rectEffects2.h * timePast;
-
-        if( item->window.rectClient.h > item->window.rectEffects.h )
+        else
         {
-          item->window.rectClient.h = item->window.rectEffects.h;
-          done++;
+          item->window.rectClient.w -= item->window.rectEffects2.w;
+
+          if( item->window.rectClient.w < item->window.rectEffects.w )
+          {
+            item->window.rectClient.w = item->window.rectEffects.w;
+            done++;
+          }
         }
       }
+
+      if( item->window.rectClient.h == item->window.rectEffects.h )
+        done++;
       else
       {
-        item->window.rectClient.h -= item->window.rectEffects2.h * timePast;
-
         if( item->window.rectClient.h < item->window.rectEffects.h )
         {
-          item->window.rectClient.h = item->window.rectEffects.h;
-          done++;
+          item->window.rectClient.h += item->window.rectEffects2.h;
+
+          if( item->window.rectClient.h > item->window.rectEffects.h )
+          {
+            item->window.rectClient.h = item->window.rectEffects.h;
+            done++;
+          }
+        }
+        else
+        {
+          item->window.rectClient.h -= item->window.rectEffects2.h;
+
+          if( item->window.rectClient.h < item->window.rectEffects.h )
+          {
+            item->window.rectClient.h = item->window.rectEffects.h;
+            done++;
+          }
         }
       }
+
+      Item_UpdatePosition( item );
+
+      if( done == 4 )
+        item->window.flags &= ~WINDOW_INTRANSITION;
+
     }
-
-    Item_UpdatePosition( item );
-
-    if( done == 4 )
-      item->window.flags &= ~WINDOW_INTRANSITION;
   }
 
   if( item->window.ownerDrawFlags && DC->ownerDrawVisible )
@@ -6418,12 +6333,6 @@ void Item_Paint( itemDef_t *item )
       item->window.flags &= ~WINDOW_VISIBLE;
     else
       item->window.flags |= WINDOW_VISIBLE;
-  }
-
-  if( item->window.ownerDraw == UI_SCREEN && DC->hideScreen )
-  {
-    if( DC->hideScreen( item->special ) )
-      item->window.flags &= ~WINDOW_VISIBLE;
   }
 
   if( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) )
@@ -6716,6 +6625,8 @@ void Menu_HandleMouseMove( menuDef_t *menu, float x, float y )
       if( menu->items[i]->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) &&
           !Item_EnableShowViaCvar( menu->items[i], CVAR_SHOW ) )
         continue;
+
+
 
       if( Rect_ContainsPoint( &menu->items[i]->window.rect, x, y ) )
       {
@@ -7520,14 +7431,6 @@ qboolean ItemParse_onTextEntry( itemDef_t *item, int handle )
   return qtrue;
 }
 
-qboolean ItemParse_delayEvent( itemDef_t *item, int handle )
-{
-  if( !PC_Script_Parse( handle, &item->delayEvent ) )
-    return qfalse;
-
-  return qtrue;
-}
-
 qboolean ItemParse_action( itemDef_t *item, int handle )
 {
   if( !PC_Script_Parse( handle, &item->action ) )
@@ -7891,7 +7794,6 @@ keywordHash_t itemParseKeywords[] = {
   {"mouseEnterText", ItemParse_mouseEnterText, NULL},
   {"mouseExitText", ItemParse_mouseExitText, NULL},
   {"onTextEntry", ItemParse_onTextEntry, NULL},
-  {"delayEvent", ItemParse_delayEvent, NULL},
   {"action", ItemParse_action, NULL},
   {"special", ItemParse_special, NULL},
   {"cvar", ItemParse_cvar, NULL},

@@ -173,35 +173,6 @@ static void CG_TellAttacker_f( void )
   trap_SendClientCommand( command );
 }
 
-void CG_ClientList_f( void )
-{
-  clientInfo_t *ci;
-  int i;
-  int count = 0;
-
-  for( i = 0; i < MAX_CLIENTS; i++ ) 
-  {
-    ci = &cgs.clientinfo[ i ];
-    if( !ci->infoValid ) 
-      continue;
-
-    switch( ci->team ) 
-    {
-      case TEAM_ALIENS:
-        Com_Printf( "%2i ^1A   ^7%s^7\n", i, ci->name );
-        break;
-      case TEAM_HUMANS:
-        Com_Printf( "%2i ^4H   ^7%s^7\n", i, ci->name );
-        break;
-      default:
-        Com_Printf( "%2i ^3S   ^7%s^7\n", i, ci->name );
-        break;
-    }
-    count++;
-  }
-  Com_Printf( "Listed %2i clients\n", count );
-}
-
 static void CG_SquadMark_f( void )
 {
   centity_t *cent;
@@ -249,7 +220,6 @@ static consoleCommand_t commands[ ] =
   { "destroyTestPS", CG_DestroyTestPS_f },
   { "testTS", CG_TestTS_f },
   { "destroyTestTS", CG_DestroyTestTS_f },
-  { "clientlist", CG_ClientList_f },
   { "reloadhud", CG_LoadHudMenu },
   { "squadmark", CG_SquadMark_f },
 };

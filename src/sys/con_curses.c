@@ -62,7 +62,6 @@ static WINDOW *borderwin;
 static WINDOW *logwin;
 static WINDOW *inputwin;
 static WINDOW *scrollwin;
-static WINDOW *clockwin;
 
 static char logbuf[LOG_BUF_SIZE];
 static char *insert = logbuf;
@@ -208,22 +207,6 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 
 /*
 ==================
-CON_UpdateClock
-
-Update the clock
-==================
-*/
-static void CON_UpdateClock(void)
-{
-	qtime_t realtime;
-	Com_RealTime(&realtime);
-	werase(clockwin);
-	CON_ColorPrint(clockwin, va("^0[^3%02d%c%02d^0]^7 ", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min), qtrue);
-	wnoutrefresh(clockwin);
-}
-
-/*
-==================
 CON_Resize
 
 The window has just been resized, move everything back into place
@@ -235,7 +218,7 @@ static void CON_Resize(void)
 	struct winsize winsz = {0, };
 
 	ioctl(fileno(stdout), TIOCGWINSZ, &winsz);
-	if (winsz.ws_col < 12 || winsz.ws_row < 5)
+	if (winsz.ws_col < 4 || winsz.ws_row < 5)
 		return;
 	resizeterm(winsz.ws_row + 1, winsz.ws_col + 1);
 	resizeterm(winsz.ws_row, winsz.ws_col);
@@ -286,7 +269,6 @@ void CON_Shutdown(void)
 	}
 
 	endwin();
-	curses_on = qfalse;
 }
 
 /*
@@ -375,8 +357,8 @@ void CON_Init(void)
 	mvaddch(LINES - 2, COLS - 1, SCRLBAR_DOWN);
 
 	// Create the input field
-	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT) - 8, LINES - 1, Q_PrintStrlen(PROMPT) + 8);
-	input_field.widthInChars = COLS - Q_PrintStrlen(PROMPT) - 9;
+	inputwin = newwin(1, COLS - Q_PrintStrlen(PROMPT), LINES - 1, Q_PrintStrlen(PROMPT));
+	input_field.widthInChars = COLS - Q_PrintStrlen(PROMPT) - 1;
 	if (curses_on) {
 		if (input_field.cursor < input_field.scroll)
 			input_field.scroll = input_field.cursor;
@@ -387,14 +369,10 @@ void CON_Init(void)
 	CON_UpdateCursor();
 	wnoutrefresh(inputwin);
 
-	// Create the clock
-	clockwin = newwin(1, 8, LINES - 1, 0);
-	CON_UpdateClock();
-
 	// Display the title and input prompt
 	move(0, (COLS - Q_PrintStrlen(TITLE)) / 2);
 	CON_ColorPrint(stdscr, TITLE, qtrue);
-	move(LINES - 1, 8);
+	move(LINES - 1, 0);
 	CON_ColorPrint(stdscr, PROMPT, qtrue);
 	wnoutrefresh(stdscr);
 	doupdate();
@@ -416,7 +394,6 @@ char *CON_Input(void)
 {
 	int chr, num_chars = 0;
 	static char text[MAX_EDIT_LINE];
-	static int lasttime = -1;
 
 	if (!curses_on)
 		return CON_Input_tty();
@@ -424,12 +401,6 @@ char *CON_Input(void)
 	if (com_ansiColor->modified) {
 		CON_Resize();
 		com_ansiColor->modified = qfalse;
-	}
-
-	if (Com_RealTime(NULL) != lasttime) {
-		lasttime = Com_RealTime(NULL);
-		CON_UpdateClock();
-		num_chars++;
 	}
 
 	while (1) {

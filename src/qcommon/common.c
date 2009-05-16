@@ -77,7 +77,6 @@ cvar_t	*com_cl_running;
 cvar_t	*com_logfile;		// 1 = buffer log, 2 = flush after each print
 cvar_t	*com_showtrace;
 cvar_t	*com_version;
-cvar_t	*com_timestamps;
 cvar_t	*com_buildScript;	// for automated data building scripts
 cvar_t	*cl_paused;
 cvar_t	*sv_paused;
@@ -148,22 +147,12 @@ A raw string should NEVER be passed as fmt, because of "%f" type crashers.
 void QDECL Com_Printf( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-	char		*buf = msg;
-	static qboolean opening_qconsole = qfalse;
-	static qboolean is_new_line = qtrue;
+  static qboolean opening_qconsole = qfalse;
 
-	// timestamps
-	if (is_new_line && (com_timestamps && com_timestamps->integer)) {
-		qtime_t realtime;
-		Com_RealTime(&realtime);
-		Com_sprintf(msg, sizeof(msg), "^0[^3%02d:%02d^0]^7 ", realtime.tm_hour, realtime.tm_min);
-		buf += 16;
-	}
 
 	va_start (argptr,fmt);
-	Q_vsnprintf (buf, sizeof(msg) - 16, fmt, argptr);
+	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
-	is_new_line = msg[strlen(msg) - 1] == '\n';
 
 	if ( rd_buffer ) {
 		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
@@ -2245,7 +2234,7 @@ int Com_EventLoop( void ) {
 			if ( cmd[ 0 ] == '\\' || cmd[ 0 ] == '/' )
 				Cbuf_AddText( cmd + 1 );
 			else
-				Cbuf_AddText( va( "say \"%s\"", cmd ) );
+				Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
 #else
 			Cbuf_AddText( cmd );
 #endif
@@ -2419,7 +2408,6 @@ Com_Init
 */
 void Com_Init( char *commandLine ) {
 	char	*s;
-	int	qport;
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 
@@ -2506,7 +2494,6 @@ void Com_Init( char *commandLine ) {
 	com_speeds = Cvar_Get ("com_speeds", "0", 0);
 	com_timedemo = Cvar_Get ("timedemo", "0", CVAR_CHEAT);
 	com_cameraMode = Cvar_Get ("com_cameraMode", "0", CVAR_CHEAT);
-	com_timestamps = Cvar_Get ("com_timestamps", "0", CVAR_ARCHIVE);
 
 	cl_paused = Cvar_Get ("cl_paused", "0", CVAR_ROM);
 	sv_paused = Cvar_Get ("sv_paused", "0", CVAR_ROM);
@@ -2539,11 +2526,7 @@ void Com_Init( char *commandLine ) {
 	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO | CVAR_USERINFO );
 
 	Sys_Init();
-
-	// Pick a random port value
-	Com_RandomBytes( (byte*)&qport, sizeof(int) );
-	Netchan_Init( qport & 0xffff );
-
+	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
 	VM_Init();
 	SV_Init();
 	Hist_Load();
@@ -2966,24 +2949,6 @@ void Field_Clear( field_t *edit ) {
 	edit->scroll = 0;
 }
 
-/*
-==================
-Field_WordDelete
-==================
-*/
-void Field_WordDelete( field_t *edit) {
-	while (edit->cursor) {
-		if(edit->buffer[edit->cursor-1] != ' ') {
-			edit->buffer[edit->cursor-1] = 0;
-			edit->cursor--;
-		} else {
-			edit->cursor--;
-			if(edit->buffer[edit->cursor-1] != ' ')
-				return;
-		}
-	}
-}
-
 static const char *completionString;
 static char shortestMatch[MAX_TOKEN_CHARS];
 static int	matchCount;
@@ -3159,10 +3124,10 @@ void Field_CompleteDelay( void )
 	matchCount = 0;
 	shortestMatch[ 0 ] = 0;
 
-	Cmd_DelayCompletion( FindMatches );
+	Cmd_AliasCompletion( FindMatches );
 
 	if( !Field_Complete( ) )
-		Cmd_DelayCompletion( PrintMatches );
+		Cmd_AliasCompletion( PrintMatches );
 }
 
 /*

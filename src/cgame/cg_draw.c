@@ -1666,29 +1666,6 @@ static void CG_DrawTeamSpectators( rectDef_t *rect, float scale, int textvalign,
   }
 }
 
-#define FOLLOWING_STRING "Following: "
-#define CHASING_STRING "Chasing: "
-/*
-==================
-CG_DrawFollow
-==================
-*/
-static void CG_DrawFollow( rectDef_t *rect, float text_x, float text_y,
-    vec4_t color, float scale, int textalign, int textvalign, int textStyle )
-{
-  float tx, ty;
-  char  *text;
-
-  if( cg.clientNum == cg.snap->ps.clientNum )
-    return; // not following anyone
-
-  text = va( "%s%s", ( cg.chaseFollow ) ? CHASING_STRING : FOLLOWING_STRING,
-             cgs.clientinfo[ cg.snap->ps.clientNum ].name );
-  CG_AlignText( rect, text, scale, 0, 0, textalign, textvalign, &tx, &ty );
-  UI_Text_Paint( text_x + tx, text_y + ty, scale, color, text, 0, 0,
-                 textStyle );
-}
-
 /*
 ==================
 CG_DrawTeamLabel
@@ -2287,7 +2264,7 @@ static void CG_DrawLagometer( rectDef_t *rect, float text_x, float text_y,
   int     color;
   vec4_t  adjustedColor;
   float   vscale;
-  char    *ping;
+  vec4_t  white = { 1.0f, 1.0f, 1.0f, 1.0f };
 
   if( cg.snap->ps.pm_type == PM_INTERMISSION )
     return;
@@ -2410,18 +2387,19 @@ static void CG_DrawLagometer( rectDef_t *rect, float text_x, float text_y,
   trap_R_SetColor( NULL );
 
   if( cg_nopredict.integer || cg_synchronousClients.integer )
-    ping = "snc";
+    UI_Text_Paint( ax, ay, 0.5, white, "snc", 0, 0, ITEM_TEXTSTYLE_NORMAL );
   else
-    ping = va( "%d", cg.ping );
-  ax = rect->x + ( rect->w / 2.0f ) -
-       ( UI_Text_Width( ping, scale, 0 ) / 2.0f ) + text_x;
-  ay = rect->y + ( rect->h / 2.0f ) +
-       ( UI_Text_Height( ping, scale, 0 ) / 2.0f ) + text_y;
+  {
+    char        *s;
 
-  Vector4Copy( textColor, adjustedColor );
-  adjustedColor[ 3 ] = 0.5f;
-  UI_Text_Paint( ax, ay, scale, adjustedColor, ping, 0, 0,
-                 ITEM_TEXTSTYLE_NORMAL );
+    s = va( "%d", cg.ping );
+    ax = rect->x + ( rect->w / 2.0f ) - ( UI_Text_Width( s, scale, 0 ) / 2.0f ) + text_x;
+    ay = rect->y + ( rect->h / 2.0f ) + ( UI_Text_Height( s, scale, 0 ) / 2.0f ) + text_y;
+
+    Vector4Copy( textColor, adjustedColor );
+    adjustedColor[ 3 ] = 0.5f;
+    UI_Text_Paint( ax, ay, scale, adjustedColor, s, 0, 0, ITEM_TEXTSTYLE_NORMAL );
+  }
 
   CG_DrawDisconnect( );
 }
@@ -2647,27 +2625,6 @@ static void CG_DrawLocation( rectDef_t *rect, float scale, int textalign, vec4_t
   trap_R_SetColor( NULL );
 }
 
-
-/*
-=====================
-CG_DrawPlayerScore
-=====================
-*/
-static void CG_DrawPlayerScore( rectDef_t *rect, float scale, int textalign, vec4_t color )
-{
-  const char    *text;
-  float         maxX;
-  float         tx = rect->x, ty = rect->y;
-  maxX = rect->x + rect->w;
-  text = va( "%d", cg.snap->ps.persistant[ PERS_SCORE ] );
-
-  if( UI_Text_Width( text, scale, 0 ) < rect->w ) 
-    CG_AlignText( rect, text, scale, 0.0f, 0.0f, textalign, VALIGN_CENTER, &tx, &ty );
-
-  UI_Text_Paint_Limit( &maxX, tx, ty, scale, color, text, 0, 0);
-  trap_R_SetColor( NULL );
-}
-
 /*
 =====================
 CG_DrawCrosshairNames
@@ -2822,6 +2779,9 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
 {
   rectDef_t rect;
 
+  if( cg_drawStatus.integer == 0 )
+    return;
+
   rect.x = x;
   rect.y = y;
   rect.w = w;
@@ -2921,18 +2881,11 @@ void CG_OwnerDraw( float x, float y, float w, float h, float text_x,
     case CG_PLAYER_LOCATION:
       CG_DrawLocation( &rect, scale, textalign, foreColor );
       break;
-    case CG_FOLLOW:
-      CG_DrawFollow( &rect, text_x, text_y, foreColor, scale,
-                     textalign, textvalign, textStyle );
-      break;
     case CG_PLAYER_CROSSHAIRNAMES:
       CG_DrawCrosshairNames( &rect, scale, textStyle );
       break;
     case CG_PLAYER_CROSSHAIR:
       CG_DrawCrosshair( &rect, foreColor );
-      break;
-    case CG_PLAYER_SCORE:
-      CG_DrawPlayerScore( &rect, scale, textalign, foreColor );
       break;
     case CG_STAGE_REPORT_TEXT:
       CG_DrawStageReport( &rect, text_x, text_y, foreColor, scale, textalign, textvalign, textStyle );
@@ -3421,12 +3374,46 @@ CG_DrawIntermission
 */
 static void CG_DrawIntermission( void )
 {
-  Menu_Paint( Menus_FindByName( "default_hud" ), qtrue );
+  if( cg_drawStatus.integer )
+    Menu_Paint( Menus_FindByName( "default_hud" ), qtrue );
 
   cg.scoreFadeTime = cg.time;
   cg.scoreBoardShowing = CG_DrawScoreboard( );
 }
 
+#define FOLLOWING_STRING "Following: "
+#define CHASING_STRING "Chasing: "
+
+/*
+=================
+CG_DrawFollow
+=================
+*/
+static qboolean CG_DrawFollow( void )
+{
+  float       w;
+  vec4_t      color;
+  char        buffer[ MAX_STRING_CHARS ];
+
+  if( cg.snap->ps.clientNum == cg.clientNum )
+    return qfalse;
+
+  color[ 0 ] = 1;
+  color[ 1 ] = 1;
+  color[ 2 ] = 1;
+  color[ 3 ] = 1;
+
+  if( !cg.chaseFollow ) 
+    strcpy( buffer, FOLLOWING_STRING );
+  else 
+    strcpy( buffer, CHASING_STRING );
+  strcat( buffer, cgs.clientinfo[ cg.snap->ps.clientNum ].name );
+
+  w = UI_Text_Width( buffer, 0.7f, 0 );
+  UI_Text_Paint( 320 - w / 2, 400, 0.7f, color, buffer, 0, 0, ITEM_TEXTSTYLE_SHADOWED );
+
+  return qtrue;
+}
 
 /*
 =================
@@ -3524,6 +3511,7 @@ static void CG_DrawBotInfo( void ){
 
 //==================================================================================
 
+#define SPECTATOR_STRING "SPECTATOR"
 /*
 =================
 CG_Draw2D
@@ -3531,15 +3519,15 @@ CG_Draw2D
 */
 static void CG_Draw2D( void )
 {
-  menuDef_t *menu = NULL;
+  vec4_t    color;
+  float     w;
+  menuDef_t *menu = NULL, *defaultMenu;
+
+  color[ 0 ] = color[ 1 ] = color[ 2 ] = color[ 3 ] = 1.0f;
 
   // if we are taking a levelshot for the menu, don't draw anything
   if( cg.levelShot )
     return;
-
-  // fading to black if stamina runs out
-  // (only 2D that can't be disabled)
-  CG_DrawLighting( );
 
   if( cg_draw2D.integer == 0 )
     return;
@@ -3550,27 +3538,34 @@ static void CG_Draw2D( void )
     return;
   }
 
-  if( cg.snap->ps.persistant[ PERS_SPECSTATE ] == SPECTATOR_NOT &&
-      !( cg.snap->ps.stats[ STAT_STATE ] & SS_HOVELING ) &&
-      cg.snap->ps.stats[ STAT_HEALTH ] > 0 )
+  CG_DrawLighting( );
+
+
+  defaultMenu = Menus_FindByName( "default_hud" );
+
+  if( cg.snap->ps.persistant[ PERS_SPECSTATE ] != SPECTATOR_NOT )
   {
-    menu = Menus_FindByName( BG_ClassConfig( cg.predictedPlayerState.stats
-                                                 [ STAT_CLASS ] )->hudName );
+    w = UI_Text_Width( SPECTATOR_STRING, 0.7f, 0 );
+    UI_Text_Paint( 320 - w / 2, 440, 0.7f, color, SPECTATOR_STRING, 0, 0, ITEM_TEXTSTYLE_SHADOWED );
+  }
+  else
+    menu = Menus_FindByName( BG_ClassConfig( cg.predictedPlayerState.stats[ STAT_CLASS ] )->hudName );
+
+  if( menu && !( cg.snap->ps.stats[ STAT_STATE ] & SS_HOVELING ) &&
+      ( cg.snap->ps.stats[ STAT_HEALTH ] > 0 ) )
+  {
     CG_DrawBuildableStatus( );
+    CG_DrawTeamStatus( );
+    if( cg_drawStatus.integer )
+      Menu_Paint( menu, qtrue );
+
   }
-
-  if( !menu )
-  {
-    menu = Menus_FindByName( "default_hud" );
-
-    if( !menu ) // still couldn't find it
-      CG_Error( "Default HUD could not be found" );
-  }
-
-  Menu_Paint( menu, qtrue );
+  else if( cg_drawStatus.integer )
+    Menu_Paint( defaultMenu, qtrue );
 
   CG_DrawVote( );
   CG_DrawTeamVote( );
+  CG_DrawFollow( );
   CG_DrawQueue( );
   CG_DrawBotInfo( );
 

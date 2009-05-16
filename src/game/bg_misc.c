@@ -2904,7 +2904,8 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
   s->time2 = ps->movementDir;
   s->legsAnim = ps->legsAnim;
   s->torsoAnim = ps->torsoAnim;
-  s->weaponAnim |= ps->weaponAnim;
+  //FIXME: gotta work out a way to transmit this in the entitystate
+  //s->weaponAnim |= ps->weaponAnim;
   s->clientNum = ps->clientNum;   // ET_PLAYER looks here instead of at number
                     // so corpses can also reference the proper config
   s->eFlags = ps->eFlags;
@@ -3012,7 +3013,8 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
   s->time2 = ps->movementDir;
   s->legsAnim = ps->legsAnim;
   s->torsoAnim = ps->torsoAnim;
-  s->weaponAnim = ps->weaponAnim;
+  // FIXME: see previous instance of weaponAnim
+  //s->weaponAnim = ps->weaponAnim;
   s->clientNum = ps->clientNum;   // ET_PLAYER looks here instead of at number
                     // so corpses can also reference the proper config
   s->eFlags = ps->eFlags;
@@ -3447,110 +3449,6 @@ int atoi_neg( char *token, qboolean allowNegative )
   return value;
 }
 
-/*
-===============
-BG_PackZapTargets
-
-pack up to 12 entityNums into an entityState_t
-===============
-*/
-void BG_PackZapTargets( entityState_t *es, int *entityNums, int count )
-{
-  int i;
-  es->misc = es->time = es->time2 = es->constantLight = 0;
-  for( i = 0; i < MAX_GENTITYNUM_PACK; i++ )
-  {
-    int entityNum = ENTITYNUM_NONE;
-    if( i < count )
-      entityNum = entityNums[i];
-    if( entityNum & ~(GENTITYNUM_MASK) )
-    {
-      Com_Printf("Warning: BG_PackZapTargets: entityNums[%d] (%d) doesn't fit in %d bits, using ENTITYNUM_NONE",
-                 i, entityNums[i], GENTITYNUM_BITS);
-      entityNum = ENTITYNUM_NONE;
-    }
-    switch( i )
-    {
-      case 0:
-        es->misc |= entityNum;
-        break;
-      case 1:
-        es->time |= entityNum;
-        break;
-      case 2:
-        es->time |= entityNum << GENTITYNUM_BITS;
-        break;
-      case 3:
-        es->time |= entityNum << (GENTITYNUM_BITS * 2);
-        break;
-      case 4:
-        es->time2 |= entityNum;
-        break;
-      case 5:
-        es->time2 |= entityNum << GENTITYNUM_BITS;
-        break;
-      case 6:
-        es->time2 |= entityNum << (GENTITYNUM_BITS * 2);
-        break;
-      case 7:
-        es->constantLight |= entityNum;
-        break;
-      case 8:
-        es->constantLight |= entityNum << GENTITYNUM_BITS;
-        break;
-      case 9:
-        es->constantLight |= entityNum << (GENTITYNUM_BITS * 2);
-    }
-  }
-}
-
-/*
-===============
-BG_UnpackZapTargets
-
-unpacks the 12 entityNums in an entityState_t
-===============
-*/
-void BG_UnpackZapTargets( entityState_t *es, int *entityNums, int count )
-{
-  int i;
-  for( i = 0; i < count; i++ )
-  {
-    switch( i )
-    {
-      case 0:
-        entityNums[i] = es->misc & GENTITYNUM_MASK;
-        break;
-      case 1:
-        entityNums[i] = es->time & GENTITYNUM_MASK;
-        break;
-      case 2:
-        entityNums[i] = (es->time >> GENTITYNUM_BITS) & GENTITYNUM_MASK;
-        break;
-      case 3:
-        entityNums[i] = (es->time >> (GENTITYNUM_BITS * 2)) & GENTITYNUM_MASK;
-        break;
-      case 4:
-        entityNums[i] = es->time2 & GENTITYNUM_MASK;
-        break;
-      case 5:
-        entityNums[i] = (es->time2 >> GENTITYNUM_BITS) & GENTITYNUM_MASK;
-        break;
-      case 6:
-        entityNums[i] = (es->time2 >> (GENTITYNUM_BITS * 2)) & GENTITYNUM_MASK;
-        break;
-      case 7:
-        entityNums[i] = es->constantLight & GENTITYNUM_MASK;
-        break;
-      case 8:
-        entityNums[i] = (es->constantLight >> GENTITYNUM_BITS) & GENTITYNUM_MASK;
-        break;
-      case 9:
-        entityNums[i] = (es->constantLight >> (GENTITYNUM_BITS * 2)) & GENTITYNUM_MASK;
-        break;
-    }
-  }
-}
 /*
 ===============
 BG_ParseCSVEquipmentList

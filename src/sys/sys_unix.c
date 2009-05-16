@@ -44,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(char **path2)
 {
 	char *p;
 
@@ -54,13 +54,22 @@ char *Sys_DefaultHomePath(void)
 		{
 			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
+#if USE_OLD_HOMEPATH
+			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremulous" );
+#else
 			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremfusion" );
+#endif
+#else
+#if USE_OLD_HOMEPATH
+			Q_strcat( homePath, sizeof( homePath ), "/.tremulous" );
 #else
 			Q_strcat( homePath, sizeof( homePath ), "/.tremfusion" );
+#endif
 #endif
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
 }
 
@@ -519,16 +528,13 @@ void Sys_ErrorDialog( const char *error )
 	fileHandle_t f;
 	const char *fileName = "crashlog.txt";
 
-	// Shut down now so that the curses console doesn't clear the screen when it's really shut down
-	CON_Shutdown( );
-
 	Sys_Print( va( "%s\n", error ) );
 
 	// Make sure the curses console is shutdown
 	CON_Shutdown();
 
 	// Write console log to file and to stderr
-	f = FS_SV_FOpenFileWrite( fileName );
+	f = FS_FOpenFileWrite( fileName );
 	if( !f )
 	{
 		Com_Printf( "ERROR: couldn't open %s\n", fileName );

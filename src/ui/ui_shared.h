@@ -289,11 +289,10 @@ typedef struct itemDef_s
   const char *onFocus;           // select script
   const char *leaveFocus;        // select script
   const char *onTextEntry;       // called when text entered
-  const char *delayEvent;        // delay event script
   const char *cvar;              // associated cvar
   const char *cvarTest;          // associated cvar for enable actions
-  const char *enableCvar;        // enable, disable, show, or hide based on value, this can contain a list
-  int cvarFlags;                 // what type of action to take on cvarenables
+  const char *enableCvar;         // enable, disable, show, or hide based on value, this can contain a list
+  int cvarFlags;                 //  what type of action to take on cvarenables
   sfxHandle_t focusSound;
   int numColors;                 // number of color ranges
   colorRangeDef_t colorRanges[MAX_COLOR_RANGES];
@@ -401,7 +400,6 @@ typedef struct
                             vec4_t backColor, qhandle_t shader, int textStyle );
   float ( *getValue ) ( int ownerDraw );
   qboolean ( *ownerDrawVisible ) ( int flags );
-  qboolean ( *hideScreen ) ( int modifier );
   void ( *runScript )( char **p );
   void ( *getCVarString )( const char *cvar, char *buffer, int bufsize );
   float ( *getCVarValue )( const char *cvar );

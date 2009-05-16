@@ -352,10 +352,12 @@ void Sys_UnloadDll( void *dllHandle )
 Sys_TryLibraryLoad
 =================
 */
-static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname)
+static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const char* fname, char* fqpath )
 {
 	void* libHandle;
 	char* fn;
+
+	*fqpath = 0;
 
 	fn = FS_BuildOSPath( base, gamedir, fname );
 	Com_Printf( "Sys_LoadDll(%s)... \n", fn );
@@ -367,7 +369,8 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 		return NULL;
 	}
 
-	Com_Printf ( "Sys_LoadDll(%s): succeeded ...\n", fn );\
+	Com_Printf ( "Sys_LoadDll(%s): succeeded ...\n", fn );
+	Q_strncpyz ( fqpath , fn , MAX_QPATH ) ;
 
 	return libHandle;
 }
@@ -382,7 +385,7 @@ Used to load a development dll instead of a virtual machine
 #3 look in fs_basepath
 =================
 */
-void *Sys_LoadDll( const char *name,
+void *Sys_LoadDll( const char *name, char *fqpath ,
 	intptr_t (**entryPoint)(int, ...),
 	intptr_t (*systemcalls)(intptr_t, ...) )
 {
@@ -406,16 +409,16 @@ void *Sys_LoadDll( const char *name,
 	extrapath = Cvar_VariableString( "fs_extrapath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
-	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname);
+	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
 
 	if(!libHandle && *homepath)
-		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname);
+		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
 
 	if(!libHandle && *extrapath)
-		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname);
+		libHandle = Sys_TryLibraryLoad(extrapath, gamedir, fname, fqpath);
 
 	if(!libHandle && *basepath)
-		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname);
+		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
 
 	if(!libHandle) {
 		Com_Printf ( "Sys_LoadDll(%s) failed to load library - it couldn't be found in the path\n", name );
@@ -541,9 +544,6 @@ int main( int argc, char **argv )
 #endif
 
 	Sys_PlatformInit( );
-
-	// Set the initial time base
-	Sys_Milliseconds( );
 
 	Sys_ParseArgs( argc, argv );
 	Sys_SetBinaryPath( Sys_Dirname( Sys_ResolveLink( argv[ 0 ] ) ) );

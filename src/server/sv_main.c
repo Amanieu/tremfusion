@@ -59,8 +59,8 @@ cvar_t	*sv_dequeuePeriod;
 cvar_t	*sv_demoState;
 cvar_t	*sv_autoDemo;
 cvar_t	*sv_pure;
-cvar_t	*sv_rateOverride;
 
+cvar_t	*sv_minPing;
 /*
 =============================================================================
 

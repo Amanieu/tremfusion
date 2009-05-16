@@ -1171,6 +1171,36 @@ demoState_t CL_DemoState( void ) {
 	}
 }
 
+/*
+==================
+CL_DemoPos
+
+Returns the current position of the demo
+==================
+*/
+int CL_DemoPos( void ) {
+	if( clc.demoplaying || clc.demorecording ) {
+		return FS_FTell( clc.demofile );
+	} else {
+		return 0;
+	}
+}
+
+/*
+==================
+CL_DemoName
+
+Returns the name of the demo
+==================
+*/
+void CL_DemoName( char *buffer, int size ) {
+	if( clc.demoplaying || clc.demorecording ) {
+		Q_strncpyz( buffer, clc.demoName, size );
+	} else if( size >= 1 ) {
+		buffer[ 0 ] = '\0';
+	}
+}
+
 //======================================================================
 
 /*
@@ -1306,13 +1336,17 @@ update cl_guid using QKEY_FILE and optional prefix
 static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
-	int len;
+	int len, len2;
 	//get the length of both files
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
+	FS_FCloseFile( f );
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
 	FS_FCloseFile( f );
 	//check lengths and set cl_guid accordinally
 	if( len == QKEY_SIZE ) {
 		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
+	} else if( len2 == QKEY_SIZE ) {
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE_FALLBACK, QKEY_SIZE, prefix, prefix_len ) );
 	} else {
 		Cvar_Set( "cl_guid", "" );
 	}
@@ -1742,7 +1776,7 @@ void CL_Rcon_f( void ) {
 		}
 	}
 	
-	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
+	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to, 0);
 }
 
 /*
@@ -3271,14 +3305,21 @@ it by filling it with 2048 bytes of random data.
 static void CL_GenerateQKey(void)
 {
 	int len = 0;
+	int len2 = 0;
 	unsigned char buff[ QKEY_SIZE ];
 	fileHandle_t f;
 
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
+	FS_FCloseFile( f );
 
 	if( len == QKEY_SIZE ) {
 		Com_Printf( "QKEY found.\n" );
+		return;
+	}
+	else if( len2 == QKEY_SIZE ) {
+		Com_Printf( "QKEY found. (Fallback Location)\n" );
 		return;
 	}
 	else {
@@ -3412,7 +3453,7 @@ void CL_Init( void ) {
 	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
 	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
@@ -3974,9 +4015,9 @@ void CL_LocalServers_f( void ) {
 			to.port = BigShort( (short)(PORT_SERVER + j) );
 
 			to.type = NA_BROADCAST;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
 			to.type = NA_MULTICAST6;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
+			NET_SendPacket( NS_CLIENT, strlen( message ), message, to, 0 );
 		}
 	}
 }
