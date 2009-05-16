@@ -1,11 +1,17 @@
-Spawns: +5
-In view: +1
-Directly in view: +3
-Damaging bot: +4
+Base value: 10
+Spawns: +3
+In view(FOV 120): +1
+Directly in view (FOV 10): +3
+Damaging bot: +4 (Un implemented)
 Trapper: +2
 #### HEALTH ####
 Health 0%-20%: +2
 Health 20%-50%: 0
 Health 51%-99%: -1
 Full health: -2
-
+#### DISTANCE ####
+Distance 0-40: +4
+Distance 40-80: +2
+Distance 80-160: +1
+Distance 160-320: 0
+Distance 320-640: -1

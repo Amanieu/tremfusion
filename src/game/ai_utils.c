@@ -328,8 +328,10 @@ int BotSameTeam(bot_state_t *bs, int entnum) {
     return qfalse;
   }
   if (entnum < 0 || entnum >= MAX_CLIENTS) {
-    //BotAI_Print(PRT_ERROR, "BotSameTeam: client out of range\n");
-    return qfalse;
+    gentity_t *buildable;
+    buildable = &g_entities[ entnum ];
+    if(BG_Buildable(buildable->s.modelindex)->team == bs->ent->client->ps.stats[ STAT_TEAM ])
+            return qtrue;
   }
   
   trap_GetConfigstring(CS_PLAYERS+bs->client, info1, sizeof(info1));
@@ -446,7 +448,7 @@ int GetWalkingDist( bot_state_t* bs, vec3_t origin ){
   OrgToGoal(origin, &goal);
   if(!CheckReachability(&goal)){
     //    Bot_Print( BPDEBUG, "cant find a goal for entity %s \n", ent->classname);
-    return 10;
+    return -1;
   }
   //  arenanum = BotPointAreaNum( bestorigin );
   return trap_AAS_AreaTravelTimeToGoalArea(bs->areanum, bs->cur_ps.origin, goal.areanum, bs->tfl);

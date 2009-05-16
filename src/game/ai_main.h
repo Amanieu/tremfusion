@@ -366,6 +366,7 @@ qboolean TeamPlayIsOn( void );
 void BotSetEntityNumForGoalWithModel(bot_goal_t *goal, int eType, char *modelname);
 int BotReachedGoal(bot_state_t *bs, bot_goal_t *goal);
 char *EasyClientName(int client, char *buf, int size);
+int GetWalkingDist( bot_state_t* bs, vec3_t origin );
 
 extern bot_waypoint_t botai_waypoints[MAX_WAYPOINTS];
 extern bot_waypoint_t *botai_freewaypoints;
@@ -377,6 +378,7 @@ void BotAIBlocked(bot_state_t *bs, bot_moveresult_t *moveresult, int activate);
 void BotRandomMove(bot_state_t *bs, bot_moveresult_t *moveresult);
 int BotAILoadMap( int restart );
 void  QDECL BotAI_Print(int type, char *fmt, ...);
+int Bot_FindTarget(bot_state_t *bs);
 
 //returns the number of bots in the game
 int NumBots(void);

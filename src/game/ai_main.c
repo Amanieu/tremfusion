@@ -1066,3 +1066,91 @@ void BotBeginIntermission( void )
     }
   }
 }
+
+// Bot_TargetValue
+// Calculate this entities target value
+int Bot_TargetValue(bot_state_t* bs, int i) {
+        int target_value = 10;
+        aas_entityinfo_t entinfo;
+        gentity_t *ent;
+        int x;
+        vec3_t origin;
+        float f;
+        
+        ent = &g_entities[ i ];
+        BotEntityInfo(i, &entinfo);
+        VectorCopy(ent->s.origin, origin);
+        x = GetWalkingDist(bs, origin);
+        if (x == -1)
+                return -1;
+        if(BotSameTeam(bs, i)) 
+                return -1;
+        if(ent->s.eType == ET_BUILDABLE) {
+                switch(ent->s.modelindex) {
+                case BA_A_SPAWN:
+                case BA_H_SPAWN:
+                        target_value += 3;
+                        break;
+                case BA_A_TRAPPER:
+                        target_value += 2;
+                        break;
+                case BA_H_MEDISTAT:
+                        origin[2] += 5.0;
+                        break;
+                default:
+                        break;
+                }
+                f = (float)ent->health/(float)BG_Buildable(ent->s.modelindex)->health;
+        } else if (ent->s.eType == ET_PLAYER) {
+                f = (float)ent->health/(float)BG_Class(ent->client->ps.stats[ STAT_CLASS ])->health;
+        } else
+                return -1;
+        /* Check Health */
+        if(f >= 1.0)
+                target_value -= 2;
+        else if (f >= 0.5)
+                target_value -= 1;
+        else if (f >= 0.2)
+                target_value -= 0;
+        else
+                target_value += 2;
+        /* Check visibility */
+        if(BotEntityVisible(bs->entitynum, bs->eye, bs->viewangles, 120.0, i)) {
+                vec3_t dir, entangles, middle;
+                target_value += 1;
+                VectorAdd(entinfo.mins, entinfo.maxs, middle);
+                VectorScale(middle, 0.5, middle);
+                VectorAdd(entinfo.origin, middle, middle);
+                //check if entity is within inner field of vision
+                VectorSubtract(middle, bs->eye, dir);
+                vectoangles(dir, entangles);
+                if (BotInFieldOfVision(bs->viewangles, 10.0, entangles)) 
+                        target_value += 2;
+        }
+        /* Check walking distance */
+        if(x < 40)
+                target_value += 4;
+        else if(x < 80)
+                target_value += 2;
+        else if(x < 160)
+                target_value += 1;
+        else if(x < 640)
+                target_value -= 1;
+        else
+                target_value -= 2;
+        return target_value;
+}
+
+int Bot_FindTarget(bot_state_t *bs) {
+        int i, value, best_value, best_target;
+        best_target = -1;
+        best_value = 0;
+        for (i = 0; i < level.num_entities; i++) {
+                value = Bot_TargetValue(bs, i);
+                if(value > best_value) {
+                        best_value = value;
+                        best_target = i;
+                }
+        }
+        return best_target;
+}

@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ai_main.h"
 #include "ai_chat.h"
 
-#define TIME_BETWEENFINDINGENEMY 5
+#define TIME_BETWEENFINDINGENEMY 0.5
 #define TIME_BETWEENBUYINGAMMO  4
 #define TIME_BETWEENBUYINGGUN   10
 
@@ -841,36 +841,27 @@ qboolean HBotAttack2(bot_state_t* bs){
 // if enemy is found: bs->enemy and return qtrue
 
 qboolean HBotFindEnemy(bot_state_t* bs){
-  if(bs->findenemy_time > FloatTime() - TIME_BETWEENFINDINGENEMY) return qtrue;
-  bs->findenemy_time = FloatTime();
-  // return 0 if no alien building can be found
-  
-  //see if there's an enemy in range, and go for it
-  if( BotGoalForNearestEnemy( bs , &bs->goal ) ) goto gotenemy;
-  //{
-  // go for acid tubes
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_ACIDTUBE, Nullcheckfuct ) ) goto gotenemy;
-  // go for barricades
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_BARRICADE, Nullcheckfuct ) ) goto gotenemy;
-  // go for eggs
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_SPAWN, Nullcheckfuct ) ) goto gotenemy;
-  // go for trappers
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_TRAPPER, Nullcheckfuct ) ) goto gotenemy;
-  // go for boosters
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_BOOSTER, Nullcheckfuct ) ) goto gotenemy;
-  // go for hives
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_HIVE, Nullcheckfuct ) ) goto gotenemy;
-  // go for hovels
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_HOVEL, Nullcheckfuct ) ) goto gotenemy;
-  // go for OM
-  if( BotGoalForClosestBuildable(  bs, &bs->goal, BA_A_OVERMIND, Nullcheckfuct ) ) goto gotenemy;
-  // haven't returned yet so no enemy found > dont do anything
-  BotAddInfo(bs, "enemy", "none");
-  return qfalse;
-  gotenemy:	
-  bs->enemy = bs->goal.entitynum;
-  BotAddInfo(bs, "enemy", va("# %d", bs->enemy) );
-  return qtrue;
+        int enemy;
+        gentity_t *ent;
+        if(bs->findenemy_time > FloatTime() - TIME_BETWEENFINDINGENEMY && bs->lastheardtime < FloatTime() - 0.5) return qtrue;
+        bs->findenemy_time = FloatTime();
+
+        enemy = Bot_FindTarget(bs);
+
+        if(enemy == -1) {
+                BotAddInfo(bs, "enemy", "none");
+                return qfalse;
+        }
+        bs->enemy = enemy;
+        BotAddInfo(bs, "enemy", va("# %d", bs->enemy) );
+        /* Find goal */
+        ent = &g_entities[ enemy ];
+        VectorCopy(ent->s.origin, bs->goal.origin);
+        VectorCopy(ent->r.maxs, bs->goal.maxs);
+        VectorCopy(ent->r.mins, bs->goal.mins);
+        bs->goal.areanum = BotPointAreaNum(ent->s.origin);
+        bs->goal.entitynum = enemy;
+        return qtrue;
 }
 
 void HBotAvoid(bot_state_t *bs){

@@ -1764,7 +1764,7 @@ qboolean G_admin_ban( gentity_t *ent, int skiparg )
   if(g_admin_namelog[ logmatch ]->slot != -1)
   {
     int slot = g_admin_namelog[ logmatch ]->slot;
-    if(g_entities[slot] && g_entities[slot].r.svFlags & SVF_BOT)
+    if(g_entities[slot].r.svFlags & SVF_BOT)
     {
       ADMP( "^3!ban: ^7banning a bot would cause bad things\n" );
       return qfalse;
