@@ -3487,10 +3487,10 @@ static void CG_DrawBotInfo( void ){
 
 
     // we dont spec? so give info for the crosshairplayer
-    //if(!cgs.clientinfo[ cg.snap->ps.clientNum ].botSkill){
-    //    clientnum = CG_CrosshairPlayer();
-    //}
-	//else	// info for the bot we spec
+    if(!cgs.clientinfo[ cg.snap->ps.clientNum ].botSkill){
+        clientnum = CG_CrosshairPlayer();
+    }
+	else	// info for the bot we spec
 		clientnum = cg.snap->ps.clientNum;
 
     info = CG_ConfigString( CS_BOTINFOS + clientnum );

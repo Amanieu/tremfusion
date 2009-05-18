@@ -1,5 +1,5 @@
 Base value: 10
-Spawns: +3
+Spawns: +1
 In view(FOV 120): +1
 Directly in view (FOV 10): +3
 Damaging bot: +4 (Un implemented)

@@ -1087,9 +1087,10 @@ int Bot_TargetValue(bot_state_t* bs, int i) {
                 return -1;
         if(ent->s.eType == ET_BUILDABLE) {
                 switch(ent->s.modelindex) {
-                case BA_A_SPAWN:
                 case BA_H_SPAWN:
-                        target_value += 3;
+                        origin[2] += 5.0;
+                case BA_A_SPAWN:
+                        target_value += 1;
                         break;
                 case BA_A_TRAPPER:
                         target_value += 2;
@@ -1102,6 +1103,15 @@ int Bot_TargetValue(bot_state_t* bs, int i) {
                 }
                 f = (float)ent->health/(float)BG_Buildable(ent->s.modelindex)->health;
         } else if (ent->s.eType == ET_PLAYER) {
+                switch(ent->client->ps.stats[ STAT_CLASS ]) {
+                case WP_ALEVEL0:
+                case WP_ALEVEL1:
+                case WP_ALEVEL1_UPG:
+                        origin[2] += 5.0;
+                        break;
+                default:
+                        break;
+                }
                 f = (float)ent->health/(float)BG_Class(ent->client->ps.stats[ STAT_CLASS ])->health;
         } else
                 return -1;
@@ -1112,8 +1122,10 @@ int Bot_TargetValue(bot_state_t* bs, int i) {
                 target_value -= 1;
         else if (f >= 0.2)
                 target_value -= 0;
-        else
+        else if (f > 0.0)
                 target_value += 2;
+        else
+                return -1;
         /* Check visibility */
         if(BotEntityVisible(bs->entitynum, bs->eye, bs->viewangles, 120.0, i)) {
                 vec3_t dir, entangles, middle;

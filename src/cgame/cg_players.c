@@ -809,6 +809,10 @@ void CG_NewClientInfo( int clientNum )
 
   v = Info_ValueForKey( configstring, "c2" );
   CG_ColorFromString( v, newInfo.color2 );
+  
+  // bot skill
+  v = Info_ValueForKey( configstring, "skill" );
+  newInfo.botSkill = atoi( v );
 
   // handicap
   v = Info_ValueForKey( configstring, "hc" );

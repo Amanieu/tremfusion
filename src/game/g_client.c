@@ -996,6 +996,7 @@ void ClientUserinfoChanged( int clientNum )
 {
   gentity_t *ent;
   int       health;
+  int       botskill;
   char      *s;
   char      *s2;
   char      model[ MAX_QPATH ];
@@ -1172,6 +1173,14 @@ void ClientUserinfoChanged( int clientNum )
   // colors
   strcpy( c1, Info_ValueForKey( userinfo, "color1" ) );
   strcpy( c2, Info_ValueForKey( userinfo, "color2" ) );
+  
+  // bot skill level
+  s = Info_ValueForKey( userinfo, "skill" );
+  if( !s[0] || atoi( s ) == 0 )
+    botskill = 0;
+  else
+    botskill = atoi(s);
+  
 
   Q_strncpyz( client->pers.voice, Info_ValueForKey( userinfo, "voice" ),
     sizeof( client->pers.voice ) );
@@ -1181,10 +1190,10 @@ void ClientUserinfoChanged( int clientNum )
 
   Com_sprintf( userinfo, sizeof( userinfo ),
     "n\\%s\\t\\%i\\model\\%s\\c1\\%s\\c2\\%s\\"
-    "hc\\%i\\ig\\%16s\\v\\%s",
+    "hc\\%i\\ig\\%16s\\v\\%s\\skill\\%i",
     client->pers.netname, client->pers.teamSelection, model, c1, c2,
     client->pers.maxHealth, BG_ClientListString( &client->sess.ignoreList ),
-    client->pers.voice );
+    client->pers.voice, botskill );
 
   trap_SetConfigstring( CS_PLAYERS + clientNum, userinfo );
 

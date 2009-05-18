@@ -726,6 +726,8 @@ typedef struct
 
   char        name[ MAX_QPATH ];
   team_t      team;
+  
+  int         botSkill;               // 0 = not bot, 1-5 = bot
 
   vec3_t      color1;
   vec3_t      color2;

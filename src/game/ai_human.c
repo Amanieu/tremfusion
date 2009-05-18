@@ -1347,64 +1347,66 @@ BotHumanAI
 ==================
  */
 void BotHumanAI(bot_state_t *bs, float thinktime) {
-  if (bs->setupcount > 0) {
-    bs->setupcount--;
-    if (bs->setupcount > 0) return;
-    
-    trap_EA_Command(bs->client, "team humans");
-    //
-    //bs->lastframe_health = bs->inventory[INVENTORY_HEALTH];
-    //bs->lasthitcount = bs->cur_ps.persistant[PERS_HITS];
-    bs->setupcount = 0;
-  }
-  
-  //char buf[144];
-  
-  /*bot_goal_t goal;
+        if (bs->setupcount > 0) {
+                bs->setupcount--;
+                if (bs->setupcount > 0) return;
+
+                trap_EA_Command(bs->client, "team humans");
+                //
+                //bs->lastframe_health = bs->inventory[INVENTORY_HEALTH];
+                //bs->lasthitcount = bs->cur_ps.persistant[PERS_HITS];
+                bs->setupcount = 0;
+        }
+
+        //char buf[144];
+
+        /*bot_goal_t goal;
 	bot_moveresult_t moveresult;
 	int tt;
 	vec3_t target, dir;
-   */
-  //char userinfo[MAX_INFO_STRING];
-  
-  //if the bot has just been setup
-  
-  
-  // update knowledge base and inventory
-  HBotUpdateInventory(bs);
-  
-  // run the FSM
-  bs->statecycles = 0;
-  //reset the state switches from the previous frame
-  BotResetStateSwitches();
-  while( !HBotRunState(bs) ){
-    if( ++(bs->statecycles) > MAX_STATESWITCHES){
-      BotAddInfo(bs, "botstates", "loop");
-      HBotDumpStateSwitches(bs);
-      break;
-    }
-  }
-  
-  // update the hud
-  if(bot_developer.integer){
-    // fsm state
-    BotAddInfo(bs, "state", va("%s",stateNames[ bs->state ]) );
-    //BotAddInfo(bs, "nextstate", va("%s" ,stateNames[ bs->nextstate ]) );
-    
-    // weapon
-    BotAddInfo(bs, "skill", va("%f",trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_AIM_SKILL, 0, 1) ) );
-    // ammo
-    //BotAddInfo(bs, "ammo", va("%d",bs->inventory[BI_AMMO]) );
-    //target
-    //		if (bs->goal != NULL)
-    BotAddInfo(bs, "goal", va("%d",  bs->goal.entitynum ) );
-    //		else
-    //		  BotAddInfo(bs, "goal", "None");
-    //Enemy Info
-    if( bs->enemyent && bs->enemyent->client)
-      BotAddInfo(bs, "enemyname", va("%s",bs->enemyent->client->pers.netname) );
-    
-    // copy config string
-    trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);
-  }
+         */
+        //char userinfo[MAX_INFO_STRING];
+
+        //if the bot has just been setup
+
+
+        // update knowledge base and inventory
+        HBotUpdateInventory(bs);
+
+        // run the FSM
+        bs->statecycles = 0;
+        //reset the state switches from the previous frame
+        BotResetStateSwitches();
+        while( !HBotRunState(bs) ){
+                if( ++(bs->statecycles) > MAX_STATESWITCHES){
+                        BotAddInfo(bs, "botstates", "loop");
+                        HBotDumpStateSwitches(bs);
+                        break;
+                }
+        }
+
+        // update the hud
+        if(bot_developer.integer){
+                gentity_t *target;
+                // fsm state
+                BotAddInfo(bs, "state", va("%s",stateNames[ bs->state ]) );
+
+                // weapon
+                //BotAddInfo(bs, "Aim Skill", va("%f",trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_AIM_SKILL, 0, 1) ) );
+                // ammo
+                //target
+                BotAddInfo(bs, "Goal ent #", va("%d",  bs->goal.entitynum ) );
+                //Enemy Info
+                if(bs->enemy >= 0 || bs->enemy < MAX_GENTITIES ) {
+                        target = &g_entities[ bs->enemy ];
+                        if(target->client)
+                                BotAddInfo(bs, "Target Name", target->client->pers.netname );
+                        if(target->classname)
+                                BotAddInfo(bs, "Target Class", target->classname);
+                        
+                }
+
+                // copy config string
+                trap_SetConfigstring( CS_BOTINFOS + bs->client, bs->hudinfo);
+        }
 }
