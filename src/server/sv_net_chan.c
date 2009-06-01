@@ -65,7 +65,12 @@ static void SV_Netchan_Encode( client_t *client, msg_t *msg ) {
 		// modify the key with the last received and with this message acknowledged client command
 		if (!string[index])
 			index = 0;
-		key ^= string[index] << (i & 1);
+		if (string[index] > 127 || string[index] == '%') {
+			key ^= '.' << (i & 1);
+		}
+		else {
+			key ^= string[index] << (i & 1);
+		}
 		index++;
 		// encode the data with this key
 		*(msg->data + i) = *(msg->data + i) ^ key;
