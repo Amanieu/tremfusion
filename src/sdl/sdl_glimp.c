@@ -22,11 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <SDL.h>
 
-#ifdef SMP
-#	include <SDL_thread.h>
-#	ifdef SDL_VIDEO_DRIVER_X11
-#		include <X11/Xlib.h>
-#	endif
+#include <SDL_thread.h>
+#ifdef SDL_VIDEO_DRIVER_X11
+#	include <X11/Xlib.h>
 #endif
 
 #include <stdarg.h>
@@ -52,7 +50,6 @@ static void GLimp_GetCurrentContext(void)
 	opengl_context = CGLGetCurrentContext();
 }
 
-#ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable)
 {
 	if(enable)
@@ -60,7 +57,6 @@ static void GLimp_SetCurrentContext(qboolean enable)
 	else
 		CGLSetCurrentContext(NULL);
 }
-#endif
 #elif SDL_VIDEO_DRIVER_X11
 #include <GL/glx.h>
 typedef struct
@@ -80,7 +76,6 @@ static void GLimp_GetCurrentContext(void)
 	opengl_context.drawable = glXGetCurrentDrawable();
 }
 
-#ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable)
 {
 	if(enable)
@@ -88,7 +83,6 @@ static void GLimp_SetCurrentContext(qboolean enable)
 	else
 		glXMakeCurrent(opengl_context.dpy, None, NULL);
 }
-#endif
 #elif WIN32
 typedef struct
 {
@@ -114,7 +108,6 @@ static void GLimp_GetCurrentContext(void)
 	opengl_context.hGLRC = info.hglrc;
 }
 
-#ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable)
 {
 	if(enable)
@@ -122,12 +115,9 @@ static void GLimp_SetCurrentContext(qboolean enable)
 	else
 		wglMakeCurrent(opengl_context.hDC, NULL);
 }
-#endif
 #else
 static void GLimp_GetCurrentContext(void) {}
-#ifdef SMP
 static void GLimp_SetCurrentContext(qboolean enable) {}
-#endif
 #endif
 
 typedef enum
@@ -718,7 +708,7 @@ void GLimp_Init( void )
 
 	Sys_GLimpInit( );
 
-#if defined(SMP) && defined(SDL_VIDEO_DRIVER_X11)
+#ifdef SDL_VIDEO_DRIVER_X11
 	XInitThreads( );
 #endif
 
@@ -849,7 +839,6 @@ void GLimp_EndFrame( void )
 
 
 
-#ifdef SMP
 /*
 ===========================================================
 
@@ -1061,31 +1050,3 @@ void GLimp_WakeRenderer( void *data )
 	}
 	SDL_UnlockMutex(smpMutex);
 }
-
-#else
-
-// No SMP - stubs
-void GLimp_RenderThreadWrapper( void *arg )
-{
-}
-
-qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
-{
-	ri.Printf( PRINT_WARNING, "ERROR: SMP support was disabled at compile time\n");
-	return qfalse;
-}
-
-void *GLimp_RendererSleep( void )
-{
-	return NULL;
-}
-
-void GLimp_FrontEndSleep( void )
-{
-}
-
-void GLimp_WakeRenderer( void *data )
-{
-}
-
-#endif

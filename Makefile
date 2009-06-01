@@ -24,9 +24,6 @@ endif
 ifndef BUILD_CLIENT
   BUILD_CLIENT     = 1
 endif
-ifndef BUILD_CLIENT_SMP
-  BUILD_CLIENT_SMP = 1
-endif
 ifndef BUILD_CLIENT_TTY
   BUILD_CLIENT_TTY = 1
 endif
@@ -38,15 +35,6 @@ ifndef BUILD_GAME_SO
 endif
 ifndef BUILD_GAME_QVM
   BUILD_GAME_QVM   = 1
-endif
-
-# SMP only works on Mac, Linux and Windows
-ifneq ($(PLATFORM),darwin)
-ifneq ($(PLATFORM),mingw32)
-ifneq ($(PLATFORM),linux)
-  BUILD_CLIENT_SMP = 0
-endif
-endif
 endif
 
 #############################################################################
@@ -377,11 +365,10 @@ ifeq ($(PLATFORM),linux)
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   BASE_CFLAGS+=-I/usr/X11R6/include
-  THREAD_LDFLAGS=-L/usr/X11R6/$(LIB)
-  THREAD_LIBS=-lpthread -lX11
+  CLIENT_LDFLAGS=-L/usr/X11R6/$(LIB)
   LIBS=-ldl -lm
 
-  CLIENT_LIBS += $(shell sdl-config --libs) -lGL
+  CLIENT_LIBS += $(shell sdl-config --libs) -lGL -lpthread -lX11
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -746,15 +733,14 @@ ifeq ($(PLATFORM),freebsd)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  THREAD_LIBS=-lpthread
   # don't need -ldl (FreeBSD)
   LIBS+=-lm
 
-  CLIENT_LIBS += $(shell sdl-config --libs) -lGL
+  CLIENT_LIBS += $(shell sdl-config --libs) -lGL -lpthread
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
-      CLIENT_LIBS += $(THREAD_LIBS) -lopenal
+      CLIENT_LIBS += -lopenal
     endif
   endif
 
@@ -806,14 +792,13 @@ ifeq ($(PLATFORM),openbsd)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  THREAD_LIBS=-lpthread
   LIBS=-lm
 
-  CLIENT_LIBS = $(shell sdl-config --libs) -lGL
+  CLIENT_LIBS = $(shell sdl-config --libs) -lGL -lpthread
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
-      CLIENT_LIBS += $(THREAD_LIBS) -lossaudio -lopenal
+      CLIENT_LIBS += -lossaudio -lopenal
     endif
   endif
 
@@ -833,7 +818,7 @@ ifeq ($(PLATFORM),netbsd)
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
-  THREAD_LIBS=-lpthread
+  CLIENT_LIBS=-lpthread
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
@@ -932,10 +917,9 @@ ifeq ($(PLATFORM),sunos)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  THREAD_LIBS=-lpthread
   LIBS=-lsocket -lnsl -ldl -lm
 
-  CLIENT_LIBS +=$(shell sdl-config --libs) -lGL
+  CLIENT_LIBS +=$(shell sdl-config --libs) -lGL -lpthread
 
 else # ifeq sunos
 
@@ -967,9 +951,6 @@ endif
 
 ifneq ($(BUILD_CLIENT),0)
   TARGETS += $(B)/tremfusion.$(ARCH)$(BINEXT)
-  ifneq ($(BUILD_CLIENT_SMP),0)
-    TARGETS += $(B)/tremfusion-smp.$(ARCH)$(BINEXT)
-  endif
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
@@ -1040,11 +1021,6 @@ endif
 define DO_CC
 $(echo_cmd) "CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
-endef
-
-define DO_SMP_CC
-$(echo_cmd) "SMP_CC $<"
-$(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -DSMP -o $@ -c $<
 endef
 
 define DO_TTY_CC
@@ -1161,7 +1137,6 @@ makedirs:
 	@if [ ! -d $(BUILD_DIR) ];then $(MKDIR) $(BUILD_DIR);fi
 	@if [ ! -d $(B) ];then $(MKDIR) $(B);fi
 	@if [ ! -d $(B)/client ];then $(MKDIR) $(B)/client;fi
-	@if [ ! -d $(B)/clientsmp ];then $(MKDIR) $(B)/clientsmp;fi
 	@if [ ! -d $(B)/clienttty ];then $(MKDIR) $(B)/clienttty;fi
 	@if [ ! -d $(B)/ded ];then $(MKDIR) $(B)/ded;fi
 	@if [ ! -d $(B)/base ];then $(MKDIR) $(B)/base;fi
@@ -1476,7 +1451,8 @@ Q3OBJ = \
   \
   $(B)/client/sdl_gamma.o \
   $(B)/client/sdl_input.o \
-  $(B)/client/sdl_snd.o
+  $(B)/client/sdl_snd.o \
+  $(B)/client/sdl_glimp.o
 
 Q3TOBJ += \
   $(B)/clienttty/null_input.o \
@@ -1584,25 +1560,13 @@ ifeq ($(USE_MUMBLE),1)
     $(B)/client/libmumblelink.o
 endif
 
-Q3POBJ = \
-  $(B)/client/sdl_glimp.o
-
-Q3POBJ_SMP = \
-  $(B)/clientsmp/sdl_glimp.o
-
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
-	    -o $@ $(Q3OBJ) $(Q3POBJ) $(CLIENT_LIBS) $(LIBS) \
-        $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
-
-$(B)/tremfusion-smp.$(ARCH)$(BINEXT): $(Q3OBJ) $(Q3POBJ_SMP) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
-	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(THREAD_LDFLAGS) \
-       -o $@ $(Q3OBJ) $(Q3POBJ_SMP) $(CLIENT_LIBS) $(LIBS) $(THREAD_LIBS) \
+	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
 $(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
@@ -1912,9 +1876,6 @@ $(B)/client/%.o: $(RDIR)/%.c
 $(B)/client/%.o: $(SDLDIR)/%.c
 	$(DO_CC)
 
-$(B)/clientsmp/%.o: $(SDLDIR)/%.c
-	$(DO_SMP_CC)
-
 $(B)/client/%.o: $(SYSDIR)/%.c
 	$(DO_CC)
 
@@ -2038,7 +1999,7 @@ $(B)/base/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 # MISC
 #############################################################################
 
-OBJ = $(Q3OBJ) $(Q3POBJ) $(Q3POBJ_SMP) $(Q3TOBJ) $(Q3DOBJ) \
+OBJ = $(Q3OBJ) $(Q3TOBJ) $(Q3DOBJ) \
   $(GOBJ) $(CGOBJ) $(UIOBJ) \
   $(GVMOBJ) $(CGVMOBJ) $(UIVMOBJ)
 TOOLSOBJ = $(LBURGOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
