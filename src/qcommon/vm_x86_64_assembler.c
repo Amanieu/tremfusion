@@ -30,6 +30,8 @@ typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long u64;
 
+void Com_DPrintf(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+
 static char* out;
 static unsigned compiledOfs;
 static unsigned assembler_pass;
