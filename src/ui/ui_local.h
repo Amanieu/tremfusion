@@ -107,13 +107,6 @@ typedef struct serverStatus_s
   int    nextSortTime;
   qhandle_t currentServerPreview;
   int    currentServerCinematic;
-  int    motdLen;
-  int    motdWidth;
-  int    motdPaintX;
-  int    motdPaintX2;
-  int    motdOffset;
-  int    motdTime;
-  char  motd[MAX_STRING_CHARS];
 }
 serverStatus_t;
 
