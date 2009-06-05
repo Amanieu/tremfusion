@@ -1804,7 +1804,8 @@ void CL_Vid_Restart_f( void ) {
 	// clear pak references
 	FS_ClearPakReferences( FS_UI_REF | FS_CGAME_REF );
 	// reinitialize the filesystem if the game directory or checksum has changed
-	FS_ConditionalRestart( clc.checksumFeed );
+	if ( cls.state <= CA_CONNECTED || cls.state == CA_CINEMATIC )
+		FS_ConditionalRestart( clc.checksumFeed );
 
 	cls.rendererStarted = qfalse;
 	cls.uiStarted = qfalse;
