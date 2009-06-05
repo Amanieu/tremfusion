@@ -395,6 +395,9 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		return NULL;
 	}
 
+	// show where the qvm was loaded from
+	Cmd_ExecuteString( va( "which %s\n", filename ) );
+
 	if( LittleLong( header.h->vmMagic ) == VM_MAGIC_VER2 ) {
 		Com_DPrintf( "...which has vmMagic VM_MAGIC_VER2\n" );
 
