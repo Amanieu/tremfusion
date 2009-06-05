@@ -217,8 +217,6 @@ static  cvar_t          *fs_apppath;
 static	cvar_t		*fs_basepath;
 static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_gamedirvar;
-static	cvar_t		*fs_extrapaks;
-static	cvar_t		*fs_restrict;
         cvar_t		*fs_autogen;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
@@ -261,10 +259,6 @@ static qboolean fs_reordered;
 static int		fs_numServerPaks;
 static int		fs_serverPaks[MAX_SEARCH_PATHS];				// checksums
 
-// extra paks are on top of the search paths, overriding the current directory and bypassing pure
-static int		fs_numExtraPaks;
-static char		*fs_extraPaks[MAX_SEARCH_PATHS];				// pk3 names
-
 // only used for autodownload, to make sure the client has at least
 // all the pk3 files that are referenced at the server side
 static int		fs_numServerReferencedPaks;
@@ -294,7 +288,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 #ifndef DEDICATED
 	int i;
 	extern int cl_connectedToPureServer;
-	if ( fs_numServerPaks && ( cl_connectedToPureServer || fs_restrict->integer ) ) {
+	if ( fs_numServerPaks && cl_connectedToPureServer ) {
 		for ( i = 0 ; i < fs_numServerPaks ; i++ ) {
 			// FIXME: also use hashed file names
 			// NOTE TTimo: a pk3 with same checksum but different name would be validated too
@@ -303,12 +297,7 @@ qboolean FS_PakIsPure( pack_t *pack ) {
 				return qtrue;		// on the aproved list
 			}
 		}
-		for ( i = 0 ; i < fs_numExtraPaks ; i++ ) {
-			if ( !Q_stricmp( pack->pakBasename, fs_extraPaks[i] ) ) {
-				return qtrue;		// on the aproved list
-			}
-		}
-		return qfalse;	// not on the pure server pak list or extra pak list
+		return qfalse;	// not on the pure server pak list
 	}
 #endif
 	return qtrue;
@@ -2769,84 +2758,6 @@ static void FS_ReorderPurePaks( void )
 }
 
 /*
-=====================
-FS_SetExtraPaks
-=====================
-*/
-static void FS_SetExtraPaks( const char *pakNames ) {
-	int		i, c;
-
-#ifndef DEDICATED
-	extern int cl_connectedToPureServer;
-	if ( cl_connectedToPureServer ) {
-		fs_numExtraPaks = 0;
-		return;
-	}
-#endif
-
-	Cmd_TokenizeString( pakNames );
-
-	c = Cmd_Argc();
-	if ( c > MAX_SEARCH_PATHS ) {
-		c = MAX_SEARCH_PATHS;
-	}
-
-	fs_numExtraPaks = c;
-
-	for ( i = 0 ; i < c ; i++ ) {
-		if (fs_extraPaks[i]) {
-			Z_Free(fs_extraPaks[i]);
-		}
-		fs_extraPaks[i] = CopyString( Cmd_Argv( i ) );
-	}
-}
-
-/*
-================
-FS_ReorderExtraPaks
-NOTE TTimo: the reordering that happens here is not reflected in the cvars (\cvarlist *pak*)
-  this can lead to misleading situations, see https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=540
-================
-*/
-static void FS_ReorderExtraPaks( void )
-{
-	searchpath_t *s;
-	int i;
-	searchpath_t **p_insert_index, // for linked list reordering
-		**p_previous; // when doing the scan
-
-	fs_unpureAllowed = qfalse;
-
-	// only relevant when we have a list of extra paks
-	if ( !fs_numExtraPaks )
-		return;
-
-	p_insert_index = &fs_searchpaths; // we insert in order at the beginning of the list
-	for ( i = 0 ; i < fs_numExtraPaks ; i++ ) {
-		p_previous = p_insert_index; // track the pointer-to-current-item
-		for (s = *p_insert_index; s; s = s->next) {
-			// the part of the list before p_insert_index has been sorted already
-			if ((s->pack && !Q_stricmp( fs_extraPaks[i], s->pack->pakBasename )) ||
-			    (s->dir && !Q_stricmp( fs_extraPaks[i], "." ))) {
-				// move this element to the insert list
-				*p_previous = s->next;
-				s->next = *p_insert_index;
-				*p_insert_index = s;
-				// increment insert list
-				p_insert_index = &s->next;
-
-				if (s->dir)
-					fs_unpureAllowed = qtrue;
-				else
-					s->pack->referenced |= FS_EXTRA_REF;
-				break; // iterate to next server pack
-			}
-			p_previous = &s->next;
-		}
-	}
-}
-
-/*
 ================
 FS_Startup
 ================
@@ -2874,8 +2785,6 @@ static void FS_Startup( const char *gameName )
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
-	fs_extrapaks = Cvar_Get ("fs_extrapaks", "", CVAR_ARCHIVE|CVAR_VM_CREATED );
-	fs_restrict = Cvar_Get ("fs_restrict", "0", CVAR_ARCHIVE );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
 
 	// add search path elements in reverse priority order
@@ -2884,12 +2793,12 @@ static void FS_Startup( const char *gameName )
 	}
 	// fs_homepath is somewhat particular to *nix systems, only add if relevant
 
-	#ifdef MACOS_X
+#ifdef MACOS_X
 	fs_apppath = Cvar_Get ("fs_apppath", Sys_DefaultAppPath(), CVAR_INIT|CVAR_PROTECTED );
 	// Make MacOSX also include the base path included with the .app bundle
 	if (fs_apppath->string[0])
 		FS_AddGameDirectory(fs_apppath->string, gameName);
-	#endif
+#endif
 
 	// NOTE: same filtering below for mods and basegame
 	if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
@@ -2904,11 +2813,11 @@ static void FS_Startup( const char *gameName )
 		if (fs_basepath->string[0]) {
 			FS_AddGameDirectory(fs_basepath->string, fs_basegame->string);
 		}
-		#ifdef MACOS_X
+#ifdef MACOS_X
 		if (fs_apppath->string[0]) {
 			FS_AddGameDirectory(fs_apppath->string, fs_basegame->string);
 		}
-		#endif
+#endif
 		if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
 			FS_AddGameDirectory(fs_extrapath->string, fs_basegame->string);
 		}
@@ -2922,11 +2831,11 @@ static void FS_Startup( const char *gameName )
 		if (fs_basepath->string[0]) {
 			FS_AddGameDirectory(fs_basepath->string, fs_gamedirvar->string);
 		}
-		#ifdef MACOS_X
+#ifdef MACOS_X
 		if (fs_apppath->string[0]) {
 			FS_AddGameDirectory(fs_apppath->string, fs_gamedirvar->string);
 		}
-		#endif
+#endif
 		if (fs_extrapath->string[0] && Q_stricmp(fs_extrapath->string,fs_homepath->string)) {
 			FS_AddGameDirectory(fs_extrapath->string, fs_gamedirvar->string);
 		}
@@ -2946,15 +2855,11 @@ static void FS_Startup( const char *gameName )
 	// reorder the pure pk3 files according to server order
 	FS_ReorderPurePaks();
 
-	FS_SetExtraPaks( fs_extrapaks->string );
-	FS_ReorderExtraPaks();
-
 	// print the current search paths
 	if ( fs_debug->integer )
 		FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
-	fs_extrapaks->modified = qfalse; // We just loaded, it's not modified
 
 	Com_DPrintf( "----------------------\n" );
 	Com_DPrintf( "%d files in pk3 files\n", fs_packFiles );
@@ -3284,8 +3189,6 @@ void FS_InitFilesystem( void ) {
 	Com_StartupVariable( "fs_basegame" );
 	Com_StartupVariable( "fs_game" );
 	Com_StartupVariable( "fs_autogen" );
-	Com_StartupVariable( "fs_extrapaks" );
-	Com_StartupVariable( "fs_restrict" );
 
 	// try to start up normally
 	FS_Startup( BASEGAME );
@@ -3368,7 +3271,7 @@ restart if necessary
 =================
 */
 qboolean FS_ConditionalRestart( int checksumFeed ) {
-	if( fs_gamedirvar->modified || fs_basegame->modified || fs_extrapaks->modified || checksumFeed != fs_checksumFeed ) {
+	if( fs_gamedirvar->modified || fs_basegame->modified || checksumFeed != fs_checksumFeed ) {
 		FS_Restart( checksumFeed );
 		return qtrue;
 	}
