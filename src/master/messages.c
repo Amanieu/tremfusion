@@ -408,7 +408,7 @@ static void HandleGetMotd( const char* msg, const struct sockaddr_in* addr )
 	const size_t	headersize = strlen (packetheader);
 	char					packet[ MAX_PACKET_SIZE ];
 	char					challenge[ MAX_PACKET_SIZE ];
-	const char		*motd = "^2Latest version ^7of ^4Trem^3Fusion ^7is ^1" VERSION;
+	const char		*motd = "^3The latest version of Tremfusion is " VERSION;
 	size_t				packetind;
 	char					*value;
 	char		version[ 1024 ], renderer[ 1024 ];

@@ -888,7 +888,7 @@ UI_BuildServerDisplayList
 */
 static void UI_BuildServerDisplayList( qboolean force )
 {
-  int i, count, clients, maxClients, ping, len, visible;
+  int i, count, clients, maxClients, ping, visible;
   char info[MAX_STRING_CHARS];
   static int numinvisible;
 
@@ -898,17 +898,6 @@ static void UI_BuildServerDisplayList( qboolean force )
   // if we shouldn't reset
   if( force == 2 )
     force = 0;
-
-  // do motd updates here too
-  trap_Cvar_VariableStringBuffer( "cl_motdString", uiInfo.serverStatus.motd, sizeof( uiInfo.serverStatus.motd ) );
-
-  len = strlen( uiInfo.serverStatus.motd );
-
-  if( len != uiInfo.serverStatus.motdLen )
-  {
-    uiInfo.serverStatus.motdLen = len;
-    uiInfo.serverStatus.motdWidth = -1;
-  }
 
   if( force )
   {
@@ -1794,6 +1783,7 @@ static void UI_DrawSelectedMapName( rectDef_t *rect, float scale, vec4_t color, 
 
 static const char *UI_OwnerDrawText( int ownerDraw )
 {
+  static char motd[MAX_STRING_CHARS];
   const char *s = NULL;
 
   switch( ownerDraw )
@@ -1836,7 +1826,8 @@ static const char *UI_OwnerDrawText( int ownerDraw )
       break;
 
     case UI_SERVERMOTD:
-      s = uiInfo.serverStatus.motd;
+      trap_Cvar_VariableStringBuffer( "cl_motdString", motd, sizeof( motd ) );
+      s = motd;
       break;
 
     default:
