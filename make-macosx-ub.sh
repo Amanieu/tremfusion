@@ -9,8 +9,8 @@ DESTDIR=build/release-darwin-ub
 BASEDIR=base
 
 BIN_OBJ="
-	build/release-darwin-ppc/tremfusion-smp.ppc
-	build/release-darwin-x86/tremfusion-smp.x86
+	build/release-darwin-ppc/tremfusion.ppc
+	build/release-darwin-x86/tremfusion.x86
 "
 BIN_DEDOBJ="
 	build/release-darwin-ppc/tremfusionded.ppc
@@ -118,13 +118,13 @@ NCPU=`sysctl -n hw.ncpu`
 
 # ppc client and server
 (ARCH=ppc USE_OPENAL_DLOPEN=1 CC=$PPC_CC CFLAGS=$PPC_CFLAGS \
-	LDFLAGS=$PPC_LDFLAGS make -j$NCPU BUILD_CLIENT_SMP=1 BUILD_GAME_SO=0 \
-	BUILD_GAME_QVM=0 BUILD_CLIENT=1 BUILD_SERVER=1 BUILD_CLIENT_TTY=1 $*) || exit 1;
+	LDFLAGS=$PPC_LDFLAGS make -j$NCPU BUILD_CLIENT=1 BUILD_GAME_SO=0 \
+	BUILD_GAME_QVM=0 BUILD_SERVER=1 BUILD_CLIENT_TTY=1 $*) || exit 1;
 
 # intel client and server
 (ARCH=x86 CFLAGS=$X86_CFLAGS LDFLAGS=$X86_LDFLAGS make -j$NCPU \
-	BUILD_CLIENT_SMP=1 BUILD_GAME_SO=0 BUILD_GAME_QVM=0 \
-	BUILD_CLIENT=1 BUILD_SERVER=1 BUILD_CLIENT_TTY=1 $*) || exit 1;
+	BUILD_CLIENT=1 BUILD_GAME_SO=0 BUILD_GAME_QVM=0 \
+	BUILD_SERVER=1 BUILD_CLIENT_TTY=1 $*) || exit 1;
 
 echo "Creating .app bundle $DESTDIR/$APPBUNDLE"
 if [ ! -d $DESTDIR/$APPBUNDLE/Contents/MacOS/$BASEDIR ]; then
