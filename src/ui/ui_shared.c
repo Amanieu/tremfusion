@@ -2883,7 +2883,7 @@ float Item_Slider_ThumbPosition( itemDef_t *item )
   range = editDef->maxVal - editDef->minVal;
   value -= editDef->minVal;
   value /= range;
-  value *= SLIDER_WIDTH;
+  value *= SLIDER_WIDTH - SLIDER_THUMB_WIDTH;
   x += value;
 
   return x;
@@ -2902,7 +2902,7 @@ int Item_Slider_OverSlider( itemDef_t *item, float x, float y )
   rectDef_t r;
   float vScale = Item_Slider_VScale( item );
 
-  r.x = Item_Slider_ThumbPosition( item ) - ( SLIDER_THUMB_WIDTH / 2 );
+  r.x = Item_Slider_ThumbPosition( item );
   r.y = item->textRect.y - item->textRect.h +
         ( ( item->textRect.h - ( SLIDER_THUMB_HEIGHT * vScale ) ) / 2.0f );
   r.w = SLIDER_THUMB_WIDTH;
@@ -3544,7 +3544,8 @@ const char *Item_Multi_Setting( itemDef_t *item )
     }
   }
 
-  return "";
+  DC->getCVarString( item->cvar, buff, sizeof( buff ) );
+  return va( "Custom (%s)", buff );
 }
 
 qboolean Item_Combobox_HandleKey( itemDef_t *item, int key )
@@ -3976,8 +3977,8 @@ static void Scroll_Slider_ThumbFunc( void *p )
   else if( cursorx > x + SLIDER_WIDTH )
     cursorx = x + SLIDER_WIDTH;
 
-  value = cursorx - x;
-  value /= SLIDER_WIDTH;
+  value = cursorx - x - ( SLIDER_THUMB_WIDTH / 2 );
+  value /= SLIDER_WIDTH - SLIDER_THUMB_WIDTH;
   value *= ( editDef->maxVal - editDef->minVal );
   value += editDef->minVal;
   DC->setCVar( si->item->cvar, va( "%f", value ) );
@@ -5557,9 +5558,7 @@ void Item_Slider_Paint( itemDef_t *item )
       ( ( item->textRect.h - ( SLIDER_THUMB_HEIGHT * vScale ) ) / 2.0f );
 
   x = Item_Slider_ThumbPosition( item );
-  DC->drawHandlePic( x - ( SLIDER_THUMB_WIDTH / 2 ), y,
-                     SLIDER_THUMB_WIDTH, SLIDER_THUMB_HEIGHT * vScale, DC->Assets.sliderThumb );
-
+  DC->drawHandlePic( x, y, SLIDER_THUMB_WIDTH, SLIDER_THUMB_HEIGHT * vScale, DC->Assets.sliderThumb );
 }
 
 void Item_Bind_Paint( itemDef_t *item )
