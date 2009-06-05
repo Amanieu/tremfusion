@@ -370,7 +370,7 @@ void SV_ClearServer(void) {
 ================
 SV_TouchCGame
 
-  touch the cgame.vm so that a pure client can load it if it's in a seperate pk3
+Touch the cgame.qvm and ui.qvm so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
 ================
 */
 void SV_TouchCGame(void) {
@@ -379,6 +379,15 @@ void SV_TouchCGame(void) {
 	FS_FOpenFileRead( "vm/cgame.qvm", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
+	} else if ( sv_pure->integer ) {
+		Com_Printf( "WARNING: No cgame.qvm found on pure server\n" );
+	}
+
+	FS_FOpenFileRead( "vm/ui.qvm", &f, qfalse );
+	if ( f ) {
+		FS_FCloseFile( f );
+	} else if ( sv_pure->integer ) {
+		Com_Printf( "WARNING: No ui.qvm found on pure server\n" );
 	}
 }
 
@@ -530,8 +539,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 
 	// the server sends these to the clients so they will only
 	// load pk3s also loaded at the server
-	Cvar_Set( "sv_paks", FS_LoadedPakChecksums() );
-	Cvar_Set( "sv_pakNames", FS_LoadedPakNames() );
+	Cvar_Set( "sv_paks", sv_pure->integer ? FS_LoadedPakChecksums() : "" );
+	Cvar_Set( "sv_pakNames", sv_pure->integer ? FS_LoadedPakNames() : "" );
 
 	// the server sends these to the clients so they can figure
 	// out which pk3s should be auto-downloaded
