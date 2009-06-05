@@ -108,11 +108,11 @@ PM_StartWeaponAnim
 */
 static void PM_StartWeaponAnim( int anim )
 {
-  if( PM_Paralyzed( pm->ps->pm_type ) )
+  /*if( PM_Paralyzed( pm->ps->pm_type ) )
     return;
 
   pm->ps->weaponAnim = ( ( pm->ps->weaponAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-    | anim;
+    | anim;*/
 }
 
 
@@ -190,10 +190,10 @@ PM_ContinueWeaponAnim
 */
 static void PM_ContinueWeaponAnim( int anim )
 {
-  if( ( pm->ps->weaponAnim & ~ANIM_TOGGLEBIT ) == anim )
+  /*if( ( pm->ps->weaponAnim & ~ANIM_TOGGLEBIT ) == anim )
     return;
 
-  PM_StartWeaponAnim( anim );
+  PM_StartWeaponAnim( anim );*/
 }
 
 /*

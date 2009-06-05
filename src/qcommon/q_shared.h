@@ -41,7 +41,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define BASEGAME "base"
 
-#define GAMENAME_FOR_MASTER "tremfusion"
+#define GAMENAME_FOR_MASTER "tremulous"
 
 #ifdef _MSC_VER
 
@@ -363,7 +363,8 @@ extern	vec4_t		colorMdGrey;
 extern	vec4_t		colorDkGrey;
 
 #define Q_COLOR_ESCAPE	'^'
-#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1)) )
+#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && isprint(*((p)+1)) && \
+                              *((p)+1) != Q_COLOR_ESCAPE && !isspace(*((p)+1)) )
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -987,7 +988,8 @@ typedef struct {
 // if none of the catchers are active, bound key strings will be executed
 #define KEYCATCH_CONSOLE		0x0001
 #define	KEYCATCH_UI					0x0002
-#define	KEYCATCH_CGAME			0x0004
+#define	KEYCATCH_MESSAGE		0x0004
+#define	KEYCATCH_CGAME			0x0008
 
 
 // sound channels
@@ -1106,8 +1108,6 @@ typedef struct playerState_s {
 	int			torsoTimer;		// don't change low priority animations until this runs out
 	int			torsoAnim;		// mask off ANIM_TOGGLEBIT
 
-	int			weaponAnim;		// mask off ANIM_TOGGLEBIT
-
 	int			movementDir;	// a number 0 to 7 that represents the reletive angle
 								// of movement to the view angle (axial and diagonals)
 								// when at rest, the value will remain unchanged
@@ -1143,6 +1143,8 @@ typedef struct playerState_s {
 	int			misc[MAX_MISC];	// misc data
 	int			ammo;			// ammo held
 	int			clips;			// clips held
+
+	int			ammo_extra[14]; // compatibility
 
 	int			generic1;
 	int			loopSound;
@@ -1260,7 +1262,6 @@ typedef struct entityState_s {
 	int		weapon;			// determines weapon and flash model, etc
 	int		legsAnim;		// mask off ANIM_TOGGLEBIT
 	int		torsoAnim;		// mask off ANIM_TOGGLEBIT
-	int		weaponAnim;		// mask off ANIM_TOGGLEBIT
 
 	int		generic1;
 } entityState_t;
@@ -1328,9 +1329,9 @@ typedef struct qtime_s {
 
 // server browser sources
 // AS_MPLAYER is no longer used
-#define AS_GLOBAL			0
+#define AS_GLOBAL			2
 #define AS_MPLAYER		1
-#define AS_LOCAL			2
+#define AS_LOCAL			0
 #define AS_FAVORITES	3
 
 

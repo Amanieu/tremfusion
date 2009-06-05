@@ -102,6 +102,7 @@ upgradeInfo_t   cg_upgrades[ 32 ];
 
 buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
+vmCvar_t  cg_version;
 vmCvar_t  cg_teslaTrailTime;
 vmCvar_t  cg_centertime;
 vmCvar_t  cg_runpitch;
@@ -236,6 +237,7 @@ typedef struct
 
 static cvarTable_t cvarTable[ ] =
 {
+  { &cg_version, "cg_version", PRODUCT_NAME, CVAR_ROM | CVAR_USERINFO },
   { &cg_autoswitch, "cg_autoswitch", "1", CVAR_ARCHIVE },
   { &cg_drawGun, "cg_drawGun", "1", CVAR_ARCHIVE },
   { &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE },
@@ -396,6 +398,9 @@ void CG_RegisterCvars( void )
   // see if we are also running the server on this machine
   trap_Cvar_VariableStringBuffer( "sv_running", var, sizeof( var ) );
   cgs.localServer = atoi( var );
+  
+  // override any existing version cvar
+  trap_Cvar_Set( "cg_version", PRODUCT_NAME );
 }
 
 
@@ -2002,4 +2007,24 @@ void CG_Shutdown( void )
 {
   // some mods may need to do cleanup work here,
   // like closing files or archiving session data
+
+  // Reset cg_version
+  trap_Cvar_Set( "cg_version", "" );
+}
+
+/*
+=================
+CG_SoundDuration
+
+Check the client version to make sure the syscall is availible
+=================
+*/
+int CG_SoundDuration( sfxHandle_t handle )
+{
+    char version[ MAX_CVAR_VALUE_STRING ];
+    trap_Cvar_VariableStringBuffer( "version", version, sizeof(version) );
+    if( !Q_stricmpn( version, "tremfusion ", 11 ) )
+        return trap_S_SoundDuration( handle );
+    else
+        return 3;
 }
