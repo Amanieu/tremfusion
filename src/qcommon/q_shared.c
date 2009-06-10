@@ -24,6 +24,204 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.c -- stateless support routines that are included in each code dll
 #include "q_shared.h"
 
+
+
+
+
+
+/*
+============================================================================
+
+GROWLISTS
+
+============================================================================
+*/
+
+// malloc / free all in one place for debugging
+//extern          "C" void *Com_Allocate(int bytes);
+//extern          "C" void Com_Dealloc(void *ptr);
+
+void Com_InitGrowList(growList_t * list, int maxElements)
+{
+	list->maxElements = maxElements;
+	list->currentElements = 0;
+	list->elements = (void **)Com_Allocate(list->maxElements * sizeof(void *));
+}
+
+void Com_DestroyGrowList(growList_t * list)
+{
+	Com_Dealloc(list->elements);
+	memset(list, 0, sizeof(*list));
+}
+
+int Com_AddToGrowList(growList_t * list, void *data)
+{
+	void          **old;
+
+	if(list->currentElements != list->maxElements)
+	{
+		list->elements[list->currentElements] = data;
+		return list->currentElements++;
+	}
+
+	// grow, reallocate and move
+	old = list->elements;
+
+	if(list->maxElements < 0)
+	{
+		Com_Error(ERR_FATAL, "Com_AddToGrowList: maxElements = %i", list->maxElements);
+	}
+
+	if(list->maxElements == 0)
+	{
+		// initialize the list to hold 100 elements
+		Com_InitGrowList(list, 100);
+		return Com_AddToGrowList(list, data);
+	}
+
+	list->maxElements *= 2;
+
+//  Com_DPrintf("Resizing growlist to %i maxElements\n", list->maxElements);
+
+	list->elements = (void **)Com_Allocate(list->maxElements * sizeof(void *));
+
+	if(!list->elements)
+	{
+		Com_Error(ERR_DROP, "Growlist alloc failed");
+	}
+
+	Com_Memcpy(list->elements, old, list->currentElements * sizeof(void *));
+
+	Com_Dealloc(old);
+
+	return Com_AddToGrowList(list, data);
+}
+
+void           *Com_GrowListElement(const growList_t * list, int index)
+{
+	if(index < 0 || index >= list->currentElements)
+	{
+		Com_Error(ERR_DROP, "Com_GrowListElement: %i out of range of %i", index, list->currentElements);
+	}
+	return list->elements[index];
+}
+
+int Com_IndexForGrowListElement(const growList_t * list, const void *element)
+{
+	int             i;
+
+	for(i = 0; i < list->currentElements; i++)
+	{
+		if(list->elements[i] == element)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+//=============================================================================
+
+memStream_t *AllocMemStream(byte *buffer, int bufSize)
+{
+	memStream_t		*s;
+
+	if(buffer == NULL || bufSize <= 0)
+		return NULL;
+
+	s = Com_Allocate(sizeof(memStream_t));
+	if(s == NULL)
+		return NULL;
+
+	Com_Memset(s, 0, sizeof(memStream_t));
+
+	s->buffer 	= buffer;
+	s->curPos 	= buffer;
+	s->bufSize	= bufSize;
+	s->flags	= 0;
+
+	return s;
+}
+
+void FreeMemStream(memStream_t * s)
+{
+	Com_Dealloc(s);
+}
+
+int MemStreamRead(memStream_t *s, void *buffer, int len)
+{
+	int				ret = 1;
+
+	if(s == NULL || buffer == NULL)
+		return 0;
+
+	if(s->curPos + len > s->buffer + s->bufSize)
+	{
+		s->flags |= MEMSTREAM_FLAGS_EOF;
+		len = s->buffer + s->bufSize - s->curPos;
+		ret = 0;
+
+		Com_Error(ERR_FATAL, "MemStreamRead: EOF reached");
+	}
+
+	Com_Memcpy(buffer, s->curPos, len);
+	s->curPos += len;
+
+	return ret;
+}
+
+int MemStreamGetC(memStream_t *s)
+{
+	int				c = 0;
+
+	if(s == NULL)
+		return -1;
+
+	if(MemStreamRead(s, &c, 1) == 0)
+		return -1;
+
+	return c;
+}
+
+int MemStreamGetLong(memStream_t * s)
+{
+	int				c = 0;
+
+	if(s == NULL)
+		return -1;
+
+	if(MemStreamRead(s, &c, 4) == 0)
+		return -1;
+
+	return LittleLong(c);
+}
+
+int MemStreamGetShort(memStream_t * s)
+{
+	int				c = 0;
+
+	if(s == NULL)
+		return -1;
+
+	if(MemStreamRead(s, &c, 2) == 0)
+		return -1;
+
+	return LittleShort(c);
+}
+
+float MemStreamGetFloat(memStream_t * s)
+{
+	floatint_t		c;
+
+	if(s == NULL)
+		return -1;
+
+	if(MemStreamRead(s, &c.i, 4) == 0)
+		return -1;
+
+	return LittleFloat(c.f);
+}
+
 float Com_Clamp( float min, float max, float value ) {
 	if ( value < min ) {
 		return min;
@@ -939,6 +1137,45 @@ const char *Q_stristr( const char *s, const char *find)
     s--;
   }
   return s;
+}
+
+
+/*
+=============
+Q_strreplace
+
+replaces content of find by replace in dest
+=============
+*/
+qboolean Q_strreplace(char *dest, int destsize, const char *find, const char *replace)
+{
+	int             lstart, lfind, lreplace, lend;
+	char           *s;
+	char            backup[32000];	// big, but small enough to fit in PPC stack
+
+	lend = strlen(dest);
+	if(lend >= destsize)
+	{
+		Com_Error(ERR_FATAL, "Q_strreplace: already overflowed");
+	}
+
+	s = strstr(dest, find);
+	if(!s)
+	{
+		return qfalse;
+	}
+	else
+	{
+		Q_strncpyz(backup, dest, lend + 1);
+		lstart = s - dest;
+		lfind = strlen(find);
+		lreplace = strlen(replace);
+
+		strncpy(s, replace, destsize - lstart - 1);
+		strncpy(s + lreplace, backup + lstart + lfind, destsize - lstart - lreplace - 1);
+
+		return qtrue;
+	}
 }
 
 

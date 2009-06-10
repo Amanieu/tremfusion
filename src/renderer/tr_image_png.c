@@ -1903,7 +1903,7 @@ static qboolean DecodeImageInterlaced(struct PNG_Chunk_IHDR *IHDR,
  *  The PNG loader
  */
 
-void R_LoadPNG(const char *name, byte **pic, int *width, int *height)
+void LoadPNG(const char *name, byte **pic, int *width, int *height, byte alphaByte)
 {
 	struct BufferedFile *ThePNG;
 	byte *OutBuffer;

@@ -804,7 +804,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return FS_Seek( args[1], args[2], args[3] );
 	
 	case UI_R_REGISTERMODEL:
-		return re.RegisterModel( VMA(1) );
+		return re.RegisterModel( VMA(1), qfalse );
 
 	case UI_R_REGISTERSKIN:
 		return re.RegisterSkin( VMA(1) );

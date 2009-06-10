@@ -36,8 +36,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 // surface geometry should not exceed these limits
-#define	SHADER_MAX_VERTEXES	1000
-#define	SHADER_MAX_INDEXES	(6*SHADER_MAX_VERTEXES)
+#define	SHADER_MAX_VERTEXES	100000
+#define	SHADER_MAX_INDEXES	(SHADER_MAX_VERTEXES * 6)
+#define SHADER_MAX_TRIANGLES (SHADER_MAX_INDEXES / 3)
 
 
 // the maximum size of game relative pathnames
@@ -392,6 +393,119 @@ typedef struct {
 
 #endif
 
+
+/*
+========================================================================
+
+Actor X - .PSK / .PSA skeletal triangle model file format
+
+========================================================================
+*/
+
+#define PSK_IDENTSTRING		"ACTRHEAD"
+#define PSK_IDENTLEN		8
+#define PSK_VERSION			1
+
+
+typedef struct
+{
+	char            ident[20];
+	int             flags;
+
+	int				dataSize;	// sizeof(struct)
+	int				numData;	// number of structs put into this data chunk
+} axChunkHeader_t;
+
+typedef struct
+{
+	float			point[3];
+} axPoint_t;
+
+typedef struct
+{
+	unsigned short	pointIndex;
+	unsigned short	unknownA;
+	float			st[2];
+	byte			materialIndex;
+	byte			reserved;		// we don't care about this one
+	unsigned short	unknownB;
+} axVertex_t;
+
+typedef struct
+{
+	unsigned short	indexes[3];
+	byte			materialIndex;
+	byte			materialIndex2;
+	unsigned int	smoothingGroups;
+} axTriangle_t;
+
+typedef struct
+{
+	char            name[64];
+	int             shaderIndex;	// for in-game use
+	unsigned int	polyFlags;
+	int				auxMaterial;
+	unsigned int	auxFlags;
+	int				lodBias;
+	int				lodStyle;
+} axMaterial_t;
+
+typedef struct
+{
+	float			quat[4];		// x y z w
+	float			position[3];	// x y z
+
+	float			length;
+	float			xSize;
+	float			ySize;
+	float			zSize;
+} axBone_t;
+
+typedef struct
+{
+	char			name[64];
+	unsigned int	flags;
+	int				numChildren;
+	int				parentIndex;
+	axBone_t		bone;
+} axReferenceBone_t;
+
+typedef struct
+{
+	float			weight;
+	unsigned int	pointIndex;
+	unsigned int	boneIndex;
+} axBoneWeight_t;
+
+typedef struct
+{
+	char			name[64];
+	char			group[64];
+
+	int				numBones;		// same as numChannels
+	int				rootInclude;
+
+	int				keyCompressionStyle;
+	int				keyQuotum;
+	float			keyReduction;
+
+	float			trackTime;
+
+	float			frameRate;
+
+	int				startBoneIndex;
+
+	int				firstRawFrame;
+	int				numRawFrames;
+} axAnimationInfo_t;
+
+typedef struct
+{
+	float			position[3];
+	float			quat[4];
+	float			time;
+} axAnimationKey_t;
+
 /*
 ==============================================================================
 
@@ -538,6 +652,23 @@ typedef struct {
 	int			visibleSide;	// the brush side that ray tests need to clip against (-1 == none)
 } dfog_t;
 
+// light grid
+#if defined(COMPAT_Q3A)
+typedef struct
+{
+	byte            ambient[3];
+	byte            directed[3];
+	byte            latLong[2];
+} dgridPoint_t;
+#else
+typedef struct
+{
+	float           ambient[3];
+	float           directed[3];
+	byte            latLong[2];
+} dgridPoint_t;
+#endif
+
 typedef struct {
 	vec3_t		xyz;
 	float		st[2];
@@ -553,7 +684,8 @@ typedef enum {
 	MST_PLANAR,
 	MST_PATCH,
 	MST_TRIANGLE_SOUP,
-	MST_FLARE
+	MST_FLARE,
+	MST_FOLIAGE
 } mapSurfaceType_t;
 
 typedef struct {

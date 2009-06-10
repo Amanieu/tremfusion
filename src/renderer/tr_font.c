@@ -529,7 +529,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
       }
 
 			Com_sprintf(name, sizeof(name), "%s_%i_%i.tga", strippedName, imageNumber++, pointSize);
-			if(!ri.FS_FileExists(name) && r_saveFontData->integer)  
+			if(!ri.FS_FileExists(name) && 0)  
 			{
 			  WriteTGA(name, imageBuff, 256, 256);
 			}
@@ -537,7 +537,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
             /*`image = R_CreateImage(name, imageBuff, 256, 256, IF_NOPICMIP, FT_LINEAR, WT_CLAMP);`*/
             image = R_CreateImage(name, imageBuff, 256, 256, qfalse, qfalse, GL_CLAMP_TO_EDGE);
             /*`h = RE_RegisterShaderFromImage(name, image, qfalse);`*/
-            h = RE_RegisterShaderFromImage(name, LIGHTMAP_2D, image, qfalse);
+            h = RE_RegisterShaderFromImage(name, image, qfalse);
 			
 		  Com_Memset(out, 0, 1024*1024);
       xOut = 0;
@@ -577,7 +577,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
 	Q_strncpyz(font->name, name, sizeof(font->name));
 	Com_Memcpy(&registeredFont[registeredFontCount++], font, sizeof(fontInfo_t));
 
-	if(!ri.FS_FileExists(name) && r_saveFontData->integer) 
+	if(!ri.FS_FileExists(name) && 0) 
 	{
         ri.FS_WriteFile(name, font, sizeof(fontInfo_t));
 	}
