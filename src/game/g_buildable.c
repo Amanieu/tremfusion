@@ -2553,7 +2553,9 @@ void G_BuildableThink( gentity_t *ent, int msec )
   if( ent->health <= 0 )
     ent->s.generic1 = 0;
   else
-    ent->s.generic1 = (int)( ( (float)ent->health / (float)bHealth ) * B_HEALTH_MASK );
+    ent->s.generic1 = (unsigned char)
+                      ( ( B_HEALTH_MASK * ent->health + bHealth - 1 ) / 
+                        bHealth );
     
   // Set flags
   ent->s.eFlags &= ~( EF_B_POWERED | EF_B_SPAWNED | EF_B_MARKED );
