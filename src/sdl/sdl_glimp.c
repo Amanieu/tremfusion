@@ -267,6 +267,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	int sdlcolorbits;
 	int colorbits, depthbits, stencilbits;
 	int tcolorbits, tdepthbits, tstencilbits;
+	int samples;
 	int i = 0;
 	SDL_Surface *vidscreen = NULL;
 	Uint32 flags = SDL_OPENGL;
@@ -325,6 +326,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	else
 		depthbits = r_depthbits->value;
 	stencilbits = r_stencilbits->value;
+	samples = r_ext_multisample->value;
 
 	for (i = 0; i < 16; i++)
 	{
@@ -404,6 +406,11 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		}
 		
 		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+
+		if (failSafe)
+			samples = 0;
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, samples ? 1 : 0 );
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, samples );
 
 		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval->integer ) < 0 )
 			ri.Printf( PRINT_ALL, "r_swapInterval requires libSDL >= 1.2.10\n" );
