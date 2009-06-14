@@ -2254,6 +2254,7 @@ Resend a connect message if the last one has timed out
 void CL_CheckForResend( void ) {
 	int		port;
 	char	info[MAX_INFO_STRING];
+	char	data[MAX_STRING_CHARS];
 
 	// don't send anything if playing back a demo
 	if ( clc.demoplaying ) {
@@ -2288,8 +2289,9 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "protocol", va("%i", PROTOCOL_VERSION ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
+		Com_sprintf( data, sizeof( data ), "connect \"%s\"", info );
 
-		NET_OutOfBandPrint( NS_CLIENT, clc.serverAddress, "connect \"%s\"", info );
+		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, data, strlen( data ) + 1 );
 		// the most current userinfo has been sent, so watch for any
 		// newer changes to userinfo variables
 		cvar_modifiedFlags &= ~CVAR_USERINFO;
@@ -2504,6 +2506,8 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 	s = MSG_ReadStringLine( msg );
 
 	Cmd_TokenizeString( s );
+
+	c = Cmd_Argv( 0 );
 
 	Com_DPrintf ("CL packet %s: %s\n", NET_AdrToStringwPort(from), c);
 
