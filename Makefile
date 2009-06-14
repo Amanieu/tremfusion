@@ -954,15 +954,15 @@ endif #SunOS
 TARGETS =
 
 ifneq ($(BUILD_SERVER),0)
-  TARGETS += $(B)/tremfusionded.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremded.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT),0)
-  TARGETS += $(B)/tremfusion.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
-  TARGETS += $(B)/tremfusion-tty.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_GAME_SO),0)
@@ -1164,30 +1164,6 @@ makedirs:
 	@if [ ! -d $(B)/tools/etc ];then $(MKDIR) $(B)/tools/etc;fi
 	@if [ ! -d $(B)/tools/rcc ];then $(MKDIR) $(B)/tools/rcc;fi
 	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
-
-#############################################################################
-# INSTALL
-#############################################################################
-
-install: release run-tremfusion.sh
-	@echo ""
-	@echo "Installing TremFusion in $(BUILDROOT)$(INSTALL_PREFIX):"
-	@if [ ! -d $(BUILDROOT)$(INSTALL_PREFIX) ];then $(MKDIR) -p $(BUILDROOT)$(INSTALL_PREFIX);fi
-	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
-	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
-	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
-
-run-tremfusion.sh:
-	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
-	@sed -ie "s!@LIBDIR@!$(LIBDIR)!" run-tremfusion.sh
-	@sed -ie "s!@DATADIR@!$(DATADIR)!" run-tremfusion.sh
-
 
 #############################################################################
 # QVM BUILD TOOLS
@@ -1577,13 +1553,13 @@ endif
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
@@ -1724,7 +1700,7 @@ else
     $(B)/ded/con_tty.o
 endif
 
-$(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
+$(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
