@@ -949,7 +949,7 @@ static qboolean G_NonSegModel( const char *filename )
   // read optional parameters
   while( 1 )
   {
-    token = COM_Parse( &text_p );
+    token = Com_Parse( &text_p );
 
     //EOF
     if( !token[ 0 ] )

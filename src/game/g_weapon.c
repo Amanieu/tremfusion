@@ -208,7 +208,7 @@ rather than blindly truncating.  This prevents it from truncating
 into a wall.
 ======================
 */
-void SnapVectorTowards( vec3_t v, vec3_t to )
+/*void SnapVectorTowards( vec3_t v, vec3_t to )
 {
   int   i;
 
@@ -219,7 +219,7 @@ void SnapVectorTowards( vec3_t v, vec3_t to )
     else
       v[ i ] = (int)( v[ i ] + ( to[ i ] <= v[ i ] ? -1 : 0 ) );
   }
-}
+}*/
 
 void SnapVectorNormal( vec3_t v, vec3_t normal )
 {

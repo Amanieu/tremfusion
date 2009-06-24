@@ -320,7 +320,7 @@ static void Cmd_ExecFile( char *f )
 {
 	int i;
 
-	COM_Compress (f);
+	Com_Compress (f);
 	
 	Cvar_Get( "arg_all", Cmd_ArgsFrom(2), CVAR_TEMP | CVAR_ROM | CVAR_USER_CREATED );
 	Cvar_Set( "arg_all", Cmd_ArgsFrom(2) );
@@ -353,7 +353,7 @@ void Cmd_Exec_f( void ) {
 	Com_Printf ("execing %s\n", Cmd_Argv(1));
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
+	Com_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 
 	len = FS_SV_FOpenFileRead(filename, &h);
 	if (h)

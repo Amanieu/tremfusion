@@ -1105,8 +1105,8 @@ void CG_StartMusic( void )
 
   // start the background music
   s = (char *)CG_ConfigString( CS_MUSIC );
-  Q_strncpyz( parm1, COM_Parse( &s ), sizeof( parm1 ) );
-  Q_strncpyz( parm2, COM_Parse( &s ), sizeof( parm2 ) );
+  Q_strncpyz( parm1, Com_Parse( &s ), sizeof( parm1 ) );
+  Q_strncpyz( parm2, Com_Parse( &s ), sizeof( parm2 ) );
 
   trap_S_StartBackgroundTrack( parm1, parm2 );
 }
@@ -1387,14 +1387,14 @@ qboolean CG_Load_Menu( char **p )
 {
   char *token;
 
-  token = COM_ParseExt( p, qtrue );
+  token = Com_ParseExt( p, qtrue );
 
   if( token[ 0 ] != '{' )
     return qfalse;
 
   while( 1 )
   {
-    token = COM_ParseExt( p, qtrue );
+    token = Com_ParseExt( p, qtrue );
 
     if( Q_stricmp( token, "}" ) == 0 )
       return qtrue;
@@ -1442,7 +1442,7 @@ void CG_LoadMenus( const char *menuFile )
   buf[ len ] = 0;
   trap_FS_FCloseFile( f );
 
-  COM_Compress( buf );
+  Com_Compress( buf );
 
   Menu_Reset( );
 
@@ -1450,7 +1450,7 @@ void CG_LoadMenus( const char *menuFile )
 
   while( 1 )
   {
-    token = COM_ParseExt( &p, qtrue );
+    token = Com_ParseExt( &p, qtrue );
 
     if( !token || token[ 0 ] == 0 || token[ 0 ] == '}' )
       break;

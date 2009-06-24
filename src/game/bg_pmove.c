@@ -2106,8 +2106,8 @@ static void PM_GroundClimbTrace( void )
         //we need to do some different angle correction here cos GPISROTVEC
         if( VectorCompare( surfNormal, ceilingNormal ) )
         {
-          vectoangles( trace.plane.normal, toAngles );
-          vectoangles( pm->ps->grapplePoint, surfAngles );
+          VectorToAngles( trace.plane.normal, toAngles );
+          VectorToAngles( pm->ps->grapplePoint, surfAngles );
 
           pm->ps->delta_angles[ 1 ] -= ANGLE2SHORT( ( ( surfAngles[ 1 ] - toAngles[ 1 ] ) * 2 ) - 180.0f );
         }
@@ -2153,7 +2153,7 @@ static void PM_GroundClimbTrace( void )
       AngleVectors( pm->ps->viewangles, forward, NULL, NULL );
 
       RotatePointAroundVector( rotated, pm->ps->grapplePoint, forward, 180.0f );
-      vectoangles( rotated, angles );
+      VectorToAngles( rotated, angles );
 
       pm->ps->delta_angles[ YAW ] -= ANGLE2SHORT( angles[ YAW ] - pm->ps->viewangles[ YAW ] );
     }
@@ -2238,7 +2238,7 @@ static void PM_GroundTrace( void )
       AngleVectors( pm->ps->viewangles, forward, NULL, NULL );
 
       RotatePointAroundVector( rotated, pm->ps->grapplePoint, forward, 180.0f );
-      vectoangles( rotated, angles );
+      VectorToAngles( rotated, angles );
 
       pm->ps->delta_angles[ YAW ] -= ANGLE2SHORT( angles[ YAW ] - pm->ps->viewangles[ YAW ] );
     }
@@ -3565,7 +3565,7 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
     vec3_t  dir, angles;
 
     ByteToDir( ps->stats[ STAT_VIEWLOCK ], dir );
-    vectoangles( dir, angles );
+    VectorToAngles( dir, angles );
 
     for( i = 0; i < 3; i++ )
     {

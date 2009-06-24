@@ -413,7 +413,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		{
 			const char	*s;
 
-			s = COM_Parse( &sv.entityParsePoint );
+			s = Com_Parse( &sv.entityParsePoint );
 			Q_strncpyz( VMA(1), s, args[2] );
 			if ( !sv.entityParsePoint && !s[0] ) {
 				return qfalse;

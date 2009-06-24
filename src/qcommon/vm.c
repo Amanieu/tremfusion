@@ -254,7 +254,7 @@ void VM_LoadSymbols( vm_t *vm ) {
 		return;
 	}
 
-	COM_StripExtension(vm->name, name, sizeof(name));
+	Com_StripExtension(vm->name, name, sizeof(name));
 	Com_sprintf( symbols, sizeof( symbols ), "vm/%s.map", name );
 	len = FS_ReadFile( symbols, &mapfile.v );
 	if ( !mapfile.c ) {
@@ -270,25 +270,25 @@ void VM_LoadSymbols( vm_t *vm ) {
 	count = 0;
 
 	while ( 1 ) {
-		token = COM_Parse( &text_p );
+		token = Com_Parse( &text_p );
 		if ( !token[0] ) {
 			break;
 		}
 		segment = ParseHex( token );
 		if ( segment ) {
-			COM_Parse( &text_p );
-			COM_Parse( &text_p );
+			Com_Parse( &text_p );
+			Com_Parse( &text_p );
 			continue;		// only load code segment values
 		}
 
-		token = COM_Parse( &text_p );
+		token = Com_Parse( &text_p );
 		if ( !token[0] ) {
 			Com_Printf( "WARNING: incomplete line at end of file\n" );
 			break;
 		}
 		value = ParseHex( token );
 
-		token = COM_Parse( &text_p );
+		token = Com_Parse( &text_p );
 		if ( !token[0] ) {
 			Com_Printf( "WARNING: incomplete line at end of file\n" );
 			break;

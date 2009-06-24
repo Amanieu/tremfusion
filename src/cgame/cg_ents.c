@@ -140,7 +140,7 @@ void CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
     VectorMA( entity->origin, lerped.origin[ i ], parent->axis[ i ], entity->origin );
 
   // had to cast away the const to avoid compiler problems...
-  MatrixMultiply( lerped.axis, ( (refEntity_t *)parent )->axis, entity->axis );
+  AxisMultiply( lerped.axis, ( (refEntity_t *)parent )->axis, entity->axis );
   entity->backlerp = parent->backlerp;
 }
 
@@ -171,8 +171,8 @@ void CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *pare
     VectorMA( entity->origin, lerped.origin[ i ], parent->axis[ i ], entity->origin );
 
   // had to cast away the const to avoid compiler problems...
-  MatrixMultiply( entity->axis, lerped.axis, tempAxis );
-  MatrixMultiply( tempAxis, ( (refEntity_t *)parent )->axis, entity->axis );
+  AxisMultiply( entity->axis, lerped.axis, tempAxis );
+  AxisMultiply( tempAxis, ( (refEntity_t *)parent )->axis, entity->axis );
 }
 
 
@@ -985,7 +985,7 @@ static void CG_CalcEntityLerpPositions( centity_t *cent )
 	
     // don't let the projectile go through the floor
     if( tr.fraction < 1.0f )
-      VectorLerp( tr.fraction, lastOrigin, cent->lerpOrigin, cent->lerpOrigin );
+      VectorLerp( lastOrigin, cent->lerpOrigin, tr.fraction, cent->lerpOrigin );
   }
 
   // adjust for riding a mover if it wasn't rolled into the predicted

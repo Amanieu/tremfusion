@@ -438,7 +438,7 @@ Float_Parse
 qboolean Float_Parse( char **p, float *f )
 {
   char  *token;
-  token = COM_ParseExt( p, qfalse );
+  token = Com_ParseExt( p, qfalse );
 
   if( token && token[0] != 0 )
   {
@@ -800,7 +800,7 @@ Int_Parse
 qboolean Int_Parse( char **p, int *i )
 {
   char  *token;
-  token = COM_ParseExt( p, qfalse );
+  token = Com_ParseExt( p, qfalse );
 
   if( token && token[0] != 0 )
   {
@@ -912,7 +912,7 @@ qboolean String_Parse( char **p, const char **out )
 {
   char *token;
 
-  token = COM_ParseExt( p, qfalse );
+  token = Com_ParseExt( p, qfalse );
 
   if( token && token[0] != 0 )
   {
