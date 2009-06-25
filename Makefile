@@ -182,6 +182,7 @@ ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
 FTDIR=$(MOUNT_DIR)/freetype2
 PDCDIR=$(MOUNT_DIR)/pdcurses
+BTDIR=$(MOUNT_DIR)/bullet
 LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
@@ -369,6 +370,14 @@ ifeq ($(PLATFORM),linux)
   LIBS=-ldl -lm
 
   CLIENT_LIBS += $(shell sdl-config --libs) -lGL -lpthread -lX11
+
+  BASE_CFLAGS += -I$(BTDIR)
+
+  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletcollision.a
+  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletdynamics.a
+  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletmath.a
+  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletmultithreaded.a
+  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletsoftbody.a
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
