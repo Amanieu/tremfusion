@@ -789,7 +789,7 @@ void Com_ParseError( char *format, ... )
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	Com_Printf(S_COLOR_RED "ERROR: %s, line %d: %s\n", com_parsename, com_lines, string);
+	Com_Printf(S_COLOR_RED "ERROR: '%s', line %d: %s\n", com_parsename, com_lines, string);
 }
 
 void Com_ParseWarning( char *format, ... )
@@ -801,7 +801,7 @@ void Com_ParseWarning( char *format, ... )
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	Com_Printf(S_COLOR_YELLOW "WARNING: %s, line %d: %s\n", com_parsename, com_lines, string);
+	Com_Printf(S_COLOR_YELLOW "WARNING: '%s', line %d: %s\n", com_parsename, com_lines, string);
 }
 
 /*
