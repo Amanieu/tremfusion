@@ -373,11 +373,12 @@ ifeq ($(PLATFORM),linux)
 
   BASE_CFLAGS += -I$(BTDIR)
 
-  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletcollision.a
-  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletdynamics.a
-  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletmath.a
-  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletmultithreaded.a
-  CLIENT_LIBS += $(LIBSDIR)/linux/libbulletsoftbody.a
+  LIBS += \
+    $(LIBSDIR)/linux/libbulletcollision.a \
+    $(LIBSDIR)/linux/libbulletdynamics.a \
+    $(LIBSDIR)/linux/libbulletmath.a \
+    $(LIBSDIR)/linux/libbulletmultithreaded.a \
+    $(LIBSDIR)/linux/libbulletsoftbody.a
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
