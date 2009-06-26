@@ -235,7 +235,6 @@ else
   VERSION=$(VERSION_NUMBER)
 endif
 
-
 #############################################################################
 # SETUP AND BUILD -- LINUX
 #############################################################################
@@ -374,11 +373,11 @@ ifeq ($(PLATFORM),linux)
   BASE_CFLAGS += -I$(BTDIR)
 
   LIBS += \
-    $(LIBSDIR)/linux/libbulletcollision.a \
     $(LIBSDIR)/linux/libbulletdynamics.a \
-    $(LIBSDIR)/linux/libbulletmath.a \
-    $(LIBSDIR)/linux/libbulletmultithreaded.a \
-    $(LIBSDIR)/linux/libbulletsoftbody.a
+    $(LIBSDIR)/linux/libbulletcollision.a \
+    $(LIBSDIR)/linux/libbulletmath.a
+    #$(LIBSDIR)/linux/libbulletmultithreaded.a
+    #$(LIBSDIR)/linux/libbulletsoftbody.a
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -1032,10 +1031,20 @@ define DO_CC
 $(echo_cmd) "CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
 endef
+ 
+define DO_CXX
+$(echo_cmd) "CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
+endef
 
 define DO_TTY_CC
 $(echo_cmd) "TTY_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
+endef
+ 
+define DO_TTY_CXX
+$(echo_cmd) "CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
 endef
 
 ifeq ($(GENERATE_DEPENDENCIES),1)
@@ -1074,6 +1083,11 @@ endef
 define DO_DED_CC
 $(echo_cmd) "DED_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
+endef
+ 
+define DO_DED_CXX
+$(echo_cmd) "DED_CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
 endef
 
 define DO_WINDRES
@@ -1114,6 +1128,8 @@ targets: makedirs
 	@echo "  COMPILE_PLATFORM: $(COMPILE_PLATFORM)"
 	@echo "  COMPILE_ARCH: $(COMPILE_ARCH)"
 	@echo "  CC: $(CC)"
+	@echo "  CXX: $(CXX)"
+	@echo "  LD: $(LD)"
 	@echo ""
 	@echo "  CFLAGS:"
 	-@for i in $(CFLAGS); \
@@ -1335,6 +1351,7 @@ Q3OBJ_ = \
   $(B)/client/cl_ui.o \
   $(B)/client/cl_avi.o \
   \
+  $(B)/client/cm_bullet.o \
   $(B)/client/cm_load.o \
   $(B)/client/cm_patch.o \
   $(B)/client/cm_polylib.o \
@@ -1575,13 +1592,13 @@ Q3OBJ += $(Q3OBJ_)
 
 $(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(CXX) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
 $(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(CXX) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
@@ -1639,6 +1656,7 @@ Q3DOBJ = \
   $(B)/ded/sv_snapshot.o \
   $(B)/ded/sv_world.o \
   \
+  $(B)/ded/cm_bullet.o \
   $(B)/ded/cm_load.o \
   $(B)/ded/cm_patch.o \
   $(B)/ded/cm_polylib.o \
@@ -1722,7 +1740,7 @@ endif
 
 $(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
+	$(Q)$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
 
 
@@ -1871,6 +1889,9 @@ $(B)/client/%.o: $(SDIR)/%.c
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(CMDIR)/%.cpp
+	$(DO_CXX)
+
 $(B)/client/%.o: $(JPDIR)/%.c
 	$(DO_CC)
 
@@ -1908,6 +1929,9 @@ $(B)/clienttty/%.o: $(SDIR)/%.c
 $(B)/clienttty/%.o: $(CMDIR)/%.c
 	$(DO_TTY_CC)
 
+$(B)/clienttty/%.o: $(CMDIR)/%.cpp
+	$(DO_TTY_CXX)
+
 $(B)/clienttty/%.o: $(ZDIR)/%.c
 	$(DO_TTY_CC)
 
@@ -1929,6 +1953,9 @@ $(B)/ded/%.o: $(SDIR)/%.c
 
 $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(CMDIR)/%.cpp
+	$(DO_DED_CXX)
 
 $(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)

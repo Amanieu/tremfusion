@@ -231,3 +231,8 @@ void CM_ClearLevelPatches( void );
 #if id386_sse >= 1
 clipHandle_t CM_TempBoxModel_sse( v4f mins, v4f maxs, int capsule );
 #endif
+
+// cm_bullet.cpp
+
+void CM_InitBullet(void);
+void CM_ShutdownBullet(void);
