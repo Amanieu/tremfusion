@@ -97,7 +97,7 @@ typedef struct md3Frame_s {
 } md3Frame_t;
 
 typedef struct md3Tag_s {
-	char		name[MAX_QPATH];	// tag name
+	char		name[64];	// tag name
 	vec3_t		origin;
 	vec3_t		axis[3];
 } md3Tag_t;
@@ -115,7 +115,7 @@ typedef struct md3Tag_s {
 typedef struct {
 	int		ident;				// 
 
-	char	name[MAX_QPATH];	// polyset name
+	char	name[64];	// polyset name
 
 	int		flags;
 	int		numFrames;			// all surfaces in a model should have the same
@@ -134,7 +134,7 @@ typedef struct {
 } md3Surface_t;
 
 typedef struct {
-	char			name[MAX_QPATH];
+	char			name[64];
 	int				shaderIndex;	// for in-game use
 } md3Shader_t;
 
@@ -155,7 +155,7 @@ typedef struct {
 	int			ident;
 	int			version;
 
-	char		name[MAX_QPATH];	// model name
+	char		name[64];	// model name
 
 	int			flags;
 
@@ -204,8 +204,8 @@ typedef struct {
 typedef struct {
 	int			ident;
 
-	char		name[MAX_QPATH];	// polyset name
-	char		shader[MAX_QPATH];
+	char		name[64];	// polyset name
+	char		shader[64];
 	int			shaderIndex;		// for in-game use
 
 	int			ofsHeader;			// this will be a negative number
@@ -248,12 +248,12 @@ typedef struct {
 	int			ident;
 	int			version;
 
-	char		name[MAX_QPATH];	// model name
+	char		name[64];	// model name
 
 	// frames and bones are shared by all levels of detail
 	int			numFrames;
 	int			numBones;
-	int			ofsBoneNames;		// char	name[ MAX_QPATH ]
+	int			ofsBoneNames;		// char	name[ 64 ]
 	int			ofsFrames;			// md4Frame_t[numFrames]
 
 	// each level of detail has completely separate sets of surfaces
@@ -308,8 +308,8 @@ typedef struct {
 typedef struct {
 	int			ident;
 
-	char		name[MAX_QPATH];	// polyset name
-	char		shader[MAX_QPATH];
+	char		name[64];	// polyset name
+	char		shader[64];
 	int			shaderIndex;	// for in-game use
 
 	int			ofsHeader;	// this will be a negative number
@@ -369,7 +369,7 @@ typedef struct {
 	int			ident;
 	int			version;
 
-	char		name[MAX_QPATH];	// model name
+	char		name[64];	// model name
 
 	// frames and bones are shared by all levels of detail
 	int			numFrames;
@@ -484,7 +484,7 @@ typedef struct {
 } dmodel_t;
 
 typedef struct {
-	char		shader[MAX_QPATH];
+	char		shader[64];
 	int			surfaceFlags;
 	int			contentFlags;
 } dshader_t;
@@ -529,7 +529,7 @@ typedef struct {
 } dbrush_t;
 
 typedef struct {
-	char		shader[MAX_QPATH];
+	char		shader[64];
 	int			brushNum;
 	int			visibleSide;	// the brush side that ray tests need to clip against (-1 == none)
 } dfog_t;

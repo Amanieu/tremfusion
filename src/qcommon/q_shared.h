@@ -325,8 +325,8 @@ typedef vec_t vec2_t[2];
 
 // Align all vectors to 16 bytes to allow SSE optimisations
 typedef vec_t vec4_t[4] ALIGNED(16);
-typedef vec4_t vec3_t ALIGNED(16);
 typedef vec4_t vec3a_t ALIGNED(16);
+typedef vec_t vec3_t[3];
 
 #if id386_sse >= 1
 #define vec3aLoad(vec3a)       v4fLoadA(vec3a)
