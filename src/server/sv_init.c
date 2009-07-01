@@ -370,25 +370,27 @@ void SV_ClearServer(void) {
 ================
 SV_TouchCGame
 
-Touch the cgame.qvm and ui.qvm so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
+Touch the cgame and ui so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
 ================
 */
 void SV_TouchCGame(void) {
+#ifdef USE_LLVM
 	fileHandle_t	f;
 
-	FS_FOpenFileRead( "vm/cgame.qvm", &f, qfalse );
+	FS_FOpenFileRead( "cgamellvm.bc", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No cgame.qvm found on pure server\n" );
+		Com_Printf( "WARNING: No cgamellvm.bc found on pure server\n" );
 	}
 
-	FS_FOpenFileRead( "vm/ui.qvm", &f, qfalse );
+	FS_FOpenFileRead( "uillvm.bc", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No ui.qvm found on pure server\n" );
+		Com_Printf( "WARNING: No uillvm.bc found on pure server\n" );
 	}
+#endif
 }
 
 /*

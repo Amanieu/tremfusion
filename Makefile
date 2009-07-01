@@ -153,6 +153,10 @@ ifndef USE_FREETYPE
   USE_FREETYPE=1
 endif
 
+ifndef USE_LLVM
+  USE_LLVM=0
+endif
+
 ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
@@ -240,6 +244,12 @@ ifeq ($(USE_SCM_VERSION),1)
   endif
 else
   VERSION=$(VERSION_NUMBER)
+endif
+ 
+ifeq ($(USE_LLVM),1)
+  LD=$(CXX)
+else
+  LD=$(CC)
 endif
 
 
@@ -334,6 +344,10 @@ ifeq ($(PLATFORM),linux)
     endif
     TTYC_CFLAGS += -UUSE_CIN_THEORA
   endif
+ 
+  ifeq ($(USE_LLVM),1)
+    BASE_CFLAGS += -DUSE_LLVM
+  endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
@@ -410,6 +424,10 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_FREETYPE),1)
     CLIENT_LIBS += $(shell freetype-config --libs)
+  endif
+
+  ifeq ($(USE_LLVM),1)
+    LIBS += $(shell llvm-config --libs) -pthread
   endif
 
   ifeq ($(ARCH),x86)
@@ -945,6 +963,33 @@ ifeq ($(PLATFORM),sunos)
   CLIENT_LIBS +=$(shell sdl-config --libs) -lGL -lpthread
 
 else # ifeq sunos
+ 
+#############################################################################
+# SETUP AND BUILD -- LLVM
+#############################################################################
+
+ifeq ($(PLATFORM),llvm)
+
+  CC=llvm-gcc
+  LD=llvm-link
+  ARCH=llvm
+
+  HAVE_VM_COMPILED=true
+
+  BASE_CFLAGS += -emit-llvm
+  DEBUG_CFLAGS = $(BASE_CFLAGS) -O0
+  RELEASE_CFLAGS = $(BASE_CFLAGS) -DNDEBUG -O3
+
+  LDFLAGS=
+  SHLIBEXT=bc
+  SHLIBLDFLAGS=$(LDFLAGS)
+
+  BUILD_CLIENT = 0
+  BUILD_CLIENT_SMP = 0
+  BUILD_SERVER = 0
+  BUILD_GAME_SO = 1
+
+else # ifeq llvm
 
 #############################################################################
 # SETUP AND BUILD -- GENERIC
@@ -964,6 +1009,7 @@ endif #OpenBSD
 endif #NetBSD
 endif #IRIX
 endif #SunOS
+endif #LLVM
 
 TARGETS =
 
@@ -1035,10 +1081,20 @@ define DO_CC
 $(echo_cmd) "CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
 endef
+ 
+define DO_CXX
+$(echo_cmd) "CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
+endef
 
 define DO_TTY_CC
 $(echo_cmd) "TTY_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
+endef
+ 
+define DO_TTY_CXX
+$(echo_cmd) "CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
 endef
 
 define DO_SHLIB_CC
@@ -1069,6 +1125,11 @@ endef
 define DO_DED_CC
 $(echo_cmd) "DED_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
+endef
+ 
+define DO_DED_CXX
+$(echo_cmd) "DED_CXX $<"
+$(Q)$(CXX) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
 endef
 
 define DO_WINDRES
@@ -1109,6 +1170,8 @@ targets: makedirs
 	@echo "  COMPILE_PLATFORM: $(COMPILE_PLATFORM)"
 	@echo "  COMPILE_ARCH: $(COMPILE_ARCH)"
 	@echo "  CC: $(CC)"
+	@echo "  CXX: $(CXX)"
+	@echo "  LD: $(LD)"
 	@echo ""
 	@echo "  CFLAGS:"
 	-@for i in $(CFLAGS); \
@@ -1124,6 +1187,18 @@ targets: makedirs
 	@echo ""
 	@echo "  LIBS:"
 	-@for i in $(LIBS); \
+	do \
+		echo "    $$i"; \
+	done
+	@echo ""
+	@echo "  CLIENT_LDFLAGS:"
+	-@for i in $(CLIENT_LDFLAGS); \
+	do \
+		echo "    $$i"; \
+	done
+	@echo ""
+	@echo "  CLIENT_LIBS:"
+	-@for i in $(CLIENT_LIBS); \
 	do \
 		echo "    $$i"; \
 	done
@@ -1409,18 +1484,22 @@ ifeq ($(USE_MUMBLE),1)
     $(B)/client/libmumblelink.o
 endif
 
+ifeq ($(USE_LLVM),1)
+  Q3OBJ_ += $(B)/client/vm_llvm.o
+endif
+
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
 $(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(LD) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
 $(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(LD) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
@@ -1523,6 +1602,10 @@ ifeq ($(ARCH),x86)
       $(B)/ded/snapvectora.o \
       $(B)/ded/matha.o
 endif
+ 
+ifeq ($(USE_LLVM),1)
+  Q3DOBJ += $(B)/ded/vm_llvm.o
+endif
 
 ifeq ($(USE_INTERNAL_ZLIB),1)
 Q3DOBJ += \
@@ -1550,7 +1633,7 @@ endif
 
 $(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
+	$(Q)$(LD) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
 
 
@@ -1563,7 +1646,6 @@ CGOBJ = \
   $(B)/base/cgame/bg_misc.o \
   $(B)/base/cgame/bg_pmove.o \
   $(B)/base/cgame/bg_slidemove.o \
-  $(B)/base/cgame/bg_lib.o \
   $(B)/base/cgame/bg_alloc.o \
   $(B)/base/cgame/bg_voice.o \
   $(B)/base/cgame/cg_consolecmds.o \
@@ -1596,7 +1678,7 @@ CGOBJ = \
 
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
 
 
 
@@ -1609,7 +1691,6 @@ GOBJ = \
   $(B)/base/game/bg_misc.o \
   $(B)/base/game/bg_pmove.o \
   $(B)/base/game/bg_slidemove.o \
-  $(B)/base/game/bg_lib.o \
   $(B)/base/game/bg_alloc.o \
   $(B)/base/game/bg_voice.o \
   $(B)/base/game/g_active.o \
@@ -1639,7 +1720,7 @@ GOBJ = \
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
+	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
 
 
 
@@ -1654,14 +1735,13 @@ UIOBJ = \
   $(B)/base/ui/ui_gameinfo.o \
   \
   $(B)/base/ui/bg_misc.o \
-  $(B)/base/ui/bg_lib.o \
   $(B)/base/qcommon/q_math.o \
   $(B)/base/qcommon/q_shared.o \
   $(B)/base/ui/ui_syscalls.o
 
 $(B)/base/ui$(ARCH).$(SHLIBEXT): $(UIOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
+	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
 
 
 
@@ -1680,6 +1760,9 @@ $(B)/client/%.o: $(SDIR)/%.c
 
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
+
+$(B)/client/%.o: $(CMDIR)/%.cpp
+	$(DO_CXX)
 
 $(B)/client/%.o: $(JPDIR)/%.c
 	$(DO_CC)
@@ -1718,6 +1801,9 @@ $(B)/clienttty/%.o: $(SDIR)/%.c
 $(B)/clienttty/%.o: $(CMDIR)/%.c
 	$(DO_TTY_CC)
 
+$(B)/clienttty/%.o: $(CMDIR)/%.cpp
+	$(DO_TTY_CXX)
+
 $(B)/clienttty/%.o: $(ZDIR)/%.c
 	$(DO_TTY_CC)
 
@@ -1739,6 +1825,9 @@ $(B)/ded/%.o: $(SDIR)/%.c
 
 $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(CMDIR)/%.cpp
+	$(DO_DED_CXX)
 
 $(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)

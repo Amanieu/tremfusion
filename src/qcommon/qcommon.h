@@ -303,7 +303,10 @@ VIRTUAL MACHINE
 typedef struct vm_s vm_t;
 
 typedef enum {
-	VMI_NATIVE
+	VMI_NATIVE,
+#if USE_LLVM
+	VMI_BYTECODE
+#endif
 } vmInterpret_t;
 
 typedef enum {
@@ -321,7 +324,7 @@ typedef enum {
 void	VM_Init( void );
 vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
 				   vmInterpret_t interpret );
-// module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
+// module should be bare: "cgame", not "cgame.dll", "cgamellvm.bc" or "vm/cgame.qvm"
 
 void	VM_Free( vm_t *vm );
 void	VM_Clear(void);

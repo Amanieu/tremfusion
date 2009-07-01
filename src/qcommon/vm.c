@@ -149,9 +149,6 @@ vm_t *VM_Restart( vm_t *vm ) {
 /*
 ================
 VM_Create
-
-If image ends in .qvm it will be interpreted, otherwise
-it will attempt to load as a system dll
 ================
 */
 vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
@@ -187,7 +184,10 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	Q_strncpyz( vm->name, module, sizeof( vm->name ) );
 	vm->systemCall = systemCalls;
 
-	if ( interpret == VMI_NATIVE ) {
+#if USE_LLVM
+	if ( interpret == VMI_NATIVE )
+#endif
+	{
 		// try to load as a system dll
 		Com_DPrintf( "Loading dll file %s.\n", vm->name );
 		vm->dllHandle = Sys_LoadDll( module, &vm->entryPoint, VM_DllSyscall );
@@ -195,7 +195,23 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 			vm->interpret = VMI_NATIVE;
 			return vm;
 		}
+#if USE_LLVM
+		Com_Printf("Failed to load dll, looking for llvm.\n");
+#endif
 	}
+
+#if USE_LLVM
+	// try to load the llvm
+	Com_Printf("Loading llvm file '%s'.\n", vm->name);
+	vm->llvmModuleProvider = VM_LoadLLVM(vm, VM_DllSyscall);
+	if(vm->llvmModuleProvider)
+	{
+		vm->interpret = VMI_BYTECODE;
+		return vm;
+	}
+
+	Com_Printf("Failed to load llvm.\n");
+#endif
 
 	return vm;
 }
@@ -224,6 +240,14 @@ void VM_Free( vm_t *vm ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
 	}
+
+#if USE_LLVM
+	if(vm->llvmModuleProvider)
+	{
+		VM_UnloadLLVM(vm->llvmModuleProvider);
+		Com_Memset(vm, 0, sizeof(*vm));
+	}
+#endif
 
 	Com_Memset( vm, 0, sizeof( *vm ) );
 
@@ -310,5 +334,12 @@ void VM_VmInfo_f( void ) {
 			Com_Printf( "native\n" );
 			continue;
 		}
+#if USE_LLVM
+		if(vm->llvmModuleProvider)
+		{
+			Com_Printf("llvm\n");
+			continue;
+		}
+#endif
 	}
 }

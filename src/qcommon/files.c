@@ -1091,12 +1091,14 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 						}
 					}
 
-					if (!(pak->referenced & FS_CGAME_REF) && strstr(filename, "cgame.qvm")) {
+#ifdef USE_LLVM
+					if (!(pak->referenced & FS_CGAME_REF) && strstr(filename, "cgame.llvm")) {
 						pak->referenced |= FS_CGAME_REF;
 					}
-					if (!(pak->referenced & FS_UI_REF) && strstr(filename, "ui.qvm")) {
+					if (!(pak->referenced & FS_UI_REF) && strstr(filename, "ui.llvm")) {
 						pak->referenced |= FS_UI_REF;
 					}
+#endif
 
 					if ( uniqueFILE ) {
 						// open a new file on the pakfile

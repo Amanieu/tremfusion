@@ -30,7 +30,14 @@ struct vm_s {
 	void *dllHandle;
 	int callLevel;
 	vmInterpret_t interpret;
+
+#if USE_LLVM
+	// for llvm modules
+	void *llvmModuleProvider;
+#endif
 };
 
 extern vm_t *currentVM;
 
+void *VM_LoadLLVM(vm_t *vm, intptr_t(*systemCalls)(intptr_t, ...));
+void VM_UnloadLLVM(void *llvmModuleProvider);
