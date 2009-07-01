@@ -111,6 +111,14 @@ ifndef USE_CODEC_VORBIS
   USE_CODEC_VORBIS=1
 endif
 
+ifndef USE_CIN_THEORA
+  USE_CIN_THEORA=1
+endif
+
+ifeq ($(USE_CIN_THEORA),1)
+  USE_CODEC_VORBIS=1
+endif
+
 ifndef USE_CURSES
   USE_CURSES=1
 endif
@@ -198,6 +206,13 @@ ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
   SDL_LIBS=$(shell pkg-config --libs sdl)
   OGG_CFLAGS=$(shell pkg-config --cflags ogg vorbis vorbisfile)
   OGG_LIBS=$(shell pkg-config --libs ogg vorbis vorbisfile)
+  # Some distros still use the old pkgconfig string
+  THEORA_CFLAGS=$(shell pkg-config --cflags theoradec 2> /dev/null)
+  THEORA_LIBS=$(shell pkg-config --libs theoradec 2> /dev/null)
+  ifeq ($(THEORA_LIBS),)
+    THEORA_CFLAGS=$(shell pkg-config --cflags theora)
+	THEORA_LIBS=$(shell pkg-config --libs theora)
+  endif
 endif
 
 # version info
@@ -317,6 +332,16 @@ ifeq ($(PLATFORM),linux)
     TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
+  ifeq ($(USE_CIN_THEORA),1)
+    BASE_CFLAGS += -DUSE_CIN_THEORA
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(THEORA_CFLAGS)
+    endif
+    TTYC_CFLAGS += -UUSE_CIN_THEORA
+  endif
+
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
   ifeq ($(ARCH),x86_64)
@@ -385,6 +410,10 @@ ifeq ($(PLATFORM),linux)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LIBS += $(OGG_LIBS)
+  endif
+
+  ifeq ($(USE_CIN_THEORA),1)
+    CLIENT_LIBS += $(THEORA_LIBS)
   endif
 
   ifeq ($(USE_CURSES),1)
@@ -493,6 +522,16 @@ ifeq ($(PLATFORM),darwin)
     TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
+  ifeq ($(USE_CIN_THEORA),1)
+    BASE_CFLAGS += -DUSE_CIN_THEORA
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(THEORA_CFLAGS)
+    endif
+    TTYC_CFLAGS += -UUSE_CIN_THEORA
+  endif
+
   ifeq ($(USE_CURSES),1)
      LIBS += -lncurses
      BASE_CFLAGS += -DUSE_CURSES
@@ -521,6 +560,15 @@ ifeq ($(PLATFORM),darwin)
       LIBOGGSRC=$(LIBSDIR)/macosx/libogg.a
     else
       CLIENT_LIBS += $(OGG_LIBS)
+    endif
+  endif
+
+  ifeq ($(USE_CIN_THEORA),1)
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      LIBTHEORA=$(B)/libtheoradec.a
+      LIBTHEORASRC=$(LIBSDIR)/macosx/libtheoradec.a
+    else
+      CLIENT_LIBS += $(THEORA_LIBS)
     endif
   endif
 
@@ -595,6 +643,16 @@ ifeq ($(PLATFORM),mingw32)
     TTYC_CFLAGS += -UUSE_CODEC_VORBIS
   endif
 
+  ifeq ($(USE_CIN_THEORA),1)
+    BASE_CFLAGS += -DUSE_CIN_THEORA
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      BASE_CFLAGS += -I$(OGGDIR)
+    else
+      BASE_CFLAGS += $(THEORA_CFLAGS)
+    endif
+    TTYC_CFLAGS += -UUSE_CIN_THEORA
+  endif
+
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
@@ -642,6 +700,15 @@ ifeq ($(PLATFORM),mingw32)
         $(LIBSDIR)/win32/libogg.a
     else
       CLIENT_LIBS += $(OGG_LIBS)
+    endif
+  endif
+
+  ifeq ($(USE_CIN_THEORA),1)
+    ifeq ($(USE_LOCAL_HEADERS),1)
+      CLIENT_LIBS += \
+        $(LIBSDIR)/win32/libtheoradec.a
+    else
+      CLIENT_LIBS += $(THEORA_LIBS)
     endif
   endif
 
@@ -1312,6 +1379,7 @@ $(Q3ASM): $(Q3ASMOBJ)
 #############################################################################
 
 Q3OBJ_ = \
+  $(B)/client/cin_ogm.o \
   $(B)/client/cl_cgame.o \
   $(B)/client/cl_cin.o \
   $(B)/client/cl_console.o \
@@ -1601,6 +1669,14 @@ endif
 ifneq ($(strip $(LIBVORBISFILE)),)
 ifneq ($(strip $(LIBVORBISFILESRC)),)
 $(LIBVORBISFILE) : $(LIBVORBISFILESRC)
+	cp $< $@
+	ranlib $@
+endif
+endif
+
+ifneq ($(strip $(LIBTHEORA)),)
+ifneq ($(strip $(LIBTHEORASRC)),)
+$(LIBTHEORA) : $(LIBTHEORASRC)
 	cp $< $@
 	ranlib $@
 endif
