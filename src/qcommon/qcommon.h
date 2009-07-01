@@ -303,9 +303,7 @@ VIRTUAL MACHINE
 typedef struct vm_s vm_t;
 
 typedef enum {
-	VMI_NATIVE,
-	VMI_BYTECODE,
-	VMI_COMPILED
+	VMI_NATIVE
 } vmInterpret_t;
 
 typedef enum {
@@ -333,20 +331,16 @@ vm_t	*VM_Restart( vm_t *vm );
 
 intptr_t		QDECL VM_Call( vm_t *vm, int callNum, ... );
 
-void	VM_Debug( int level );
+#define VMA(x) ((void *)args[x])
+#define VM_ExplicitArgPtr(vm, x) ((void *)x)
 
-void	*VM_ArgPtr( intptr_t intValue );
-void	*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
-
-#define	VMA(x) VM_ArgPtr(args[x])
 static ID_INLINE float _vmf(intptr_t x)
 {
-	floatint_t fi;
-	fi.i = (int) x;
-	return fi.f;
+	floatint_t t;
+	t.i = x;
+	return t.f;
 }
-#define	VMF(x)	_vmf(args[x])
-
+#define VMF(x) _vmf(args[x])
 
 /*
 ==============================================================
