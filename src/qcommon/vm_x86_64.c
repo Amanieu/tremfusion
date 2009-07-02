@@ -39,6 +39,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //#define USE_GAS
 //#define DEBUG_VM
 
+#define MAX_CACHE_ENTRIES 6
+
+typedef struct {
+	int checksum;
+	int age;
+	byte *codeBase;
+	int codeLength;
+	int *instructionPointers;
+} vmCache_t;
+
+static vmCache_t vmCache[MAX_CACHE_ENTRIES];
+
 #ifdef DEBUG_VM
 #define Dfprintf(fd, args...) fprintf(fd, ##args)
 static FILE* qdasmout;
@@ -59,7 +71,70 @@ void assemble_line(const char* input, size_t len);
 #endif
 #endif // USE_GAS
 
-static void VM_Destroy_Compiled(vm_t* self);
+// Cache system to compensate for the slowness of the x86_64 JIT compiler
+
+static ID_INLINE void VM_Destroy_Compiled(byte *codeBase, int codeLength)
+{
+#ifdef _WIN32
+	VirtualFree(codeBase, 0, MEM_RELEASE);
+#else
+	munmap(codeBase, codeLength);
+#endif
+}
+
+static ID_INLINE qboolean VM_Cache_Search(vm_t *vm, vmHeader_t *header)
+{
+	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
+	int i;
+
+	for (i = 0; i < MAX_CACHE_ENTRIES; i++) {
+		if (vmCache[i].checksum == checksum) {
+			vm->codeLength = vmCache[i].codeLength;
+			vm->codeBase = vmCache[i].codeBase;
+			memcpy(vm->instructionPointers, vmCache[i].instructionPointers, vm->instructionPointersLength);
+			vm->compiled = qtrue;
+			vm->destroy = NULL;
+			vmCache[i].age = 0;
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
+{
+	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
+	int i, oldest = 0, oldestage = -1;
+
+	for (i = 0; i < MAX_CACHE_ENTRIES; i++) {
+		if (!vmCache[i].codeBase) {
+			oldest = i;
+			break;
+		} else if (vmCache[i].age > oldestage) {
+			oldestage = vmCache[i].age;
+			oldest = i;
+		}
+	}
+
+	// Free existing cache entry
+	if (vmCache[oldest].codeBase) {
+		VM_Destroy_Compiled(vmCache[oldest].codeBase, vmCache[oldest].codeLength);
+		free(vmCache[oldest].instructionPointers);
+		vmCache[oldest].codeBase = NULL;
+		vmCache[i].checksum = 0;
+	}
+
+	vmCache[oldest].checksum = checksum;
+	vmCache[oldest].age = -1;
+	vmCache[oldest].codeLength = vm->codeLength;
+	vmCache[oldest].codeBase = vm->codeBase;
+	vmCache[oldest].instructionPointers = malloc(vm->instructionPointersLength);
+	memcpy(vmCache[oldest].instructionPointers, vm->instructionPointers, vm->instructionPointersLength);
+
+	for (i = 0; i < MAX_CACHE_ENTRIES; i++)
+		vmCache[i].age++;
+}
 
 /*
  
@@ -463,6 +538,11 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	int neednilabel = 0;
 	struct timeval tvstart =  {0, 0};
 
+	if (VM_Cache_Search(vm, header)) {
+		Com_DPrintf("loaded %s from the cache\n", vm->name);
+		return;
+	}
+
 #ifdef USE_GAS
 	byte* compiledcode;
 	int   compiledsize;
@@ -560,7 +640,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 #endif
 
 		/* store current instruction number in r15 for debugging */
-#if 1
+#if 0
 		emit("nop");
 		emit("movq $%d, %%r15", instruction);
 		emit("nop");
@@ -988,7 +1068,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 		Com_Error(ERR_DROP, "VM_CompileX86: mprotect failed");
 #endif // USE_GAS
 
-	vm->destroy = VM_Destroy_Compiled;
+	vm->destroy = NULL;
 	
 #ifdef USE_GAS
 	entryPoint = getentrypoint(vm);
@@ -1032,20 +1112,11 @@ out:
 		gettimeofday(&tvdone, NULL);
 		timersub(&tvdone, &tvstart, &dur);
 		Com_DPrintf( "compilation took %lu.%06lu seconds\n", dur.tv_sec, dur.tv_usec );
+
+		VM_Cache_Add(vm, header);
 	}
 }
 
-
-void VM_Destroy_Compiled(vm_t* self)
-{
-#ifdef USE_GAS
-	munmap(self->codeBase, self->codeLength);
-#elif _WIN32
-	VirtualFree(self->codeBase, 0, MEM_RELEASE);
-#else
-	munmap(self->codeBase, self->codeLength);
-#endif
-}
 
 /*
 ==============
