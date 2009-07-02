@@ -2055,8 +2055,7 @@ S_AL_Init
 qboolean S_AL_Init( soundInterface_t *si )
 {
 #ifdef USE_OPENAL
-
-	qboolean enumsupport, founddev = qfalse;
+	const char* device = NULL;
 	int i;
 
 	if( !si ) {
@@ -2081,7 +2080,9 @@ qboolean S_AL_Init( soundInterface_t *si )
 	s_alGraceDistance = Cvar_Get("s_alGraceDistance", "512", CVAR_CHEAT);
 	s_alSourcePitch = Cvar_Get("s_alSourcePitch", "1.0", CVAR_ARCHIVE);
 
-	s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE );
+	s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH );
+
+	s_alDevice = Cvar_Get("s_alDevice", "", CVAR_ARCHIVE | CVAR_LATCH);
 
 	// Load QAL
 	if( !QAL_Init( s_alDriver->string ) )
@@ -2090,8 +2091,12 @@ qboolean S_AL_Init( soundInterface_t *si )
 		return qfalse;
 	}
 
+	device = s_alDevice->string;
+	if(device && !*device)
+		device = NULL;
+
 	// Device enumeration support (extension is implemented reasonably only on Windows right now).
-	if((enumsupport = qalcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT")))
+	if(qalcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
 	{
 		char devicenames[1024] = "";
 		const char *devicelist;
@@ -2107,11 +2112,9 @@ qboolean S_AL_Init( soundInterface_t *si )
 		// Generic Software as that one works more reliably with various sound systems.
 		// If it's not, use OpenAL's default selection as we don't want to ignore
 		// native hardware acceleration.
-		if(!strcmp(defaultdevice, "Generic Hardware"))
-			s_alDevice = Cvar_Get("s_alDevice", ALDEVICE_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH);
-		else
+		if(!device && !strcmp(defaultdevice, "Generic Hardware"))
+			device = "Generic Software";
 #endif
-			s_alDevice = Cvar_Get("s_alDevice", defaultdevice, CVAR_ARCHIVE | CVAR_LATCH);
 
 		// dump a list of available devices to a cvar for the user to see.
 		while((curlen = strlen(devicelist)))
@@ -2119,26 +2122,18 @@ qboolean S_AL_Init( soundInterface_t *si )
 			Q_strcat(devicenames, sizeof(devicenames), devicelist);
 			Q_strcat(devicenames, sizeof(devicenames), "\n");
 
-			// check whether the device we want to load is available at all.
-			if(!strcmp(s_alDevice->string, devicelist))
-				founddev = qtrue;
-
 			devicelist += curlen + 1;
 		}
 
 		s_alAvailableDevices = Cvar_Get("s_alAvailableDevices", devicenames, CVAR_ROM | CVAR_NORESTART);
-		
-		if(!founddev)
-		{
-			Cvar_ForceReset("s_alDevice");
-			founddev = 1;
-		}
 	}
 
-	if(founddev)
-		alDevice = qalcOpenDevice(s_alDevice->string);
-	else
+	alDevice = qalcOpenDevice(device);
+	if( !alDevice && device )
+	{
+		Com_Printf( "Failed to open OpenAL device '%s', trying default.\n", device );
 		alDevice = qalcOpenDevice(NULL);
+	}
 
 	if( !alDevice )
 	{
@@ -2146,9 +2141,6 @@ qboolean S_AL_Init( soundInterface_t *si )
 		Com_Printf( "Failed to open OpenAL device.\n" );
 		return qfalse;
 	}
-
-	if(enumsupport)
-		Cvar_Set("s_alDevice", qalcGetString(alDevice, ALC_DEVICE_SPECIFIER));
 
 	// Create OpenAL context
 	alContext = qalcCreateContext( alDevice, NULL );

@@ -153,6 +153,10 @@ typedef int		clipHandle_t;
 #define BIT(x)				(1 << x)
 #endif
 
+#define STRING(s)			#s
+// expand constants before stringifying them
+#define XSTRING(s)			STRING(s)
+
 #define	MAX_QINT			0x7fffffff
 #define	MIN_QINT			(-MAX_QINT-1)
 
