@@ -1092,16 +1092,18 @@ CL_InitUI
 #define UI_OLD_API_VERSION	4
 void CL_InitUI( void ) {
 	int		v;
-	vmInterpret_t		interpret;
+	vmInterpret_t		interpret = VMI_NATIVE;
 
+#ifdef USE_LLVM
 	// load the dll or bytecode
 	if ( cl_connectedToPureServer != 0 ) {
 		// if sv_pure is set we only allow qvms to be loaded
-		interpret = VMI_COMPILED;
+		interpret = VMI_BYTECODE;
 	}
 	else {
 		interpret = Cvar_VariableValue( "vm_ui" );
 	}
+#endif
 	uivm = VM_Create( "ui", CL_UISystemCalls, interpret );
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
