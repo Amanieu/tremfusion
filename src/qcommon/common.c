@@ -694,7 +694,7 @@ int Com_HashKey(char *string, int maxlen) {
 
 	hash = 0;
 	for (i = 0; i < maxlen && string[i] != '\0'; i++) {
-		hash += string[i] * (119 + i);
+		hash += (string[i] == '%' || string[i] < 0 ? '.' : string[i]) * (119 + i);
 	}
 	hash = (hash ^ (hash >> 10) ^ (hash >> 20));
 	return hash;
@@ -2685,7 +2685,7 @@ void Com_WriteConfig_f( void ) {
 	}
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	Com_DefaultExtension( filename, sizeof( filename ), ".cfg" );
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 	Com_Printf( "Writing %s.\n", filename );
 	Com_WriteConfigToFile( filename );
 }
@@ -2947,6 +2947,35 @@ void Com_Shutdown (void) {
 }
 
 //------------------------------------------------------------------------
+
+
+/*
+=====================
+Q_acos
+
+the msvc acos doesn't always return a value between -PI and PI:
+
+int i;
+i = 1065353246;
+acos(*(float*) &i) == -1.#IND0
+
+	This should go in q_math but it is too late to add new traps
+	to game and ui
+=====================
+*/
+float Q_acos(float c) {
+	float angle;
+
+	angle = acos(c);
+
+	if (angle > M_PI) {
+		return (float)M_PI;
+	}
+	if (angle < -M_PI) {
+		return (float)M_PI;
+	}
+	return angle;
+}
 
 /*
 ===========================================

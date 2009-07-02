@@ -1266,7 +1266,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height )
 
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	ext = Com_GetExtension( localName );
+	ext = COM_GetExtension( localName );
 
 	if( *ext )
 	{
@@ -1289,7 +1289,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height )
 				// Loader failed, most likely because the file isn't there;
 				// try again without the extension
 				orgNameFailed = qtrue;
-				Com_StripExtension( name, localName, MAX_QPATH );
+				COM_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{

@@ -142,6 +142,12 @@ cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_pixelAspect;
 
+// compatibility
+cvar_t  *r_mode;
+cvar_t  *r_customwidth;
+cvar_t  *r_customheight;
+cvar_t  *r_custompixelAspect;
+
 cvar_t	*r_overBrightBits;
 cvar_t	*r_mapOverBrightBits;
 
@@ -935,6 +941,13 @@ void R_Register( void )
 	r_width = ri.Cvar_Get( "r_width", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_height = ri.Cvar_Get( "r_height", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
+
+	// legacy variables
+	r_mode = ri.Cvar_Get( "r_mode", "-1", 0 );
+	ri.Cvar_CheckRange( r_mode, -1, 11, qtrue );
+	r_customwidth = ri.Cvar_Get( "r_customwidth", r_width->string, 0 );
+	r_customheight = ri.Cvar_Get( "r_customheight", r_height->string, 0 );
+	r_custompixelAspect = ri.Cvar_Get( "r_custompixelAspect", r_pixelAspect->string, 0 );
 
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );

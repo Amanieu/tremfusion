@@ -29,6 +29,14 @@ key up events are sent even if in console mode
 */
 
 field_t		g_consoleField;
+field_t		chatField;
+qboolean	chat_team;
+qboolean	chat_admins;
+qboolean	chat_clans;
+
+int			chat_playerNum;
+
+cmdPrompt_t prompt = {qfalse, "\0", "\0"};
 
 qboolean	key_overstrikeMode;
 
@@ -696,6 +704,71 @@ void Console_Key (int key) {
 //============================================================================
 
 
+/*
+================
+Message_Key
+
+In game talk message
+================
+*/
+void Message_Key( int key ) {
+
+	char	buffer[MAX_STRING_CHARS];
+
+
+	if (key == K_ESCAPE) {
+		Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
+		Field_Clear( &chatField );
+		return;
+	}
+
+	if ( key == K_ENTER || key == K_KP_ENTER )
+	{
+		if ( chatField.buffer[0] && cls.state == CA_ACTIVE ) {
+			if (chat_playerNum != -1 )
+
+				Com_sprintf( buffer, sizeof( buffer ), "tell %i \"%s\"\n", chat_playerNum, chatField.buffer );
+
+			else if (chat_team)
+
+				Com_sprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", chatField.buffer );
+
+			else if (chat_admins)
+
+				Com_sprintf( buffer, sizeof( buffer ), "say_admins \"%s\"\n", chatField.buffer );
+
+			else if (chat_clans) {
+
+				char clantagDecolored[ 32 ];
+				Q_strncpyz(clantagDecolored, cl_clantag->string, sizeof( clantagDecolored ) );
+				Q_CleanStr(clantagDecolored);
+				Com_sprintf( buffer, sizeof( buffer ), "m \"%s\" \"%s\"\n", clantagDecolored, chatField.buffer );
+
+			} else if (prompt.active) {
+
+				Cvar_SetLatched( "ui_sayBuffer", chatField.buffer );
+				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
+				Cbuf_ExecuteText( EXEC_NOW, buffer);
+
+			} else {
+				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
+				Hist_Add( chatField.buffer );
+			}
+
+			if ( !prompt.active )
+				CL_AddReliableCommand( buffer );
+		}
+		Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_MESSAGE );
+		Field_Clear( &chatField );
+		return;
+	}
+
+	Field_KeyDownEvent( &chatField, key );
+}
+
+//============================================================================
+
+
 qboolean Key_GetOverstrikeMode( void ) {
 	return key_overstrikeMode;
 }
@@ -1144,6 +1217,12 @@ void CL_KeyDownEvent( int key, unsigned time )
 
 	// escape is always handled special
 	if ( key == K_ESCAPE ) {
+		if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) {
+			// clear message mode
+			Message_Key( key );
+			return;
+		}
+
 		// escape always gets out of CGAME stuff
 		if (Key_GetCatcher( ) & KEYCATCH_CGAME) {
 			Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
@@ -1177,7 +1256,9 @@ void CL_KeyDownEvent( int key, unsigned time )
 	} else if ( Key_GetCatcher( ) & KEYCATCH_CGAME ) {
 		if ( cgvm ) {
 			VM_Call( cgvm, CG_KEY_EVENT, key, qtrue );
-		}
+		} 
+	} else if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) {
+		Message_Key( key );
 	} else if ( cls.state == CA_DISCONNECTED ) {
 		Console_Key( key );
 	} else {
@@ -1259,6 +1340,10 @@ void CL_CharEvent( int key ) {
 	else if ( Key_GetCatcher( ) & KEYCATCH_UI )
 	{
 		VM_Call( uivm, UI_KEY_EVENT, key | K_CHAR_FLAG, qtrue );
+	}
+	else if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) 
+	{
+		Field_CharEvent( &chatField, key );
 	}
 	else if ( cls.state == CA_DISCONNECTED )
 	{
