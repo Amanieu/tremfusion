@@ -44,7 +44,7 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 Sys_DefaultHomePath
 ==================
 */
-char *Sys_DefaultHomePath(void)
+char *Sys_DefaultHomePath(char **path2)
 {
 	char *p;
 
@@ -54,13 +54,14 @@ char *Sys_DefaultHomePath(void)
 		{
 			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
-			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremfusion" );
+			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Tremulous" );
 #else
-			Q_strcat( homePath, sizeof( homePath ), "/.tremfusion" );
+			Q_strcat( homePath, sizeof( homePath ), "/.tremulous" );
 #endif
 		}
 	}
 
+	*path2 = NULL;
 	return homePath;
 }
 
