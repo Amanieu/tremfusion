@@ -634,4 +634,9 @@ void Sys_PlatformInit( void )
 
 	// Handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
+
+	// Optionally show the console
+	extern qboolean win32_showconsole;
+	if (win32_showconsole)
+		AllocConsole();
 }

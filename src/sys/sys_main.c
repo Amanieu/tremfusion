@@ -48,6 +48,9 @@ static qboolean signalcaught = qfalse;
 #ifdef USE_CURSES
 static qboolean nocurses = qfalse;
 #endif
+#ifdef _WIN32
+qboolean win32_showconsole = qfalse;
+#endif
 
 /*
 =================
@@ -473,6 +476,17 @@ void Sys_ParseArgs( int argc, char **argv )
 		}
 	}
 #endif
+
+#ifdef _WIN32
+	for (i = 1; i < argc; i++)
+	{
+		if( !strcmp( argv[i], "+showconsole" ) )
+		{
+			win32_showconsole = qtrue;
+			break;
+		}
+	}
+#endif
 }
 
 #ifndef DEFAULT_BASEDIR
@@ -551,6 +565,8 @@ int main( int argc, char **argv )
 	for( i = 1; i < argc; i++ )
 	{
 		if( !strcmp( argv[ i ], "+nocurses" ) )
+			continue;
+		if( !strcmp( argv[ i ], "+showconsole" ) )
 			continue;
 		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
