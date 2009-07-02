@@ -1005,6 +1005,7 @@ extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
 extern cvar_t	*r_texturebits;			// number of desired texture bits
+extern cvar_t	*r_ext_multisample;
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
 										// 32 = use 32-bit textures
@@ -1045,6 +1046,12 @@ extern	cvar_t	*r_showcluster;
 extern cvar_t	*r_width;
 extern cvar_t	*r_height;
 extern cvar_t	*r_pixelAspect;
+
+// compatibility
+extern cvar_t   *r_mode;
+extern cvar_t	*r_customwidth;
+extern cvar_t	*r_customheight;
+extern cvar_t	*r_custompixelAspect;
 
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_minimize;

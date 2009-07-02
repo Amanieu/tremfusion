@@ -1306,16 +1306,21 @@ update cl_guid using QKEY_FILE and optional prefix
 static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
-	int len;
-
+	int len, len2;
+	//get the length of both files
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
-
-	if( len != QKEY_SIZE ) 
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
+	FS_FCloseFile( f );
+	//check lengths and set cl_guid accordinally
+	if( len == QKEY_SIZE ) {
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
+	} else if( len2 == QKEY_SIZE ) {
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE_FALLBACK, QKEY_SIZE, prefix, prefix_len ) );
+	} else {
 		Cvar_Set( "cl_guid", "" );
-	else
-		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
-			prefix, prefix_len ) );
+	}
+
 }
 
 
@@ -1467,23 +1472,19 @@ CL_GetMotd_f
 void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
-	Com_DPrintf( "Resolving %s\n", MASTER_SERVER_NAME );
-	if ( !NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
+	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
+	if ( !NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
 		return;
 	}
 	cls.updateServer.port = BigShort( PORT_MASTER );
-	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MOTD_SERVER_NAME,
 		cls.updateServer.ip[0], cls.updateServer.ip[1],
 		cls.updateServer.ip[2], cls.updateServer.ip[3],
 		BigShort( cls.updateServer.port ) );
 
 	info[0] = 0;
-  // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
-  // only srand I could catch before here is tr_noise.c l:26 srand(1001)
-  // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=382
-  // NOTE: the Com_Milliseconds xoring only affects the lower 16-bit word,
-  //   but I decided it was enough randomization
+
 	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ),
 			"%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
 
@@ -1655,10 +1656,14 @@ void CL_Connect_f( void ) {
 
 	// if we aren't playing on a lan, we need to authenticate
 	// with the cd key
-	if ( NET_IsLocalAddress( clc.serverAddress ) ) {
+	if(NET_IsLocalAddress(clc.serverAddress))
 		cls.state = CA_CHALLENGING;
-	} else {
+	else
+	{
 		cls.state = CA_CONNECTING;
+		
+		// Set a client challenge number that ideally is mirrored back by the server.
+		clc.challenge = ((rand() << 16) ^ rand()) ^ Com_Milliseconds();
 	}
 
 	Key_SetCatcher( 0 );
@@ -2252,9 +2257,9 @@ Resend a connect message if the last one has timed out
 =================
 */
 void CL_CheckForResend( void ) {
-	int		port, i;
+	int		port;
 	char	info[MAX_INFO_STRING];
-	char	data[MAX_INFO_STRING];
+	char	data[MAX_STRING_CHARS];
 
 	// don't send anything if playing back a demo
 	if ( clc.demoplaying ) {
@@ -2277,7 +2282,8 @@ void CL_CheckForResend( void ) {
 	switch ( cls.state ) {
 	case CA_CONNECTING:
 		// requesting a challenge
-		NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, "getchallenge");
+		// The challenge request shall be followed by a client challenge so no malicious server can hijack this connection.
+		NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, "getchallenge %d", clc.challenge);
 		break;
 		
 	case CA_CHALLENGING:
@@ -2288,20 +2294,9 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "protocol", va("%i", PROTOCOL_VERSION ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
-		
-		strcpy(data, "connect ");
-    // TTimo adding " " around the userinfo string to avoid truncated userinfo on the server
-    //   (Com_TokenizeString tokenizes around spaces)
-    data[8] = '"';
+		Com_sprintf( data, sizeof( data ), "connect \"%s\"", info );
 
-		for(i=0;i<strlen(info);i++) {
-			data[9+i] = info[i];	// + (clc.challenge)&0x3;
-		}
-    data[9+i] = '"';
-		data[10+i] = 0;
-
-    // NOTE TTimo don't forget to set the right data length!
-		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, (byte *) &data[0], i+10 );
+		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, data, strlen( data ) + 1 );
 		// the most current userinfo has been sent, so watch for any
 		// newer changes to userinfo variables
 		cvar_modifiedFlags &= ~CVAR_USERINFO;
@@ -2508,8 +2503,7 @@ Responses to broadcasts, etc
 */
 void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 	char	*s;
-	char	c[ BIG_INFO_STRING ];
-	char	arg1[ BIG_INFO_STRING ];
+	char	*c;
 
 	MSG_BeginReadingOOB( msg );
 	MSG_ReadLong( msg );	// skip the -1
@@ -2518,27 +2512,44 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 
 	Cmd_TokenizeString( s );
 
-	Q_strncpyz( c, Cmd_Argv( 0 ), BIG_INFO_STRING );
-	Q_strncpyz( arg1, Cmd_Argv( 1 ), BIG_INFO_STRING );
+	c = Cmd_Argv( 0 );
 
 	Com_DPrintf ("CL packet %s: %s\n", NET_AdrToStringwPort(from), c);
 
 	// challenge from the server we are connecting to
-	if ( !Q_stricmp(c, "challengeResponse") ) {
-		if ( cls.state != CA_CONNECTING ) {
-			Com_DPrintf( "Unwanted challenge response received.  Ignored.\n" );
-		} else {
-			// start sending challenge repsonse instead of challenge request packets
-			clc.challenge = atoi(arg1);
-			cls.state = CA_CHALLENGING;
-			clc.connectPacketCount = 0;
-			clc.connectTime = -99999;
-
-			// take this address as the new server address.  This allows
-			// a server proxy to hand off connections to multiple servers
-			clc.serverAddress = from;
-			Com_DPrintf ("challengeResponse: %d\n", clc.challenge);
+	if (!Q_stricmp(c, "challengeResponse"))
+	{
+		if (cls.state != CA_CONNECTING)
+		{
+			Com_DPrintf("Unwanted challenge response received.  Ignored.\n");
+			return;
 		}
+		
+		if(!NET_CompareAdr(from, clc.serverAddress))
+		{
+			// This challenge response is not coming from the expected address.
+			// Check whether we have a matching client challenge to prevent
+			// connection hi-jacking.
+			
+			c = Cmd_Argv(2);
+			
+			if(!*c || atoi(c) != clc.challenge)
+			{
+				Com_DPrintf("Challenge response received from unexpected source. Ignored.\n");
+				return;
+			}
+		}
+
+		// start sending challenge response instead of challenge request packets
+		clc.challenge = atoi(Cmd_Argv(1));
+		cls.state = CA_CHALLENGING;
+		clc.connectPacketCount = 0;
+		clc.connectTime = -99999;
+
+		// take this address as the new server address.  This allows
+		// a server proxy to hand off connections to multiple servers
+		clc.serverAddress = from;
+		Com_DPrintf ("challengeResponse: %d\n", clc.challenge);
 		return;
 	}
 
@@ -2549,13 +2560,11 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 			return;
 		}
 		if ( cls.state != CA_CHALLENGING ) {
-			Com_Printf ("connectResponse packet while not connecting.  Ignored.\n");
+			Com_Printf ("connectResponse packet while not connecting. Ignored.\n");
 			return;
 		}
-		if ( !NET_CompareBaseAdr( from, clc.serverAddress ) ) {
-			Com_Printf( "connectResponse from a different address.  Ignored.\n" );
-			Com_Printf( "%s should have been %s\n", NET_AdrToStringwPort( from ), 
-				NET_AdrToStringwPort( clc.serverAddress ) );
+		if ( !NET_CompareAdr( from, clc.serverAddress ) ) {
+			Com_Printf( "connectResponse from wrong address. Ignored.\n" );
 			return;
 		}
 		Netchan_Setup (NS_CLIENT, &clc.netchan, from, Cvar_VariableValue( "net_qport" ) );
@@ -2585,13 +2594,13 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 
 	// echo request from server
 	if ( !Q_stricmp(c, "echo") ) {
-		NET_OutOfBandPrint( NS_CLIENT, from, "%s", arg1 );
+		NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
 		return;
 	}
 
 	// global MOTD from trem master
 	if ( !Q_stricmp(c, "motd") ) {
-		CL_MotdPacket( from, arg1 );
+		CL_MotdPacket( from, Cmd_Argv(1) );
 		return;
 	}
 
@@ -2901,8 +2910,8 @@ void CL_Frame ( int msec ) {
 				*p = '.';
 			}
 
-			Q_strncpyz( mapName, Com_SkipPath( cl.mapname ), sizeof( cl.mapname ) );
-			Com_StripExtension(mapName, mapName, sizeof(mapName));
+			Q_strncpyz( mapName, COM_SkipPath( cl.mapname ), sizeof( cl.mapname ) );
+			COM_StripExtension(mapName, mapName, sizeof(mapName));
 
 			Cbuf_ExecuteText( EXEC_NOW,
 					va( "record %s-%s-%s", nowString, serverName, mapName ) );
@@ -3271,14 +3280,21 @@ it by filling it with 2048 bytes of random data.
 static void CL_GenerateQKey(void)
 {
 	int len = 0;
+	int len2 = 0;
 	unsigned char buff[ QKEY_SIZE ];
 	fileHandle_t f;
 
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
+	FS_FCloseFile( f );
 
 	if( len == QKEY_SIZE ) {
 		Com_Printf( "QKEY found.\n" );
+		return;
+	}
+	else if( len2 == QKEY_SIZE ) {
+		Com_Printf( "QKEY found. (Fallback Location)\n" );
 		return;
 	}
 	else {
@@ -3412,7 +3428,7 @@ void CL_Init( void ) {
 	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
 	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);

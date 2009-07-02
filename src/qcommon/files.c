@@ -483,7 +483,7 @@ static void FS_CheckFilenameIsNotExecutable( const char *filename,
 		const char *function )
 {
 	// Check if the filename ends with the library extension
-	if( !Q_stricmp( Com_GetExtension( filename ), DLL_EXT ) )
+	if( !Q_stricmp( COM_GetExtension( filename ), DLL_EXT ) )
 	{
 		Com_Error( ERR_FATAL, "%s: Not allowed to manipulate '%s' due "
 			"to %s extension\n", function, filename, DLL_EXT );
@@ -1091,14 +1091,12 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 						}
 					}
 
-#ifdef USE_LLVM
-					if (!(pak->referenced & FS_CGAME_REF) && strstr(filename, "cgame.llvm")) {
+					if (!(pak->referenced & FS_CGAME_REF) && strstr(filename, "cgame.qvm")) {
 						pak->referenced |= FS_CGAME_REF;
 					}
-					if (!(pak->referenced & FS_UI_REF) && strstr(filename, "ui.llvm")) {
+					if (!(pak->referenced & FS_UI_REF) && strstr(filename, "ui.qvm")) {
 						pak->referenced |= FS_UI_REF;
 					}
-#endif
 
 					if ( uniqueFILE ) {
 						// open a new file on the pakfile
@@ -2766,20 +2764,26 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-	char *homePath;
+	char *homePath, *extraPath;
 
 	Com_Printf( "----- FS_Startup -----\n" );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	homePath = Sys_DefaultHomePath();
+	homePath = Sys_DefaultHomePath(&extraPath);
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
 	}
 	FS_CreatePath(homePath);
+	if (!extraPath) {
+		extraPath = "";
+	}
+	if (extraPath[0]) {
+		FS_CreatePath(extraPath);
+	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
-	fs_extrapath = Cvar_Get ("fs_extrapath", "", CVAR_INIT|CVAR_PROTECTED );
+	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
 
@@ -3365,7 +3369,7 @@ void	FS_FilenameCompletion( const char *dir, const char *ext,
 		Q_strncpyz( filename, filenames[ i ], MAX_STRING_CHARS );
 
 		if( stripExt ) {
-			Com_StripExtension(filename, filename, sizeof(filename));
+			COM_StripExtension(filename, filename, sizeof(filename));
 		}
 
 		callback( filename );

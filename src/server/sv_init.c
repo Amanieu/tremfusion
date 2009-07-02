@@ -217,7 +217,7 @@ to the clients -- only the fields that differ from the
 baseline will be transmitted
 ================
 */
-void SV_CreateBaseline( void ) {
+static void SV_CreateBaseline( void ) {
 	sharedEntity_t *svent;
 	int				entnum;	
 
@@ -237,41 +237,11 @@ void SV_CreateBaseline( void ) {
 
 
 /*
-===============
-SV_Startup
-
-Called when a host starts a map when it wasn't running
-one before.  Successive map or map_restart commands will
-NOT cause this to be called, unless the game is exited to
-the menu system first.
-===============
-*/
-void SV_Startup( void ) {
-	if ( svs.initialized ) {
-		Com_Error( ERR_FATAL, "SV_Startup: svs.initialized" );
-	}
-
-	SV_ChangeMaxClients();
-	svs.initialized = qtrue;
-
-	// Don't respect sv_killserver unless a server is actually running
-	if ( sv_killserver->integer ) {
-		Cvar_Set( "sv_killserver", "0" );
-	}
-
-	Cvar_Set( "sv_running", "1" );
-	
-	// Join the ipv6 multicast group now that a map is running so clients can scan for us on the local network.
-	NET_JoinMulticast6();
-}
-
-
-/*
 ==================
 SV_ChangeMaxClients
 ==================
 */
-void SV_ChangeMaxClients( void ) {
+static void SV_ChangeMaxClients( void ) {
 	int		oldMaxClients;
 	int		i, j;
 	client_t	*oldClients = NULL;
@@ -350,12 +320,42 @@ void SV_ChangeMaxClients( void ) {
 	}
 }
 
+
+/*
+===============
+SV_Startup
+
+Called when a host starts a map when it wasn't running
+one before.  Successive map or map_restart commands will
+NOT cause this to be called, unless the game is exited to
+the menu system first.
+===============
+*/
+static void SV_Startup( void ) {
+	if ( svs.initialized ) {
+		Com_Error( ERR_FATAL, "SV_Startup: svs.initialized" );
+	}
+
+	SV_ChangeMaxClients();
+	svs.initialized = qtrue;
+
+	// Don't respect sv_killserver unless a server is actually running
+	if ( sv_killserver->integer ) {
+		Cvar_Set( "sv_killserver", "0" );
+	}
+
+	Cvar_Set( "sv_running", "1" );
+	
+	// Join the ipv6 multicast group now that a map is running so clients can scan for us on the local network.
+	NET_JoinMulticast6();
+}
+
 /*
 ================
 SV_ClearServer
 ================
 */
-void SV_ClearServer(void) {
+static void SV_ClearServer(void) {
 	int i;
 
 	for ( i = 0 ; i < MAX_CONFIGSTRINGS ; i++ ) {
@@ -370,27 +370,25 @@ void SV_ClearServer(void) {
 ================
 SV_TouchCGame
 
-Touch the cgame and ui so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
+Touch the cgame.qvm and ui.qvm so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
 ================
 */
-void SV_TouchCGame(void) {
-#ifdef USE_LLVM
+static void SV_TouchCGame(void) {
 	fileHandle_t	f;
 
-	FS_FOpenFileRead( "cgamellvm.bc", &f, qfalse );
+	FS_FOpenFileRead( "vm/cgame.qvm", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No cgamellvm.bc found on pure server\n" );
+		Com_Printf( "WARNING: No cgame.qvm found on pure server\n" );
 	}
 
-	FS_FOpenFileRead( "uillvm.bc", &f, qfalse );
+	FS_FOpenFileRead( "vm/ui.qvm", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No uillvm.bc found on pure server\n" );
+		Com_Printf( "WARNING: No ui.qvm found on pure server\n" );
 	}
-#endif
 }
 
 /*
@@ -470,7 +468,6 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	Cvar_Set("cl_paused", "0");
 
 	// get a new checksum feed and restart the file system
-	srand(Com_Milliseconds());
 	sv.checksumFeed = ( ((int) rand() << 16) ^ rand() ) ^ Com_Milliseconds();
 	FS_Restart( sv.checksumFeed );
 
@@ -634,6 +631,8 @@ void SV_Init (void) {
 
 	sv_allowDownload = Cvar_Get ("sv_allowDownload", "1", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_dlURL", "", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	Cvar_Get ("sv_wwwDownload", "1", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
+	Cvar_Get ("sv_wwwBaseURL", "", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
 	sv_master[0] = Cvar_Get ("sv_master1", MASTER_SERVER_NAME, 0 );
 	sv_master[1] = Cvar_Get ("sv_master2", "", CVAR_ARCHIVE );
 	sv_master[2] = Cvar_Get ("sv_master3", "", CVAR_ARCHIVE );

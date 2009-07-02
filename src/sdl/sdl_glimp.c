@@ -261,12 +261,33 @@ static void GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
+typedef struct vidmode_s
+{
+	int width, height;
+	float pixelAspect;		// pixel width / height
+} vidmode_t;
+vidmode_t vidModes[] =
+{
+	{ 320,	240,	1 },
+	{ 400,	300,	1 },
+	{ 512,	384,	1 },
+	{ 640,	480,	1 },
+	{ 800,	600,	1 },
+	{ 960,	720,	1 },
+	{ 1024,	768,	1 },
+	{ 1152,	864,	1 },
+	{ 1280,	1024,	1 },
+	{ 1600,	1200,	1 },
+	{ 2048,	1536,	1 },
+	{ 856,	480,	1 }
+};
 static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 {
 	const char*   glstring;
 	int sdlcolorbits;
 	int colorbits, depthbits, stencilbits;
 	int tcolorbits, tdepthbits, tstencilbits;
+	int samples;
 	int i = 0;
 	SDL_Surface *vidscreen = NULL;
 	Uint32 flags = SDL_OPENGL;
@@ -288,6 +309,31 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 	if( !failSafe )
 	{
+		if ( r_width->modified || r_height->modified || r_pixelAspect->modified )
+		{
+			for ( i = 0; i < 12; i++ )
+			{
+				if ( r_width->integer == vidModes[ i ].width &&
+				     r_height->integer == vidModes[ i ].height &&
+				     r_pixelAspect->integer == vidModes[ i ].pixelAspect )
+				{
+					Cvar_SetValue( "r_mode", i );
+					break;
+				}
+			}
+			if ( i == 12 )
+				Cvar_Set( "r_mode", "-1" );
+		}
+		else if ( r_mode->modified && r_mode->integer >= 0 )
+		{
+			Cvar_SetValue( "r_width", vidModes[ r_mode->integer ].width );
+			Cvar_SetValue( "r_height", vidModes[ r_mode->integer ].height );
+			Cvar_SetValue( "r_pixelAspect", vidModes[ r_mode->integer ].pixelAspect );
+		}
+		r_width->modified = qfalse;
+		r_height->modified = qfalse;
+		r_pixelAspect->modified = qfalse;
+		r_mode->modified = qfalse;
 		glConfig.vidWidth = ( r_width->integer ? r_width->integer : desktop_w );
 		glConfig.vidHeight = ( r_height->integer ? r_height->integer : desktop_h );
 		glConfig.windowAspect = glConfig.vidWidth / ( (float)glConfig.vidHeight * r_pixelAspect->value );
@@ -325,6 +371,7 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 	else
 		depthbits = r_depthbits->value;
 	stencilbits = r_stencilbits->value;
+	samples = r_ext_multisample->value;
 
 	for (i = 0; i < 16; i++)
 	{
@@ -404,6 +451,11 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 		}
 		
 		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+
+		if (failSafe)
+			samples = 0;
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, samples ? 1 : 0 );
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, samples );
 
 		if( SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, r_swapInterval->integer ) < 0 )
 			ri.Printf( PRINT_ALL, "r_swapInterval requires libSDL >= 1.2.10\n" );

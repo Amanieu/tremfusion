@@ -212,6 +212,7 @@ typedef struct client_s {
 typedef struct {
 	netadr_t	adr;
 	int			challenge;
+	int			clientChallenge;	// challenge number coming from the client
 	int			time;				// time the first challenge response was sent to client
 	int			pingTime;			// time the last challenge response was sent to client
 	qboolean	connected;
@@ -312,7 +313,6 @@ void SV_UpdateConfigstrings( client_t *client );
 void SV_SetUserinfo( int index, const char *val );
 void SV_GetUserinfo( int index, char *buffer, int bufferSize );
 
-void SV_ChangeMaxClients( void );
 void SV_SpawnServer( char *server, qboolean killBots );
 
 
@@ -320,7 +320,7 @@ void SV_SpawnServer( char *server, qboolean killBots );
 //
 // sv_client.c
 //
-void SV_GetChallenge( netadr_t from );
+void SV_GetChallenge(netadr_t from);
 
 void SV_DirectConnect( netadr_t from );
 

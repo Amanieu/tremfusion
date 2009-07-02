@@ -457,7 +457,7 @@ void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, floa
 	float oppleg, adjleg, length;
 	int i;
 	
-	if(stereoSep == 0 && xmin != -xmax)
+	if(stereoSep == 0 && xmin == -xmax)
 	{
 		// symmetric case can be simplified
 		VectorCopy(dest->or.origin, ofsorigin);
@@ -524,9 +524,9 @@ void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 	if(stereoSep != 0)
 	{
 		if(dest->stereoFrame == STEREO_LEFT)
-			stereoSep = zProj / r_stereoSeparation->value;
+			stereoSep = zProj / stereoSep;
 		else if(dest->stereoFrame == STEREO_RIGHT)
-			stereoSep = zProj / -r_stereoSeparation->value;
+			stereoSep = zProj / -stereoSep;
 		else
 			stereoSep = 0;
 	}
@@ -640,13 +640,13 @@ void R_PlaneForSurface (surfaceType_t *surfType, cplane_t *plane) {
 		v1 = tri->verts + tri->indexes[0];
 		v2 = tri->verts + tri->indexes[1];
 		v3 = tri->verts + tri->indexes[2];
-		PlaneFromPoints( plane4, v1->xyz, v2->xyz, v3->xyz, qtrue );
+		PlaneFromPoints( plane4, v1->xyz, v2->xyz, v3->xyz );
 		VectorCopy( plane4, plane->normal ); 
 		plane->dist = plane4[3];
 		return;
 	case SF_POLY:
 		poly = (srfPoly_t *)surfType;
-		PlaneFromPoints( plane4, poly->verts[0].xyz, poly->verts[1].xyz, poly->verts[2].xyz, qtrue );
+		PlaneFromPoints( plane4, poly->verts[0].xyz, poly->verts[1].xyz, poly->verts[2].xyz );
 		VectorCopy( plane4, plane->normal ); 
 		plane->dist = plane4[3];
 		return;

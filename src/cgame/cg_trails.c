@@ -671,7 +671,7 @@ static qboolean CG_ParseTrailBeamColor( byte *c, char **text_p )
 
   for( i = 0; i <= 2; i++ )
   {
-    token = Com_Parse( text_p );
+    token = COM_Parse( text_p );
 
     if( !Q_stricmp( token, "" ) )
       return qfalse;
@@ -696,14 +696,14 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( text_p );
+    token = COM_Parse( text_p );
 
     if( !Q_stricmp( token, "" ) )
       return qfalse;
 
     if( !Q_stricmp( token, "segments" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -718,13 +718,13 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "width" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
       btb->frontWidth = atof_neg( token, qfalse );
 
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -736,13 +736,13 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "alpha" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
       btb->frontAlpha = atof_neg( token, qfalse );
 
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -754,7 +754,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "color" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -763,14 +763,14 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
         if( !CG_ParseTrailBeamColor( btb->frontColor, text_p ) )
           break;
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( Q_stricmp( token, "}" ) )
         {
           CG_Printf( S_COLOR_RED "ERROR: missing '}'\n" );
           break;
         }
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( !Q_stricmp( token, "" ) )
           break;
 
@@ -785,7 +785,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
           if( !CG_ParseTrailBeamColor( btb->backColor, text_p ) )
             break;
 
-          token = Com_Parse( text_p );
+          token = COM_Parse( text_p );
           if( Q_stricmp( token, "}" ) )
           {
             CG_Printf( S_COLOR_RED "ERROR: missing '}'\n" );
@@ -808,7 +808,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "segmentTime" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -817,7 +817,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "fadeOutTime" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -826,7 +826,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "shader" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -836,7 +836,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
     }
     else if( !Q_stricmp( token, "textureType" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -844,13 +844,13 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
       {
         btb->textureType = TBTT_STRETCH;
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( !Q_stricmp( token, "" ) )
           break;
 
         btb->frontTextureCoord = atof_neg( token, qfalse );
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( !Q_stricmp( token, "" ) )
           break;
 
@@ -860,7 +860,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
       {
         btb->textureType = TBTT_REPEAT;
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( !Q_stricmp( token, "" ) )
           break;
 
@@ -874,7 +874,7 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
           break;
         }
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
         if( !Q_stricmp( token, "" ) )
           break;
 
@@ -902,13 +902,13 @@ static qboolean CG_ParseTrailBeam( baseTrailBeam_t *btb, char **text_p )
         break;
       }
 
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
       btb->jitters[ btb->numJitters ].magnitude = atof_neg( token, qfalse );
 
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -972,7 +972,7 @@ static qboolean CG_ParseTrailSystem( baseTrailSystem_t *bts, char **text_p, cons
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( text_p );
+    token = COM_Parse( text_p );
 
     if( !Q_stricmp( token, "" ) )
       return qfalse;
@@ -1011,7 +1011,7 @@ static qboolean CG_ParseTrailSystem( baseTrailSystem_t *bts, char **text_p, cons
       bts->thirdPersonOnly = qtrue;
     else if( !Q_stricmp( token, "lifeTime" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
       if( !Q_stricmp( token, "" ) )
         break;
 
@@ -1078,7 +1078,7 @@ static qboolean CG_ParseTrailFile( const char *fileName )
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !Q_stricmp( token, "" ) )
       break;

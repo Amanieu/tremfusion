@@ -316,7 +316,7 @@ void CG_OffsetThirdPersonView( void )
       VectorCopy( cg_entities[ killerEntNum ].lerpOrigin, killerPos );
 
       VectorSubtract( killerPos, cg.refdef.vieworg, killerPos );
-      VectorToAngles( killerPos, cg.refdefViewAngles );
+      vectoangles( killerPos, cg.refdefViewAngles );
     }
   }
 
@@ -436,7 +436,7 @@ void CG_OffsetThirdPersonView( void )
   if( cg.predictedPlayerState.stats[ STAT_HEALTH ] > 0 )
   {
     VectorSubtract( focusPoint, cg.refdef.vieworg, focusPoint );
-    VectorToAngles( focusPoint, cg.refdefViewAngles );
+    vectoangles( focusPoint, cg.refdefViewAngles );
   }
 }
 

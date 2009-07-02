@@ -306,9 +306,9 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	cvar_t	*var;
 	long	hash;
 
-  if ( !var_name || ! var_value ) {
+	if ( !var_name || ! var_value ) {
 		Com_Error( ERR_FATAL, "Cvar_Get: NULL parameter" );
-  }
+	}
 
 	if ( !Cvar_ValidateString( var_name ) ) {
 		Com_Printf("invalid cvar name string: %s\n", var_name );
@@ -455,6 +455,14 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 		var_value = "BADVALUE";
 	}
 #endif
+
+	// legacy mode cvar support hacks 
+	if( !Q_stricmp(var_name, "r_customheight" ) )
+		var_name = "r_height";
+	if( !Q_stricmp(var_name, "r_customwidth" ) )
+		var_name = "r_width";
+	if( !Q_stricmp(var_name, "r_custompixelAspect" ) )
+		var_name = "r_pixelAspect";
 
 	var = Cvar_FindVar (var_name);
 	if (!var) {
@@ -654,15 +662,15 @@ void Cvar_SetCheatState( void ) {
 	// set all default vars to the safe value
 	for ( var = cvar_vars ; var ; var = var->next ) {
 		if ( var->flags & CVAR_CHEAT ) {
-      // the CVAR_LATCHED|CVAR_CHEAT vars might escape the reset here 
-      // because of a different var->latchedString
-      if (var->latchedString)
-      {
-        Z_Free(var->latchedString);
-        var->latchedString = NULL;
-      }
+			// the CVAR_LATCHED|CVAR_CHEAT vars might escape the reset here 
+			// because of a different var->latchedString
+			if (var->latchedString)
+			{
+				Z_Free(var->latchedString);
+				var->latchedString = NULL;
+			}
 			if (strcmp(var->resetString,var->string)) {
-        Cvar_Set( var->name, var->resetString );
+				Cvar_Set( var->name, var->resetString );
 			}
 		}
 	}
@@ -678,6 +686,13 @@ Handles variable inspection and changing from the console
 qboolean Cvar_Command( void ) {
 	cvar_t	*v;
 	char	*cvarname = Cmd_Argv(0);
+
+	if ( !Q_stricmp( cvarname, "r_customheight" ) )
+		cvarname = "r_height";
+	if ( !Q_stricmp( cvarname, "r_customwidth" ) )
+		cvarname = "r_width";
+	if ( !Q_stricmp( cvarname, "r_custompixelAspect" ) )
+		cvarname = "r_pixelAspect";
 
 	// check variables
 	v = Cvar_FindVar (cvarname);
@@ -815,6 +830,11 @@ void Cvar_Set_f( void ) {
 		return;
 	}
 
+	// don't make these old vars archive even if the client's old autogen told us to
+	if( !Q_stricmp( Cmd_Argv(1), "r_mode" ) || !Q_stricmp( Cmd_Argv(1), "r_customheight" ) ||
+	    !Q_stricmp( Cmd_Argv(1), "r_customwidth" ) || !Q_stricmp( Cmd_Argv(1), "r_custompixelAspect" ) ) 
+		return;
+
 	switch( cmd[3] ) {
 		default:
 			return;
@@ -907,6 +927,11 @@ void Cvar_List_f( void ) {
 		} else {
 			Com_Printf(" ");
 		}
+		if (var->flags & CVAR_SYSTEMINFO) {
+			Com_Printf("s");
+		} else {
+			Com_Printf(" ");
+		}
 		if (var->flags & CVAR_USERINFO) {
 			Com_Printf("U");
 		} else {
@@ -934,6 +959,11 @@ void Cvar_List_f( void ) {
 		}
 		if (var->flags & CVAR_CHEAT) {
 			Com_Printf("C");
+		} else {
+			Com_Printf(" ");
+		}
+		if (var->flags & CVAR_USER_CREATED) {
+			Com_Printf("?");
 		} else {
 			Com_Printf(" ");
 		}

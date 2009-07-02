@@ -45,8 +45,6 @@ int demo_protocols[] =
 #define MIN_COMHUNKMEGS		128
 #define DEF_COMHUNKMEGS		128
 #define DEF_COMZONEMEGS		24
-#define XSTRING(x)				STRING(x)
-#define STRING(x)					#x
 #define DEF_COMHUNKMEGS_S	XSTRING(DEF_COMHUNKMEGS)
 #define DEF_COMZONEMEGS_S	XSTRING(DEF_COMZONEMEGS)
 
@@ -696,7 +694,7 @@ int Com_HashKey(char *string, int maxlen) {
 
 	hash = 0;
 	for (i = 0; i < maxlen && string[i] != '\0'; i++) {
-		hash += string[i] * (119 + i);
+		hash += (string[i] == '%' || string[i] < 0 ? '.' : string[i]) * (119 + i);
 	}
 	hash = (hash ^ (hash >> 10) ^ (hash >> 20));
 	return hash;
@@ -2108,6 +2106,21 @@ void	Com_GetRealEvent( sysEvent_t *ev ) {
 	}
 }
 
+/*
+=================
+Com_InitRand
+Seed the random number generator, if possible with an OS supplied random seed.
+=================
+*/
+static void Com_InitRand(void)
+{
+	unsigned int seed;
+
+	if(Sys_RandomBytes((byte *) &seed, sizeof(seed)))
+		srand(seed);
+	else
+		srand(time(NULL));
+}
 
 /*
 =================
@@ -2443,8 +2456,11 @@ void Com_Init( char *commandLine ) {
 	Com_Memset( &eventQueue[ 0 ], 0, MAX_QUEUED_EVENTS * sizeof( sysEvent_t ) );
 	Com_Memset( &sys_packetReceived[ 0 ], 0, MAX_MSGLEN * sizeof( byte ) );
 
-  // do this before anything else decides to push events
-  Com_InitPushEvent();
+	// initialize the weak pseudo-random number generator for use later.
+	Com_InitRand();
+
+	// do this before anything else decides to push events
+	Com_InitPushEvent();
 
 	Com_InitSmallZoneMemory();
 	Cvar_Init ();
@@ -2669,7 +2685,7 @@ void Com_WriteConfig_f( void ) {
 	}
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	Com_DefaultExtension( filename, sizeof( filename ), ".cfg" );
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 	Com_Printf( "Writing %s.\n", filename );
 	Com_WriteConfigToFile( filename );
 }
@@ -2931,6 +2947,35 @@ void Com_Shutdown (void) {
 }
 
 //------------------------------------------------------------------------
+
+
+/*
+=====================
+Q_acos
+
+the msvc acos doesn't always return a value between -PI and PI:
+
+int i;
+i = 1065353246;
+acos(*(float*) &i) == -1.#IND0
+
+	This should go in q_math but it is too late to add new traps
+	to game and ui
+=====================
+*/
+float Q_acos(float c) {
+	float angle;
+
+	angle = acos(c);
+
+	if (angle > M_PI) {
+		return (float)M_PI;
+	}
+	if (angle < -M_PI) {
+		return (float)M_PI;
+	}
+	return angle;
+}
 
 /*
 ===========================================
@@ -3270,7 +3315,6 @@ void Com_RandomBytes( byte *string, int len )
 		return;
 
 	Com_Printf( "Com_RandomBytes: using weak randomization\n" );
-	srand( time( 0 ) );
 	for( i = 0; i < len; i++ )
 		string[i] = (unsigned char)( rand() % 255 );
 }

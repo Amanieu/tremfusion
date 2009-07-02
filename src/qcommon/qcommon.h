@@ -136,7 +136,7 @@ NET
 #define	MAX_RELIABLE_COMMANDS	128			// max string commands buffered for restransmit
 
 typedef enum {
-	NA_BAD,					// an address lookup failed
+	NA_BAD = 0,					// an address lookup failed
 	NA_LOOPBACK,
 	NA_BROADCAST,
 	NA_IP,
@@ -163,7 +163,7 @@ typedef struct {
 
 void		NET_Init( void );
 void		NET_Shutdown( void );
-void		NET_Restart( void );
+void		NET_Restart_f( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
 void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
@@ -171,6 +171,7 @@ void		QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *f
 void		QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
 qboolean	NET_CompareAdr (netadr_t a, netadr_t b);
+qboolean	NET_CompareBaseAdrMask(netadr_t a, netadr_t b, int netmask);
 qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
 qboolean	NET_IsLocalAddress (netadr_t adr);
 const char	*NET_AdrToString (netadr_t a);
@@ -235,7 +236,7 @@ PROTOCOL
 ==============================================================
 */
 
-#define	PROTOCOL_VERSION	70
+#define	PROTOCOL_VERSION	69
 
 // maintain a list of compatible protocols for demo playing
 // NOTE: that stuff only works with two digits protocols
@@ -243,7 +244,10 @@ extern int demo_protocols[];
 
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.tremfusion.net"
+#define MASTER_SERVER_NAME	"master.tremulous.net"
+#endif
+#ifndef MOTD_SERVER_NAME
+#define MOTD_SERVER_NAME	"master.tremfusion.net"
 #endif
 
 #define	PORT_MASTER			30710
@@ -304,9 +308,8 @@ typedef struct vm_s vm_t;
 
 typedef enum {
 	VMI_NATIVE,
-#if USE_LLVM
-	VMI_BYTECODE
-#endif
+	VMI_BYTECODE,
+	VMI_COMPILED
 } vmInterpret_t;
 
 typedef enum {
@@ -324,7 +327,7 @@ typedef enum {
 void	VM_Init( void );
 vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
 				   vmInterpret_t interpret );
-// module should be bare: "cgame", not "cgame.dll", "cgamellvm.bc" or "vm/cgame.qvm"
+// module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
 
 void	VM_Free( vm_t *vm );
 void	VM_Clear(void);
@@ -334,16 +337,20 @@ vm_t	*VM_Restart( vm_t *vm );
 
 intptr_t		QDECL VM_Call( vm_t *vm, int callNum, ... );
 
-#define VMA(x) ((void *)args[x])
-#define VM_ExplicitArgPtr(vm, x) ((void *)x)
+void	VM_Debug( int level );
 
+void	*VM_ArgPtr( intptr_t intValue );
+void	*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
+
+#define	VMA(x) VM_ArgPtr(args[x])
 static ID_INLINE float _vmf(intptr_t x)
 {
-	floatint_t t;
-	t.i = x;
-	return t.f;
+	floatint_t fi;
+	fi.i = (int) x;
+	return fi.f;
 }
-#define VMF(x) _vmf(args[x])
+#define	VMF(x)	_vmf(args[x])
+
 
 /*
 ==============================================================
@@ -1057,7 +1064,7 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-char	*Sys_DefaultHomePath(void);
+char	*Sys_DefaultHomePath(char **path2);
 const char *Sys_Dirname( char *path );
 const char *Sys_Basename( char *path );
 char *Sys_ConsoleInput(void);
