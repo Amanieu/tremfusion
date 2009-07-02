@@ -1089,7 +1089,7 @@ void CL_PlayDemo_f( void ) {
 	}
 
 	if (!demofile) {
-		Com_Error( ERR_DROP, "couldn't open %s", name);
+		Com_Printf("Couldn't open %s\n", name);
 		return;
 	}
 
