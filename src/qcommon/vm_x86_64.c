@@ -91,7 +91,7 @@ static ID_INLINE qboolean VM_Cache_Search(vm_t *vm, vmHeader_t *header)
 		if (vmCache[i].checksum == checksum) {
 			vm->codeLength = vmCache[i].codeLength;
 			vm->codeBase = vmCache[i].codeBase;
-			memcpy(vm->instructionPointers, vmCache[i].instructionPointers, vm->instructionPointersLength);
+			vm->instructionPointers = vmCache[i].instructionPointers;
 			vm->compiled = qtrue;
 			vm->destroy = NULL;
 			vmCache[i].age = 0;
@@ -105,14 +105,13 @@ static ID_INLINE qboolean VM_Cache_Search(vm_t *vm, vmHeader_t *header)
 static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
 {
 	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
-	int i, oldest = 0, oldestage = -1;
+	int i, oldest = 0;
 
-	for (i = 0; i < MAX_CACHE_ENTRIES; i++) {
+	for (i = 1; i < MAX_CACHE_ENTRIES; i++) {
 		if (!vmCache[i].codeBase) {
 			oldest = i;
 			break;
-		} else if (vmCache[i].age > oldestage) {
-			oldestage = vmCache[i].age;
+		} else if (vmCache[i].age > vmCache[oldest].age) {
 			oldest = i;
 		}
 	}
@@ -122,15 +121,14 @@ static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
 		VM_Destroy_Compiled(vmCache[oldest].codeBase, vmCache[oldest].codeLength);
 		free(vmCache[oldest].instructionPointers);
 		vmCache[oldest].codeBase = NULL;
-		vmCache[i].checksum = 0;
+		vmCache[oldest].checksum = 0;
 	}
 
 	vmCache[oldest].checksum = checksum;
 	vmCache[oldest].age = -1;
 	vmCache[oldest].codeLength = vm->codeLength;
 	vmCache[oldest].codeBase = vm->codeBase;
-	vmCache[oldest].instructionPointers = malloc(vm->instructionPointersLength);
-	memcpy(vmCache[oldest].instructionPointers, vm->instructionPointers, vm->instructionPointersLength);
+	vmCache[oldest].instructionPointers = vm->instructionPointers;
 
 	for (i = 0; i < MAX_CACHE_ENTRIES; i++)
 		vmCache[i].age++;
@@ -542,6 +540,9 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 		Com_DPrintf("loaded %s from the cache\n", vm->name);
 		return;
 	}
+
+	// We need persistant instruction pointers
+	vm->instructionPointers = malloc(vm->instructionPointersLength);
 
 #ifdef USE_GAS
 	byte* compiledcode;
