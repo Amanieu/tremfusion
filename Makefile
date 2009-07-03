@@ -1239,6 +1239,29 @@ makedirs:
 	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
 
 #############################################################################
+# INSTALL
+#############################################################################
+
+install: release run-tremfusion.sh
+	@echo ""
+	@echo "Installing TremFusion in $(BUILDROOT)$(INSTALL_PREFIX):"
+	@if [ ! -d $(BUILDROOT)$(INSTALL_PREFIX) ];then $(MKDIR) -p $(BUILDROOT)$(INSTALL_PREFIX);fi
+	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
+	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
+	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
+
+run-tremfusion.sh:
+	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
+	@sed -ie "s!@LIBDIR@!$(LIBDIR)!" run-tremfusion.sh
+	@sed -ie "s!@DATADIR@!$(DATADIR)!" run-tremfusion.sh
+
+#############################################################################
 # QVM BUILD TOOLS
 #############################################################################
 
