@@ -3677,7 +3677,10 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 		if ( cl_pinglist[i].adr.port && !cl_pinglist[i].time && NET_CompareAdr( from, cl_pinglist[i].adr ) )
 		{
 			// calc ping time
-			cl_pinglist[i].time = realmsec - cl_pinglist[i].start;
+			if (cl_pinglist[i].start == cls.realtime)
+				cl_pinglist[i].time = realmsec - cl_pinglist[i].start + 1;
+			else
+				cl_pinglist[i].time = cls.realtime - cl_pinglist[i].start + 1;
 			Com_DPrintf( "ping time %dms from %s\n", cl_pinglist[i].time, NET_AdrToString( from ) );
 
 			// save of info
