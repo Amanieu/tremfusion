@@ -383,7 +383,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     return;
   }
 
-	Com_StripExtension(fontName, strippedName, sizeof(strippedName));
+	COM_StripExtension(fontName, strippedName, sizeof(strippedName));
     //Compatibility: If there is no extension, assume this is loading one of the legacy fonts
     if(!Q_stricmp(strippedName, fontName))
     {

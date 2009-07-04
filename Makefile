@@ -33,6 +33,9 @@ endif
 ifndef BUILD_GAME_SO
   BUILD_GAME_SO    = 1
 endif
+ifndef BUILD_GAME_QVM
+  BUILD_GAME_QVM   = 1
+endif
 
 #############################################################################
 #
@@ -109,7 +112,7 @@ ifndef USE_CODEC_VORBIS
 endif
 
 ifndef USE_CIN_THEORA
-  USE_CIN_THEORA=1
+  USE_CIN_THEORA=0
 endif
 
 ifeq ($(USE_CIN_THEORA),1)
@@ -153,10 +156,6 @@ ifndef USE_FREETYPE
   USE_FREETYPE=1
 endif
 
-ifndef USE_LLVM
-  USE_LLVM=0
-endif
-
 ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
@@ -182,6 +181,10 @@ NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
 JPDIR=$(MOUNT_DIR)/jpeg-6b
 SPEEXDIR=$(MOUNT_DIR)/libspeex
+Q3ASMDIR=$(MOUNT_DIR)/tools/asm
+LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
+Q3LCCETCDIR=$(MOUNT_DIR)/tools/lcc/etc
+Q3LCCSRCDIR=$(MOUNT_DIR)/tools/lcc/src
 SDLHDIR=$(MOUNT_DIR)/SDL12
 ZDIR=$(MOUNT_DIR)/zlib
 OGGDIR=$(MOUNT_DIR)/ogg_vorbis
@@ -251,12 +254,6 @@ ifeq ($(USE_SCM_VERSION),1)
   endif
 else
   VERSION=$(VERSION_NUMBER)
-endif
- 
-ifeq ($(USE_LLVM),1)
-  LD=$(CXX)
-else
-  LD=$(CC)
 endif
 
 
@@ -351,10 +348,6 @@ ifeq ($(PLATFORM),linux)
     endif
     TTYC_CFLAGS += -UUSE_CIN_THEORA
   endif
- 
-  ifeq ($(USE_LLVM),1)
-    BASE_CFLAGS += -DUSE_LLVM
-  endif
 
   OPTIMIZE = -O3 -funroll-loops -fomit-frame-pointer
 
@@ -362,21 +355,27 @@ ifeq ($(PLATFORM),linux)
     OPTIMIZE = -O3 -fomit-frame-pointer -funroll-loops \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -fstrength-reduce
+    # experimental x86_64 jit compiler! you need GNU as
+    HAVE_VM_COMPILED = true
   else
   ifeq ($(ARCH),x86)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
+    HAVE_VM_COMPILED=true
   else
   USE_SSE=0
   ifeq ($(ARCH),ppc)
     BASE_CFLAGS += -maltivec
+    HAVE_VM_COMPILED=true
   endif
   ifeq ($(ARCH),ppc64)
     BASE_CFLAGS += -maltivec
+    HAVE_VM_COMPILED=true
   endif
   ifeq ($(ARCH),sparc)
     OPTIMIZE += -mtune=ultrasparc3 -mv8plus
+    HAVE_VM_COMPILED=true
   endif
   endif
   endif
@@ -387,6 +386,10 @@ ifeq ($(PLATFORM),linux)
     ifeq ($(USE_SSE),1)
       BASE_CFLAGS += -msse -mfpmath=sse
     endif
+  endif
+
+  ifneq ($(HAVE_VM_COMPILED),true)
+    BASE_CFLAGS += -DNO_VM_COMPILED
   endif
 
   SHLIBEXT=so
@@ -433,10 +436,6 @@ ifeq ($(PLATFORM),linux)
     CLIENT_LIBS += $(shell freetype-config --libs)
   endif
 
-  ifeq ($(USE_LLVM),1)
-    LIBS += $(shell llvm-config --libs) -pthread
-  endif
-
   ifeq ($(ARCH),x86)
     # linux32 make ...
     BASE_CFLAGS += -m32
@@ -460,6 +459,7 @@ else # ifeq Linux
 #############################################################################
 
 ifeq ($(PLATFORM),darwin)
+  HAVE_VM_COMPILED=true
   CLIENT_LIBS=
   OPTIMIZE=-O3
   
@@ -473,6 +473,9 @@ ifeq ($(PLATFORM),darwin)
   endif
   ifeq ($(ARCH),x86)
     OPTIMIZE += -march=prescott -mfpmath=sse
+    # x86 vm will crash without -mstackrealign since MMX instructions will be
+    # used no matter what and they corrupt the frame pointer in VM calls
+    BASE_CFLAGS += -mstackrealign
   endif
 
   BASE_CFLAGS += -DMACOS_X -fno-common -pipe
@@ -578,6 +581,10 @@ ifeq ($(PLATFORM),darwin)
 
   OPTIMIZE += -falign-loops=16
 
+  ifneq ($(HAVE_VM_COMPILED),true)
+    BASE_CFLAGS += -DNO_VM_COMPILED
+  endif
+
   DEBUG_CFLAGS = $(BASE_CFLAGS) -g -O0
 
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
@@ -587,6 +594,8 @@ ifeq ($(PLATFORM),darwin)
   SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) --no-allow-shlib-undefined
 
   NOTSHLIBCFLAGS=-mdynamic-no-pic
+
+  TOOLS_CFLAGS += -DMACOS_X
 
 else # ifeq darwin
 
@@ -654,6 +663,8 @@ ifeq ($(PLATFORM),mingw32)
   OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
     -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
     -fstrength-reduce
+
+  HAVE_VM_COMPILED = true
 
   SHLIBEXT=dll
   SHLIBCFLAGS=
@@ -775,6 +786,7 @@ ifeq ($(PLATFORM),freebsd)
   endif
 
   ifeq ($(ARCH),axp)
+    BASE_CFLAGS += -DNO_VM_COMPILED
     RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 -funroll-loops \
       -fomit-frame-pointer -fexpensive-optimizations
   else
@@ -783,6 +795,9 @@ ifeq ($(PLATFORM),freebsd)
       -march=pentium -fomit-frame-pointer -pipe \
       -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
       -funroll-loops -fstrength-reduce
+    HAVE_VM_COMPILED=true
+  else
+    BASE_CFLAGS += -DNO_VM_COMPILED
   endif
   endif
 
@@ -838,11 +853,12 @@ ifeq ($(PLATFORM),openbsd)
     endif
   endif
 
-  BASE_CFLAGS += -I/usr/X11R6/include -I/usr/local/include
+  BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 \
     -march=pentium -fomit-frame-pointer -pipe \
     -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
     -funroll-loops -fstrength-reduce
+  HAVE_VM_COMPILED=false
 
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
 
@@ -880,9 +896,14 @@ ifeq ($(PLATFORM),netbsd)
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
+  ifneq ($(ARCH),x86)
+    BASE_CFLAGS += -DNO_VM_COMPILED
+  endif
+
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
 
   BUILD_CLIENT = 0
+  BUILD_GAME_QVM = 0
 
 else # ifeq netbsd
 
@@ -898,7 +919,7 @@ ifeq ($(PLATFORM),irix64)
   MKDIR = mkdir -p
 
   BASE_CFLAGS=-Dstricmp=strcasecmp -Xcpluscomm -woff 1185 \
-    -I. $(SDL_CFLAGS) -I$(ROOT)/usr/include
+    -I. $(SDL_CFLAGS) -I$(ROOT)/usr/include -DNO_VM_COMPILED
   RELEASE_CFLAGS=$(BASE_CFLAGS) -O3
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
 
@@ -952,10 +973,15 @@ ifeq ($(PLATFORM),sunos)
     OPTIMIZE = -O3 -march=i586 -fomit-frame-pointer \
       -funroll-loops -falign-loops=2 -falign-jumps=2 \
       -falign-functions=2 -fstrength-reduce
+    HAVE_VM_COMPILED=true
     BASE_CFLAGS += -m32
     BASE_CFLAGS += -I/usr/X11/include/NVIDIA
     CLIENT_LDFLAGS += -L/usr/X11/lib/NVIDIA -R/usr/X11/lib/NVIDIA
   endif
+  endif
+
+  ifneq ($(HAVE_VM_COMPILED),true)
+    BASE_CFLAGS += -DNO_VM_COMPILED
   endif
 
   DEBUG_CFLAGS = $(BASE_CFLAGS) -ggdb -O0
@@ -971,37 +997,11 @@ ifeq ($(PLATFORM),sunos)
   CLIENT_LIBS +=$(SDL_LIBS) -lGL -lpthread
 
 else # ifeq sunos
- 
-#############################################################################
-# SETUP AND BUILD -- LLVM
-#############################################################################
-
-ifeq ($(PLATFORM),llvm)
-
-  CC=llvm-gcc
-  LD=llvm-link
-  ARCH=llvm
-
-  HAVE_VM_COMPILED=true
-
-  BASE_CFLAGS += -emit-llvm
-  DEBUG_CFLAGS = $(BASE_CFLAGS) -O0
-  RELEASE_CFLAGS = $(BASE_CFLAGS) -DNDEBUG -O3
-
-  LDFLAGS=
-  SHLIBEXT=bc
-  SHLIBLDFLAGS=$(LDFLAGS)
-
-  BUILD_CLIENT = 0
-  BUILD_CLIENT_SMP = 0
-  BUILD_SERVER = 0
-  BUILD_GAME_SO = 1
-
-else # ifeq llvm
 
 #############################################################################
 # SETUP AND BUILD -- GENERIC
 #############################################################################
+  BASE_CFLAGS=-DNO_VM_COMPILED
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3
 
@@ -1017,20 +1017,19 @@ endif #OpenBSD
 endif #NetBSD
 endif #IRIX
 endif #SunOS
-endif #LLVM
 
 TARGETS =
 
 ifneq ($(BUILD_SERVER),0)
-  TARGETS += $(B)/tremfusionded.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremded.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT),0)
-  TARGETS += $(B)/tremfusion.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
-  TARGETS += $(B)/tremfusion-tty.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
 endif
 
 ifneq ($(BUILD_GAME_SO),0)
@@ -1038,6 +1037,15 @@ ifneq ($(BUILD_GAME_SO),0)
     $(B)/base/cgame$(ARCH).$(SHLIBEXT) \
     $(B)/base/game$(ARCH).$(SHLIBEXT) \
     $(B)/base/ui$(ARCH).$(SHLIBEXT)
+endif
+
+ifneq ($(BUILD_GAME_QVM),0)
+  ifneq ($(CROSS_COMPILING),1)
+    TARGETS += \
+      $(B)/base/vm/cgame.qvm \
+      $(B)/base/vm/game.qvm \
+      $(B)/base/vm/ui.qvm
+  endif
 endif
 
 ifeq ($(USE_MUMBLE),1)
@@ -1089,40 +1097,38 @@ define DO_CC
 $(echo_cmd) "CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
 endef
- 
-define DO_CXX
-$(echo_cmd) "CXX $<"
-$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) -o $@ -c $<
-endef
 
 define DO_TTY_CC
 $(echo_cmd) "TTY_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
 endef
- 
-define DO_TTY_CXX
-$(echo_cmd) "CXX $<"
-$(Q)$(CXX) $(NOTSHLIBCFLAGS) $(CFLAGS) $(TTYC_CFLAGS) -DBUILD_TTY_CLIENT -o $@ -c $<
-endef
+
+ifeq ($(GENERATE_DEPENDENCIES),1)
+  DO_QVM_DEP=cat $(@:%.o=%.d) | sed -e 's/\.o/\.asm/g' >> $(@:%.o=%.d)
+endif
 
 define DO_SHLIB_CC
 $(echo_cmd) "SHLIB_CC $<"
 $(Q)$(CC) $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(DO_QVM_DEP)
 endef
 
 define DO_GAME_CC
 $(echo_cmd) "GAME_CC $<"
 $(Q)$(CC) -DGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(DO_QVM_DEP)
 endef
 
 define DO_CGAME_CC
 $(echo_cmd) "CGAME_CC $<"
 $(Q)$(CC) -DCGAME $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(DO_QVM_DEP)
 endef
 
 define DO_UI_CC
 $(echo_cmd) "UI_CC $<"
 $(Q)$(CC) -DUI $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+$(Q)$(DO_QVM_DEP)
 endef
 
 define DO_AS
@@ -1133,11 +1139,6 @@ endef
 define DO_DED_CC
 $(echo_cmd) "DED_CC $<"
 $(Q)$(CC) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
-endef
- 
-define DO_DED_CXX
-$(echo_cmd) "DED_CXX $<"
-$(Q)$(CXX) $(NOTSHLIBCFLAGS) -DDEDICATED $(CFLAGS) -o $@ -c $<
 endef
 
 define DO_WINDRES
@@ -1178,8 +1179,6 @@ targets: makedirs
 	@echo "  COMPILE_PLATFORM: $(COMPILE_PLATFORM)"
 	@echo "  COMPILE_ARCH: $(COMPILE_ARCH)"
 	@echo "  CC: $(CC)"
-	@echo "  CXX: $(CXX)"
-	@echo "  LD: $(LD)"
 	@echo ""
 	@echo "  CFLAGS:"
 	-@for i in $(CFLAGS); \
@@ -1232,6 +1231,12 @@ makedirs:
 	@if [ ! -d $(B)/base/game ];then $(MKDIR) $(B)/base/game;fi
 	@if [ ! -d $(B)/base/ui ];then $(MKDIR) $(B)/base/ui;fi
 	@if [ ! -d $(B)/base/qcommon ];then $(MKDIR) $(B)/base/qcommon;fi
+	@if [ ! -d $(B)/base/vm ];then $(MKDIR) $(B)/base/vm;fi
+	@if [ ! -d $(B)/tools ];then $(MKDIR) $(B)/tools;fi
+	@if [ ! -d $(B)/tools/asm ];then $(MKDIR) $(B)/tools/asm;fi
+	@if [ ! -d $(B)/tools/etc ];then $(MKDIR) $(B)/tools/etc;fi
+	@if [ ! -d $(B)/tools/rcc ];then $(MKDIR) $(B)/tools/rcc;fi
+	@if [ ! -d $(B)/tools/lburg ];then $(MKDIR) $(B)/tools/lburg;fi
 
 #############################################################################
 # INSTALL
@@ -1244,9 +1249,9 @@ install: release run-tremfusion.sh
 	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
 	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
 	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
@@ -1255,6 +1260,137 @@ run-tremfusion.sh:
 	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
 	@sed -ie "s!@LIBDIR@!$(LIBDIR)!" run-tremfusion.sh
 	@sed -ie "s!@DATADIR@!$(DATADIR)!" run-tremfusion.sh
+
+#############################################################################
+# QVM BUILD TOOLS
+#############################################################################
+
+TOOLS_OPTIMIZE = -O2 -Wall -fno-strict-aliasing
+TOOLS_CFLAGS = $(TOOLS_OPTIMIZE) \
+               -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
+               -I$(Q3LCCSRCDIR) \
+               -I$(LBURGDIR)
+TOOLS_LIBS =
+TOOLS_LDFLAGS =
+
+ifeq ($(GENERATE_DEPENDENCIES),1)
+	TOOLS_CFLAGS += -MMD
+endif
+
+define DO_TOOLS_CC
+$(echo_cmd) "TOOLS_CC $<"
+$(Q)$(CC) $(TOOLS_CFLAGS) -o $@ -c $<
+endef
+
+define DO_TOOLS_CC_DAGCHECK
+$(echo_cmd) "TOOLS_CC_DAGCHECK $<"
+$(Q)$(CC) $(TOOLS_CFLAGS) -Wno-unused -o $@ -c $<
+endef
+
+LBURG       = $(B)/tools/lburg/lburg$(BINEXT)
+DAGCHECK_C  = $(B)/tools/rcc/dagcheck.c
+Q3RCC       = $(B)/tools/q3rcc$(BINEXT)
+Q3LCC       = $(B)/tools/q3lcc$(BINEXT)
+Q3ASM       = $(B)/tools/q3asm$(BINEXT)
+
+LBURGOBJ= \
+	$(B)/tools/lburg/lburg.o \
+	$(B)/tools/lburg/gram.o
+
+$(B)/tools/lburg/%.o: $(LBURGDIR)/%.c
+	$(DO_TOOLS_CC)
+
+$(LBURG): $(LBURGOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $^ $(TOOLS_LIBS)
+
+Q3RCCOBJ = \
+  $(B)/tools/rcc/alloc.o \
+  $(B)/tools/rcc/bind.o \
+  $(B)/tools/rcc/bytecode.o \
+  $(B)/tools/rcc/dag.o \
+  $(B)/tools/rcc/dagcheck.o \
+  $(B)/tools/rcc/decl.o \
+  $(B)/tools/rcc/enode.o \
+  $(B)/tools/rcc/error.o \
+  $(B)/tools/rcc/event.o \
+  $(B)/tools/rcc/expr.o \
+  $(B)/tools/rcc/gen.o \
+  $(B)/tools/rcc/init.o \
+  $(B)/tools/rcc/inits.o \
+  $(B)/tools/rcc/input.o \
+  $(B)/tools/rcc/lex.o \
+  $(B)/tools/rcc/list.o \
+  $(B)/tools/rcc/main.o \
+  $(B)/tools/rcc/null.o \
+  $(B)/tools/rcc/output.o \
+  $(B)/tools/rcc/prof.o \
+  $(B)/tools/rcc/profio.o \
+  $(B)/tools/rcc/simp.o \
+  $(B)/tools/rcc/stmt.o \
+  $(B)/tools/rcc/string.o \
+  $(B)/tools/rcc/sym.o \
+  $(B)/tools/rcc/symbolic.o \
+  $(B)/tools/rcc/trace.o \
+  $(B)/tools/rcc/tree.o \
+  $(B)/tools/rcc/types.o
+
+$(DAGCHECK_C): $(LBURG) $(Q3LCCSRCDIR)/dagcheck.md
+	$(echo_cmd) "LBURG $(Q3LCCSRCDIR)/dagcheck.md"
+	$(Q)$(LBURG) $(Q3LCCSRCDIR)/dagcheck.md $@
+
+$(B)/tools/rcc/dagcheck.o: $(DAGCHECK_C)
+	$(DO_TOOLS_CC_DAGCHECK)
+
+$(B)/tools/rcc/%.o: $(Q3LCCSRCDIR)/%.c
+	$(DO_TOOLS_CC)
+
+$(Q3RCC): $(Q3RCCOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $^ $(TOOLS_LIBS)
+
+Q3LCCOBJ = \
+	$(B)/tools/etc/lcc.o \
+	$(B)/tools/etc/bytecode.o
+
+$(B)/tools/etc/%.o: $(Q3LCCETCDIR)/%.c
+	$(DO_TOOLS_CC)
+
+$(Q3LCC): $(Q3LCCOBJ) $(Q3RCC)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $(Q3LCCOBJ) $(TOOLS_LIBS)
+
+define DO_Q3LCC
+$(echo_cmd) "Q3LCC $<"
+$(Q)$(Q3LCC) -o $@ $<
+endef
+
+define DO_CGAME_Q3LCC
+$(echo_cmd) "CGAME_Q3LCC $<"
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DCGAME -o $@ $<
+endef
+
+define DO_GAME_Q3LCC
+$(echo_cmd) "GAME_Q3LCC $<"
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DGAME -o $@ $<
+endef
+
+define DO_UI_Q3LCC
+$(echo_cmd) "UI_Q3LCC $<"
+$(Q)$(Q3LCC) -DPRODUCT_VERSION=\"$(VERSION)\" -DUI -o $@ $<
+endef
+
+
+Q3ASMOBJ = \
+  $(B)/tools/asm/q3asm.o \
+  $(B)/tools/asm/cmdlib.o
+
+$(B)/tools/asm/%.o: $(Q3ASMDIR)/%.c
+	$(DO_TOOLS_CC)
+
+$(Q3ASM): $(Q3ASMOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(TOOLS_CFLAGS) $(TOOLS_LDFLAGS) -o $@ $^ $(TOOLS_LIBS)
 
 
 #############################################################################
@@ -1328,6 +1464,7 @@ Q3OBJ_ = \
   $(B)/client/ioapi.o \
   $(B)/client/puff.o \
   $(B)/client/vm.o \
+  $(B)/client/vm_interpreted.o \
   \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
@@ -1476,6 +1613,24 @@ ifeq ($(USE_CURSES),1)
   Q3OBJ_ += $(B)/client/con_curses.o
 endif
 
+ifeq ($(HAVE_VM_COMPILED),true)
+  ifeq ($(ARCH),x86)
+    Q3OBJ_ += $(B)/client/vm_x86.o
+  endif
+  ifeq ($(ARCH),x86_64)
+    Q3OBJ_ += $(B)/client/vm_x86_64.o $(B)/client/vm_x86_64_assembler.o
+  endif
+  ifeq ($(ARCH),ppc)
+    Q3OBJ_ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3OBJ_ += $(B)/client/vm_powerpc.o $(B)/client/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),sparc)
+    Q3OBJ += $(B)/client/vm_sparc.o
+  endif
+endif
+
 ifeq ($(PLATFORM),mingw32)
   Q3OBJ_ += \
     $(B)/client/win_resource.o \
@@ -1492,22 +1647,18 @@ ifeq ($(USE_MUMBLE),1)
     $(B)/client/libmumblelink.o
 endif
 
-ifeq ($(USE_LLVM),1)
-  Q3OBJ_ += $(B)/client/vm_llvm.o
-endif
-
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremfusion.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremfusion-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
+	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
 
 ifneq ($(strip $(LIBSDLMAIN)),)
@@ -1596,6 +1747,7 @@ Q3DOBJ = \
   $(B)/ded/unzip.o \
   $(B)/ded/ioapi.o \
   $(B)/ded/vm.o \
+  $(B)/ded/vm_interpreted.o \
   \
   $(B)/ded/null_client.o \
   $(B)/ded/null_input.o \
@@ -1609,10 +1761,6 @@ ifeq ($(ARCH),x86)
       $(B)/ded/ftola.o \
       $(B)/ded/snapvectora.o \
       $(B)/ded/matha.o
-endif
- 
-ifeq ($(USE_LLVM),1)
-  Q3DOBJ += $(B)/ded/vm_llvm.o
 endif
 
 ifeq ($(USE_INTERNAL_ZLIB),1)
@@ -1628,6 +1776,24 @@ ifeq ($(USE_CURSES),1)
   Q3DOBJ += $(B)/ded/con_curses.o
 endif
 
+ifeq ($(HAVE_VM_COMPILED),true)
+  ifeq ($(ARCH),x86)
+    Q3DOBJ += $(B)/ded/vm_x86.o
+  endif
+  ifeq ($(ARCH),x86_64)
+    Q3DOBJ += $(B)/ded/vm_x86_64.o $(B)/ded/vm_x86_64_assembler.o
+  endif
+  ifeq ($(ARCH),ppc)
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),ppc64)
+    Q3DOBJ += $(B)/ded/vm_powerpc.o $(B)/ded/vm_powerpc_asm.o
+  endif
+  ifeq ($(ARCH),sparc)
+    Q3DOBJ += $(B)/ded/vm_sparc.o
+  endif
+endif
+
 ifeq ($(PLATFORM),mingw32)
   Q3DOBJ += \
     $(B)/ded/win_resource.o \
@@ -1639,9 +1805,9 @@ else
     $(B)/ded/con_tty.o
 endif
 
-$(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
+$(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
+	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
 
 
@@ -1649,11 +1815,12 @@ $(B)/tremfusionded.$(ARCH)$(BINEXT): $(Q3DOBJ)
 ## TREMFUSION CGAME
 #############################################################################
 
-CGOBJ = \
+CGOBJ_ = \
   $(B)/base/cgame/cg_main.o \
   $(B)/base/cgame/bg_misc.o \
   $(B)/base/cgame/bg_pmove.o \
   $(B)/base/cgame/bg_slidemove.o \
+  $(B)/base/cgame/bg_lib.o \
   $(B)/base/cgame/bg_alloc.o \
   $(B)/base/cgame/bg_voice.o \
   $(B)/base/cgame/cg_consolecmds.o \
@@ -1681,12 +1848,18 @@ CGOBJ = \
   $(B)/base/ui/ui_shared.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o \
-  $(B)/base/cgame/cg_syscalls.o
+  $(B)/base/qcommon/q_shared.o
+
+CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
+CGVMOBJ = $(CGOBJ_:%.o=%.asm)
 
 $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
+
+$(B)/base/vm/cgame.qvm: $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm $(Q3ASM)
+	$(echo_cmd) "Q3ASM $@"
+	$(Q)$(Q3ASM) -o $@ $(CGVMOBJ) $(CGDIR)/cg_syscalls.asm
 
 
 
@@ -1694,11 +1867,12 @@ $(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
 ## TREMFUSION GAME
 #############################################################################
 
-GOBJ = \
+GOBJ_ = \
   $(B)/base/game/g_main.o \
   $(B)/base/game/bg_misc.o \
   $(B)/base/game/bg_pmove.o \
   $(B)/base/game/bg_slidemove.o \
+  $(B)/base/game/bg_lib.o \
   $(B)/base/game/bg_alloc.o \
   $(B)/base/game/bg_voice.o \
   $(B)/base/game/g_active.o \
@@ -1723,12 +1897,18 @@ GOBJ = \
   $(B)/base/game/g_admin.o \
   \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o \
-  $(B)/base/game/g_syscalls.o
+  $(B)/base/qcommon/q_shared.o
+
+GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
+GVMOBJ = $(GOBJ_:%.o=%.asm)
 
 $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
+	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
+
+$(B)/base/vm/game.qvm: $(GVMOBJ) $(GDIR)/g_syscalls.asm $(Q3ASM)
+	$(echo_cmd) "Q3ASM $@"
+	$(Q)$(Q3ASM) -o $@ $(GVMOBJ) $(GDIR)/g_syscalls.asm
 
 
 
@@ -1736,20 +1916,27 @@ $(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
 ## TREMFUSION UI
 #############################################################################
 
-UIOBJ = \
+UIOBJ_ = \
   $(B)/base/ui/ui_main.o \
   $(B)/base/ui/ui_atoms.o \
   $(B)/base/ui/ui_shared.o \
   $(B)/base/ui/ui_gameinfo.o \
   \
   $(B)/base/ui/bg_misc.o \
+  $(B)/base/ui/bg_lib.o \
   $(B)/base/qcommon/q_math.o \
-  $(B)/base/qcommon/q_shared.o \
-  $(B)/base/ui/ui_syscalls.o
+  $(B)/base/qcommon/q_shared.o
+
+UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
+UIVMOBJ = $(UIOBJ_:%.o=%.asm)
 
 $(B)/base/ui$(ARCH).$(SHLIBEXT): $(UIOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(LD) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
+	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
+
+$(B)/base/vm/ui.qvm: $(UIVMOBJ) $(UIDIR)/ui_syscalls.asm $(Q3ASM)
+	$(echo_cmd) "Q3ASM $@"
+	$(Q)$(Q3ASM) -o $@ $(UIVMOBJ) $(UIDIR)/ui_syscalls.asm
 
 
 
@@ -1768,9 +1955,6 @@ $(B)/client/%.o: $(SDIR)/%.c
 
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
-
-$(B)/client/%.o: $(CMDIR)/%.cpp
-	$(DO_CXX)
 
 $(B)/client/%.o: $(JPDIR)/%.c
 	$(DO_CC)
@@ -1809,9 +1993,6 @@ $(B)/clienttty/%.o: $(SDIR)/%.c
 $(B)/clienttty/%.o: $(CMDIR)/%.c
 	$(DO_TTY_CC)
 
-$(B)/clienttty/%.o: $(CMDIR)/%.cpp
-	$(DO_TTY_CXX)
-
 $(B)/clienttty/%.o: $(ZDIR)/%.c
 	$(DO_TTY_CC)
 
@@ -1833,9 +2014,6 @@ $(B)/ded/%.o: $(SDIR)/%.c
 
 $(B)/ded/%.o: $(CMDIR)/%.c
 	$(DO_DED_CC)
-
-$(B)/ded/%.o: $(CMDIR)/%.cpp
-	$(DO_DED_CXX)
 
 $(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)
@@ -1917,7 +2095,9 @@ $(B)/base/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 #############################################################################
 
 OBJ = $(Q3OBJ) $(Q3TOBJ) $(Q3DOBJ) \
-  $(GOBJ) $(CGOBJ) $(UIOBJ)
+  $(GOBJ) $(CGOBJ) $(UIOBJ) \
+  $(GVMOBJ) $(CGVMOBJ) $(UIVMOBJ)
+TOOLSOBJ = $(LBURGOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
 
 
 clean: clean-debug clean-release
@@ -1936,6 +2116,20 @@ clean2:
 	@rm -f $(OBJ_D_FILES)
 	@rm -f $(TARGETS)
 
+toolsclean: toolsclean-debug toolsclean-release
+
+toolsclean-debug:
+	@$(MAKE) toolsclean2 B=$(BD)
+
+toolsclean-release:
+	@$(MAKE) toolsclean2 B=$(BR)
+
+toolsclean2:
+	@echo "TOOLS_CLEAN $(B)"
+	@rm -f $(TOOLSOBJ)
+	@rm -f $(TOOLSOBJ_D_FILES)
+	@rm -f $(LBURG) $(DAGCHECK_C) $(Q3RCC) $(Q3LCC) $(Q3ASM)
+
 distclean:
 	@rm -rf $(BUILD_DIR)
 
@@ -1944,8 +2138,10 @@ distclean:
 #############################################################################
 
 OBJ_D_FILES=$(filter %.d,$(OBJ:%.o=%.d))
--include $(OBJ_D_FILES)
+TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
+-include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 
 .PHONY: all clean clean2 clean-debug clean-release copyfiles \
 	debug default distclean makedirs \
-	release targets
+	release targets \
+	toolsclean toolsclean2 toolsclean-debug toolsclean-release

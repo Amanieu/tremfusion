@@ -108,11 +108,11 @@ PM_StartWeaponAnim
 */
 static void PM_StartWeaponAnim( int anim )
 {
-  if( PM_Paralyzed( pm->ps->pm_type ) )
+  /*if( PM_Paralyzed( pm->ps->pm_type ) )
     return;
 
   pm->ps->weaponAnim = ( ( pm->ps->weaponAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-    | anim;
+    | anim;*/
 }
 
 
@@ -190,10 +190,10 @@ PM_ContinueWeaponAnim
 */
 static void PM_ContinueWeaponAnim( int anim )
 {
-  if( ( pm->ps->weaponAnim & ~ANIM_TOGGLEBIT ) == anim )
+  /*if( ( pm->ps->weaponAnim & ~ANIM_TOGGLEBIT ) == anim )
     return;
 
-  PM_StartWeaponAnim( anim );
+  PM_StartWeaponAnim( anim );*/
 }
 
 /*
@@ -2106,8 +2106,8 @@ static void PM_GroundClimbTrace( void )
         //we need to do some different angle correction here cos GPISROTVEC
         if( VectorCompare( surfNormal, ceilingNormal ) )
         {
-          VectorToAngles( trace.plane.normal, toAngles );
-          VectorToAngles( pm->ps->grapplePoint, surfAngles );
+          vectoangles( trace.plane.normal, toAngles );
+          vectoangles( pm->ps->grapplePoint, surfAngles );
 
           pm->ps->delta_angles[ 1 ] -= ANGLE2SHORT( ( ( surfAngles[ 1 ] - toAngles[ 1 ] ) * 2 ) - 180.0f );
         }
@@ -2153,7 +2153,7 @@ static void PM_GroundClimbTrace( void )
       AngleVectors( pm->ps->viewangles, forward, NULL, NULL );
 
       RotatePointAroundVector( rotated, pm->ps->grapplePoint, forward, 180.0f );
-      VectorToAngles( rotated, angles );
+      vectoangles( rotated, angles );
 
       pm->ps->delta_angles[ YAW ] -= ANGLE2SHORT( angles[ YAW ] - pm->ps->viewangles[ YAW ] );
     }
@@ -2238,7 +2238,7 @@ static void PM_GroundTrace( void )
       AngleVectors( pm->ps->viewangles, forward, NULL, NULL );
 
       RotatePointAroundVector( rotated, pm->ps->grapplePoint, forward, 180.0f );
-      VectorToAngles( rotated, angles );
+      vectoangles( rotated, angles );
 
       pm->ps->delta_angles[ YAW ] -= ANGLE2SHORT( angles[ YAW ] - pm->ps->viewangles[ YAW ] );
     }
@@ -3565,7 +3565,7 @@ void PM_UpdateViewAngles( playerState_t *ps, const usercmd_t *cmd )
     vec3_t  dir, angles;
 
     ByteToDir( ps->stats[ STAT_VIEWLOCK ], dir );
-    VectorToAngles( dir, angles );
+    vectoangles( dir, angles );
 
     for( i = 0; i < 3; i++ )
     {

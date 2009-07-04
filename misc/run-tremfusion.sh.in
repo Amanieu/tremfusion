@@ -26,9 +26,9 @@ while [ "$1" != "" ]; do {
 # Ready to rumble!
 
 if [ ${QUIET} -eq 1 ]; then
-	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-0.99 $* >/dev/null 2>&1
+	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} $* >/dev/null 2>&1
 else
-	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} +set fs_extrapaks z-tremfusion-menus-0.99 $*
+	exec ${BINARY} +set fs_basepath ${BASE_PATH} +set fs_extrapath ${EXTRA_PATH} $*
 fi
 
 exit $?

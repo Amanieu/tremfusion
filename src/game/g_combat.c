@@ -426,7 +426,7 @@ int G_ParseDmgScript( damageRegion_t *regions, char *buf )
 
   for( count = 0; ; count++ )
   {
-    token = Com_Parse( &buf );
+    token = COM_Parse( &buf );
     if( !token[0] )
       break;
 
@@ -453,7 +453,7 @@ int G_ParseDmgScript( damageRegion_t *regions, char *buf )
 
     while( 1 )
     {
-      token = Com_ParseExt( &buf, qtrue );
+      token = COM_ParseExt( &buf, qtrue );
 
       if( !token[0] )
       {
@@ -467,42 +467,42 @@ int G_ParseDmgScript( damageRegion_t *regions, char *buf )
       }
       else if( !strcmp( token, "name" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if( token[ 0 ] )
           Q_strncpyz( regions[ count ].name, token,
                       sizeof( regions[ count ].name ) );
       }
       else if( !strcmp( token, "minHeight" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if ( !token[0] )
           strcpy( token, "0" );
         regions[ count ].minHeight = atof( token );
       }
       else if( !strcmp( token, "maxHeight" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if ( !token[0] )
           strcpy( token, "100" );
         regions[ count ].maxHeight = atof( token );
       }
       else if( !strcmp( token, "minAngle" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if ( !token[0] )
           strcpy( token, "0" );
         regions[ count ].minAngle = atoi( token );
       }
       else if( !strcmp( token, "maxAngle" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if ( !token[0] )
           strcpy( token, "360" );
         regions[ count ].maxAngle = atoi( token );
       }
       else if( !strcmp( token, "modifier" ) )
       {
-        token = Com_ParseExt( &buf, qfalse );
+        token = COM_ParseExt( &buf, qfalse );
         if ( !token[0] )
           strcpy( token, "1.0" );
         regions[ count ].modifier = atof( token );
@@ -751,7 +751,7 @@ static float G_CalcDamageModifier( vec3_t point, gentity_t *targ, gentity_t *att
 
   // Get the yaw of the attack relative to the target's view yaw
   VectorSubtract( targOrigin, point, bulletPath );
-  VectorToAngles( bulletPath, bulletAngle );
+  vectoangles( bulletPath, bulletAngle );
   hitRotation = AngleNormalize360( targ->client->ps.viewangles[ YAW ] -
                                    bulletAngle[ YAW ] );
 
