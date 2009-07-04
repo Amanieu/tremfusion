@@ -747,7 +747,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !token )
       break;
@@ -759,7 +759,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
     {
       int index = 0;
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -770,7 +770,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
       else if( index > 3 )
         index = 3;
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -781,7 +781,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
     }
     else if( !Q_stricmp( token, "modelScale" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -799,7 +799,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -813,7 +813,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -827,7 +827,7 @@ static qboolean BG_ParseBuildableFile( const char *filename, buildableConfig_t *
     {
       float offset;
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1469,7 +1469,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !token )
       break;
@@ -1479,7 +1479,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
 
     if( !Q_stricmp( token, "model" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1490,7 +1490,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "skin" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1501,7 +1501,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "hud" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1512,7 +1512,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "modelScale" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1528,7 +1528,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "shadowScale" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1546,7 +1546,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -1560,7 +1560,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -1574,7 +1574,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -1588,7 +1588,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -1602,7 +1602,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       for( i = 0; i <= 2; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -1614,14 +1614,14 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "viewheight" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       cc->viewheight = atoi( token );
       defined |= VIEWHEIGHT;
       continue;
     }
     else if( !Q_stricmp( token, "crouchViewheight" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       cc->crouchViewheight = atoi( token );
       defined |= CVIEWHEIGHT;
       continue;
@@ -1630,7 +1630,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     {
       float offset;
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -1643,7 +1643,7 @@ static qboolean BG_ParseClassFile( const char *filename, classConfig_t *cc )
     }
     else if( !Q_stricmp( token, "name" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -2904,7 +2904,8 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
   s->time2 = ps->movementDir;
   s->legsAnim = ps->legsAnim;
   s->torsoAnim = ps->torsoAnim;
-  s->weaponAnim |= ps->weaponAnim;
+  //FIXME: gotta work out a way to transmit this in the entitystate
+  //s->weaponAnim |= ps->weaponAnim;
   s->clientNum = ps->clientNum;   // ET_PLAYER looks here instead of at number
                     // so corpses can also reference the proper config
   s->eFlags = ps->eFlags;
@@ -3012,7 +3013,8 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
   s->time2 = ps->movementDir;
   s->legsAnim = ps->legsAnim;
   s->torsoAnim = ps->torsoAnim;
-  s->weaponAnim = ps->weaponAnim;
+  // FIXME: see previous instance of weaponAnim
+  //s->weaponAnim = ps->weaponAnim;
   s->clientNum = ps->clientNum;   // ET_PLAYER looks here instead of at number
                     // so corpses can also reference the proper config
   s->eFlags = ps->eFlags;
@@ -3325,7 +3327,7 @@ void BG_PositionBuildableRelativeToPlayer( const playerState_t *ps,
   (*trace)( tr, entityOrigin, mins, maxs, targetOrigin, ps->clientNum, MASK_DEADSOLID );
   VectorCopy( tr->endpos, entityOrigin );
   VectorMA( entityOrigin, 0.1f, playerNormal, outOrigin );
-  VectorToAngles( forward, outAngles );
+  vectoangles( forward, outAngles );
 }
 
 /*

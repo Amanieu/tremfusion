@@ -55,7 +55,7 @@ int UI_ParseInfos( char *buf, int max, char *infos[] )
 
   while( 1 )
   {
-    token = Com_Parse( &buf );
+    token = COM_Parse( &buf );
 
     if( !token[0] )
       break;
@@ -76,7 +76,7 @@ int UI_ParseInfos( char *buf, int max, char *infos[] )
 
     while( 1 )
     {
-      token = Com_ParseExt( &buf, qtrue );
+      token = COM_ParseExt( &buf, qtrue );
 
       if( !token[0] )
       {
@@ -89,7 +89,7 @@ int UI_ParseInfos( char *buf, int max, char *infos[] )
 
       Q_strncpyz( key, token, sizeof( key ) );
 
-      token = Com_ParseExt( &buf, qfalse );
+      token = COM_ParseExt( &buf, qfalse );
 
       if( !token[0] )
         strcpy( token, "<NULL>" );
@@ -243,7 +243,7 @@ static void UI_LoadBotsFromFile( char *filename )
   buf[len] = 0;
   trap_FS_FCloseFile( f );
 
-  Com_Compress( buf );
+  COM_Compress( buf );
 
   ui_numBots += UI_ParseInfos( buf, MAX_BOTS - ui_numBots, &ui_botInfos[ui_numBots] );
 }

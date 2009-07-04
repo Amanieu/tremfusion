@@ -1306,16 +1306,21 @@ update cl_guid using QKEY_FILE and optional prefix
 static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
-	int len;
-
+	int len, len2;
+	//get the length of both files
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
-
-	if( len != QKEY_SIZE ) 
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
+	FS_FCloseFile( f );
+	//check lengths and set cl_guid accordinally
+	if( len == QKEY_SIZE ) {
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
+	} else if( len2 == QKEY_SIZE ) {
+		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE_FALLBACK, QKEY_SIZE, prefix, prefix_len ) );
+	} else {
 		Cvar_Set( "cl_guid", "" );
-	else
-		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
-			prefix, prefix_len ) );
+	}
+
 }
 
 
@@ -1467,13 +1472,13 @@ CL_GetMotd_f
 void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
-	Com_DPrintf( "Resolving %s\n", MASTER_SERVER_NAME );
-	if ( !NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
+	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
+	if ( !NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer, NA_IP  ) ) {
 		Com_Printf( "Couldn't resolve address\n" );
 		return;
 	}
 	cls.updateServer.port = BigShort( PORT_MASTER );
-	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MASTER_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %i.%i.%i.%i:%i\n", MOTD_SERVER_NAME,
 		cls.updateServer.ip[0], cls.updateServer.ip[1],
 		cls.updateServer.ip[2], cls.updateServer.ip[3],
 		BigShort( cls.updateServer.port ) );
@@ -2905,8 +2910,8 @@ void CL_Frame ( int msec ) {
 				*p = '.';
 			}
 
-			Q_strncpyz( mapName, Com_SkipPath( cl.mapname ), sizeof( cl.mapname ) );
-			Com_StripExtension(mapName, mapName, sizeof(mapName));
+			Q_strncpyz( mapName, COM_SkipPath( cl.mapname ), sizeof( cl.mapname ) );
+			COM_StripExtension(mapName, mapName, sizeof(mapName));
 
 			Cbuf_ExecuteText( EXEC_NOW,
 					va( "record %s-%s-%s", nowString, serverName, mapName ) );
@@ -3275,14 +3280,21 @@ it by filling it with 2048 bytes of random data.
 static void CL_GenerateQKey(void)
 {
 	int len = 0;
+	int len2 = 0;
 	unsigned char buff[ QKEY_SIZE ];
 	fileHandle_t f;
 
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
+	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
+	FS_FCloseFile( f );
 
 	if( len == QKEY_SIZE ) {
 		Com_Printf( "QKEY found.\n" );
+		return;
+	}
+	else if( len2 == QKEY_SIZE ) {
+		Com_Printf( "QKEY found. (Fallback Location)\n" );
 		return;
 	}
 	else {
@@ -3416,7 +3428,7 @@ void CL_Init( void ) {
 	cl_alienConfig = Cvar_Get ("cl_alienConfig", "", CVAR_ARCHIVE);
 	cl_spectatorConfig = Cvar_Get ("cl_spectatorConfig", "", CVAR_ARCHIVE);
 
-	cl_defaultUI = Cvar_Get ("cl_defaultUI", "", CVAR_ARCHIVE);
+	cl_defaultUI = Cvar_Get ("cl_defaultUI", "tremfusion", CVAR_ARCHIVE);
 	Cvar_Set ("fs_game", cl_defaultUI->string);
 	Com_StartupVariable( "fs_game" );
 	FS_ConditionalRestart (clc.checksumFeed);
