@@ -224,7 +224,7 @@ ifeq ($(SDL_CFLAGS),)
 endif
 
 # version info
-VERSION_NUMBER=0.99r2
+VERSION_NUMBER=0.99r3
 
 ifeq ($(USE_SCM_VERSION),1)
   # For svn
