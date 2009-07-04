@@ -1,5 +1,5 @@
 diff --git a/src/game/g_active.c b/src/game/g_active.c
-index 839299a..87deb53 100644
+index fe7ebd4..ef4fb34 100644
 --- a/src/game/g_active.c
 +++ b/src/game/g_active.c
 @@ -404,7 +404,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd )
@@ -11,7 +11,7 @@ index 839299a..87deb53 100644
          doPmove = qfalse;
      }
    }
-@@ -1847,7 +1847,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
+@@ -1864,7 +1864,7 @@ void SpectatorClientEndFrame( gentity_t *ent )
      {
        cl = &level.clients[ clientNum ];
  
@@ -21,10 +21,10 @@ index 839299a..87deb53 100644
   
      if( cl -> sess.spectatorState != SPECTATOR_FOLLOW ) 
 diff --git a/src/game/g_admin.c b/src/game/g_admin.c
-index 4dcad64..a562f83 100644
+index 6c003b3..688a297 100644
 --- a/src/game/g_admin.c
 +++ b/src/game/g_admin.c
-@@ -2474,6 +2474,11 @@ qboolean G_admin_putteam( gentity_t *ent, int skiparg )
+@@ -2484,6 +2484,11 @@ qboolean G_admin_putteam( gentity_t *ent, int skiparg )
    }
    if( vic->client->pers.teamSelection == teamnum )
      return qfalse;
@@ -37,10 +37,10 @@ index 4dcad64..a562f83 100644
  
    AP( va( "print \"^3!putteam: ^7%s^7 put %s^7 on to the %s team\n\"",
 diff --git a/src/game/g_client.c b/src/game/g_client.c
-index 0799375..9ea17bb 100644
+index 6a64b7d..ae0a09f 100644
 --- a/src/game/g_client.c
 +++ b/src/game/g_client.c
-@@ -1248,6 +1248,9 @@ void ClientUserinfoChanged( int clientNum )
+@@ -1262,6 +1262,9 @@ void ClientUserinfoChanged( int clientNum, qboolean forceName )
  
    trap_SetConfigstring( CS_PLAYERS + clientNum, userinfo );
  
@@ -50,7 +50,7 @@ index 0799375..9ea17bb 100644
    /*G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, userinfo );*/
  }
  
-@@ -1417,6 +1420,7 @@ void ClientBegin( int clientNum )
+@@ -1431,6 +1434,7 @@ void ClientBegin( int clientNum )
  {
    gentity_t *ent;
    gclient_t *client;
@@ -58,7 +58,7 @@ index 0799375..9ea17bb 100644
    int       flags;
  
    ent = g_entities + clientNum;
-@@ -1460,6 +1464,10 @@ void ClientBegin( int clientNum )
+@@ -1474,6 +1478,10 @@ void ClientBegin( int clientNum )
  
    G_LogPrintf( "ClientBegin: %i\n", clientNum );
  
@@ -69,7 +69,7 @@ index 0799375..9ea17bb 100644
    if( g_clientUpgradeNotice.integer )
    {
      if( !Q_stricmp( ent->client->pers.guid, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ) )
-@@ -1866,5 +1874,7 @@ void ClientDisconnect( int clientNum )
+@@ -1880,5 +1888,7 @@ void ClientDisconnect( int clientNum )
  
    trap_SetConfigstring( CS_PLAYERS + clientNum, "");
  
@@ -78,12 +78,12 @@ index 0799375..9ea17bb 100644
    CalculateRanks( );
  }
 diff --git a/src/game/g_cmds.c b/src/game/g_cmds.c
-index 858c1c9..0b0f0eb 100644
+index 765986d..517f93c 100644
 --- a/src/game/g_cmds.c
 +++ b/src/game/g_cmds.c
 @@ -797,6 +797,12 @@ void Cmd_Team_f( gentity_t *ent )
    
-   if( !Q_stricmp( s, "spectate" ) )
+   if( !Q_stricmpn( s, "spec", 4 ) )
      team = PTE_NONE;
 +  else if( level.demoState == DS_PLAYBACK )
 +  {
@@ -126,7 +126,7 @@ index 858c1c9..0b0f0eb 100644
        break;
        
        case SAY_ADMINS:
-@@ -3698,11 +3708,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
+@@ -3748,11 +3758,13 @@ qboolean G_FollowNewClient( gentity_t *ent, int dir )
        continue;
  
      // can only follow connected clients
@@ -143,10 +143,10 @@ index 858c1c9..0b0f0eb 100644
       
        // can only follow teammates when dead and on a team
 diff --git a/src/game/g_local.h b/src/game/g_local.h
-index 418a89e..f631ccf 100644
+index 1eacea6..b99a232 100644
 --- a/src/game/g_local.h
 +++ b/src/game/g_local.h
-@@ -408,6 +408,7 @@ typedef struct
+@@ -410,6 +410,7 @@ typedef struct
    char                guid[ 33 ];
    char                ip[ 16 ];
    qboolean            muted;
@@ -154,7 +154,7 @@ index 418a89e..f631ccf 100644
    qboolean            denyBuild;
    int                 adminLevel;
    char                adminName[ MAX_NETNAME ];
-@@ -561,6 +562,15 @@ typedef struct damageRegion_s
+@@ -563,6 +564,15 @@ typedef struct damageRegion_s
    qboolean  crouch;
  } damageRegion_t;
  
@@ -170,7 +170,7 @@ index 418a89e..f631ccf 100644
  #define MAX_ARMOUR_TEXT    8192
  #define MAX_ARMOUR_REGIONS 16
  
-@@ -758,7 +768,9 @@ typedef struct
+@@ -760,7 +770,9 @@ typedef struct
    int               lastTeamUnbalancedTime;
    int               numTeamWarnings;  
    int               lastMsgTime;
@@ -181,7 +181,7 @@ index 418a89e..f631ccf 100644
    statsCounters_level alienStatsCounters;
    statsCounters_level humanStatsCounters;
  } level_locals_t;
-@@ -1080,6 +1092,7 @@ void QDECL G_Error( const char *fmt, ... );
+@@ -1082,6 +1094,7 @@ void QDECL G_Error( const char *fmt, ... );
  void CheckVote( void );
  void CheckTeamVote( int teamnum );
  void LogExit( const char *string );
@@ -189,13 +189,13 @@ index 418a89e..f631ccf 100644
  int  G_TimeTilSuddenDeath( void );
  void CheckMsgTimer( void );
  qboolean G_Flood_Limited( gentity_t *ent );
-@@ -1411,3 +1424,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
+@@ -1414,3 +1427,4 @@ qboolean  trap_GetEntityToken( char *buffer, int bufferSize );
  
  void      trap_SnapVector( float *v );
  void      trap_SendGameStat( const char *data );
 +void      trap_DemoCommand( demoCommand_t cmd, const char *string );
 diff --git a/src/game/g_main.c b/src/game/g_main.c
-index 4b4b447..d92844f 100644
+index f07e30d..95b6212 100644
 --- a/src/game/g_main.c
 +++ b/src/game/g_main.c
 @@ -62,6 +62,7 @@ vmCvar_t  g_dedicated;
@@ -206,7 +206,7 @@ index 4b4b447..d92844f 100644
  vmCvar_t  g_knockback;
  vmCvar_t  g_quadfactor;
  vmCvar_t  g_inactivity;
-@@ -188,6 +189,9 @@ static cvarTable_t   gameCvarTable[ ] =
+@@ -189,6 +190,9 @@ static cvarTable_t   gameCvarTable[ ] =
    // don't override the cheat state set by the system
    { &g_cheats, "sv_cheats", "", 0, 0, qfalse },
  
@@ -216,7 +216,7 @@ index 4b4b447..d92844f 100644
    // noset vars
    { NULL, "gamename", GAME_VERSION , CVAR_SERVERINFO | CVAR_ROM, 0, qfalse  },
    { NULL, "gamedate", __DATE__ , CVAR_ROM, 0, qfalse  },
-@@ -357,6 +361,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
+@@ -359,6 +363,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart );
  void G_RunFrame( int levelTime );
  void G_ShutdownGame( int restart );
  void CheckExitRules( void );
@@ -226,7 +226,7 @@ index 4b4b447..d92844f 100644
  
  void G_CountSpawns( void );
  void G_CalculateBuildPoints( void );
-@@ -412,6 +419,22 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
+@@ -414,6 +421,22 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
  
      case GAME_CONSOLE_COMMAND:
        return ConsoleCommand( );
@@ -249,7 +249,7 @@ index 4b4b447..d92844f 100644
    }
  
    return -1;
-@@ -612,6 +635,8 @@ G_InitGame
+@@ -614,6 +637,8 @@ G_InitGame
  void G_InitGame( int levelTime, int randomSeed, int restart )
  {
    int i;
@@ -258,7 +258,7 @@ index 4b4b447..d92844f 100644
  
    srand( randomSeed );
  
-@@ -631,6 +656,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
+@@ -633,6 +658,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart )
    level.startTime = levelTime;
    level.alienStage2Time = level.alienStage3Time =
      level.humanStage2Time = level.humanStage3Time = level.startTime;
@@ -270,7 +270,7 @@ index 4b4b447..d92844f 100644
  
    level.snd_fry = G_SoundIndex( "sound/misc/fry.wav" ); // FIXME standing in lava / slime
  
-@@ -781,6 +811,8 @@ G_ShutdownGame
+@@ -789,6 +819,8 @@ G_ShutdownGame
  */
  void G_ShutdownGame( int restart )
  {
@@ -279,7 +279,7 @@ index 4b4b447..d92844f 100644
    // in case of a map_restart
    G_ClearVotes( );
  
-@@ -802,6 +834,11 @@ void G_ShutdownGame( int restart )
+@@ -810,6 +842,11 @@ void G_ShutdownGame( int restart )
    level.restarted = qfalse;
    level.surrenderTeam = PTE_NONE;
    trap_SetConfigstring( CS_WINNER, "" );
@@ -291,7 +291,7 @@ index 4b4b447..d92844f 100644
  }
  
  
-@@ -1366,6 +1403,8 @@ void G_CalculateStages( void )
+@@ -1379,6 +1416,8 @@ void G_CalculateStages( void )
    float         humanPlayerCountMod     = level.averageNumHumanClients / PLAYER_COUNT_MOD;
    static int    lastAlienStageModCount  = 1;
    static int    lastHumanStageModCount  = 1;
@@ -300,7 +300,7 @@ index 4b4b447..d92844f 100644
  
    if( alienPlayerCountMod < 0.1f )
      alienPlayerCountMod = 0.1f;
-@@ -1435,6 +1474,15 @@ void G_CalculateStages( void )
+@@ -1448,6 +1487,15 @@ void G_CalculateStages( void )
  
      lastHumanStageModCount = g_humanStage.modificationCount;
    }
@@ -316,7 +316,7 @@ index 4b4b447..d92844f 100644
  }
  
  /*
-@@ -1502,13 +1550,15 @@ void CalculateRanks( void )
+@@ -1515,13 +1563,15 @@ void CalculateRanks( void )
    for( i = 0; i < level.maxclients; i++ )
    {
      P[ i ] = '-';
@@ -334,7 +334,7 @@ index 4b4b447..d92844f 100644
          continue;
  
        level.numVotingClients++;
-@@ -1559,6 +1609,84 @@ void CalculateRanks( void )
+@@ -1572,6 +1622,84 @@ void CalculateRanks( void )
      SendScoreboardMessageToAllClients( );
  }
  
@@ -419,7 +419,7 @@ index 4b4b447..d92844f 100644
  
  /*
  ========================================================================
-@@ -1755,7 +1883,6 @@ void ExitLevel( void )
+@@ -1768,7 +1896,6 @@ void ExitLevel( void )
      if( level.clients[ i ].pers.connected == CON_CONNECTED )
        level.clients[ i ].pers.connected = CON_CONNECTING;
    }
@@ -427,7 +427,7 @@ index 4b4b447..d92844f 100644
  }
  /*
  =================
-@@ -2172,6 +2299,10 @@ can see the last frag.
+@@ -2185,6 +2312,10 @@ can see the last frag.
  */
  void CheckExitRules( void )
  {
@@ -438,7 +438,7 @@ index 4b4b447..d92844f 100644
    // if at the intermission, wait for all non-bots to
    // signal ready, then go to next level
    if( level.intermissiontime )
-@@ -2514,6 +2645,54 @@ void CheckCvars( void )
+@@ -2536,6 +2667,54 @@ void CheckCvars( void )
  }
  
  /*
@@ -493,7 +493,7 @@ index 4b4b447..d92844f 100644
  =============
  G_RunThink
  
-@@ -2606,13 +2785,16 @@ void G_RunFrame( int levelTime )
+@@ -2628,13 +2807,16 @@ void G_RunFrame( int levelTime )
    // get any cvar changes
    G_UpdateCvars( );
  
@@ -595,16 +595,3 @@ index a74df3f..ca4f296 100644
  }
  
  
-diff --git a/src/tools/asm/Makefile b/src/tools/asm/Makefile
-index 52f1060..a788386 100644
---- a/src/tools/asm/Makefile
-+++ b/src/tools/asm/Makefile
-@@ -13,7 +13,7 @@ else
- endif
- 
- CC=gcc
--Q3ASM_CFLAGS=-O2 -Wall -Werror -fno-strict-aliasing
-+Q3ASM_CFLAGS=-O2 -Wall -fno-strict-aliasing
- 
- ifeq ($(PLATFORM),darwin)
-   LCC_CFLAGS += -DMACOS_X=1
