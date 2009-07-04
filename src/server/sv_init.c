@@ -370,27 +370,25 @@ static void SV_ClearServer(void) {
 ================
 SV_TouchCGame
 
-Touch the cgame and ui so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
+Touch the cgame.qvm and ui.qvm so that a pure client can load it if it's in a seperate pk3, and so it gets on the download list
 ================
 */
 static void SV_TouchCGame(void) {
-#ifdef USE_LLVM
 	fileHandle_t	f;
 
-	FS_FOpenFileRead( "cgamellvm.bc", &f, qfalse );
+	FS_FOpenFileRead( "vm/cgame.qvm", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No cgamellvm.bc found on pure server\n" );
+		Com_Printf( "WARNING: No cgame.qvm found on pure server\n" );
 	}
 
-	FS_FOpenFileRead( "uillvm.bc", &f, qfalse );
+	FS_FOpenFileRead( "vm/ui.qvm", &f, qfalse );
 	if ( f ) {
 		FS_FCloseFile( f );
 	} else if ( sv_pure->integer ) {
-		Com_Printf( "WARNING: No uillvm.bc found on pure server\n" );
+		Com_Printf( "WARNING: No ui.qvm found on pure server\n" );
 	}
-#endif
 }
 
 /*
@@ -633,6 +631,8 @@ void SV_Init (void) {
 
 	sv_allowDownload = Cvar_Get ("sv_allowDownload", "1", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	Cvar_Get ("sv_dlURL", "", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	Cvar_Get ("sv_wwwDownload", "1", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
+	Cvar_Get ("sv_wwwBaseURL", "", CVAR_SYSTEMINFO | CVAR_ARCHIVE);
 	sv_master[0] = Cvar_Get ("sv_master1", MASTER_SERVER_NAME, 0 );
 	sv_master[1] = Cvar_Get ("sv_master2", "", CVAR_ARCHIVE );
 	sv_master[2] = Cvar_Get ("sv_master3", "", CVAR_ARCHIVE );

@@ -38,7 +38,20 @@ void Field_Draw( field_t *edit, int x, int y, qboolean showCursor, qboolean noCo
 void Field_BigDraw( field_t *edit, int x, int y, qboolean showCursor, qboolean noColorEscape );
 
 extern	field_t	g_consoleField;
+extern	field_t	chatField;
 extern	int				anykeydown;
+extern	qboolean	chat_team;
+extern	qboolean	chat_admins;
+extern	qboolean	chat_clans;
+extern	int			chat_playerNum;
+
+typedef struct {
+	qboolean	active;
+	char		question[1024];
+	char		callback[1024];
+} cmdPrompt_t;
+
+extern	cmdPrompt_t	prompt;
 
 void Key_WriteBindings( fileHandle_t f );
 void Key_SetBinding( int keynum, const char *binding );

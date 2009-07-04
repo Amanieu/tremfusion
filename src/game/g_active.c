@@ -64,7 +64,7 @@ void P_DamageFeedback( gentity_t *player )
   }
   else
   {
-    VectorToAngles( client->damage_from, angles );
+    vectoangles( client->damage_from, angles );
     client->ps.damagePitch = angles[ PITCH ] / 360.0 * 256;
     client->ps.damageYaw = angles[ YAW ] / 360.0 * 256;
   }
@@ -1035,14 +1035,14 @@ void G_UnlaggedCalc( int time, gentity_t *rewindEnt )
       continue;
 
     // between two unlagged markers
-    VectorLerp( ent->client->unlaggedHist[ startIndex ].mins,
-      ent->client->unlaggedHist[ stopIndex ].mins, lerp,
+    VectorLerp( lerp, ent->client->unlaggedHist[ startIndex ].mins,
+      ent->client->unlaggedHist[ stopIndex ].mins,
       ent->client->unlaggedCalc.mins );
-    VectorLerp( ent->client->unlaggedHist[ startIndex ].maxs,
-      ent->client->unlaggedHist[ stopIndex ].maxs, lerp,
+    VectorLerp( lerp, ent->client->unlaggedHist[ startIndex ].maxs,
+      ent->client->unlaggedHist[ stopIndex ].maxs,
       ent->client->unlaggedCalc.maxs );
-    VectorLerp( ent->client->unlaggedHist[ startIndex ].origin,
-      ent->client->unlaggedHist[ stopIndex ].origin, lerp,
+    VectorLerp( lerp, ent->client->unlaggedHist[ startIndex ].origin,
+      ent->client->unlaggedHist[ stopIndex ].origin,
       ent->client->unlaggedCalc.origin );
 
     ent->client->unlaggedCalc.used = qtrue;

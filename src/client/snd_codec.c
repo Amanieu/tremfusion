@@ -73,7 +73,7 @@ static snd_codec_t *S_FindCodecForFile(const char *filename)
 			
 			// there is no extension so we do not need to subtract 4 chars
 			Q_strncpyz(fn, filename, MAX_QPATH);
-			Com_DefaultExtension(fn, MAX_QPATH, codec->ext);
+			COM_DefaultExtension(fn, MAX_QPATH, codec->ext);
 
 			// Check it exists
 			if(FS_ReadFile(fn, NULL) != -1)
@@ -150,7 +150,7 @@ void *S_CodecLoad(const char *filename, snd_info_t *info)
 	}
 
 	strncpy(fn, filename, sizeof(fn));
-	Com_DefaultExtension(fn, sizeof(fn), codec->ext);
+	COM_DefaultExtension(fn, sizeof(fn), codec->ext);
 
 	return codec->load(fn, info);
 }
@@ -173,7 +173,7 @@ snd_stream_t *S_CodecOpenStream(const char *filename)
 	}
 
 	strncpy(fn, filename, sizeof(fn));
-	Com_DefaultExtension(fn, sizeof(fn), codec->ext);
+	COM_DefaultExtension(fn, sizeof(fn), codec->ext);
 
 	return codec->open(fn);
 }

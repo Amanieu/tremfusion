@@ -136,14 +136,14 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
   while( 1 )
   {
     prev = text_p;  // so we can unget
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !token )
       break;
 
     if( !Q_stricmp( token, "footsteps" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !token )
         break;
 
@@ -164,7 +164,7 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
     {
       for( i = 0 ; i < 3 ; i++ )
       {
-        token = Com_Parse( &text_p );
+        token = COM_Parse( &text_p );
         if( !token )
           break;
 
@@ -175,7 +175,7 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
     }
     else if( !Q_stricmp( token, "sex" ) )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !token )
         break;
@@ -220,7 +220,7 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
     // read information for each frame
     for( i = 0; i < MAX_PLAYER_ANIMATIONS; i++ )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
       {
@@ -248,7 +248,7 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
       if( i >= LEGS_WALKCR && i<TORSO_GETFLAG )
         animations[ i ].firstFrame -= skip;
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !*token )
         break;
 
@@ -263,14 +263,14 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
         animations[ i ].reversed = qtrue;
       }
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
         break;
 
       animations[ i ].loopFrames = atoi( token );
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
         break;
@@ -321,14 +321,14 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
     // read information for each frame
     for( i = 0; i < MAX_NONSEG_PLAYER_ANIMATIONS; i++ )
     {
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
         break;
 
       animations[ i ].firstFrame = atoi( token );
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
       if( !*token )
         break;
 
@@ -343,14 +343,14 @@ static qboolean CG_ParseAnimationFile( const char *filename, clientInfo_t *ci )
         animations[ i ].reversed = qtrue;
       }
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
         break;
 
       animations[ i ].loopFrames = atoi( token );
 
-      token = Com_Parse( &text_p );
+      token = COM_Parse( &text_p );
 
       if( !*token )
         break;
