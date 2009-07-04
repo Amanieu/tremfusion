@@ -58,6 +58,8 @@ cvar_t		*cl_autoNamelog;
 
 cvar_t		*con_conspeed;
 
+cvar_t		*scr_conUseOld;
+
 // Color and alpha for console
 cvar_t		*scr_conUseShader;
 
@@ -327,8 +329,12 @@ void Con_CheckResize (void)
 	short	tbuf[CON_TEXTSIZE];
 
 	if (cls.glconfig.vidWidth) {
-		g_consoleField.widthInChars = cls.glconfig.vidWidth / SCR_ConsoleFontCharWidth('W') - Q_PrintStrlen(cl_consolePrompt->string) - 1;
-		width = cls.glconfig.vidWidth / SCR_ConsoleFontCharWidth('W') - 2;
+		if (scr_conUseOld->integer) {
+			width = cls.glconfig.vidWidth / SCR_ConsoleFontCharWidth('W');
+		} else {
+			width = (cls.glconfig.vidWidth - 30) / SCR_ConsoleFontCharWidth('W');
+		}
+		g_consoleField.widthInChars = width - Q_PrintStrlen(cl_consolePrompt->string) - 1;
 	} else {
 		width = 0;
 	}
@@ -403,6 +409,8 @@ void Con_Init (void) {
 	cl_autoNamelog = Cvar_Get ("cl_autoNamelog", "0", CVAR_ARCHIVE);
 	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
+	
+	scr_conUseOld = Cvar_Get ("scr_conUseOld", "0", CVAR_ARCHIVE|CVAR_LATCH);
 	
 	// Defines cvar for color and alpha for console/bar under console
 	scr_conUseShader = Cvar_Get ("scr_conUseShader", "0", CVAR_ARCHIVE);
@@ -588,6 +596,7 @@ Draw the editline after a ] prompt
 void Con_DrawInput (void) {
 	int		y;
 	char	prompt[ MAX_STRING_CHARS ];
+	vec4_t	color;
 	qtime_t realtime;
 
 	if ( cls.state != CA_DISCONNECTED && !(Key_GetCatcher( ) & KEYCATCH_CONSOLE ) ) {
@@ -600,10 +609,15 @@ void Con_DrawInput (void) {
 
 	Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 %s", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min, cl_consolePrompt->string );
 
-	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, colorWhite, qfalse, qfalse );
+	color[0] = 1.0f;
+	color[1] = 1.0f;
+	color[2] = 1.0f;
+	color[3] = (scr_conUseOld->integer ? 1.0f : con.displayFrac * 2.0f);
+
+	SCR_DrawSmallStringExt( con.xadjust + cl_conXOffset->integer, y, prompt, color, qfalse, qfalse );
 
 	Q_CleanStr( prompt );
-	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue );
+	Field_Draw( &g_consoleField, con.xadjust + cl_conXOffset->integer + SCR_ConsoleFontStringWidth(prompt, strlen(prompt)), y, qtrue, qtrue, color[3] );
 }
 
 /*
@@ -623,74 +637,108 @@ void Con_DrawSolidConsole( float frac ) {
 	int				currentColor;
 	vec4_t			color;
 
-	lines = cls.glconfig.vidHeight * frac;
-	if (lines <= 0)
-		return;
+	if (scr_conUseOld->integer) {
+		lines = cls.glconfig.vidHeight * frac;
+		if (lines <= 0)
+			return;
 
-	if (lines > cls.glconfig.vidHeight )
-		lines = cls.glconfig.vidHeight;
+		if (lines > cls.glconfig.vidHeight )
+			lines = cls.glconfig.vidHeight;
+	} else {
+		lines = cls.glconfig.vidHeight * scr_conHeight->integer * 0.01 - 10;
+	}
 
 	// on wide screens, we will center the text
-	con.xadjust = 0;
+	if (!scr_conUseOld->integer) {
+		con.xadjust = 15;
+	}
 	SCR_AdjustFrom640( &con.xadjust, NULL, NULL, NULL );
 
 	// draw the background
-	y = frac * SCREEN_HEIGHT;
-	if ( y < 1 ) {
-		y = 0;
-	}
-	else {
-	 if( scr_conUseShader->integer )
-	   {
-		SCR_DrawPic( 0, 0, SCREEN_WIDTH, y, cls.consoleShader );
-	   }
-	 else
-	   {
-	  	// This will be overwrote, so ill just abuse it here, no need to define another array
-		color[0] = scr_conColorRed->value;
-		color[1] = scr_conColorGreen->value;
-		color[2] = scr_conColorBlue->value;
-		color[3] = scr_conColorAlpha->value;
-		
-	   	SCR_FillRect( 0, 0, SCREEN_WIDTH, y, color );
-	   }
-	}
+	if (scr_conUseOld->integer) {
+		y = frac * SCREEN_HEIGHT;
+		if ( y < 1 ) {
+			y = 0;
+		}
+		else {
+		 if( scr_conUseShader->integer )
+		   {
+			SCR_DrawPic( 0, 0, SCREEN_WIDTH, y, cls.consoleShader );
+		   }
+		 else
+		   {
+			// This will be overwrote, so ill just abuse it here, no need to define another array
+			color[0] = scr_conColorRed->value;
+			color[1] = scr_conColorGreen->value;
+			color[2] = scr_conColorBlue->value;
+			color[3] = scr_conColorAlpha->value;
+			
+			SCR_FillRect( 0, 0, SCREEN_WIDTH, y, color );
+		   }
+		}
 
-	color[0] = scr_conBarColorRed->value;
-	color[1] = scr_conBarColorGreen->value;
-	color[2] = scr_conBarColorBlue->value;
-	color[3] = scr_conBarColorAlpha->value;
-	
-	SCR_FillRect( 0, y, SCREEN_WIDTH, scr_conBarSize->value, color );
+		color[0] = scr_conBarColorRed->value;
+		color[1] = scr_conBarColorGreen->value;
+		color[2] = scr_conBarColorBlue->value;
+		color[3] = scr_conBarColorAlpha->value;
+		
+		SCR_FillRect( 0, y, SCREEN_WIDTH, scr_conBarSize->value, color );
+	} else {
+		color[0] = 0.05f;
+		color[1] = 0.25f;
+		color[2] = 0.30f;
+		color[3] = frac * 0.85f;
+		SCR_FillRect(10, 10, 620, 460 * scr_conHeight->integer * 0.01, color);
+
+		color[0] = 0.7f;
+		color[1] = 0.7f;
+		color[2] = 0.9f;
+		color[3] = frac * 0.75f;
+		SCR_FillRect(10, 10, 620, 1, color);	//top
+		SCR_FillRect(10, 460 * scr_conHeight->integer * 0.01 + 10, 620, 1, color);	//buttom
+		SCR_FillRect(10, 10, 1, 460 * scr_conHeight->integer * 0.01, color);	//left
+		SCR_FillRect(630, 10, 1, 460 * scr_conHeight->integer * 0.01, color);	//right
+	}
 
 
 	// draw the version number
 
-	re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
+	color[0] = 1.0f;
+	color[1] = 0.0f;
+	color[2] = 0.0f;
+	color[3] = (scr_conUseOld->integer ? 1.0f : frac * 2.0f);
+	re.SetColor( color );
 
 	i = strlen( Q3_VERSION );
     float totalwidth = SCR_ConsoleFontStringWidth( Q3_VERSION, i ) + cl_conXOffset->integer;
+	if (!scr_conUseOld->integer) {
+		totalwidth += 30;
+	}
     float currentWidthLocation = 0;
 	for (x=0 ; x<i ; x++) {
-
         SCR_DrawConsoleFontChar( cls.glconfig.vidWidth - totalwidth + currentWidthLocation, lines-SCR_ConsoleFontCharHeight(), Q3_VERSION[x] );
         currentWidthLocation += SCR_ConsoleFontCharWidth( Q3_VERSION[x] );
-
 	}
 
 
 	// draw the text
 	con.vislines = lines;
-	rows = (lines)/SCR_ConsoleFontCharHeight();		// rows of text to draw
+	rows = (lines)/SCR_ConsoleFontCharHeight() - 3;		// rows of text to draw
+	if (scr_conUseOld->integer)
+		rows++;
 
 	y = lines - (SCR_ConsoleFontCharHeight()*3);
 
 	// draw from the bottom up
 	if (con.display != con.current)
 	{
-	// draw arrows to show the buffer is backscrolled
-	    re.SetColor( g_color_table[ColorIndex(COLOR_RED)] );
-        for (x=0 ; x<con.linewidth ; x+=4)
+		// draw arrows to show the buffer is backscrolled
+		color[0] = 1.0f;
+		color[1] = 0.0f;
+		color[2] = 0.0f;
+		color[3] = (scr_conUseOld->integer ? 1.0f : frac * 2.0f);
+	    re.SetColor( color );
+        for (x=0 ; x<con.linewidth - (scr_conUseOld->integer ? 0 : 4); x+=4)
             SCR_DrawConsoleFontChar( con.xadjust + (x+1)*SCR_ConsoleFontCharWidth('^'), y, '^' );
         y -= SCR_ConsoleFontCharHeight();
         rows--;
@@ -703,7 +751,11 @@ void Con_DrawSolidConsole( float frac ) {
 	}
 
 	currentColor = 7;
-	re.SetColor( g_color_table[currentColor] );
+	color[0] = g_color_table[currentColor][0];
+	color[1] = g_color_table[currentColor][1];
+	color[2] = g_color_table[currentColor][2];
+	color[3] = (scr_conUseOld->integer ? 1.0f : frac * 2.0f);
+	re.SetColor( color );
 
 	for (i=0 ; i<rows ; i++, y -= SCR_ConsoleFontCharHeight(), row--)
 	{
@@ -720,7 +772,11 @@ void Con_DrawSolidConsole( float frac ) {
 		for (x=0 ; x<con.linewidth ; x++) {
 			if ( ( (text[x]>>8)&7 ) != currentColor ) {
 				currentColor = (text[x]>>8)&7;
-				re.SetColor( g_color_table[currentColor] );
+				color[0] = g_color_table[currentColor][0];
+				color[1] = g_color_table[currentColor][1];
+				color[2] = g_color_table[currentColor][2];
+				color[3] = (scr_conUseOld->integer ? 1.0f : frac * 2.0f);
+				re.SetColor( color );
 			}
             
             SCR_DrawConsoleFontChar(  con.xadjust + currentWidthLocation, y, text[x] & 0xff );
@@ -773,7 +829,11 @@ Scroll it up or down
 void Con_RunConsole (void) {
 	// decide on the destination height of the console
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
-		con.finalFrac = MAX(0.10, 0.01 * scr_conHeight->integer);  // configured console percentage
+		if (scr_conUseOld->integer) {
+			con.finalFrac = MAX(0.10, 0.01 * scr_conHeight->integer);  // configured console percentage
+		} else {
+			con.finalFrac = 0.5;
+		}
 	else
 		con.finalFrac = 0;				// none visible
 	
