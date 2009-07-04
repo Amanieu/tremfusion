@@ -1,9 +1,9 @@
 #!/bin/sh
-APPBUNDLE=Tremulous.app
-BINARY=Tremulous.ub
-DEDBIN=Tremded.ub
-TTYBIN=Tremulous-tty.ub
-PKGINFO=APPLTREM
+APPBUNDLE=Tremfusion.app
+BINARY=Tremfusion.ub
+DEDBIN=Tremfusionded.ub
+TTYBIN=Tremfusion-tty.ub
+PKGINFO=APPLTREMFUSION
 ICNS=misc/Tremfusion.icns
 DESTDIR=build/release-darwin-ub
 BASEDIR=base
@@ -154,11 +154,11 @@ echo "
 		<key>CFBundleIconFile</key>
 		<string>Tremfusion.icns</string>
 		<key>CFBundleIdentifier</key>
-		<string>net.tremulous</string>
+		<string>net.tremfusion</string>
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>Tremulous</string>
+		<string>Tremfusion</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
