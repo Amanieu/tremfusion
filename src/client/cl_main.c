@@ -3660,7 +3660,6 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 	char	info[MAX_INFO_STRING];
 	char	*infoString;
 	int		prot;
-	int		realmsec = Sys_Milliseconds();
 
 	infoString = MSG_ReadString( msg );
 
@@ -3678,7 +3677,7 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 		{
 			// calc ping time
 			if (cl_pinglist[i].start == cls.realtime)
-				cl_pinglist[i].time = realmsec - cl_pinglist[i].start + 1;
+				cl_pinglist[i].time = Sys_Milliseconds() - cl_pinglist[i].start + 1;
 			else
 				cl_pinglist[i].time = cls.realtime - cl_pinglist[i].start + 1;
 			Com_DPrintf( "ping time %dms from %s\n", cl_pinglist[i].time, NET_AdrToString( from ) );

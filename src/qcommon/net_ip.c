@@ -92,13 +92,6 @@ typedef int SOCKET;
 static qboolean usingSocks = qfalse;
 static int networkingEnabled = 0;
 
-#define NET_ENABLEV4		0x01
-#define NET_ENABLEV6		0x02
-// if this flag is set, always attempt ipv6 connections instead of ipv4 if a v6 address is found.
-#define NET_PRIOV6		0x04
-// disables ipv6 multicast support if set.
-#define NET_DISABLEMCAST	0x08
-
 static cvar_t	*net_enabled;
 
 static cvar_t	*net_socksEnabled;
@@ -284,8 +277,6 @@ static qboolean Sys_StringToSockaddr(const char *s, struct sockaddr *sadr, int s
 	hintsp = &hints;
 	hintsp->ai_family = family;
 	hintsp->ai_socktype = SOCK_DGRAM;
-	// FIXME: we should set "->ai_flags" to AI_PASSIVE if we intend
-	//        to use this structure for a bind() - instead of a sendto()
 	
 	retval = getaddrinfo(s, NULL, hintsp, &res);
 
@@ -294,18 +285,20 @@ static qboolean Sys_StringToSockaddr(const char *s, struct sockaddr *sadr, int s
 		if(family == AF_UNSPEC)
 		{
 			// Decide here and now which protocol family to use
-			if((net_enabled->integer & NET_ENABLEV6) && (net_enabled->integer & NET_PRIOV6))
-				search = SearchAddrInfo(res, AF_INET6);
-			else
-				search = SearchAddrInfo(res, AF_INET);
-			
-			if(!search)
+			if(net_enabled->integer & NET_PRIOV6)
 			{
-				if((net_enabled->integer & NET_ENABLEV6) &&
-				   (net_enabled->integer & NET_PRIOV6) &&
-				   (net_enabled->integer & NET_ENABLEV4))
+				if(net_enabled->integer & NET_ENABLEV6)
+					search = SearchAddrInfo(res, AF_INET6);
+				
+				if(!search && (net_enabled->integer & NET_ENABLEV4))
 					search = SearchAddrInfo(res, AF_INET);
-				else if(net_enabled->integer & NET_ENABLEV6)
+			}
+			else
+			{
+				if(net_enabled->integer & NET_ENABLEV4)
+					search = SearchAddrInfo(res, AF_INET);
+				
+				if(!search && (net_enabled->integer & NET_ENABLEV6))
 					search = SearchAddrInfo(res, AF_INET6);
 			}
 		}
@@ -348,7 +341,8 @@ static void Sys_SockaddrToString(char *dest, int destlen, struct sockaddr *input
 	else
 		inputlen = sizeof(struct sockaddr_in);
 
-	getnameinfo(input, inputlen, dest, destlen, NULL, 0, NI_NUMERICHOST);
+	if(getnameinfo(input, inputlen, dest, destlen, NULL, 0, NI_NUMERICHOST) && destlen > 0)
+		*dest = '\0';
 }
 
 /*
@@ -929,7 +923,7 @@ int NET_IP6Socket( char *net_interface, int port, struct sockaddr_in6 *bindto, i
 
 #ifdef IPV6_V6ONLY
 	{
-		int i;
+		int i = 1;
 
 		// ipv4 addresses should not be allowed to connect via this socket.
 		if(setsockopt(newsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &i, sizeof(i)) == SOCKET_ERROR)
@@ -1321,9 +1315,6 @@ void NET_GetLocalAddress( void ) {
 	char				hostname[256];
 	struct addrinfo		hint;
 	struct addrinfo 	*res = NULL;
-	struct addrinfo 	*search;
-	struct sockaddr_in mask4;
-	struct sockaddr_in6 mask6;
 
 	if(gethostname( hostname, 256 ) == SOCKET_ERROR)
 		return;
@@ -1335,29 +1326,36 @@ void NET_GetLocalAddress( void ) {
 	hint.ai_family = AF_UNSPEC;
 	hint.ai_socktype = SOCK_DGRAM;
 	
-	if(getaddrinfo(hostname, NULL, &hint, &res))
- 		return;
-
-	/* On operating systems where it's more difficult to find out the configured interfaces, we'll just assume a
-	 * netmask with all bits set. */
-	
-	memset(&mask4, 0, sizeof(mask4));
-	memset(&mask6, 0, sizeof(mask6));
-	mask4.sin_family = AF_INET;
-	memset(&mask4.sin_addr.s_addr, 0xFF, sizeof(mask4.sin_addr.s_addr));
-	mask6.sin6_family = AF_INET6;
-	memset(&mask6.sin6_addr, 0xFF, sizeof(mask6.sin6_addr));
-
-	// add all IPs from returned list.
-	for(search = res; search; search = search->ai_next)
+	if(!getaddrinfo(hostname, NULL, &hint, &res))
 	{
-		if(search->ai_family == AF_INET)
-			NET_AddLocalAddress("", search->ai_addr, (struct sockaddr *) &mask4);
-		else if(search->ai_family == AF_INET6)
-			NET_AddLocalAddress("", search->ai_addr, (struct sockaddr *) &mask6);
+		struct sockaddr_in mask4;
+		struct sockaddr_in6 mask6;
+		struct addrinfo 	*search;
+	
+		/* On operating systems where it's more difficult to find out the configured interfaces, we'll just assume a
+		 * netmask with all bits set. */
+	
+		memset(&mask4, 0, sizeof(mask4));
+		memset(&mask6, 0, sizeof(mask6));
+		mask4.sin_family = AF_INET;
+		memset(&mask4.sin_addr.s_addr, 0xFF, sizeof(mask4.sin_addr.s_addr));
+		mask6.sin6_family = AF_INET6;
+		memset(&mask6.sin6_addr, 0xFF, sizeof(mask6.sin6_addr));
+
+		// add all IPs from returned list.
+		for(search = res; search; search = search->ai_next)
+		{
+			if(search->ai_family == AF_INET)
+				NET_AddLocalAddress("", search->ai_addr, (struct sockaddr *) &mask4);
+			else if(search->ai_family == AF_INET6)
+				NET_AddLocalAddress("", search->ai_addr, (struct sockaddr *) &mask6);
+		}
+	
+		Sys_ShowIP();
 	}
 	
-	Sys_ShowIP();
+	if(res)
+		freeaddrinfo(res);
 }
 #endif
 
