@@ -161,7 +161,11 @@ ifndef USE_SSE
   ifeq ($(ARCH),x86_64)
     USE_SSE=2
   else
-    USE_SSE=1
+	ifeq ($(ARCH),x86)
+	  USE_SSE=1
+	else
+	  USE_SSE=0
+	endif
   endif
 endif
 
@@ -1244,12 +1248,18 @@ install: release run-tremfusion.sh
 	@if [ ! -d $(BUILDROOT)$(BINDIR) ];then $(MKDIR) -p $(BUILDROOT)$(BINDIR);fi
 	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
 	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
+ifeq ($(BUILD_CLIENT),1)
 	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
+endif
+ifeq ($(BUILD_CLIENT_TTY),1)
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusion-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
+endif
+ifeq ($(BUILD_SERVER),1)
+	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremfusionded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
 	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
+endif
 
 run-tremfusion.sh:
 	@cp misc/run-tremfusion.sh.in ./run-tremfusion.sh
