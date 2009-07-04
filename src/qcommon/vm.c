@@ -42,13 +42,8 @@ and one exported function: Perform
 #include <sys/mman.h>
 #include <limits.h>
 #include <unistd.h>
-#ifdef __unix__
-#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
-#else
-#include <sys/stat.h>
-#include <fcntl.h>
-#endif
 #endif
 #endif
 
@@ -390,10 +385,6 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		void		*v;
 	} header;
 
-	#ifndef MAP_ANONYMOUS
-	int fd_zero;
-	#endif
-
 	// load the image
 	Com_sprintf( filename, sizeof(filename), "vm/%s.qvm", vm->name );
 	Com_Printf( "Loading vm file %s...\n", filename );
@@ -463,25 +454,9 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 			vm->dataBase = Hunk_Alloc( dataLength, h_high );
 		}
 #else
-#ifndef MAP_ANONYMOUS
-		fd_zero = open("/dev/zero", O_RDWR);
-
-		if (!fd_zero)
-		{
-			Com_DPrintf("VM_LoadQVM: open(/dev/zero) failure");
-		}
-		else
-		{
-			vm->dataBase = mmap(NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED, fd_zero, 0);
-		}
-#else
 		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
-#endif
 		if(vm->dataBase == (void*)-1) {
 			Com_DPrintf("VM_LoadQVM: can't mmap memory");
-#ifndef MAP_ANONYMOUS
-			close(fd_zero);
-#endif
 			vm->mmaped = qfalse;
 			vm->dataBase = Hunk_Alloc( dataLength, h_high );
 		}
