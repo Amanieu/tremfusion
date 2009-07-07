@@ -495,15 +495,6 @@ static const char *opnames[256] = {
 	"OP_CVIF", "OP_CVFI",
 };
 
-static void VM_Destroy_Compiled(vm_t *vm)
-{
-	if (vm->codeBase) {
-		if (munmap(vm->codeBase, vm->codeLength))
-			Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
-	}
-	vm->codeBase = NULL;
-}
-
 typedef struct VM_Data {
 	unsigned int dataLength;
 	unsigned int codeLength;
@@ -1611,7 +1602,6 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 		DIE("mprotect failed");
 	}
 
-	vm->destroy = VM_Destroy_Compiled;
 	vm->compiled = qtrue;
 }
 

@@ -62,6 +62,8 @@ vm_t	vmTable[MAX_VM];
 void VM_VmInfo_f( void );
 void VM_VmProfile_f( void );
 
+static vmCache_t vmCache[MAX_CACHE_ENTRIES];
+
 
 
 #if 0 // 64bit!
@@ -557,6 +559,71 @@ vm_t *VM_Restart( vm_t *vm ) {
 	return vm;
 }
 
+// Cache system to compensate for the slowness of the x86_64 JIT compiler
+
+static ID_INLINE void VM_Cache_Free(vmCache_t *vmc)
+{
+	if (vmc->codeBase) {
+#ifdef _WIN32
+		VirtualFree(vmc->codeBase, 0, MEM_RELEASE);
+#else
+		munmap(vmc->codeBase, vmc->codeLength);
+#endif
+		free(vmc->instructionPointers);
+		vmc->codeBase = NULL;
+		vmc->checksum = 0;
+	}
+}
+
+static ID_INLINE qboolean VM_Cache_Search(vm_t *vm, vmHeader_t *header)
+{
+	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
+	int i;
+
+	Com_DPrintf("cached checksum: %x\n", checksum); 
+	Com_DPrintf("cached length: %d\n", vm->instructionPointersLength); 
+
+	for (i = 0; i < MAX_CACHE_ENTRIES; i++) {
+		if (vmCache[i].checksum == checksum) {
+			vm->codeLength = vmCache[i].codeLength;
+			vm->codeBase = vmCache[i].codeBase;
+			vm->instructionPointers = vmCache[i].instructionPointers;
+			vm->compiled = qtrue;
+			vmCache[i].age = 0;
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
+{
+	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
+	int i, oldest = 0;
+
+	for (i = 1; i < MAX_CACHE_ENTRIES; i++) {
+		if (!vmCache[i].codeBase) {
+			oldest = i;
+			break;
+		} else if (vmCache[i].age > vmCache[oldest].age) {
+			oldest = i;
+		}
+	}
+
+	// Free existing cache entry
+	VM_Cache_Free(&vmCache[oldest]);
+
+	vmCache[oldest].checksum = checksum;
+	vmCache[oldest].age = -1;
+	vmCache[oldest].codeLength = vm->codeLength;
+	vmCache[oldest].codeBase = vm->codeBase;
+	vmCache[oldest].instructionPointers = vm->instructionPointers;
+
+	for (i = 0; i < MAX_CACHE_ENTRIES; i++)
+		vmCache[i].age++;
+}
+
 /*
 ================
 VM_Create
@@ -621,9 +688,8 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 		return NULL;
 	}
 
-	// allocate space for the jump targets, which will be filled in by the compile/prep functions
+	// the number of instruction pointers
 	vm->instructionPointersLength = header->instructionCount * 4;
-	vm->instructionPointers = Hunk_Alloc( vm->instructionPointersLength, h_high );
 
 	// copy or compile the instructions
 	vm->codeLength = header->codeLength;
@@ -634,16 +700,34 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *),
 	if(interpret >= VMI_COMPILED) {
 		Com_DPrintf("Architecture doesn't have a bytecode compiler, using interpreter\n");
 		interpret = VMI_BYTECODE;
+		// allocate space for the jump targets, which will be filled in by the compile/prep functions
+		vm->instructionPointers = Hunk_Alloc( vm->instructionPointersLength, h_high );
 	}
 #else
 	if ( interpret >= VMI_COMPILED ) {
 		vm->compiled = qtrue;
-		VM_Compile( vm, header );
+
+		// check if the vm has been already cached
+		if (VM_Cache_Search(vm, header)) {
+			Com_DPrintf("loaded %s from the cache\n", vm->name);
+		} else {
+			// we need persistant instruction pointers
+			vm->instructionPointers = malloc(vm->instructionPointersLength);
+
+			VM_Compile( vm, header );
+
+			if (vm->compiled) {
+				VM_Cache_Add(vm, header);
+			} else {
+				free(vm->instructionPointers);
+			}
+		}
 	}
 #endif
 	// VM_Compile may have reset vm->compiled if compilation failed
-	if (!vm->compiled)
-	{
+	if (!vm->compiled) {
+		// allocate space for the jump targets, which will be filled in by the compile/prep functions
+		vm->instructionPointers = Hunk_Alloc( vm->instructionPointersLength, h_high );
 		VM_PrepareInterpreter( vm, header );
 	}
 
@@ -682,9 +766,6 @@ void VM_Free( vm_t *vm ) {
 		}
 	}
 
-	if(vm->destroy)
-		vm->destroy(vm);
-
 	if ( vm->dllHandle ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
@@ -706,6 +787,9 @@ void VM_Clear(void) {
 	int i;
 	for (i=0;i<MAX_VM; i++) {
 		VM_Free(&vmTable[i]);
+	}
+	for (i=0;i<MAX_CACHE_ENTRIES;i++) {
+		VM_Cache_Free(&vmCache[i]);
 	}
 }
 

@@ -39,18 +39,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //#define USE_GAS
 //#define DEBUG_VM
 
-#define MAX_CACHE_ENTRIES 6
-
-typedef struct {
-	int checksum;
-	int age;
-	byte *codeBase;
-	int codeLength;
-	int *instructionPointers;
-} vmCache_t;
-
-static vmCache_t vmCache[MAX_CACHE_ENTRIES];
-
 #ifdef DEBUG_VM
 #define Dfprintf(fd, args...) fprintf(fd, ##args)
 static FILE* qdasmout;
@@ -70,69 +58,6 @@ void assemble_line(const char* input, size_t len);
 #define Dfprintf(args...)
 #endif
 #endif // USE_GAS
-
-// Cache system to compensate for the slowness of the x86_64 JIT compiler
-
-static ID_INLINE void VM_Destroy_Compiled(byte *codeBase, int codeLength)
-{
-#ifdef _WIN32
-	VirtualFree(codeBase, 0, MEM_RELEASE);
-#else
-	munmap(codeBase, codeLength);
-#endif
-}
-
-static ID_INLINE qboolean VM_Cache_Search(vm_t *vm, vmHeader_t *header)
-{
-	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
-	int i;
-
-	for (i = 0; i < MAX_CACHE_ENTRIES; i++) {
-		if (vmCache[i].checksum == checksum) {
-			vm->codeLength = vmCache[i].codeLength;
-			vm->codeBase = vmCache[i].codeBase;
-			vm->instructionPointers = vmCache[i].instructionPointers;
-			vm->compiled = qtrue;
-			vm->destroy = NULL;
-			vmCache[i].age = 0;
-			return qtrue;
-		}
-	}
-
-	return qfalse;
-}
-
-static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
-{
-	int checksum = Com_BlockChecksum((byte *)header + header->codeOffset, header->codeLength);
-	int i, oldest = 0;
-
-	for (i = 1; i < MAX_CACHE_ENTRIES; i++) {
-		if (!vmCache[i].codeBase) {
-			oldest = i;
-			break;
-		} else if (vmCache[i].age > vmCache[oldest].age) {
-			oldest = i;
-		}
-	}
-
-	// Free existing cache entry
-	if (vmCache[oldest].codeBase) {
-		VM_Destroy_Compiled(vmCache[oldest].codeBase, vmCache[oldest].codeLength);
-		free(vmCache[oldest].instructionPointers);
-		vmCache[oldest].codeBase = NULL;
-		vmCache[oldest].checksum = 0;
-	}
-
-	vmCache[oldest].checksum = checksum;
-	vmCache[oldest].age = -1;
-	vmCache[oldest].codeLength = vm->codeLength;
-	vmCache[oldest].codeBase = vm->codeBase;
-	vmCache[oldest].instructionPointers = vm->instructionPointers;
-
-	for (i = 0; i < MAX_CACHE_ENTRIES; i++)
-		vmCache[i].age++;
-}
 
 /*
  
@@ -535,14 +460,6 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	unsigned char barg = 0;
 	int neednilabel = 0;
 	struct timeval tvstart =  {0, 0};
-
-	if (VM_Cache_Search(vm, header)) {
-		Com_DPrintf("loaded %s from the cache\n", vm->name);
-		return;
-	}
-
-	// We need persistant instruction pointers
-	vm->instructionPointers = malloc(vm->instructionPointersLength);
 
 #ifdef USE_GAS
 	byte* compiledcode;
@@ -1068,8 +985,6 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	if(mprotect(vm->codeBase, compiledOfs, PROT_READ|PROT_EXEC))
 		Com_Error(ERR_DROP, "VM_CompileX86: mprotect failed");
 #endif // USE_GAS
-
-	vm->destroy = NULL;
 	
 #ifdef USE_GAS
 	entryPoint = getentrypoint(vm);
@@ -1113,8 +1028,6 @@ out:
 		gettimeofday(&tvdone, NULL);
 		timersub(&tvdone, &tvstart, &dur);
 		Com_DPrintf( "compilation took %lu.%06lu seconds\n", dur.tv_sec, dur.tv_usec );
-
-		VM_Cache_Add(vm, header);
 	}
 }
 

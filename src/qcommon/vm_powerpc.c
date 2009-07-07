@@ -1986,16 +1986,6 @@ PPC_ComputeCode( vm_t *vm )
 	return;
 }
 
-static void
-VM_Destroy_Compiled( vm_t *self )
-{
-	if ( self->codeBase ) {
-		if ( munmap( self->codeBase, self->codeLength ) )
-			Com_Printf( S_COLOR_RED "Memory unmap failed, possible memory leak\n" );
-	}
-	self->codeBase = NULL;
-}
-
 void
 VM_Compile( vm_t *vm, vmHeader_t *header )
 {
@@ -2090,7 +2080,6 @@ VM_Compile( vm_t *vm, vmHeader_t *header )
 		DIE( "mprotect failed" );
 	}
 
-	vm->destroy = VM_Destroy_Compiled;
 	vm->compiled = qtrue;
 
 	{

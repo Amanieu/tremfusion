@@ -137,7 +137,6 @@ struct vm_s {
 	// for dynamic linked modules
 	void		*dllHandle;
 	intptr_t			(QDECL *entryPoint)( int callNum, ... );
-	void (*destroy)(vm_t* self);
 
 	// for interpreted modules
 	qboolean	currentlyInterpreting;
@@ -165,6 +164,16 @@ struct vm_s {
 	byte		*jumpTableTargets;
 	int			numJumpTableTargets;
 };
+
+#define MAX_CACHE_ENTRIES 6
+
+typedef struct {
+	int checksum;
+	int age;
+	byte *codeBase;
+	int codeLength;
+	int *instructionPointers;
+} vmCache_t;
 
 
 extern	vm_t	*currentVM;
