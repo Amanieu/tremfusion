@@ -399,9 +399,9 @@ ifeq ($(PLATFORM),linux)
 
   BASE_CFLAGS+=-I/usr/X11R6/include
   CLIENT_LDFLAGS=-L/usr/X11R6/$(LIB)
-  LIBS=-ldl -lm
+  LIBS=-ldl -lm -lpthread
 
-  CLIENT_LIBS += $(SDL_LIBS) -lGL -lpthread -lX11
+  CLIENT_LIBS += $(SDL_LIBS) -lGL -lX11
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -438,7 +438,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   ifeq ($(USE_LLVM),1)
-    LIBS += $(shell llvm-config --libs) -pthread
+    LIBS += $(shell llvm-config --libs)
   endif
 
   ifeq ($(ARCH),x86)
@@ -797,9 +797,9 @@ ifeq ($(PLATFORM),freebsd)
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   # don't need -ldl (FreeBSD)
-  LIBS+=-lm
+  LIBS+=-lm -lpthread
 
-  CLIENT_LIBS += $(SDL_LIBS) -lGL -lpthread
+  CLIENT_LIBS += $(SDL_LIBS) -lGL
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -854,9 +854,9 @@ ifeq ($(PLATFORM),openbsd)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  LIBS=-lm
+  LIBS=-lm -lpthread
 
-  CLIENT_LIBS = $(SDL_LIBS) -lGL -lpthread
+  CLIENT_LIBS = $(SDL_LIBS) -lGL
 
   ifeq ($(USE_OPENAL),1)
     ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -876,11 +876,11 @@ else # ifeq openbsd
 
 ifeq ($(PLATFORM),netbsd)
 
-  LIBS=-lm
+  LIBS=-lm -lpthread
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
-  CLIENT_LIBS=-lpthread
+  CLIENT_LIBS=
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
 
@@ -970,9 +970,9 @@ ifeq ($(PLATFORM),sunos)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
-  LIBS=-lsocket -lnsl -ldl -lm
+  LIBS=-lsocket -lnsl -ldl -lm -lpthread
 
-  CLIENT_LIBS +=$(SDL_LIBS) -lGL -lpthread
+  CLIENT_LIBS +=$(SDL_LIBS) -lGL
 
 else # ifeq sunos
  
@@ -1334,6 +1334,7 @@ Q3OBJ_ = \
   $(B)/client/q_shared.o \
   $(B)/client/qsse.o \
   \
+  $(B)/client/thread.o \
   $(B)/client/unzip.o \
   $(B)/client/ioapi.o \
   $(B)/client/puff.o \
@@ -1603,6 +1604,7 @@ Q3DOBJ = \
   $(B)/ded/q_shared.o \
   $(B)/ded/qsse.o \
   \
+  $(B)/ded/thread.o \
   $(B)/ded/unzip.o \
   $(B)/ded/ioapi.o \
   $(B)/ded/vm.o \

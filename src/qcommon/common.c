@@ -2456,6 +2456,9 @@ void Com_Init( char *commandLine ) {
 	Com_Memset( &eventQueue[ 0 ], 0, MAX_QUEUED_EVENTS * sizeof( sysEvent_t ) );
 	Com_Memset( &sys_packetReceived[ 0 ], 0, MAX_MSGLEN * sizeof( byte ) );
 
+	// initialize the multithreading thread pool
+	Com_InitThreadPool(Com_GetNumCPUs());
+
 	// initialize the weak pseudo-random number generator for use later.
 	Com_InitRand();
 
@@ -2934,6 +2937,9 @@ Com_Shutdown
 =================
 */
 void Com_Shutdown (void) {
+	// wait for any running threads to finish up
+	Com_ShutdownThreadPool();
+
 	if (logfile) {
 		FS_FCloseFile (logfile);
 		logfile = 0;
