@@ -552,12 +552,13 @@ int main( int argc, char **argv )
 	}
 #endif
 
+	Sys_ParseArgs( argc, argv );
+
 	Sys_PlatformInit( );
 
 	// Set the initial time base
 	Sys_Milliseconds( );
 
-	Sys_ParseArgs( argc, argv );
 	Sys_SetBinaryPath( Sys_Dirname( Sys_ResolveLink( argv[ 0 ] ) ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
 

@@ -113,7 +113,7 @@ static inline void CON_UpdateCursor(void)
 {
 // pdcurses uses a different mechanism to move the cursor than ncurses
 #ifdef _WIN32
-	move(LINES - 1, Q_PrintStrlen(PROMPT) + input_field.cursor - input_field.scroll);
+	move(LINES - 1, Q_PrintStrlen(PROMPT) + 8 + input_field.cursor - input_field.scroll);
 	wnoutrefresh(stdscr);
 #else
 	wmove(inputwin, 0, input_field.cursor - input_field.scroll);
@@ -308,7 +308,7 @@ void CON_Init(void)
 #endif
 
 	// Make sure we're on a tty
-	if (isatty(STDIN_FILENO) != 1 || isatty(STDOUT_FILENO) != 1 || isatty(STDERR_FILENO) != 1) {
+	if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO) || !isatty(STDERR_FILENO)) {
 		CON_Init_tty();
 		return;
 	}

@@ -639,14 +639,14 @@ void Sys_PlatformInit( void )
 		SDL_VIDEODRIVER_externallySet = qfalse;
 #endif
 
+	// Optionally show the console
+	extern qboolean win32_showconsole;
+	if (win32_showconsole)
+		AllocConsole();
+
 	// Set the console title
 	SetConsoleTitle( "Tremfusion Console" );
 
 	// Handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
-
-	// Optionally show the console
-	extern qboolean win32_showconsole;
-	if (win32_showconsole)
-		AllocConsole();
 }
