@@ -1104,7 +1104,7 @@ static qboolean AHive_CheckTarget( gentity_t *self, gentity_t *enemy )
 
   VectorSubtract( enemy->s.pos.trBase, self->s.pos.trBase, dirToTarget );
   VectorNormalize( dirToTarget );
-  VectorToAngles( dirToTarget, self->turretAim );
+  vectoangles( dirToTarget, self->turretAim );
 
   // Fire at target
   FireWeapon( self );
@@ -1183,7 +1183,7 @@ void AHive_Die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 
     VectorSubtract( attacker->s.pos.trBase, self->s.pos.trBase, dirToTarget );
     VectorNormalize( dirToTarget );
-    VectorToAngles( dirToTarget, self->turretAim );
+    vectoangles( dirToTarget, self->turretAim );
 
     //fire at target
     FireWeapon( self );
@@ -1236,7 +1236,7 @@ qboolean AHovel_Blocked( gentity_t *hovel, gentity_t *player, qboolean provideEx
   if( tr.fraction < 1.0f )
     return qtrue;
 
-  VectorToAngles( forward, angles );
+  vectoangles( forward, angles );
 
   VectorMA( origin, HOVEL_TRACE_DEPTH, normal, start );
 
@@ -1337,7 +1337,7 @@ void AHovel_Use( gentity_t *self, gentity_t *other, gentity_t *activator )
 
       VectorCopy( self->s.origin2, inverseNormal );
       VectorInverse( inverseNormal );
-      VectorToAngles( inverseNormal, hovelAngles );
+      vectoangles( inverseNormal, hovelAngles );
 
       VectorCopy( activator->s.pos.trBase, activator->client->hovelOrigin );
 
@@ -1499,7 +1499,7 @@ void ATrapper_FireOnEnemy( gentity_t *self, int firespeed, float range )
   }
 
   VectorNormalize( dirToTarget );
-  VectorToAngles( dirToTarget, self->turretAim );
+  vectoangles( dirToTarget, self->turretAim );
 
   //fire at target
   FireWeapon( self );
@@ -2031,7 +2031,7 @@ qboolean HMGTurret_TrackEnemy( gentity_t *self )
   rotAngle = RAD2DEG( acos( DotProduct( self->s.origin2, refNormal ) ) );
   RotatePointAroundVector( dttAdjusted, xNormal, dirToTarget, rotAngle );
 
-  VectorToAngles( dttAdjusted, angleToTarget );
+  vectoangles( dttAdjusted, angleToTarget );
 
   angularDiff[ PITCH ] = AngleSubtract( self->s.angles2[ PITCH ], angleToTarget[ PITCH ] );
   angularDiff[ YAW ] = AngleSubtract( self->s.angles2[ YAW ], angleToTarget[ YAW ] );
@@ -2062,7 +2062,7 @@ qboolean HMGTurret_TrackEnemy( gentity_t *self )
 
   AngleVectors( self->s.angles2, dttAdjusted, NULL, NULL );
   RotatePointAroundVector( dirToTarget, xNormal, dttAdjusted, -rotAngle );
-  VectorToAngles( dirToTarget, self->turretAim );
+  vectoangles( dirToTarget, self->turretAim );
 
   //fire if target is within accuracy
   return ( abs( angularDiff[ YAW ] ) - angularSpeed <=
@@ -2553,7 +2553,9 @@ void G_BuildableThink( gentity_t *ent, int msec )
   if( ent->health <= 0 )
     ent->s.generic1 = 0;
   else
-    ent->s.generic1 = (int)( ( (float)ent->health / (float)bHealth ) * B_HEALTH_MASK );
+    ent->s.generic1 = (unsigned char)
+                      ( ( B_HEALTH_MASK * ent->health + bHealth - 1 ) / 
+                        bHealth );
     
   // Set flags
   ent->s.eFlags &= ~( EF_B_POWERED | EF_B_SPAWNED | EF_B_MARKED );
@@ -3695,7 +3697,7 @@ void G_LayoutSelect( void )
   layouts[ 0 ] = '\0';
   while( 1 )
   {
-    s = Com_ParseExt( &l, qfalse );
+    s = COM_ParseExt( &l, qfalse );
     if( !*s )
       break;
 
@@ -3730,7 +3732,7 @@ void G_LayoutSelect( void )
   l = &layouts2[ 0 ];
   while( 1 )
   {
-    s = Com_ParseExt( &l, qfalse );
+    s = COM_ParseExt( &l, qfalse );
     if( !*s )
       break;
 

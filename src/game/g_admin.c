@@ -483,17 +483,17 @@ static void admin_readconfig_string( char **cnf, char *s, int size )
 {
   char *t;
 
-  //Com_MatchToken(cnf, "=");
+  //COM_MatchToken(cnf, "=");
   s[ 0 ] = '\0';
-  t = Com_ParseExt( cnf, qfalse );
+  t = COM_ParseExt( cnf, qfalse );
   if( strcmp( t, "=" ) )
   {
-    Com_ParseWarning( "expected '=' before \"%s\"", t );
+    COM_ParseWarning( "expected '=' before \"%s\"", t );
     Q_strncpyz( s, t, size );
   }
   while( 1 )
   {
-    t = Com_ParseExt( cnf, qfalse );
+    t = COM_ParseExt( cnf, qfalse );
     if( !*t )
       break;
     if( strlen( t ) + strlen( s ) >= size )
@@ -508,15 +508,15 @@ static void admin_readconfig_int( char **cnf, int *v )
 {
   char *t;
 
-  //Com_MatchToken(cnf, "=");
-  t = Com_ParseExt( cnf, qfalse );
+  //COM_MatchToken(cnf, "=");
+  t = COM_ParseExt( cnf, qfalse );
   if( !strcmp( t, "=" ) )
   {
-    t = Com_ParseExt( cnf, qfalse );
+    t = COM_ParseExt( cnf, qfalse );
   }
   else
   {
-    Com_ParseWarning( "expected '=' before \"%s\"", t );
+    COM_ParseWarning( "expected '=' before \"%s\"", t );
   }
   *v = atoi( t );
 }
@@ -1090,10 +1090,10 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
   admin_level_maxname = 0;
 
   level_open = admin_open = ban_open = command_open = qfalse;
-  Com_BeginParseSession( g_admin.string );
+  COM_BeginParseSession( g_admin.string );
   while( 1 )
   {
-    t = Com_Parse( &cnf );
+    t = COM_Parse( &cnf );
     if( !*t )
       break;
 
@@ -1150,7 +1150,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       }
       else
       {
-        Com_ParseError( "[level] unrecognized token \"%s\"", t );
+        COM_ParseError( "[level] unrecognized token \"%s\"", t );
       }
     }
     else if( admin_open )
@@ -1173,7 +1173,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       }
       else
       {
-        Com_ParseError( "[admin] unrecognized token \"%s\"", t );
+        COM_ParseError( "[admin] unrecognized token \"%s\"", t );
       }
 
     }
@@ -1209,7 +1209,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       }
       else
       {
-        Com_ParseError( "[ban] unrecognized token \"%s\"", t );
+        COM_ParseError( "[ban] unrecognized token \"%s\"", t );
       }
     }
     else if( command_open )
@@ -1236,7 +1236,7 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
         admin_readconfig_string( &cnf, levels, sizeof( levels ) );
         while( cmdlevel < MAX_ADMIN_LEVELS )
         {
-          lp = Com_Parse( &level );
+          lp = COM_Parse( &level );
           if( !*lp )
             break;
           c->levels[ cmdlevel++ ] = atoi( lp );
@@ -1246,12 +1246,12 @@ qboolean G_admin_readconfig( gentity_t *ent, int skiparg )
       }
       else
       {
-        Com_ParseError( "[command] unrecognized token \"%s\"", t );
+        COM_ParseError( "[command] unrecognized token \"%s\"", t );
       }
     }
     else
     {
-      Com_ParseError( "unexpected token \"%s\"", t );
+      COM_ParseError( "unexpected token \"%s\"", t );
     }
   }
   BG_Free( cnf2 );

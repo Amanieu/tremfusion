@@ -73,7 +73,7 @@ static qboolean G_ParseMapCommandSection( mapRotationEntry_t *mre, char **text_p
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( text_p );
+    token = COM_Parse( text_p );
 
     if( !token )
       break;
@@ -86,13 +86,13 @@ static qboolean G_ParseMapCommandSection( mapRotationEntry_t *mre, char **text_p
 
     if( !Q_stricmp( token, "layouts" ) )
     {
-      token = Com_ParseExt( text_p, qfalse );
+      token = COM_ParseExt( text_p, qfalse );
       mre->layouts[ 0 ] = '\0';
       while( token && token[ 0 ] != 0 )
       {
         Q_strcat( mre->layouts, sizeof( mre->layouts ), token );
         Q_strcat( mre->layouts, sizeof( mre->layouts ), " " );
-        token = Com_ParseExt( text_p, qfalse );
+        token = COM_ParseExt( text_p, qfalse );
       }
       continue;
     }
@@ -107,13 +107,13 @@ static qboolean G_ParseMapCommandSection( mapRotationEntry_t *mre, char **text_p
     Q_strncpyz( mre->postCmds[ mre->numCmds ], token, sizeof( mre->postCmds[ 0 ] ) );
     Q_strcat( mre->postCmds[ mre->numCmds ], sizeof( mre->postCmds[ 0 ] ), " " );
 
-    token = Com_ParseExt( text_p, qfalse );
+    token = COM_ParseExt( text_p, qfalse );
 
     while( token && token[ 0 ] != 0 )
     {
       Q_strcat( mre->postCmds[ mre->numCmds ], sizeof( mre->postCmds[ 0 ] ), token );
       Q_strcat( mre->postCmds[ mre->numCmds ], sizeof( mre->postCmds[ 0 ] ), " " );
-      token = Com_ParseExt( text_p, qfalse );
+      token = COM_ParseExt( text_p, qfalse );
     }
     mre->numCmds++;
   }
@@ -138,7 +138,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( text_p );
+    token = COM_Parse( text_p );
 
     if( !token )
       break;
@@ -165,7 +165,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
     }
     else if( !Q_stricmp( token, "goto" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
 
       if( !token )
         break;
@@ -185,7 +185,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
     }
     else if( !Q_stricmp( token, "if" ) )
     {
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
 
       if( !token )
         break;
@@ -203,7 +203,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
       {
         mrc->lhs = MCV_NUMCLIENTS;
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
 
         if( !token )
           break;
@@ -220,7 +220,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
           return qfalse;
         }
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
 
         if( !token )
           break;
@@ -231,7 +231,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
       {
         mrc->lhs = MCV_LASTWIN;
 
-        token = Com_Parse( text_p );
+        token = COM_Parse( text_p );
 
         if( !token )
           break;
@@ -254,7 +254,7 @@ static qboolean G_ParseMapRotation( mapRotation_t *mr, char **text_p )
         return qfalse;
       }
 
-      token = Com_Parse( text_p );
+      token = COM_Parse( text_p );
 
       if( !token )
         break;
@@ -324,7 +324,7 @@ static qboolean G_ParseMapRotationFile( const char *fileName )
   // read optional parameters
   while( 1 )
   {
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !token )
       break;
@@ -479,7 +479,7 @@ static int *G_GetCurrentMapArray( void )
 
   while( 1 )
   {
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
 
     if( !token )
       break;

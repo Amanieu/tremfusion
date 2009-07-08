@@ -9,16 +9,16 @@ DESTDIR=build/release-darwin-ub
 BASEDIR=base
 
 BIN_OBJ="
-	build/release-darwin-ppc/tremfusion.ppc
-	build/release-darwin-x86/tremfusion.x86
+	build/release-darwin-ppc/tremulous.ppc
+	build/release-darwin-x86/tremulous.x86
 "
 BIN_DEDOBJ="
-	build/release-darwin-ppc/tremfusionded.ppc
-	build/release-darwin-x86/tremfusionded.x86
+	build/release-darwin-ppc/tremded.ppc
+	build/release-darwin-x86/tremded.x86
 "
 BIN_TTYOBJ="
-	build/release-darwin-ppc/tremfusion-tty.ppc
-	build/release-darwin-x86/tremfusion-tty.x86
+	build/release-darwin-ppc/tremulous-tty.ppc
+	build/release-darwin-x86/tremulous-tty.x86
 "
 
 cd `dirname $0`

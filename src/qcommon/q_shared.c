@@ -24,531 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.c -- stateless support routines that are included in each code dll
 #include "q_shared.h"
 
-
-/*
-============================================================================
-
-OPTIMIZED
-
-============================================================================
-*/
-
-
-// bk001207 - we need something under Linux, too. Mac?
-#if 0							// defined(C_ONLY) // bk010102 - dedicated?
-void Com_Memcpy(void *dest, const void *src, const size_t count)
-{
-	memcpy(dest, src, count);
-}
-
-void Com_Memset(void *dest, const int val, const size_t count)
-{
-	memset(dest, val, count);
-}
-
-#elif 0
-
-typedef enum
-{
-	PRE_READ,					// prefetch assuming that buffer is used for reading only
-	PRE_WRITE,					// prefetch assuming that buffer is used for writing only
-	PRE_READ_WRITE				// prefetch assuming that buffer is used for both reading and writing
-} e_prefetch;
-
-void            Com_Prefetch(const void *s, const unsigned int bytes, e_prefetch type);
-
-// *INDENT-OFF*
-void _copyDWord (unsigned int* dest, const unsigned int constant, const unsigned int count) {
-	// MMX version not used on standard Pentium MMX
-	// because the dword version is faster (with
-	// proper destination prefetching)
-		__asm__ __volatile__ (" \
-			//mov			eax,constant		// eax = val \
-			//mov			edx,dest			// dest \
-			//mov			ecx,count \
-			movd		%%eax, %%mm0 \
-			punpckldq	%%mm0, %%mm0 \
-\
-			// ensure that destination is qword aligned \
-\
-			testl		$7, %%edx				// qword padding?\
-			jz		0f	\
-			movl		%%eax, (%%edx) \
-			decl		%%ecx \
-			addl		$4, %%edx \
-\
-0:			movl		%%ecx, %%ebx				\
-			andl		$0xfffffff0, %%ecx	\
-			jz		2f \
-			jmp		1f \
-			.align 		16 \
-\
-			// funny ordering here to avoid commands \
-			// that cross 32-byte boundaries (the \
-			// [edx+0] version has a special 3-byte opcode... \
-1:			movq		%%mm0, 8(%%edx) \
-			movq		%%mm0, 16(%%edx) \
-			movq		%%mm0, 24(%%edx) \
-			movq		%%mm0, 32(%%edx) \
-			movq		%%mm0, 40(%%edx) \
-			movq		%%mm0, 48(%%edx) \
-			movq		%%mm0, 56(%%edx) \
-			movq		%%mm0, (%%edx)\
-			addl		$64, %%edx \
-			subl		$16, %%ecx \
-			jnz		1b \
-2:	\
-			movl		%%ebx, %%ecx				// ebx = cnt \
-			andl		$0xfffffff0, %%ecx				// ecx = cnt&~15 \
-			subl		%%ecx, %%ebx \
-			jz		6f \
-			cmpl		$8, %%ebx \
-			jl		3f \
-\
-			movq		%%mm0, (%%edx) \
-			movq		%%mm0, 8(%%edx) \
-			movq		%%mm0, 16(%%edx) \
-			movq		%%mm0, 24(%%edx) \
-			addl		$32, %%edx \
-			subl		$8, %%ebx \
-			jz		6f \
-\
-3:			cmpl		$4, %%ebx \
-			jl		4f \
-			\
-			movq		%%mm0, (%%edx) \
-			movq		%%mm0, 8(%%edx) \
-			addl		$16, %%edx \
-			subl		$4, %%ebx \
-\
-4:			cmpl		$2, %%ebx \
-			jl		5f \
-			movq		%%mm0, (%%edx) \
-			addl		$8, %%edx \
-			subl		$2, %%ebx \
-\
-5:			cmpl		$1, %%ebx \
-			jl		6f \
-			movl		%%eax, (%%edx) \
-6: \
-			emms \
-	"
-	: : "a" (constant), "c" (count), "d" (dest)
-	: "%ebx", "%edi", "%esi", "cc", "memory");
-}
-
-// optimized memory copy routine that handles all alignment
-// cases and block sizes efficiently
-void Com_Memcpy(void *dest, const void *src, const size_t count)
-{
-	Com_Prefetch(src, count, PRE_READ);
-
-	__asm__ __volatile__ (" \
-		pushl		%%edi \
-		pushl		%%esi \
-		//mov		ecx,count \
-		cmpl		$0, %%ecx						// count = 0 check (just to be on the safe side) \
-		je		6f \
-		//mov		edx,dest \
-		movl		%0, %%ebx \
-		cmpl		$32, %%ecx						// padding only? \
-		jl		1f \
-\
-		movl		%%ecx, %%edi					\
-		andl		$0xfffffe00, %%edi					// edi = count&~31 \
-		subl		$32, %%edi \
-\
-		.align 16 \
-0: \
-		movl		(%%ebx, %%edi, 1), %%eax \
-		movl		4(%%ebx, %%edi, 1), %%esi \
-		movl		%%eax, (%%edx, %%edi, 1) \
-		movl		%%esi, 4(%%edx, %%edi, 1) \
-		movl		8(%%ebx, %%edi, 1), %%eax \
-		movl		12(%%ebx, %%edi, 1), %%esi \
-		movl		%%eax, 8(%%edx, %%edi, 1) \
-		movl		%%esi, 12(%%edx, %%edi, 1) \
-		movl		16(%%ebx, %%edi, 1), %%eax \
-		movl		20(%%ebx, %%edi, 1), %%esi \
-		movl		%%eax, 16(%%edx, %%edi, 1) \
-		movl		%%esi, 20(%%edx, %%edi, 1) \
-		movl		24(%%ebx, %%edi, 1), %%eax \
-		movl		28(%%ebx, %%edi, 1), %%esi \
-		movl		%%eax, 24(%%edx, %%edi, 1) \
-		movl		%%esi, 28(%%edx, %%edi, 1) \
-		subl		$32, %%edi \
-		jge		0b \
-		\
-		movl		%%ecx, %%edi \
-		andl		$0xfffffe00, %%edi \
-		addl		%%edi, %%ebx					// increase src pointer \
-		addl		%%edi, %%edx					// increase dst pointer \
-		andl		$31, %%ecx					// new count \
-		jz		6f					// if count = 0, get outta here \
-\
-1: \
-		cmpl		$16, %%ecx \
-		jl		2f \
-		movl		(%%ebx), %%eax \
-		movl		%%eax, (%%edx) \
-		movl		4(%%ebx), %%eax \
-		movl		%%eax, 4(%%edx) \
-		movl		8(%%ebx), %%eax \
-		movl		%%eax, 8(%%edx) \
-		movl		12(%%ebx), %%eax \
-		movl		%%eax, 12(%%edx) \
-		subl		$16, %%ecx \
-		addl		$16, %%ebx \
-		addl		$16, %%edx \
-2: \
-		cmpl		$8, %%ecx \
-		jl		3f \
-		movl		(%%ebx), %%eax \
-		movl		%%eax, (%%edx) \
-		movl		4(%%ebx), %%eax \
-		subl		$8, %%ecx \
-		movl		%%eax, 4(%%edx) \
-		addl		$8, %%ebx \
-		addl		$8, %%edx \
-3: \
-		cmpl		$4, %%ecx \
-		jl		4f \
-		movl		(%%ebx), %%eax	// here 4-7 bytes \
-		addl		$4, %%ebx \
-		subl		$4, %%ecx \
-		movl		%%eax, (%%edx) \
-		addl		$4, %%edx \
-4:							// 0-3 remaining bytes \
-		cmpl		$2, %%ecx \
-		jl		5f \
-		movw		(%%ebx), %%ax	// two bytes \
-		cmpl		$3, %%ecx				// less than 3? \
-		movw		%%ax, (%%edx) \
-		jl		6f \
-		movb		2(%%ebx), %%al	// last byte \
-		movb		%%al, 2(%%edx) \
-		jmp		6f \
-5: \
-		cmpl		$1, %%ecx \
-		jl		6f \
-		movb		(%%ebx), %%al \
-		movb		%%al, (%%edx) \
-6: \
-		popl		%%esi \
-		popl		%%edi \
-	"
-	: : "m" (src), "d" (dest), "c" (count)
-	: "%eax", "%ebx", "%edi", "%esi", "cc", "memory");
-}
-
-void Com_Memset (void* dest, const int val, const size_t count)
-{
-	unsigned int fillval;
-
-	if(count < 8)
-	{
-		__asm__ __volatile__ (" \
-			//mov		edx,dest \
-			//mov		eax, val \
-			movb		%%al, %%ah \
-			movl		%%eax, %%ebx \
-			andl		$0xffff, %%ebx \
-			shll		$16, %%eax \
-			addl		%%ebx, %%eax	// eax now contains pattern \
-			//mov		ecx,count \
-			cmpl		$4, %%ecx \
-			jl		0f \
-			movl		%%eax, (%%edx)	// copy first dword \
-			addl		$4, %%edx \
-			subl		$4, %%ecx \
-	0:		cmpl		$2, %%ecx \
-			jl		1f \
-			movw		%%ax, (%%edx)	// copy 2 bytes \
-			addl		$2, %%edx \
-			subl		$2, %%ecx \
-	1:		cmpl		$0, %%ecx \
-			je		2f \
-			movb		%%al, (%%edx)	// copy single byte \
-	2:		 \
-		"
-		: : "d" (dest), "a" (val), "c" (count)
-		: "%ebx", "%edi", "%esi", "cc", "memory");
-
-		return;
-	}
-
-	fillval = val;
-
-	fillval = fillval|(fillval<<8);
-	fillval = fillval|(fillval<<16);		// fill dword with 8-bit pattern
-
-	_copyDWord ((unsigned int*)(dest),fillval, count/4);
-
-	__asm__ __volatile__ ("     		// padding of 0-3 bytes \
-		//mov		ecx,count \
-		movl		%%ecx, %%eax \
-		andl		$3, %%ecx \
-		jz		1f \
-		andl		$0xffffff00, %%eax \
-		//mov		ebx,dest \
-		addl		%%eax, %%edx \
-		movl		%0, %%eax \
-		cmpl		$2, %%ecx \
-		jl		0f \
-		movw		%%ax, (%%edx) \
-		cmpl		$2, %%ecx \
-		je		1f					\
-		movb		%%al, 2(%%edx)		\
-		jmp		1f \
-0:		\
-		cmpl		$0, %%ecx\
-		je		1f\
-		movb		%%al, (%%edx)\
-1:	\
-	"
-	: : "m" (fillval), "c" (count), "d" (dest)
-	: "%eax", "%ebx", "%edi", "%esi", "cc", "memory");
-}
-
-void Com_Prefetch(const void *s, const unsigned int bytes, e_prefetch type)
-{
-	// write buffer prefetching is performed only if
-	// the processor benefits from it. Read and read/write
-	// prefetching is always performed.
-
-	switch (type)
-	{
-		case PRE_WRITE:
-			break;
-
-		case PRE_READ:
-		case PRE_READ_WRITE:
-
-		__asm__ __volatile__ ("\
-			//mov		ebx,s\
-			//mov		ecx,bytes\
-			cmpl		$4096, %%ecx				// clamp to 4kB\
-			jle		0f\
-			movl		$4096, %%ecx\
-	0:\
-			addl		$0x1f, %%ecx\
-			shrl		$5, %%ecx					// number of cache lines\
-			jz		2f\
-			jmp		1f\
-\
-			.align 16\
-	1:		testb		%%al, (%%edx)\
-			addl		$32, %%edx\
-			decl		%%ecx\
-			jnz		1b\
-	2:\
-		"
-		: : "d" (s), "c" (bytes)
-		: "%eax", "%ebx", "%edi", "%esi", "memory", "cc");
-		break;
-	}
-}
-
-#endif
-
-
-
-
-/*
-============================================================================
-
-GROWLISTS
-
-============================================================================
-*/
-
-// malloc / free all in one place for debugging
-//extern          "C" void *Com_Allocate(int bytes);
-//extern          "C" void Com_Dealloc(void *ptr);
-
-void Com_InitGrowList(growList_t * list, int maxElements)
-{
-	list->maxElements = maxElements;
-	list->currentElements = 0;
-	list->elements = (void **)Com_Allocate(list->maxElements * sizeof(void *));
-}
-
-void Com_DestroyGrowList(growList_t * list)
-{
-	Com_Dealloc(list->elements);
-	memset(list, 0, sizeof(*list));
-}
-
-int Com_AddToGrowList(growList_t * list, void *data)
-{
-	void          **old;
-
-	if(list->currentElements != list->maxElements)
-	{
-		list->elements[list->currentElements] = data;
-		return list->currentElements++;
-	}
-
-	// grow, reallocate and move
-	old = list->elements;
-
-	if(list->maxElements < 0)
-	{
-		Com_Error(ERR_FATAL, "Com_AddToGrowList: maxElements = %i", list->maxElements);
-	}
-
-	if(list->maxElements == 0)
-	{
-		// initialize the list to hold 100 elements
-		Com_InitGrowList(list, 100);
-		return Com_AddToGrowList(list, data);
-	}
-
-	list->maxElements *= 2;
-
-//  Com_DPrintf("Resizing growlist to %i maxElements\n", list->maxElements);
-
-	list->elements = (void **)Com_Allocate(list->maxElements * sizeof(void *));
-
-	if(!list->elements)
-	{
-		Com_Error(ERR_DROP, "Growlist alloc failed");
-	}
-
-	Com_Memcpy(list->elements, old, list->currentElements * sizeof(void *));
-
-	Com_Dealloc(old);
-
-	return Com_AddToGrowList(list, data);
-}
-
-void           *Com_GrowListElement(const growList_t * list, int index)
-{
-	if(index < 0 || index >= list->currentElements)
-	{
-		Com_Error(ERR_DROP, "Com_GrowListElement: %i out of range of %i", index, list->currentElements);
-	}
-	return list->elements[index];
-}
-
-int Com_IndexForGrowListElement(const growList_t * list, const void *element)
-{
-	int             i;
-
-	for(i = 0; i < list->currentElements; i++)
-	{
-		if(list->elements[i] == element)
-		{
-			return i;
-		}
-	}
-	return -1;
-}
-
-//=============================================================================
-
-memStream_t *AllocMemStream(byte *buffer, int bufSize)
-{
-	memStream_t		*s;
-
-	if(buffer == NULL || bufSize <= 0)
-		return NULL;
-
-	s = Com_Allocate(sizeof(memStream_t));
-	if(s == NULL)
-		return NULL;
-
-	Com_Memset(s, 0, sizeof(memStream_t));
-
-	s->buffer 	= buffer;
-	s->curPos 	= buffer;
-	s->bufSize	= bufSize;
-	s->flags	= 0;
-
-	return s;
-}
-
-void FreeMemStream(memStream_t * s)
-{
-	Com_Dealloc(s);
-}
-
-int MemStreamRead(memStream_t *s, void *buffer, int len)
-{
-	int				ret = 1;
-
-	if(s == NULL || buffer == NULL)
-		return 0;
-
-	if(s->curPos + len > s->buffer + s->bufSize)
-	{
-		s->flags |= MEMSTREAM_FLAGS_EOF;
-		len = s->buffer + s->bufSize - s->curPos;
-		ret = 0;
-
-		Com_Error(ERR_FATAL, "MemStreamRead: EOF reached");
-	}
-
-	Com_Memcpy(buffer, s->curPos, len);
-	s->curPos += len;
-
-	return ret;
-}
-
-int MemStreamGetC(memStream_t *s)
-{
-	int				c = 0;
-
-	if(s == NULL)
-		return -1;
-
-	if(MemStreamRead(s, &c, 1) == 0)
-		return -1;
-
-	return c;
-}
-
-int MemStreamGetLong(memStream_t * s)
-{
-	int				c = 0;
-
-	if(s == NULL)
-		return -1;
-
-	if(MemStreamRead(s, &c, 4) == 0)
-		return -1;
-
-	return LittleLong(c);
-}
-
-int MemStreamGetShort(memStream_t * s)
-{
-	int				c = 0;
-
-	if(s == NULL)
-		return -1;
-
-	if(MemStreamRead(s, &c, 2) == 0)
-		return -1;
-
-	return LittleShort(c);
-}
-
-float MemStreamGetFloat(memStream_t * s)
-{
-	floatint_t		c;
-
-	if(s == NULL)
-		return -1;
-
-	if(MemStreamRead(s, &c.i, 4) == 0)
-		return -1;
-
-	return LittleFloat(c.f);
-}
-
-//============================================================================
-
 float Com_Clamp( float min, float max, float value ) {
 	if ( value < min ) {
 		return min;
@@ -562,10 +37,10 @@ float Com_Clamp( float min, float max, float value ) {
 
 /*
 ============
-Com_SkipPath
+COM_SkipPath
 ============
 */
-char *Com_SkipPath (char *pathname)
+char *COM_SkipPath (char *pathname)
 {
 	char	*last;
 	
@@ -581,10 +56,10 @@ char *Com_SkipPath (char *pathname)
 
 /*
 ============
-Com_GetExtension
+COM_GetExtension
 ============
 */
-const char *Com_GetExtension( const char *name ) {
+const char *COM_GetExtension( const char *name ) {
 	int length, i;
 
 	length = strlen(name)-1;
@@ -603,10 +78,10 @@ const char *Com_GetExtension( const char *name ) {
 
 /*
 ============
-Com_StripExtension
+COM_StripExtension
 ============
 */
-void Com_StripExtension( const char *in, char *out, int destsize ) {
+void COM_StripExtension( const char *in, char *out, int destsize ) {
 	int             length;
 
 	Q_strncpyz(out, in, destsize);
@@ -625,10 +100,10 @@ void Com_StripExtension( const char *in, char *out, int destsize ) {
 
 /*
 ==================
-Com_DefaultExtension
+COM_DefaultExtension
 ==================
 */
-void Com_DefaultExtension (char *path, int maxSize, const char *extension ) {
+void COM_DefaultExtension (char *path, int maxSize, const char *extension ) {
 	char	oldPath[MAX_QPATH];
 	char    *src;
 
@@ -746,6 +221,43 @@ float FloatNoSwap (const float *f)
 }
 
 /*
+================
+Swap_Init
+================
+*/
+/*
+void Swap_Init (void)
+{
+	byte	swaptest[2] = {1,0};
+
+// set the byte swapping variables in a portable manner	
+	if ( *(short *)swaptest == 1)
+	{
+		_BigShort = ShortSwap;
+		_LittleShort = ShortNoSwap;
+		_BigLong = LongSwap;
+		_LittleLong = LongNoSwap;
+		_BigLong64 = Long64Swap;
+		_LittleLong64 = Long64NoSwap;
+		_BigFloat = FloatSwap;
+		_LittleFloat = FloatNoSwap;
+	}
+	else
+	{
+		_BigShort = ShortNoSwap;
+		_LittleShort = ShortSwap;
+		_BigLong = LongNoSwap;
+		_LittleLong = LongSwap;
+		_BigLong64 = Long64NoSwap;
+		_LittleLong64 = Long64Swap;
+		_BigFloat = FloatNoSwap;
+		_LittleFloat = FloatSwap;
+	}
+
+}
+*/
+
+/*
 ============================================================================
 
 PARSING
@@ -753,34 +265,27 @@ PARSING
 ============================================================================
 */
 
-// multiple character punctuation tokens
-const char     *punctuation[] = {
-	"+=", "-=", "*=", "/=", "&=", "|=", "++", "--",
-	"&&", "||", "<=", ">=", "==", "!=",
-	NULL
-};
-
 static	char	com_token[MAX_TOKEN_CHARS];
 static	char	com_parsename[MAX_TOKEN_CHARS];
 static	int		com_lines;
 
-void Com_BeginParseSession( const char *name )
+void COM_BeginParseSession( const char *name )
 {
 	com_lines = 0;
-	Q_strncpyz(com_parsename, name, sizeof(com_parsename));
+	Com_sprintf(com_parsename, sizeof(com_parsename), "%s", name);
 }
 
-int Com_GetCurrentParseLine( void )
+int COM_GetCurrentParseLine( void )
 {
 	return com_lines;
 }
 
-char *Com_Parse( char **data_p )
+char *COM_Parse( char **data_p )
 {
-	return Com_ParseExt( data_p, qtrue );
+	return COM_ParseExt( data_p, qtrue );
 }
 
-void Com_ParseError( char *format, ... )
+void COM_ParseError( char *format, ... )
 {
 	va_list argptr;
 	static char string[4096];
@@ -789,10 +294,10 @@ void Com_ParseError( char *format, ... )
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	Com_Printf(S_COLOR_RED "ERROR: '%s', line %d: %s\n", com_parsename, com_lines, string);
+	Com_Printf("ERROR: %s, line %d: %s\n", com_parsename, com_lines, string);
 }
 
-void Com_ParseWarning( char *format, ... )
+void COM_ParseWarning( char *format, ... )
 {
 	va_list argptr;
 	static char string[4096];
@@ -801,12 +306,12 @@ void Com_ParseWarning( char *format, ... )
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	Com_Printf(S_COLOR_YELLOW "WARNING: '%s', line %d: %s\n", com_parsename, com_lines, string);
+	Com_Printf("WARNING: %s, line %d: %s\n", com_parsename, com_lines, string);
 }
 
 /*
 ==============
-Com_Parse
+COM_Parse
 
 Parse a token out of a string
 Will never return NULL, just empty strings
@@ -833,7 +338,7 @@ static char *SkipWhitespace( char *data, qboolean *hasNewLines ) {
 	return data;
 }
 
-int Com_Compress( char *data_p ) {
+int COM_Compress( char *data_p ) {
 	char *in, *out;
 	qboolean space = qfalse, newline = qfalse;
 
@@ -965,17 +470,11 @@ int Com_Compress( char *data_p ) {
 	return out - data_p;
 }
 
-char *Com_ParseExt( char **data_p, qboolean allowLineBreaks )
+char *COM_ParseExt( char **data_p, qboolean allowLineBreaks )
 {
 	int c = 0, len;
 	qboolean hasNewLines = qfalse;
 	char *data;
-	const char    **punc;
-
-	if ( !data_p )
-	{
-		Com_Error(ERR_FATAL, "Com_ParseExt: NULL data_p");
-	}
 
 	data = *data_p;
 	len = 0;
@@ -1028,7 +527,6 @@ char *Com_ParseExt( char **data_p, qboolean allowLineBreaks )
 		}
 		else
 		{
-			// a real token to parse
 			break;
 		}
 	}
@@ -1040,23 +538,12 @@ char *Com_ParseExt( char **data_p, qboolean allowLineBreaks )
 		while (1)
 		{
 			c = *data++;
-
-			if ((c == '\\') && (*data == '\"'))
-			{
-				// allow quoted strings to use \" to indicate the " character
-				data++;
-			}
-			else if (c=='\"' || !c)
+			if (c=='\"' || !c)
 			{
 				com_token[len] = 0;
 				*data_p = ( char * ) data;
 				return com_token;
 			}
-			else if (*data == '\n')
-			{
-				com_lines++;
-			}
-
 			if (len < MAX_TOKEN_CHARS - 1)
 			{
 				com_token[len] = c;
@@ -1065,157 +552,35 @@ char *Com_ParseExt( char **data_p, qboolean allowLineBreaks )
 		}
 	}
 
-	// check for a number
-	// is this parsing of negative numbers going to cause expression problems
-	if(	(c >= '0' && c <= '9') ||
-		(c == '-' && data[1] >= '0' && data[1] <= '9') ||
-		(c == '.' && data[1] >= '0' && data[1] <= '9') ||
-		(c == '-' && data[1] == '.' && data[2] >= '0' && data[2] <= '9'))
+	// parse a regular word
+	do
 	{
-		do
+		if (len < MAX_TOKEN_CHARS - 1)
 		{
-			if (len < MAX_TOKEN_CHARS - 1)
-			{
-				com_token[len] = c;
-				len++;
-			}
-			data++;
-
-			c = *data;
-		} while ((c >= '0' && c <= '9') || c == '.');
-
-		// parse the exponent
-		if (c == 'e' || c == 'E')
-		{
-			if (len < MAX_TOKEN_CHARS - 1)
-			{
-				com_token[len] = c;
-				len++;
-			}
-			data++;
-			c = *data;
-
-			if (c == '-' || c == '+')
-			{
-				if (len < MAX_TOKEN_CHARS - 1)
-				{
-					com_token[len] = c;
-					len++;
-				}
-				data++;
-				c = *data;
-			}
-
-			do
-			{
-				if (len < MAX_TOKEN_CHARS - 1)
-				{
-					com_token[len] = c;
-					len++;
-				}
-				data++;
-
-				c = *data;
-			} while (c >= '0' && c <= '9');
+			com_token[len] = c;
+			len++;
 		}
+		data++;
+		c = *data;
+		if ( c == '\n' )
+			com_lines++;
+	} while (c>32);
 
-		if (len == MAX_TOKEN_CHARS)
-		{
-			len = 0;
-		}
-		com_token[len] = 0;
+	com_token[len] = 0;
 
-		*data_p = (char *)data;
-		return com_token;
-	}
-
-	// check for a regular word
-	// we still allow forward and back slashes in name tokens for pathnames
-	// and also colons for drive letters
-	if(	(c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z') ||
-		(c == '_') ||
-		(c == '/') ||
-		(c == '\\') ||
-		(c == '$') || (c == '*')) // Tr3B - for bad shader strings
-	{
-		do
-		{
-			if (len < MAX_TOKEN_CHARS - 1)
-			{
-				com_token[len] = c;
-				len++;
-			}
-			data++;
-
-			c = *data;
-		}
-		while
-			((c >= 'a' && c <= 'z') ||
-			 (c >= 'A' && c <= 'Z') ||
-			 (c == '_') ||
-			 (c == '-') ||
-			 (c >= '0' && c <= '9') ||
-			 (c == '/') ||
-			 (c == '\\') ||
-			 (c == ':') ||
-			 (c == '.') ||
-			 (c == '$') ||
-			 (c == '*') ||
-			 (c == '@'));
-
-		if (len == MAX_TOKEN_CHARS)
-		{
-			len = 0;
-		}
-		com_token[len] = 0;
-
-		*data_p = (char *)data;
-		return com_token;
-	}
-
-	// check for multi-character punctuation token
-	for (punc = punctuation; *punc; punc++)
-	{
-		int             l;
-		int             j;
-
-		l = strlen(*punc);
-		for (j = 0; j < l; j++)
-		{
-			if (data[j] != (*punc)[j])
-			{
-				break;
-			}
-		}
-		if (j == l)
-		{
-			// a valid multi-character punctuation
-			Com_Memcpy(com_token, *punc, l);
-			com_token[l] = 0;
-			data += l;
-			*data_p = (char *)data;
-			return com_token;
-		}
-	}
-
-	// single character punctuation
-	com_token[0] = *data;
-	com_token[1] = 0;
-	data++;
-	*data_p = (char *) data;
+	*data_p = ( char * ) data;
 	return com_token;
 }
 
 /*
 ==================
-Com_MatchToken
+COM_MatchToken
 ==================
 */
-void Com_MatchToken( char **buf_p, char *match ) {
+void COM_MatchToken( char **buf_p, char *match ) {
 	char	*token;
 
-	token = Com_Parse( buf_p );
+	token = COM_Parse( buf_p );
 	if ( strcmp( token, match ) ) {
 		Com_Error( ERR_DROP, "MatchToken: %s != %s", token, match );
 	}
@@ -1224,20 +589,20 @@ void Com_MatchToken( char **buf_p, char *match ) {
 
 /*
 =================
-Com_SkipBracedSection
+SkipBracedSection
 
 The next token should be an open brace.
 Skips until a matching close brace is found.
 Internal brace depths are properly skipped.
 =================
 */
-void Com_SkipBracedSection (char **program) {
+void SkipBracedSection (char **program) {
 	char			*token;
 	int				depth;
 
 	depth = 0;
 	do {
-		token = Com_ParseExt( program, qtrue );
+		token = COM_ParseExt( program, qtrue );
 		if( token[1] == 0 ) {
 			if( token[0] == '{' ) {
 				depth++;
@@ -1251,10 +616,10 @@ void Com_SkipBracedSection (char **program) {
 
 /*
 =================
-Com_SkipRestOfLine
+SkipRestOfLine
 =================
 */
-void Com_SkipRestOfLine ( char **data ) {
+void SkipRestOfLine ( char **data ) {
 	char	*p;
 	int		c;
 
@@ -1270,61 +635,42 @@ void Com_SkipRestOfLine ( char **data ) {
 }
 
 
-void Com_Parse1DMatrix (char **buf_p, int x, float *m) {
+void Parse1DMatrix (char **buf_p, int x, float *m) {
 	char	*token;
 	int		i;
 
-	Com_MatchToken( buf_p, "(" );
+	COM_MatchToken( buf_p, "(" );
 
 	for (i = 0 ; i < x ; i++) {
-		token = Com_Parse(buf_p);
+		token = COM_Parse(buf_p);
 		m[i] = atof(token);
 	}
 
-	Com_MatchToken( buf_p, ")" );
+	COM_MatchToken( buf_p, ")" );
 }
 
-void Com_Parse2DMatrix (char **buf_p, int y, int x, float *m) {
+void Parse2DMatrix (char **buf_p, int y, int x, float *m) {
 	int		i;
 
-	Com_MatchToken( buf_p, "(" );
+	COM_MatchToken( buf_p, "(" );
 
 	for (i = 0 ; i < y ; i++) {
-		Com_Parse1DMatrix (buf_p, x, m + i * x);
+		Parse1DMatrix (buf_p, x, m + i * x);
 	}
 
-	Com_MatchToken( buf_p, ")" );
+	COM_MatchToken( buf_p, ")" );
 }
 
-void Com_Parse3DMatrix (char **buf_p, int z, int y, int x, float *m) {
+void Parse3DMatrix (char **buf_p, int z, int y, int x, float *m) {
 	int		i;
 
-	Com_MatchToken( buf_p, "(" );
+	COM_MatchToken( buf_p, "(" );
 
 	for (i = 0 ; i < z ; i++) {
-		Com_Parse2DMatrix (buf_p, y, x, m + i * x*y);
+		Parse2DMatrix (buf_p, y, x, m + i * x*y);
 	}
 
-	Com_MatchToken( buf_p, ")" );
-}
-
-/*
-=============
-ColorIndex
-
-Returns the index in g_color_table[] corresponding to the colour code.
-=============
-*/
-int ColorIndex(char ccode)
-{
-	if(ccode >= '0' && ccode <= '9')
-		return (ccode - '0');
-	else if(ccode >= 'a' && ccode <= 'z')
-		return (2 * (ccode - 'a') + 10);
-	else if(ccode >= 'A' && ccode <= 'Z')
-		return (2 * (ccode - 'A') + 11);
-	else
-		return 7;
+	COM_MatchToken( buf_p, ")" );
 }
 
 /*
@@ -1424,6 +770,10 @@ char* Q_strrchr( const char* string, int c )
 
 qboolean Q_isanumber( const char *s )
 {
+#ifdef Q3_VM
+	//FIXME: implement
+	return qfalse;
+#else
 	char *p;
 	double d;
 
@@ -1433,6 +783,7 @@ qboolean Q_isanumber( const char *s )
 	d = strtod( s, &p );
 
 	return *p == '\0';
+#endif
 }
 
 qboolean Q_isintegral( float f )
@@ -1443,7 +794,7 @@ qboolean Q_isintegral( float f )
 /*
 =============
 Q_strncpyz
-
+ 
 Safe strncpy that ensures a trailing zero
 =============
 */
@@ -1473,6 +824,8 @@ int Q_stricmpn (const char *s1, const char *s2, int n) {
         }
         else if ( s2==NULL )
           return 1;
+
+
 	
 	do {
 		c1 = *s1++;
@@ -1557,11 +910,7 @@ void Q_strcat( char *dest, int size, const char *src ) {
 }
 
 /*
-=============
-Q_stristr
-
-Find the first occurrence of find in s.
-=============
+* Find the first occurrence of find in s.
 */
 const char *Q_stristr( const char *s, const char *find)
 {
@@ -1590,45 +939,6 @@ const char *Q_stristr( const char *s, const char *find)
     s--;
   }
   return s;
-}
-
-
-/*
-=============
-Q_strreplace
-
-replaces content of find by replace in dest
-=============
-*/
-qboolean Q_strreplace(char *dest, int destsize, const char *find, const char *replace)
-{
-	int             lstart, lfind, lreplace, lend;
-	char           *s;
-	char            backup[32000];	// big, but small enough to fit in PPC stack
-
-	lend = strlen(dest);
-	if (lend >= destsize)
-	{
-		Com_Error(ERR_FATAL, "Q_strreplace: already overflowed");
-	}
-
-	s = strstr(dest, find);
-	if (!s)
-	{
-		return qfalse;
-	}
-	else
-	{
-		Q_strncpyz(backup, dest, lend + 1);
-		lstart = s - dest;
-		lfind = strlen(find);
-		lreplace = strlen(replace);
-
-		strncpy(s, replace, destsize - lstart - 1);
-		strncpy(s + lreplace, backup + lstart + lfind, destsize - lstart - lreplace - 1);
-
-		return qtrue;
-	}
 }
 
 
@@ -1702,7 +1012,7 @@ void QDECL Com_sprintf( char *dest, int size, const char *fmt, ...) {
 	}
 	if (len >= size) {
 		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
-#if defined(_MSC_VER) && defined(_DEBUG)
+#ifdef	_DEBUG
 		__asm {
 			int 3;
 		}
@@ -1726,7 +1036,7 @@ char	* QDECL va( char *format, ... ) {
 	static int	index = 0;
 	char		*buf;
 
-	buf = string[index & 15];
+	buf = string[index & 7];
 	index++;
 
 	va_start (argptr, format);
@@ -2145,21 +1455,6 @@ char *Com_SkipTokens( char *s, int numTokens, char *sep )
 		return p;
 	else
 		return s;
-}
-
-qboolean Com_CheckColorCodes(const char *s)
-{
-	while (s[0])
-	{
-		if (Q_IsColorString(s))
-		{
-			if (!s[1])
-				return qfalse;
-		}
-		s++;
-	}
-
-	return qtrue;
 }
 
 #ifdef _MSC_VER

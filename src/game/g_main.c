@@ -1771,7 +1771,7 @@ void FindIntermissionPoint( void )
       if( target )
       {
         VectorSubtract( target->s.origin, level.intermission_origin, dir );
-        VectorToAngles( dir, level.intermission_angle );
+        vectoangles( dir, level.intermission_angle );
       }
     }
   }

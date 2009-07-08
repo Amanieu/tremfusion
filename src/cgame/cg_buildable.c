@@ -190,13 +190,13 @@ static qboolean CG_ParseBuildableAnimationFile( const char *filename, buildable_
   for( i = BANIM_NONE + 1; i < MAX_BUILDABLE_ANIMATIONS; i++ )
   {
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if( !*token )
       break;
 
     animations[ i ].firstFrame = atoi( token );
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if( !*token )
       break;
 
@@ -211,13 +211,13 @@ static qboolean CG_ParseBuildableAnimationFile( const char *filename, buildable_
       animations[ i ].reversed = qtrue;
     }
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if ( !*token )
       break;
 
     animations[i].loopFrames = atoi( token );
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if( !*token )
       break;
 
@@ -281,13 +281,13 @@ static qboolean CG_ParseBuildableSoundFile( const char *filename, buildable_t bu
   for( i = BANIM_NONE + 1; i < MAX_BUILDABLE_ANIMATIONS; i++ )
   {
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if ( !*token )
       break;
 
     sounds[ i ].enabled = atoi( token );
 
-    token = Com_Parse( &text_p );
+    token = COM_Parse( &text_p );
     if ( !*token )
       break;
 
@@ -633,7 +633,7 @@ static void CG_BuildableParticleEffects( centity_t *cent )
 {
   entityState_t   *es = &cent->currentState;
   team_t          team = BG_Buildable( es->modelindex )->team;
-  int             health = es->generic1;
+  int             health = es->generic1 & B_HEALTH_MASK;
   float           healthFrac = (float)health / B_HEALTH_MASK;
 
   if( !( es->eFlags & EF_B_SPAWNED ) )
@@ -927,7 +927,7 @@ static void CG_BuildableStatusDisplay( centity_t *cent )
       visible = qfalse;
   }
 
-  health = es->generic1;
+  health = (unsigned char)es->generic1;
   healthScale = (float)health / B_HEALTH_MASK;
 
   if( healthScale < 0.0f )
@@ -1427,7 +1427,7 @@ void CG_Buildable( centity_t *cent )
       trap_S_AddLoopingSound( es->number, cent->lerpOrigin, vec3_origin, weapon->readySound );
   }
 
-  health = es->generic1;
+  health = (unsigned char)es->generic1;
   healthScale = (float)health / B_HEALTH_MASK;
 
   if( healthScale < cent->lastBuildableHealthScale &&

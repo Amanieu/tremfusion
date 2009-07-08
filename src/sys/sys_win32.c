@@ -64,20 +64,30 @@ static BOOL WINAPI CON_CtrlHandler( DWORD sig )
 Sys_DefaultHomePath
 ================
 */
-char *Sys_DefaultHomePath( void )
+char *Sys_DefaultHomePath( char **path2 )
 {
 	TCHAR szPath[MAX_PATH];
 	
 	if( !*homePath )
 	{
-		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_PERSONAL,
+		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_APPDATA,
 						NULL, 0, szPath ) ) )
 		{
-			Com_Printf("Unable to find CSIDL_PERSONAL\n");
+			Com_Printf("Unable to find CSIDL_APPDATA\n");
 			return NULL;
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
-		Q_strcat( homePath, sizeof( homePath ), "\\My Games\\Tremfusion" );
+		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
+
+		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
+						NULL, 0, szPath ) ) )
+		{
+			Com_Printf("Unable to find CSIDL_LOCAL_APPDATA\n");
+			return NULL;
+		}
+		Q_strncpyz( homePathOld, szPath, sizeof( homePath ) );
+		Q_strcat( homePathOld, sizeof( homePathOld ), "\\Tremulous" );
+		*path2 = homePathOld;
 	}
 
 	return homePath;
@@ -629,14 +639,14 @@ void Sys_PlatformInit( void )
 		SDL_VIDEODRIVER_externallySet = qfalse;
 #endif
 
+	// Optionally show the console
+	extern qboolean win32_showconsole;
+	if (win32_showconsole)
+		AllocConsole();
+
 	// Set the console title
 	SetConsoleTitle( "Tremfusion Console" );
 
 	// Handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
-
-	// Optionally show the console
-	extern qboolean win32_showconsole;
-	if (win32_showconsole)
-		AllocConsole();
 }
