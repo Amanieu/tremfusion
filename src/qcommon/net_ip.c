@@ -341,7 +341,12 @@ static void Sys_SockaddrToString(char *dest, int destlen, struct sockaddr *input
 	else
 		inputlen = sizeof(struct sockaddr_in);
 
+#ifndef __sun
 	getnameinfo(input, inputlen, dest, destlen, NULL, 0, NI_NUMERICHOST);
+#else
+	if (getnameinfo(input, inputlen, dest, destlen, NULL, 0, NI_NUMERICHOST))
+		*dest = '\0';
+#endif
 }
 
 /*

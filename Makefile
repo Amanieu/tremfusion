@@ -925,7 +925,7 @@ ifeq ($(PLATFORM),sunos)
 
   CC=gcc
   INSTALL=ginstall
-  MKDIR=gmkdir
+  MKDIR=mkdir
 
   ifneq (,$(findstring i86pc,$(shell uname -m)))
     ARCH=x86
@@ -962,6 +962,11 @@ ifeq ($(PLATFORM),sunos)
   endif
   endif
 
+  ifeq ($(USE_CURSES),1)
+     LIBS += -lncurses
+     BASE_CFLAGS += -DUSE_CURSES
+  endif
+
   DEBUG_CFLAGS = $(BASE_CFLAGS) -ggdb -O0
 
   RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG $(OPTIMIZE)
@@ -972,7 +977,7 @@ ifeq ($(PLATFORM),sunos)
 
   LIBS=-lsocket -lnsl -ldl -lm
 
-  CLIENT_LIBS +=$(SDL_LIBS) -lGL -lpthread
+  CLIENT_LIBS +=$(SDL_LIBS) -lGL -lX11 -lpthread
 
 else # ifeq sunos
  
