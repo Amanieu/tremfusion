@@ -292,6 +292,7 @@ static ID_INLINE void Com_RWL_UnlockWrite(rwlock_t *rwlock)
 
 // Thread control functions
 #define MAX_THREADS 256
+#define INVALID_THREAD -1
 typedef void (*thread_func_t)(void *);
 qthread_t Com_SpawnThread(thread_func_t func, void *arg);
 void Com_JoinThread(qthread_t id);
@@ -300,8 +301,10 @@ qthread_handle_t Com_GetThreadHandle(qthread_t id);
 
 
 // Thread pool and job management
+#define JOBTYPE_ANY -1
 typedef struct jobHeader_s {
 	void (*jobfunc)(struct jobHeader_s *header);
+	int jobType;
 	// Add your own stuff after this header
 } jobHeader_t;
 int Com_GetNumCPUs(void);
@@ -311,5 +314,8 @@ int Com_GetNumThreadsInPool(void);
 // The job pointer must stay allocated for the duration of existance of the job.
 // The job function should free this structure once it is done using it.
 void Com_AddJobToPool(jobHeader_t *job);
+// This function will a single job from the pool with the specified jobType.
+// Use JOBTYPE_ANY for a job of any type. Returns qtrue if a job was run.
+qboolean Com_ProcessJobPool(int jobType);
 
 #endif // _THREAD_H_

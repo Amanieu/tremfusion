@@ -21,10 +21,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <SDL.h>
-
-#include <SDL_thread.h>
 #ifdef SDL_VIDEO_DRIVER_X11
-#	include <X11/Xlib.h>
+// For XInitThreads
+#include <X11/Xlib.h>
 #endif
 
 #include <stdarg.h>
@@ -861,11 +860,11 @@ SMP acceleration
  * which you can't currently do in SDL. We'll just have to hope for the best.
  */
 
-static SDL_mutex *smpMutex = NULL;
-static SDL_cond *renderCommandsEvent = NULL;
-static SDL_cond *renderCompletedEvent = NULL;
+static mutex_t smpMutex;
+static cond_t renderCommandsEvent;
+static cond_t renderCompletedEvent;
 static void (*glimpRenderThread)( void ) = NULL;
-static SDL_Thread *renderThread = NULL;
+static qthread_t renderThread = INVALID_THREAD;
 
 /*
 ===============
@@ -874,25 +873,10 @@ GLimp_ShutdownRenderThread
 */
 static void GLimp_ShutdownRenderThread(void)
 {
-	if (smpMutex != NULL)
-	{
-		SDL_DestroyMutex(smpMutex);
-		smpMutex = NULL;
-	}
-
-	if (renderCommandsEvent != NULL)
-	{
-		SDL_DestroyCond(renderCommandsEvent);
-		renderCommandsEvent = NULL;
-	}
-
-	if (renderCompletedEvent != NULL)
-	{
-		SDL_DestroyCond(renderCompletedEvent);
-		renderCompletedEvent = NULL;
-	}
-
-	glimpRenderThread = NULL;
+	Com_MutexDestroy(&smpMutex);
+	Com_CondDestroy(&renderCommandsEvent);
+	Com_CondDestroy(&renderCompletedEvent);
+	glimpRenderThread = INVALID_THREAD;
 }
 
 /*
@@ -900,7 +884,7 @@ static void GLimp_ShutdownRenderThread(void)
 GLimp_RenderThreadWrapper
 ===============
 */
-static int GLimp_RenderThreadWrapper( void *arg )
+static void GLimp_RenderThreadWrapper( void *arg )
 {
 	// These printfs cause race conditions which mess up the console output
 	//Com_Printf( "Render thread starting\n" );
@@ -910,8 +894,6 @@ static int GLimp_RenderThreadWrapper( void *arg )
 	GLimp_SetCurrentContext(qfalse);
 
 	//Com_Printf( "Render thread terminating\n" );
-
-	return 0;
 }
 
 /*
@@ -932,56 +914,19 @@ qboolean GLimp_SpawnRenderThread( void (*function)( void ) )
 	return qfalse;  /* better safe than sorry for now. */
 #endif
 
-	if (renderThread != NULL)  /* hopefully just a zombie at this point... */
+	if (renderThread != INVALID_THREAD)  /* hopefully just a zombie at this point... */
 	{
 		Com_Printf("Already a render thread? Trying to clean it up...\n");
-		SDL_WaitThread(renderThread, NULL);
-		renderThread = NULL;
+		Com_JoinThread(renderThread);
 		GLimp_ShutdownRenderThread();
 	}
 
-	smpMutex = SDL_CreateMutex();
-	if (smpMutex == NULL)
-	{
-		Com_Printf( "smpMutex creation failed: %s\n", SDL_GetError() );
-		GLimp_ShutdownRenderThread();
-		return qfalse;
-	}
-
-	renderCommandsEvent = SDL_CreateCond();
-	if (renderCommandsEvent == NULL)
-	{
-		Com_Printf( "renderCommandsEvent creation failed: %s\n", SDL_GetError() );
-		GLimp_ShutdownRenderThread();
-		return qfalse;
-	}
-
-	renderCompletedEvent = SDL_CreateCond();
-	if (renderCompletedEvent == NULL)
-	{
-		Com_Printf( "renderCompletedEvent creation failed: %s\n", SDL_GetError() );
-		GLimp_ShutdownRenderThread();
-		return qfalse;
-	}
+	Com_MutexInit(&smpMutex);
+	Com_CondInit(&renderCommandsEvent);
+	Com_CondInit(&renderCompletedEvent);
 
 	glimpRenderThread = function;
-	renderThread = SDL_CreateThread(GLimp_RenderThreadWrapper, NULL);
-	if ( renderThread == NULL )
-	{
-		ri.Printf( PRINT_ALL, "SDL_CreateThread() returned %s", SDL_GetError() );
-		GLimp_ShutdownRenderThread();
-		return qfalse;
-	}
-	else
-	{
-		// tma 01/09/07: don't think this is necessary anyway?
-		//
-		// !!! FIXME: No detach API available in SDL!
-		//ret = pthread_detach( renderThread );
-		//if ( ret ) {
-		//ri.Printf( PRINT_ALL, "pthread_detach returned %d: %s", ret, strerror( ret ) );
-		//}
-	}
+	renderThread = Com_SpawnThread(GLimp_RenderThreadWrapper, NULL);
 
 	return qtrue;
 }
@@ -1000,20 +945,20 @@ void *GLimp_RendererSleep( void )
 
 	GLimp_SetCurrentContext(qfalse);
 
-	SDL_LockMutex(smpMutex);
+	Com_MutexLock(&smpMutex);
 	{
 		smpData = NULL;
 		smpDataReady = qfalse;
 
 		// after this, the front end can exit GLimp_FrontEndSleep
-		SDL_CondSignal(renderCompletedEvent);
+		Com_CondSignal(&renderCompletedEvent);
 
 		while ( !smpDataReady )
-			SDL_CondWait(renderCommandsEvent, smpMutex);
+			Com_CondWait(&renderCommandsEvent, &smpMutex);
 
 		data = (void *)smpData;
 	}
-	SDL_UnlockMutex(smpMutex);
+	Com_MutexUnlock(&smpMutex);
 
 	GLimp_SetCurrentContext(qtrue);
 
@@ -1027,12 +972,12 @@ GLimp_FrontEndSleep
 */
 void GLimp_FrontEndSleep( void )
 {
-	SDL_LockMutex(smpMutex);
+	Com_MutexLock(&smpMutex);
 	{
 		while ( smpData )
-			SDL_CondWait(renderCompletedEvent, smpMutex);
+			Com_CondWait(&renderCompletedEvent, &smpMutex);
 	}
-	SDL_UnlockMutex(smpMutex);
+	Com_MutexUnlock(&smpMutex);
 
 	GLimp_SetCurrentContext(qtrue);
 }
@@ -1046,14 +991,14 @@ void GLimp_WakeRenderer( void *data )
 {
 	GLimp_SetCurrentContext(qfalse);
 
-	SDL_LockMutex(smpMutex);
+	Com_MutexLock(&smpMutex);
 	{
 		assert( smpData == NULL );
 		smpData = data;
 		smpDataReady = qtrue;
 
 		// after this, the renderer can continue through GLimp_RendererSleep
-		SDL_CondSignal(renderCommandsEvent);
+		Com_CondSignal(&renderCommandsEvent);
 	}
-	SDL_UnlockMutex(smpMutex);
+	Com_MutexUnlock(&smpMutex);
 }

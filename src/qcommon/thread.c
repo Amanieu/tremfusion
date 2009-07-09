@@ -283,3 +283,37 @@ void Com_AddJobToPool(jobHeader_t *job)
 	Com_CondSignal(&newJobs);
 	Com_MutexUnlock(&jobListMutex);
 }
+
+/*
+=================
+Com_ProcessJobPool
+=================
+*/
+qboolean Com_ProcessJobPool(int jobType)
+{
+	jobHeader_t *job;
+	int i;
+
+	Com_MutexLock(&jobListMutex);
+	if (!numJobs) {
+		Com_MutexUnlock(&jobListMutex);
+		return qfalse;
+	}
+
+	// Fetch a job, remove it from the list, and run it
+	for (i = 0; i < jobList.currentElements; i++) {
+		if (!jobList.elements[i])
+			continue;
+		job = jobList.elements[i];
+		if (jobType != JOBTYPE_ANY && job->jobType != jobType)
+			continue;
+		jobList.elements[i] = NULL;
+		numJobs--;
+		Com_MutexUnlock(&jobListMutex);
+		job->jobfunc(job);
+		return qtrue;
+	}
+
+	Com_MutexUnlock(&jobListMutex);
+	return qfalse;
+}
