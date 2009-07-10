@@ -607,7 +607,7 @@ ifeq ($(PLATFORM),mingw32)
 
   ARCH=x86
 
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON -march=i586
 
   # In the absence of wspiapi.h, require Windows XP or later
   ifeq ($(shell test -e $(CMDIR)/wspiapi.h; echo $$?),1)
@@ -655,9 +655,8 @@ ifeq ($(PLATFORM),mingw32)
     TTYC_CFLAGS += -UUSE_CIN_THEORA
   endif
 
-  OPTIMIZE = -O3 -march=i586 -fno-omit-frame-pointer \
-    -falign-loops=2 -funroll-loops -falign-jumps=2 -falign-functions=2 \
-    -fstrength-reduce
+  OPTIMIZE = -O3 -fno-omit-frame-pointer -falign-loops=2 -funroll-loops \
+    -falign-jumps=2 -falign-functions=2 -fstrength-reduce
 
   SHLIBEXT=dll
   SHLIBCFLAGS=

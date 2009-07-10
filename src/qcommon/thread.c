@@ -64,7 +64,11 @@ static void *ThreadStart(void *arg)
 {
 	threadID = (qthread_t)arg;
 	threads[threadID].func(threads[threadID].arg);
+#ifdef _WIN32
+	return 0;
+#else
 	return NULL;
+#endif
 }
 
 /*
@@ -89,7 +93,7 @@ qthread_t Com_SpawnThread(thread_func_t func, void *arg)
 	threads[i].arg = arg;
 
 #ifdef _WIN32
-	threads[i].handle = CreateThread(NULL, 0, ThreadStart, (void *)i, 0);
+	threads[i].handle = CreateThread(NULL, 0, ThreadStart, (void *)i, 0, NULL);
 	if (!threads[i].handle)
 		Com_Error(ERR_FATAL, "Error spawning thread %d", (int)i);
 #else
@@ -108,7 +112,7 @@ Com_JoinThread
 void Com_JoinThread(qthread_t id)
 {
 #ifdef _WIN32
-	WaitForSingleObject(Com_GetThreadHandle(id), INFINITE):
+	WaitForSingleObject(Com_GetThreadHandle(id), INFINITE);
 #else
 	pthread_join(Com_GetThreadHandle(id), NULL);
 #endif
@@ -242,7 +246,7 @@ void Com_ShutdownThreadPool(void)
 	Com_MutexLock(&jobListMutex);
 	numJobs++;
 	stopThreads = qtrue;
-	Com_CondSignalAll(&newJobs);
+	Com_CondBroadcast(&newJobs);
 	Com_MutexUnlock(&jobListMutex);
 
 	for (i = 0; i < numWorkerThreads; i++) {
@@ -317,3 +321,218 @@ qboolean Com_ProcessJobPool(int jobType)
 	Com_MutexUnlock(&jobListMutex);
 	return qfalse;
 }
+
+/*
+==============================================================
+SUPPORT FUNCTIONS FOR WIN32
+==============================================================
+*/
+
+#ifdef _WIN32
+
+/*
+=================
+Com_CondInit
+=================
+*/
+void Com_CondInit(cond_t *cond)
+{
+	cond->semaphore = CreateSemaphore(NULL, 0, LONG_MAX, NULL);
+	Com_MutexInit(&cond->mutex);
+	cond->numSleeping = 0;
+	cond->numAwake = 0;
+	cond->generation = 0;
+}
+
+/*
+=================
+Com_CondDestroy
+=================
+*/
+void Com_CondDestroy(cond_t *cond)
+{
+	CloseHandle(cond->semaphore);
+	Com_MutexDestroy(&cond->mutex);
+}
+
+/*
+=================
+Com_CondWait
+=================
+*/
+void Com_CondWait(cond_t *cond, mutex_t *mutex)
+{
+	uint32_t generation;
+	qboolean wake = qfalse;
+
+	Com_MutexLock(&cond->mutex);
+	cond->numSleeping++;
+	generation = cond->generation;
+	Com_MutexUnlock(&cond->mutex);
+
+	Com_MutexUnlock(mutex);
+	while (1) {
+		WaitForSingleObject(cond->semaphore, INFINITE);
+		Com_MutexLock(&cond->mutex);
+		if (cond->numAwake) {
+			if (cond->generation != generation) {
+				cond->numAwake--;
+				cond->numSleeping--;
+				break;
+			} else
+				wake = qtrue;
+		}
+		Com_MutexUnlock(&cond->mutex);
+        if (wake) {
+            wake = qfalse;
+            ReleaseSemaphore(cond->semaphore, 1, NULL);
+        }
+	}
+	Com_MutexUnlock(&cond->mutex);
+	Com_MutexLock(mutex);
+}
+
+/*
+=================
+Com_CondSignal
+=================
+*/
+void Com_CondSignal(cond_t *cond)
+{
+	qboolean wake = qfalse;
+
+	Com_MutexLock(&cond->mutex);
+    if (cond->numSleeping > cond->numAwake) {
+		wake = qtrue;
+        cond->numAwake++;
+        cond->generation++;
+    }
+	Com_MutexUnlock(&cond->mutex);
+
+	if (wake)
+		ReleaseSemaphore(cond->semaphore, 1, NULL);
+}
+
+/*
+=================
+Com_CondBroadcast
+=================
+*/
+void Com_CondBroadcast(cond_t *cond)
+{
+	uint32_t wake = 0;
+
+	Com_MutexLock(&cond->mutex);
+    if (cond->numSleeping > cond->numAwake) {
+		wake = cond->numSleeping - cond->numAwake;
+        cond->numAwake = cond->numSleeping;
+        cond->generation++;
+    }
+	Com_MutexUnlock(&cond->mutex);
+
+	if (wake)
+		ReleaseSemaphore(cond->semaphore, wake, NULL);
+}
+
+
+/*
+=================
+Com_RWL_Init
+=================
+*/
+void Com_RWL_Init(rwlock_t *rwlock)
+{
+	Com_MutexInit(&rwlock->mutex);
+	rwlock->readEvent = CreateMutex(NULL, FALSE, NULL);
+	rwlock->readers = 0;
+}
+
+/*
+=================
+Com_RWL_Destroy
+=================
+*/
+void Com_RWL_Destroy(rwlock_t *rwlock)
+{
+	CloseHandle(rwlock->readEvent);
+	Com_MutexDestroy(&rwlock->mutex);
+}
+
+/*
+=================
+Com_RWL_LockRead
+=================
+*/
+void Com_RWL_LockRead(rwlock_t *rwlock)
+{
+	Com_MutexLock(&rwlock->mutex);
+	Com_AtomicIncrement(&rwlock->readers);
+	ResetEvent(rwlock->readEvent);
+	Com_MutexUnlock(&rwlock->mutex);
+}
+
+/*
+=================
+Com_RWL_TryLockRead
+=================
+*/
+qboolean Com_RWL_TryLockRead(rwlock_t *rwlock)
+{
+	if (!Com_MutexTryLock(&rwlock->mutex))
+		return qfalse;
+	Com_AtomicIncrement(&rwlock->readers);
+	ResetEvent(rwlock->readEvent);
+	Com_MutexUnlock(&rwlock->mutex);
+	return qtrue;
+}
+
+/*
+=================
+Com_RWL_UnlockRead
+=================
+*/
+void Com_RWL_UnlockRead(rwlock_t *rwlock)
+{
+	if (!Com_AtomicDecrement(&rwlock->readers))
+		SetEvent(rwlock->readEvent);
+}
+
+/*
+=================
+Com_RWL_LockWrite
+=================
+*/
+void Com_RWL_LockWrite(rwlock_t *rwlock)
+{
+	Com_MutexLock(&rwlock->mutex);
+	if (rwlock->readers)
+		WaitForSingleObject(rwlock->readEvent, INFINITE);
+}
+
+/*
+=================
+Com_RWL_TryLockWrite
+=================
+*/
+qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock)
+{
+	if (!Com_MutexTryLock(&rwlock->mutex))
+		return qfalse;
+	if (rwlock->readers) {
+		Com_MutexUnlock(&rwlock->mutex);
+		return qfalse;
+	}
+	return qtrue;
+}
+
+/*
+=================
+Com_RWL_UnlockWrite
+=================
+*/
+void Com_RWL_UnlockWrite(rwlock_t *rwlock)
+{
+	Com_MutexUnlock(&rwlock->mutex);
+}
+
+#endif

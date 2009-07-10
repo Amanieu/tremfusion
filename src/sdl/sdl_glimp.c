@@ -876,7 +876,7 @@ static void GLimp_ShutdownRenderThread(void)
 	Com_MutexDestroy(&smpMutex);
 	Com_CondDestroy(&renderCommandsEvent);
 	Com_CondDestroy(&renderCompletedEvent);
-	glimpRenderThread = INVALID_THREAD;
+	glimpRenderThread = NULL;
 }
 
 /*

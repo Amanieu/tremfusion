@@ -2291,7 +2291,7 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
 		Com_sprintf( data, sizeof( data ), "connect \"%s\"", info );
 
-		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, data, strlen( data ) + 1 );
+		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, (byte *)data, strlen( data ) + 1 );
 		// the most current userinfo has been sent, so watch for any
 		// newer changes to userinfo variables
 		cvar_modifiedFlags &= ~CVAR_USERINFO;

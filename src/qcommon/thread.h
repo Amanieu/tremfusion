@@ -103,24 +103,26 @@ static ID_INLINE qboolean Com_AtomicTestAndSet(qboolean *ptr)
 }
 
 
-// Mutexes, condition variables and RW locks
+// Mutexes, condition variables and read/write locks
 #ifdef _WIN32
 typedef CRITICAL_SECTION mutex_t;
-typedef CONDITION_VARIABLE cond_t;
+typedef struct {
+    HANDLE semaphore;
+    mutex_t mutex;
+    uint32_t numSleeping;
+    uint32_t numAwake;
+    uint32_t generation;
+} cond_t;
+typedef struct {
+	mutex_t mutex;
+	HANDLE readEvent;
+	uint32_t readers;
+} rwlock_t;
 #else
 typedef pthread_mutex_t mutex_t;
 typedef pthread_cond_t cond_t;
+typedef pthread_rwlock_t rwlock_t;
 #endif
-typedef struct {
-	mutex_t mutex;
-	cond_t canRead;
-	cond_t canWrite;
-	uint32_t readers;
-	qboolean isWriting;
-	uint32_t queuedReaders;
-	uint32_t queuedWriters;
-	qboolean writersPreferred;
-} rwlock_t;
 
 static ID_INLINE void Com_MutexInit(mutex_t *mutex)
 {
@@ -163,132 +165,81 @@ static ID_INLINE void Com_MutexUnlock(mutex_t *mutex)
 #endif
 }
 
+#ifdef _WIN32
+void Com_CondInit(cond_t *cond);
+void Com_CondDestroy(cond_t *cond);
+void Com_CondWait(cond_t *cond, mutex_t *mutex);
+void Com_CondSignal(cond_t *cond);
+void Com_CondBroadcast(cond_t *cond);
+#else
 static ID_INLINE void Com_CondInit(cond_t *cond)
 {
-#ifdef _WIN32
-	InitializeConditionVariable(cond);
-#else
 	pthread_cond_init(cond, NULL);
-#endif
 }
 static ID_INLINE void Com_CondDestroy(cond_t *cond)
 {
-#ifdef _WIN32
-	// Condition Variables don't get destoryed on Windows
-#else
 	pthread_cond_destroy(cond);
-#endif
 }
 static ID_INLINE void Com_CondWait(cond_t *cond, mutex_t *mutex)
 {
-#ifdef _WIN32
-	SleepConditionVariableCS(cond, mutex, INFINITE);
-#else
 	pthread_cond_wait(cond, mutex);
-#endif
-}
-static ID_INLINE void Com_CondWaitTimed(cond_t *cond, mutex_t *mutex, int msec)
-{
-#ifdef _WIN32
-	SleepConditionVariableCS(cond, mutex, msec);
-#else
-	struct timespec timeout;
-	timeout.tv_sec = msec / 1000;
-	timeout.tv_nsec = (msec % 1000) * 1000000;
-	pthread_cond_timedwait(cond, mutex, &timeout);
-#endif
 }
 static ID_INLINE void Com_CondSignal(cond_t *cond)
 {
-	// Only works if there is only 1 thread waiting on the condition
-#ifdef _WIN32
-	WakeConditionVariable(cond);
-#else
+	// Only wakes up one thread
 	pthread_cond_signal(cond);
-#endif
 }
-static ID_INLINE void Com_CondSignalAll(cond_t *cond)
+static ID_INLINE void Com_CondBroadcast(cond_t *cond)
 {
-	// Works if there are multiple threads waiting on the condition
-#ifdef _WIN32
-	WakeAllConditionVariable(cond);
-#else
+	// Wakes up all threads
 	pthread_cond_broadcast(cond);
-#endif
 }
+#endif
 
-static ID_INLINE void Com_RWL_Init(rwlock_t *rwlock, qboolean writersPreferred)
+#ifdef _WIN32
+void Com_RWL_Init(rwlock_t *rwlock);
+void Com_RWL_Destroy(rwlock_t *rwlock);
+void Com_RWL_LockRead(rwlock_t *rwlock);
+qboolean Com_RWL_TryLockRead(rwlock_t *rwlock);
+void Com_RWL_UnlockRead(rwlock_t *rwlock);
+void Com_RWL_LockWrite(rwlock_t *rwlock);
+qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock);
+void Com_RWL_UnlockWrite(rwlock_t *rwlock);
+#else
+static ID_INLINE void Com_RWL_Init(rwlock_t *rwlock)
 {
-	Com_MutexInit(&rwlock->mutex);
-	Com_CondInit(&rwlock->canRead);
-	Com_CondInit(&rwlock->canWrite);
-	rwlock->readers = 0;
-	rwlock->isWriting = qfalse;
-	rwlock->queuedReaders = 0;
-	rwlock->queuedWriters = 0;
-	rwlock->writersPreferred = writersPreferred;
+	pthread_rwlock_init(rwlock, NULL);
 }
 static ID_INLINE void Com_RWL_Destroy(rwlock_t *rwlock)
 {
-	Com_MutexDestroy(&rwlock->mutex);
-	Com_CondDestroy(&rwlock->canRead);
-	Com_CondDestroy(&rwlock->canWrite);
+	pthread_rwlock_destroy(rwlock);
 }
 static ID_INLINE void Com_RWL_LockRead(rwlock_t *rwlock)
 {
-	qboolean writersPreferred = rwlock->writersPreferred; // Allow compiler to optimize
-	Com_MutexLock(&rwlock->mutex);
-	rwlock->queuedReaders++;
-	while (rwlock->isWriting || (writersPreferred && rwlock->queuedWriters))
-		Com_CondWait(&rwlock->canRead, &rwlock->mutex);
-	rwlock->queuedReaders--;
-	rwlock->readers++;
-	Com_MutexUnlock(&rwlock->mutex);
+	pthread_rwlock_rdlock(rwlock);
 }
 static ID_INLINE qboolean Com_RWL_TryLockRead(rwlock_t *rwlock)
 {
-	Com_MutexLock(&rwlock->mutex);
-	if (rwlock->isWriting || (rwlock->writersPreferred && rwlock->queuedWriters))
-		return qfalse;
-	rwlock->readers++;
-	Com_MutexUnlock(&rwlock->mutex);
-	return qtrue;
+	return pthread_rwlock_tryrdlock(rwlock) == 0;
 }
 static ID_INLINE void Com_RWL_UnlockRead(rwlock_t *rwlock)
 {
-	Com_MutexLock(&rwlock->mutex);
-	rwlock->readers--;
-	if (!rwlock->readers && rwlock->queuedWriters)
-		Com_CondSignal(&rwlock->canWrite);
-	Com_MutexUnlock(&rwlock->mutex);
+	pthread_rwlock_unlock(rwlock);
 }
 static ID_INLINE void Com_RWL_LockWrite(rwlock_t *rwlock)
 {
-	Com_MutexLock(&rwlock->mutex);
-	while (rwlock->readers || rwlock->isWriting)
-		Com_CondWait(&rwlock->canWrite, &rwlock->mutex);
-	rwlock->isWriting = qtrue;
-	Com_MutexUnlock(&rwlock->mutex);
+	pthread_rwlock_wrlock(rwlock);
 }
 static ID_INLINE qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock)
 {
-	Com_MutexLock(&rwlock->mutex);
-	if (rwlock->readers || rwlock->isWriting)
-		return qfalse;
-	rwlock->isWriting = qtrue;
-	Com_MutexUnlock(&rwlock->mutex);
-	return qtrue;
+	return pthread_rwlock_wrlock(rwlock) == 0;
 }
 static ID_INLINE void Com_RWL_UnlockWrite(rwlock_t *rwlock)
 {
-	Com_MutexLock(&rwlock->mutex);
-	rwlock->isWriting = qfalse;
-	if (rwlock->queuedReaders)
-		Com_CondSignalAll(&rwlock->canRead);
-	if (rwlock->queuedWriters)
-		Com_CondSignal(&rwlock->canWrite);
-	Com_MutexUnlock(&rwlock->mutex);
+	pthread_rwlock_unlock(rwlock);
 }
+#endif
+
 
 // Thread control functions
 #define MAX_THREADS 256
