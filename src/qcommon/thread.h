@@ -26,7 +26,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _THREAD_H_
 
 #ifdef _WIN32
-#include <windows.h>
+#define _WIN32_WINNT 0x0501
+#include <windef.h>
+#include <winbase.h>
 typedef HANDLE qthread_handle_t;
 #else
 #include <pthread.h>
@@ -45,7 +47,7 @@ typedef long qthread_t;
 
 
 // Atomic operations, always returns the old value
-static ID_INLINE uint32_t Com_AtomicExchange(uint32_t *ptr, uint32_t value)
+static ID_INLINE int32_t Com_AtomicExchange(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchange(ptr, value);
@@ -53,7 +55,7 @@ static ID_INLINE uint32_t Com_AtomicExchange(uint32_t *ptr, uint32_t value)
 	return __sync_lock_test_and_set(ptr, value);
 #endif
 }
-static ID_INLINE uint32_t Com_AtomicIncrement(uint32_t *ptr)
+static ID_INLINE int32_t Com_AtomicIncrement(int32_t *ptr)
 {
 #ifdef _MSC_VER
 	return InterlockedIncrement(ptr);
@@ -61,7 +63,7 @@ static ID_INLINE uint32_t Com_AtomicIncrement(uint32_t *ptr)
 	return __sync_fetch_and_add(ptr, 1);
 #endif
 }
-static ID_INLINE uint32_t Com_AtomicDecrement(uint32_t *ptr)
+static ID_INLINE int32_t Com_AtomicDecrement(int32_t *ptr)
 {
 #ifdef _MSC_VER
 	return InterlockedDecrement(ptr);
@@ -69,7 +71,7 @@ static ID_INLINE uint32_t Com_AtomicDecrement(uint32_t *ptr)
 	return __sync_fetch_and_sub(ptr, 1);
 #endif
 }
-static ID_INLINE uint32_t Com_AtomicAdd(uint32_t *ptr, uint32_t value)
+static ID_INLINE int32_t Com_AtomicAdd(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchangeAdd(ptr, value);
@@ -77,7 +79,7 @@ static ID_INLINE uint32_t Com_AtomicAdd(uint32_t *ptr, uint32_t value)
 	return __sync_fetch_and_add(ptr, value);
 #endif
 }
-static ID_INLINE uint32_t Com_AtomicSubtract(uint32_t *ptr, uint32_t value)
+static ID_INLINE int32_t Com_AtomicSubtract(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchangeAdd(ptr, -value);
@@ -85,7 +87,7 @@ static ID_INLINE uint32_t Com_AtomicSubtract(uint32_t *ptr, uint32_t value)
 	return __sync_fetch_and_sub(ptr, value);
 #endif
 }
-static ID_INLINE uint32_t Com_AtomicCompareExchange(uint32_t *ptr, uint32_t test, uint32_t value)
+static ID_INLINE int32_t Com_AtomicCompareExchange(int32_t *ptr, int32_t test, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedCompareExchange(ptr, value, test);
@@ -96,7 +98,7 @@ static ID_INLINE uint32_t Com_AtomicCompareExchange(uint32_t *ptr, uint32_t test
 static ID_INLINE qboolean Com_AtomicTestAndSet(qboolean *ptr)
 {
 #ifdef _MSC_VER
-	return InterlockedBitTestAndSet(ptr);
+	return InterlockedBitTestAndSet((LONG *)ptr, 0);
 #else
 	return __sync_lock_test_and_set(ptr, 1);
 #endif
@@ -116,7 +118,7 @@ typedef struct {
 typedef struct {
 	mutex_t mutex;
 	HANDLE readEvent;
-	uint32_t readers;
+	int32_t readers;
 } rwlock_t;
 #else
 typedef pthread_mutex_t mutex_t;

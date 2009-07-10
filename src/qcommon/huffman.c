@@ -299,9 +299,9 @@ void Huff_offsetReceive (node_t *node, int *ch, byte *fin, int *offset) {
 }
 
 /* Send the prefix code for this node */
-static void send_bit(node_t *node, node_t *child, byte *fout) {
+static void send(node_t *node, node_t *child, byte *fout) {
 	if (node->parent) {
-		send_bit(node->parent, node, fout);
+		send(node->parent, node, fout);
 	}
 	if (child) {
 		if (node->right == child) {
@@ -322,13 +322,13 @@ void Huff_transmit (huff_t *huff, int ch, byte *fout) {
 			add_bit((char)((ch >> i) & 0x1), fout);
 		}
 	} else {
-		send_bit(huff->loc[ch], NULL, fout);
+		send(huff->loc[ch], NULL, fout);
 	}
 }
 
 void Huff_offsetTransmit (huff_t *huff, int ch, byte *fout, int *offset) {
 	bloc = *offset;
-	send_bit(huff->loc[ch], NULL, fout);
+	send(huff->loc[ch], NULL, fout);
 	*offset = bloc;
 }
 
