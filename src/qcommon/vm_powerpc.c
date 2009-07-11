@@ -2076,7 +2076,8 @@ VM_Compile( vm_t *vm, vmHeader_t *header )
 	if ( mprotect( vm->codeBase, vm->codeLength, PROT_READ|PROT_EXEC ) ) {
 
 		// it has failed, make sure memory is unmapped before throwing the error
-		VM_Destroy_Compiled( vm );
+		if ( munmap( vm->codeBase, vm->codeLength ) )
+			Com_Printf( S_COLOR_RED "Memory unmap failed, possible memory leak\n" );
 		DIE( "mprotect failed" );
 	}
 

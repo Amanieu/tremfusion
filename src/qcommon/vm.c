@@ -565,10 +565,11 @@ static ID_INLINE void VM_Cache_Free(vmCache_t *vmc)
 {
 	if (vmc->codeBase) {
 #ifdef _WIN32
-		VirtualFree(vmc->codeBase, 0, MEM_RELEASE);
+		if (!VirtualFree(vmc->codeBase, 0, MEM_RELEASE))
 #else
-		munmap(vmc->codeBase, vmc->codeLength);
+		if (munmap(vmc->codeBase, vmc->codeLength))
 #endif
+			Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
 		free(vmc->instructionPointers);
 		vmc->codeBase = NULL;
 		vmc->checksum = 0;
