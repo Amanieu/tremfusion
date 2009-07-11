@@ -147,7 +147,6 @@ int Com_GetNumCPUs(void)
 {
 #ifdef _WIN32
 	SYSTEM_INFO info;
-
 	GetSystemInfo(&info);
 	return info.dwNumberOfProcessors;
 #else
@@ -170,13 +169,11 @@ THREAD POOL AND JOB MANAGEMENT
 */
 
 static int numWorkerThreads = 0;
-static qthread_t workerThreads[MAX_THREADS];
-static THREAD_LOCAL int workerThreadID;
+static THREAD_LOCAL qthread_t workerID;
 
 static mutex_t jobListMutex;
 static cond_t newJobs;
-static growList_t jobList;
-static int numJobs = 0;
+static jobHeader_t *jobList = NULL;
 static qboolean stopThreads = qfalse;
 
 /*
@@ -187,14 +184,12 @@ WorkerThreadStart
 static void WorkerThreadStart(void *id)
 {
 	jobHeader_t *job;
-	int i;
 
-	workerThreadID = (qthread_t)id;
-	workerThreads[workerThreadID] = threadID;
+	workerID = (qthread_t)id;
 
 	while (1) {
 		Com_MutexLock(&jobListMutex);
-		while (!numJobs)
+		while (!jobList && !stopThreads)
 			Com_CondWait(&newJobs, &jobListMutex);
 		if (stopThreads) {
 			Com_MutexUnlock(&jobListMutex);
@@ -202,16 +197,10 @@ static void WorkerThreadStart(void *id)
 		}
 
 		// Fetch a job, remove it from the list, and run it
-		for (i = 0; i < jobList.currentElements; i++) {
-			if (!jobList.elements[i])
-				continue;
-			job = jobList.elements[i];
-			jobList.elements[i] = NULL;
-			numJobs--;
-			Com_MutexUnlock(&jobListMutex);
-			job->jobfunc(job);
-			break;
-		}
+		job = jobList;
+		jobList = job->next;
+		Com_MutexUnlock(&jobListMutex);
+		job->jobfunc(job);
 	}
 }
 
@@ -224,8 +213,6 @@ void Com_InitThreadPool(int numThreads)
 {
 	qthread_t i;
 
-	Com_InitGrowList(&jobList, 32);
-	memset(jobList.elements, 0, 32 * sizeof(void *));
 	Com_MutexInit(&jobListMutex);
 	Com_CondInit(&newJobs);
 
@@ -241,17 +228,8 @@ Com_ShutdownThreadPool
 */
 void Com_ShutdownThreadPool(void)
 {
-	int i;
-
-	Com_MutexLock(&jobListMutex);
-	numJobs++;
 	stopThreads = qtrue;
 	Com_CondBroadcast(&newJobs);
-	Com_MutexUnlock(&jobListMutex);
-
-	for (i = 0; i < numWorkerThreads; i++) {
-		Com_JoinThread(workerThreads[i]);
-	}
 }
 
 /*
@@ -266,60 +244,41 @@ int Com_GetNumThreadsInPool(void)
 
 /*
 =================
+Com_GetWorkerID
+=================
+*/
+qthread_t Com_GetWorkerID(void)
+{
+	return workerID;
+}
+
+/*
+=================
 Com_AddJobToPool
 =================
 */
 void Com_AddJobToPool(jobHeader_t *job)
 {
-	int i;
+	jobHeader_t *next, *prev;
 
 	Com_MutexLock(&jobListMutex);
-	numJobs++;
 
-	// Try to reuse an existing slot
-	for (i = 0; i < jobList.currentElements; i++) {
-		if (!jobList.elements[i])
-			break;
+	if (!jobList) {
+		jobList = job;
+		job->next = NULL;
+	} else {
+		prev = jobList;
+		next = jobList->next;
+		while (next && next->priority >= job->priority) {
+			prev = next;
+			next = next->next;
+		}
+		prev->next = job;
+		job->next = next;
 	}
-	if (i == jobList.currentElements)
-		Com_AddToGrowList(&jobList, job);
 
+	Com_MutexUnlock(&jobListMutex);
 	Com_CondSignal(&newJobs);
-	Com_MutexUnlock(&jobListMutex);
-}
-
-/*
-=================
-Com_ProcessJobPool
-=================
-*/
-qboolean Com_ProcessJobPool(int jobType)
-{
-	jobHeader_t *job;
-	int i;
-
-	Com_MutexLock(&jobListMutex);
-	if (!numJobs) {
-		Com_MutexUnlock(&jobListMutex);
-		return qfalse;
-	}
-
-	// Fetch a job, remove it from the list, and run it
-	for (i = 0; i < jobList.currentElements; i++) {
-		if (!jobList.elements[i])
-			continue;
-		job = jobList.elements[i];
-		if (jobType != JOBTYPE_ANY && job->jobType != jobType)
-			continue;
-		jobList.elements[i] = NULL;
-		numJobs--;
-		Com_MutexUnlock(&jobListMutex);
-		job->jobfunc(job);
-		return qtrue;
-	}
-
-	Com_MutexUnlock(&jobListMutex);
-	return qfalse;
 }
 
 /*

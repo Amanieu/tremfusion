@@ -256,19 +256,20 @@ qthread_handle_t Com_GetThreadHandle(qthread_t id);
 // Thread pool and job management
 #define JOBTYPE_ANY -1
 typedef struct jobHeader_s {
+	struct jobHeader_s *next;
 	void (*jobfunc)(struct jobHeader_s *header);
-	int jobType;
-	// Add your own stuff after this header
+	int priority;
+	// Add your own stuff after this header.
 } jobHeader_t;
 int Com_GetNumCPUs(void);
 void Com_InitThreadPool(int numThreads);
 void Com_ShutdownThreadPool(void);
 int Com_GetNumThreadsInPool(void);
+// This is NOT the same as Com_GetThreadID(). This is the index of the worker
+// thread, from 0 to Com_GetNumThreadsInPool() - 1.
+qthread_t Com_GetWorkerID(void);
 // The job pointer must stay allocated for the duration of existance of the job.
 // The job function should free this structure once it is done using it.
 void Com_AddJobToPool(jobHeader_t *job);
-// This function will a single job from the pool with the specified jobType.
-// Use JOBTYPE_ANY for a job of any type. Returns qtrue if a job was run.
-qboolean Com_ProcessJobPool(int jobType);
 
 #endif // _THREAD_H_
