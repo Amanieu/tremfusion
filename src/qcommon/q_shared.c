@@ -656,27 +656,6 @@ void Com_DefaultExtension (char *path, int maxSize, const char *extension ) {
 
 ============================================================================
 */
-/*
-// can't just use function pointers, or dll linkage can
-// mess up when qcommon is included in multiple places
-static short	(*_BigShort) (short l);
-static short	(*_LittleShort) (short l);
-static int		(*_BigLong) (int l);
-static int		(*_LittleLong) (int l);
-static qint64	(*_BigLong64) (qint64 l);
-static qint64	(*_LittleLong64) (qint64 l);
-static float	(*_BigFloat) (const float *l);
-static float	(*_LittleFloat) (const float *l);
-
-short	BigShort(short l){return _BigShort(l);}
-short	LittleShort(short l) {return _LittleShort(l);}
-int		BigLong (int l) {return _BigLong(l);}
-int		LittleLong (int l) {return _LittleLong(l);}
-qint64 	BigLong64 (qint64 l) {return _BigLong64(l);}
-qint64 	LittleLong64 (qint64 l) {return _LittleLong64(l);}
-float	BigFloat (const float *l) {return _BigFloat(l);}
-float	LittleFloat (const float *l) {return _LittleFloat(l);}
-*/
 
 short   ShortSwap (short l)
 {
@@ -686,11 +665,6 @@ short   ShortSwap (short l)
 	b2 = (l>>8)&255;
 
 	return (b1<<8) + b2;
-}
-
-short	ShortNoSwap (short l)
-{
-	return l;
 }
 
 int    LongSwap (int l)
@@ -705,44 +679,13 @@ int    LongSwap (int l)
 	return ((int)b1<<24) + ((int)b2<<16) + ((int)b3<<8) + b4;
 }
 
-int	LongNoSwap (int l)
-{
-	return l;
-}
-
-qint64 Long64Swap (qint64 ll)
-{
-	qint64	result;
-
-	result.b0 = ll.b7;
-	result.b1 = ll.b6;
-	result.b2 = ll.b5;
-	result.b3 = ll.b4;
-	result.b4 = ll.b3;
-	result.b5 = ll.b2;
-	result.b6 = ll.b1;
-	result.b7 = ll.b0;
-
-	return result;
-}
-
-qint64 Long64NoSwap (qint64 ll)
-{
-	return ll;
-}
-
-float FloatSwap (const float *f) {
+float FloatSwap (float f) {
 	floatint_t out;
 
-	out.f = *f;
+	out.f = f;
 	out.ui = LongSwap(out.ui);
 
 	return out.f;
-}
-
-float FloatNoSwap (const float *f)
-{
-	return *f;
 }
 
 /*
@@ -1689,7 +1632,7 @@ int Q_CountChar(const char *string, char tocount)
 	return count;
 }
 
-void QDECL Com_sprintf( char *dest, int size, const char *fmt, ...) {
+void  Com_sprintf( char *dest, int size, const char *fmt, ...) {
 	int		len;
 	va_list		argptr;
 	char	bigbuffer[32000];	// big, but small enough to fit in PPC stack
@@ -1720,7 +1663,7 @@ does a varargs printf into a temp buffer, so I don't need to have
 varargs versions of all text functions.
 ============
 */
-char	* QDECL va( char *format, ... ) {
+char	*  va( char *format, ... ) {
 	va_list		argptr;
 	static char string[16][2048]; // in case va is called by nested functions
 	static int	index = 0;

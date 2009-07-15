@@ -362,7 +362,7 @@ intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4,
 }
 
 
-void QDECL G_Printf( const char *fmt, ... )
+void  G_Printf( const char *fmt, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -374,7 +374,7 @@ void QDECL G_Printf( const char *fmt, ... )
   trap_Print( text );
 }
 
-void QDECL G_Error( const char *fmt, ... )
+void  G_Error( const char *fmt, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -744,7 +744,7 @@ void G_ShutdownGame( int restart )
 
 //===================================================================
 
-void QDECL Com_Error( int level, const char *error, ... )
+void  Com_Error( int level, const char *error, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -756,7 +756,7 @@ void QDECL Com_Error( int level, const char *error, ... )
   G_Error( "%s", text );
 }
 
-void QDECL Com_Printf( const char *msg, ... )
+void  Com_Printf( const char *msg, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -783,7 +783,7 @@ SortRanks
 
 =============
 */
-int QDECL SortRanks( const void *a, const void *b )
+int  SortRanks( const void *a, const void *b )
 {
   gclient_t *ca, *cb;
 
@@ -1873,7 +1873,7 @@ Print to all active server admins, and to the logfile, and to the server console
 Prepend *prefix, or '[SERVER]' if no *prefix is given
 =================
 */
-void QDECL G_AdminMessage( const char *prefix, const char *fmt, ... )
+void  G_AdminMessage( const char *prefix, const char *fmt, ... )
 {
   va_list argptr;
   char    string[ 1024 ];
@@ -1913,7 +1913,7 @@ G_LogPrintf
 Print to the logfile with a time stamp if it is open, and to the server console
 =================
 */
-void QDECL G_LogPrintf( const char *fmt, ... )
+void  G_LogPrintf( const char *fmt, ... )
 {
   va_list argptr;
   char    string[ 1024 ], decoloured[ 1024 ];

@@ -589,7 +589,7 @@ void CG_AddNotifyText( void )
   cg.numConsoleLines++;
 }
 
-void QDECL CG_Printf( const char *msg, ... )
+void  CG_Printf( const char *msg, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -601,7 +601,7 @@ void QDECL CG_Printf( const char *msg, ... )
   trap_Print( text );
 }
 
-void QDECL CG_Error( const char *msg, ... )
+void  CG_Error( const char *msg, ... )
 {
   va_list argptr;
   char    text[ 1024 ];
@@ -613,7 +613,7 @@ void QDECL CG_Error( const char *msg, ... )
   trap_Error( text );
 }
 
-void QDECL Com_Error( int level, const char *error, ... )
+void  Com_Error( int level, const char *error, ... )
 {
   va_list argptr;
   char    text[1024];
@@ -625,7 +625,7 @@ void QDECL Com_Error( int level, const char *error, ... )
   CG_Error( "%s", text );
 }
 
-void QDECL Com_Printf( const char *msg, ... ) {
+void  Com_Printf( const char *msg, ... ) {
   va_list   argptr;
   char    text[1024];
 

@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 struct vm_s {
     intptr_t (*systemCall)(intptr_t *parms);
-	intptr_t (QDECL *entryPoint)(int callNum, ...);
+	intptr_t ( *entryPoint)(int callNum, ...);
     char name[MAX_QPATH];
 	void *dllHandle;
 	int callLevel;

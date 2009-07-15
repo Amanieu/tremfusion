@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __Q_PLATFORM_H
 
 // this is for determining if we have an asm version of a C function
-#if (defined _M_IX86 || defined __i386__) && !defined(C_ONLY)
+#if (defined _M_IX86 || defined __i386__)
 #define id386 1
 #ifdef USE_SSE2
 #define id386_sse 2
@@ -38,7 +38,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #else
 #define id386 0
-#if defined __x86_64__ && !defined(C_ONLY)
+#if defined __x86_64__
 #ifdef USE_SSE2
 #define id386_sse 2
 #else
@@ -54,7 +54,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || \
-	defined(__ppc) || defined(__ppc__)) && !defined(C_ONLY)
+	defined(__ppc) || defined(__ppc__))
 #define idppc 1
 #if defined(__VEC__)
 #define idppc_altivec 1
@@ -73,34 +73,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define idppc_altivec 0
 #endif
 
-#if defined(__sparc__) && !defined(C_ONLY)
-#define idsparc 1
-#else
-#define idsparc 0
-#endif
-
 #endif
 
 #ifndef __ASM_I386__ // don't include the C bits if included from qasm.h
-
-// for windows fastcall option
-#define QDECL
 
 //================================================================= WIN32 ===
 
 #ifdef _WIN32
 
-#undef QDECL
-#define QDECL __cdecl
-
 #if defined( _MSC_VER )
-#define OS_STRING "win_msvc"
+#define OS_STRING "win32_msvc"
 #elif defined __MINGW32__
-#define OS_STRING "win_mingw"
+#define OS_STRING "win32_mingw"
 #endif
 
-#define ID_INLINE __inline
-#define PATH_SEP '\\'
+#define inline __inline
 
 #if defined( _M_IX86 ) || defined( __i386__ )
 #define ARCH_STRING "x86"
@@ -124,8 +111,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 #define OS_STRING "macosx"
-#define ID_INLINE inline
-#define PATH_SEP '/'
 
 #ifdef __ppc__
 #define ARCH_STRING "ppc"
@@ -146,8 +131,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <endian.h>
 
 #define OS_STRING "linux"
-#define ID_INLINE inline
-#define PATH_SEP '/'
 
 #if defined __i386__
 #define ARCH_STRING "x86"
@@ -208,8 +191,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define OS_STRING "netbsd"
 #endif
 
-#define ID_INLINE inline
-#define PATH_SEP '/'
 
 #ifdef __i386__
 #define ARCH_STRING "x86"
@@ -235,8 +216,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/byteorder.h>
 
 #define OS_STRING "solaris"
-#define ID_INLINE inline
-#define PATH_SEP '/'
 
 #ifdef __i386__
 #define ARCH_STRING "x86"
@@ -259,8 +238,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifdef __sgi
 
 #define OS_STRING "irix"
-#define ID_INLINE __inline
-#define PATH_SEP '/'
+#define inline __inline
 
 #define ARCH_STRING "mips"
 
@@ -281,14 +259,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #error "Architecture not supported"
 #endif
 
-#ifndef ID_INLINE
-#error "ID_INLINE not defined"
-#endif
-
-#ifndef PATH_SEP
-#error "PATH_SEP not defined"
-#endif
-
 #ifndef DLL_EXT
 #error "DLL_EXT not defined"
 #endif
@@ -297,7 +267,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //endianness
 short ShortSwap (short l);
 int LongSwap (int l);
-float FloatSwap (const float *f);
+float FloatSwap (float f);
 
 #if defined( Q3_BIG_ENDIAN ) && defined( Q3_LITTLE_ENDIAN )
 #error "Endianness defined as both big and little"
@@ -305,7 +275,7 @@ float FloatSwap (const float *f);
 
 #define LittleShort(x) ShortSwap(x)
 #define LittleLong(x) LongSwap(x)
-#define LittleFloat(x) FloatSwap(&x)
+#define LittleFloat(x) FloatSwap(x)
 #define BigShort
 #define BigLong
 #define BigFloat
@@ -317,7 +287,7 @@ float FloatSwap (const float *f);
 #define LittleFloat
 #define BigShort(x) ShortSwap(x)
 #define BigLong(x) LongSwap(x)
-#define BigFloat(x) FloatSwap(&x)
+#define BigFloat(x) FloatSwap(x)
 
 #else
 #error "Endianness not defined"

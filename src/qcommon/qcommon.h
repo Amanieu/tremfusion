@@ -27,13 +27,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/cm_public.h"
 #include "thread.h"
 
-//Ignore __attribute__ on non-gcc platforms
-#ifndef __GNUC__
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-#endif
-
 //============================================================================
 
 //
@@ -176,8 +169,8 @@ void		NET_Restart_f( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
 void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
-void		QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
-void		QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
+void		NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, const char *format, ...) __printf(3, 4);
+void		NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
 qboolean	NET_CompareAdr (netadr_t a, netadr_t b);
 qboolean	NET_CompareBaseAdrMask(netadr_t a, netadr_t b, int netmask);
@@ -342,12 +335,12 @@ void	VM_Forced_Unload_Start(void);
 void	VM_Forced_Unload_Done(void);
 vm_t	*VM_Restart( vm_t *vm );
 
-intptr_t		QDECL VM_Call( vm_t *vm, int callNum, ... );
+intptr_t		 VM_Call( vm_t *vm, int callNum, ... );
 
 #define VMA(x) ((void *)args[x])
 #define VM_ExplicitArgPtr(vm, x) ((void *)x)
 
-static ID_INLINE float _vmf(intptr_t x)
+static inline float _vmf(intptr_t x)
 {
 	floatint_t t;
 	t.i = x;
@@ -662,7 +655,7 @@ int		FS_FTell( fileHandle_t f );
 
 void	FS_Flush( fileHandle_t f );
 
-void 	QDECL FS_Printf( fileHandle_t f, const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
+void 	 FS_Printf( fileHandle_t f, const char *fmt, ... ) __printf(2, 3);
 // like fprintf
 
 int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode );
@@ -791,9 +784,9 @@ void		Info_Print( const char *s );
 
 void		Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *));
 void		Com_EndRedirect( void );
-void 		QDECL Com_Printf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
-void 		QDECL Com_DPrintf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
-void 		QDECL Com_Error( int code, const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
+void 		Com_Printf( const char *fmt, ... ) __printf(1, 2);
+void 		Com_DPrintf( const char *fmt, ... ) __printf(1, 2);
+void 		Com_Error( int code, const char *fmt, ... ) __printf(2, 3) __cold __noreturn;
 void 		Com_Quit_f( void );
 
 int			Com_Milliseconds( void );	// will be journaled properly
@@ -1018,8 +1011,8 @@ typedef enum {
 void	Sys_Init (void);
 
 // general development dll loading for virtual machine testing
-void	* QDECL Sys_LoadDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
-				  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+void	*  Sys_LoadDll( const char *name, intptr_t ( **entryPoint)(int, ...),
+				  intptr_t ( *systemcalls)(intptr_t, ...) );
 void	Sys_UnloadDll( void *dllHandle );
 
 //bot libraries
@@ -1028,7 +1021,7 @@ void	*Sys_GetBotLibAPI( void *parms );
 
 char	*Sys_GetCurrentUser( void );
 
-void	QDECL Sys_Error( const char *error, ...) __attribute__ ((format (printf, 1, 2)));
+void	Sys_Error( const char *error, ...) __printf(1, 2) __cold __noreturn;
 void	Sys_Quit (void);
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 

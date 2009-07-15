@@ -101,7 +101,7 @@ Dlls will call this directly
  
 ============
 */
-intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
+intptr_t  VM_DllSyscall( intptr_t arg, ... ) {
 #if !id386
   // rcg010206 - see commentary above
   intptr_t args[16];
@@ -278,7 +278,7 @@ VM_Call
 rcg010207 -  see dissertation at top of VM_DllSyscall() in this file.
 ==============
 */
-intptr_t	QDECL VM_Call( vm_t *vm, int callnum, ... ) {
+intptr_t	 VM_Call( vm_t *vm, int callnum, ... ) {
 	vm_t	*oldVM;
 	intptr_t r;
 	int i;

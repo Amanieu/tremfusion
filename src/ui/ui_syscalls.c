@@ -26,9 +26,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // this file is only included when building a dll
 // ui_syscalls.asm is included instead when building a qvm
 
-static intptr_t ( QDECL *syscall )( intptr_t arg, ... ) = ( intptr_t ( QDECL * )( intptr_t, ... ) ) - 1;
+static intptr_t (  *syscall )( intptr_t arg, ... ) = ( intptr_t (  * )( intptr_t, ... ) ) - 1;
 
-void dllEntry( intptr_t ( QDECL *syscallptr )( intptr_t arg, ... ) )
+void dllEntry( intptr_t (  *syscallptr )( intptr_t arg, ... ) )
 {
   syscall = syscallptr;
 }

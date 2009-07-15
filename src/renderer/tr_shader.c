@@ -58,7 +58,6 @@ static long generateHashValue( const char *fname, const int size ) {
 		letter = tolower(fname[i]);
 		if (letter =='.') break;				// don't include extension
 		if (letter =='\\') letter = '/';		// damn path names
-		if (letter == PATH_SEP) letter = '/';		// damn path names
 		hash+=(long)(letter)*(i+119);
 		i++;
 	}

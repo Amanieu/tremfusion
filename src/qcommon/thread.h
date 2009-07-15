@@ -36,18 +36,9 @@ typedef pthread_t qthread_handle_t;
 #endif
 typedef long qthread_t;
 
-// NOTE: This doesn't work in dlls
-#ifdef _MSC_VER
-#define THREAD_LOCAL __declspec(thread)
-#elif __GNUC__
-#define THREAD_LOCAL __thread
-#else
-#error "No multithreading support!"
-#endif
-
 
 // Atomic operations, always returns the old value
-static ID_INLINE int32_t Com_AtomicExchange(int32_t *ptr, int32_t value)
+static inline int32_t Com_AtomicExchange(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchange(ptr, value);
@@ -55,7 +46,7 @@ static ID_INLINE int32_t Com_AtomicExchange(int32_t *ptr, int32_t value)
 	return __sync_lock_test_and_set(ptr, value);
 #endif
 }
-static ID_INLINE int32_t Com_AtomicIncrement(int32_t *ptr)
+static inline int32_t Com_AtomicIncrement(int32_t *ptr)
 {
 #ifdef _MSC_VER
 	return InterlockedIncrement(ptr);
@@ -63,7 +54,7 @@ static ID_INLINE int32_t Com_AtomicIncrement(int32_t *ptr)
 	return __sync_fetch_and_add(ptr, 1);
 #endif
 }
-static ID_INLINE int32_t Com_AtomicDecrement(int32_t *ptr)
+static inline int32_t Com_AtomicDecrement(int32_t *ptr)
 {
 #ifdef _MSC_VER
 	return InterlockedDecrement(ptr);
@@ -71,7 +62,7 @@ static ID_INLINE int32_t Com_AtomicDecrement(int32_t *ptr)
 	return __sync_fetch_and_sub(ptr, 1);
 #endif
 }
-static ID_INLINE int32_t Com_AtomicAdd(int32_t *ptr, int32_t value)
+static inline int32_t Com_AtomicAdd(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchangeAdd(ptr, value);
@@ -79,7 +70,7 @@ static ID_INLINE int32_t Com_AtomicAdd(int32_t *ptr, int32_t value)
 	return __sync_fetch_and_add(ptr, value);
 #endif
 }
-static ID_INLINE int32_t Com_AtomicSubtract(int32_t *ptr, int32_t value)
+static inline int32_t Com_AtomicSubtract(int32_t *ptr, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedExchangeAdd(ptr, -value);
@@ -87,7 +78,7 @@ static ID_INLINE int32_t Com_AtomicSubtract(int32_t *ptr, int32_t value)
 	return __sync_fetch_and_sub(ptr, value);
 #endif
 }
-static ID_INLINE int32_t Com_AtomicCompareExchange(int32_t *ptr, int32_t test, int32_t value)
+static inline int32_t Com_AtomicCompareExchange(int32_t *ptr, int32_t test, int32_t value)
 {
 #ifdef _MSC_VER
 	return InterlockedCompareExchange(ptr, value, test);
@@ -95,7 +86,7 @@ static ID_INLINE int32_t Com_AtomicCompareExchange(int32_t *ptr, int32_t test, i
 	return __sync_val_compare_and_swap(ptr, test, value);
 #endif
 }
-static ID_INLINE qboolean Com_AtomicTestAndSet(qboolean *ptr)
+static inline qboolean Com_AtomicTestAndSet(qboolean *ptr)
 {
 #ifdef _MSC_VER
 	return InterlockedBitTestAndSet((LONG *)ptr, 0);
@@ -126,7 +117,7 @@ typedef pthread_cond_t cond_t;
 typedef pthread_rwlock_t rwlock_t;
 #endif
 
-static ID_INLINE void Com_MutexInit(mutex_t *mutex)
+static inline void Com_MutexInit(mutex_t *mutex)
 {
 #ifdef _WIN32
 	InitializeCriticalSection(mutex);
@@ -134,7 +125,7 @@ static ID_INLINE void Com_MutexInit(mutex_t *mutex)
 	pthread_mutex_init(mutex, NULL);
 #endif
 }
-static ID_INLINE void Com_MutexDestroy(mutex_t *mutex)
+static inline void Com_MutexDestroy(mutex_t *mutex)
 {
 #ifdef _WIN32
 	DeleteCriticalSection(mutex);
@@ -142,7 +133,7 @@ static ID_INLINE void Com_MutexDestroy(mutex_t *mutex)
 	pthread_mutex_destroy(mutex);
 #endif
 }
-static ID_INLINE void Com_MutexLock(mutex_t *mutex)
+static inline void Com_MutexLock(mutex_t *mutex)
 {
 #ifdef _WIN32
 	EnterCriticalSection(mutex);
@@ -150,7 +141,7 @@ static ID_INLINE void Com_MutexLock(mutex_t *mutex)
 	pthread_mutex_lock(mutex);
 #endif
 }
-static ID_INLINE qboolean Com_MutexTryLock(mutex_t *mutex)
+static inline qboolean Com_MutexTryLock(mutex_t *mutex)
 {
 #ifdef _WIN32
 	return (TryEnterCriticalSection(mutex) != 0);
@@ -158,7 +149,7 @@ static ID_INLINE qboolean Com_MutexTryLock(mutex_t *mutex)
 	return (pthread_mutex_trylock(mutex) == 0);
 #endif
 }
-static ID_INLINE void Com_MutexUnlock(mutex_t *mutex)
+static inline void Com_MutexUnlock(mutex_t *mutex)
 {
 #ifdef _WIN32
 	LeaveCriticalSection(mutex);
@@ -174,24 +165,24 @@ void Com_CondWait(cond_t *cond, mutex_t *mutex);
 void Com_CondSignal(cond_t *cond);
 void Com_CondBroadcast(cond_t *cond);
 #else
-static ID_INLINE void Com_CondInit(cond_t *cond)
+static inline void Com_CondInit(cond_t *cond)
 {
 	pthread_cond_init(cond, NULL);
 }
-static ID_INLINE void Com_CondDestroy(cond_t *cond)
+static inline void Com_CondDestroy(cond_t *cond)
 {
 	pthread_cond_destroy(cond);
 }
-static ID_INLINE void Com_CondWait(cond_t *cond, mutex_t *mutex)
+static inline void Com_CondWait(cond_t *cond, mutex_t *mutex)
 {
 	pthread_cond_wait(cond, mutex);
 }
-static ID_INLINE void Com_CondSignal(cond_t *cond)
+static inline void Com_CondSignal(cond_t *cond)
 {
 	// Only wakes up one thread
 	pthread_cond_signal(cond);
 }
-static ID_INLINE void Com_CondBroadcast(cond_t *cond)
+static inline void Com_CondBroadcast(cond_t *cond)
 {
 	// Wakes up all threads
 	pthread_cond_broadcast(cond);
@@ -208,35 +199,35 @@ void Com_RWL_LockWrite(rwlock_t *rwlock);
 qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock);
 void Com_RWL_UnlockWrite(rwlock_t *rwlock);
 #else
-static ID_INLINE void Com_RWL_Init(rwlock_t *rwlock)
+static inline void Com_RWL_Init(rwlock_t *rwlock)
 {
 	pthread_rwlock_init(rwlock, NULL);
 }
-static ID_INLINE void Com_RWL_Destroy(rwlock_t *rwlock)
+static inline void Com_RWL_Destroy(rwlock_t *rwlock)
 {
 	pthread_rwlock_destroy(rwlock);
 }
-static ID_INLINE void Com_RWL_LockRead(rwlock_t *rwlock)
+static inline void Com_RWL_LockRead(rwlock_t *rwlock)
 {
 	pthread_rwlock_rdlock(rwlock);
 }
-static ID_INLINE qboolean Com_RWL_TryLockRead(rwlock_t *rwlock)
+static inline qboolean Com_RWL_TryLockRead(rwlock_t *rwlock)
 {
 	return pthread_rwlock_tryrdlock(rwlock) == 0;
 }
-static ID_INLINE void Com_RWL_UnlockRead(rwlock_t *rwlock)
+static inline void Com_RWL_UnlockRead(rwlock_t *rwlock)
 {
 	pthread_rwlock_unlock(rwlock);
 }
-static ID_INLINE void Com_RWL_LockWrite(rwlock_t *rwlock)
+static inline void Com_RWL_LockWrite(rwlock_t *rwlock)
 {
 	pthread_rwlock_wrlock(rwlock);
 }
-static ID_INLINE qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock)
+static inline qboolean Com_RWL_TryLockWrite(rwlock_t *rwlock)
 {
 	return pthread_rwlock_wrlock(rwlock) == 0;
 }
-static ID_INLINE void Com_RWL_UnlockWrite(rwlock_t *rwlock)
+static inline void Com_RWL_UnlockWrite(rwlock_t *rwlock)
 {
 	pthread_rwlock_unlock(rwlock);
 }

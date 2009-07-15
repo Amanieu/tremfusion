@@ -361,7 +361,7 @@ static void Parse_CreatePunctuationTable(script_t *script, punctuation_t *punctu
 Parse_ScriptError
 ===============
 */
-static void QDECL Parse_ScriptError(script_t *script, char *str, ...)
+static void  Parse_ScriptError(script_t *script, char *str, ...)
 {
   char text[1024];
   va_list ap;
@@ -379,7 +379,7 @@ static void QDECL Parse_ScriptError(script_t *script, char *str, ...)
 Parse_ScriptWarning
 ===============
 */
-static void QDECL Parse_ScriptWarning(script_t *script, char *str, ...)
+static void  Parse_ScriptWarning(script_t *script, char *str, ...)
 {
   char text[1024];
   va_list ap;
@@ -1097,7 +1097,7 @@ static void Parse_FreeScript(script_t *script)
 Parse_SourceError
 ===============
 */
-static void QDECL Parse_SourceError(source_t *source, char *str, ...)
+static void  Parse_SourceError(source_t *source, char *str, ...)
 {
   char text[1024];
   va_list ap;
@@ -1113,7 +1113,7 @@ static void QDECL Parse_SourceError(source_t *source, char *str, ...)
 Parse_SourceWarning
 ===============
 */
-static void QDECL Parse_SourceWarning(source_t *source, char *str, ...)
+static void  Parse_SourceWarning(source_t *source, char *str, ...)
 {
   char text[1024];
   va_list ap;
@@ -1778,7 +1778,7 @@ static void Parse_ConvertPath(char *path)
   //set OS dependent path seperators
   for (ptr = path; *ptr;)
   {
-    if (*ptr == '/' || *ptr == '\\') *ptr = PATH_SEP;
+    if (*ptr == '\\') *ptr = '/';
     ptr++;
   }
 }

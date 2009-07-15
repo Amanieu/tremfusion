@@ -1186,7 +1186,7 @@ static void RB_SurfaceFace_sse2( srfSurfaceFace_t *surf ) {
 }
 #endif
 
-static ID_INLINE void RB_SurfaceFace_scalar( srfSurfaceFace_t *surf ) {
+static inline void RB_SurfaceFace_scalar( srfSurfaceFace_t *surf ) {
 	int			i;
 	unsigned	*indices, *tessIndexes;
 	float		*v;

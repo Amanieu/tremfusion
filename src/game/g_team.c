@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "g_local.h"
 
 // NULL for everyone
-void QDECL PrintMsg( gentity_t *ent, const char *fmt, ... )
+void  PrintMsg( gentity_t *ent, const char *fmt, ... )
 {
   char    msg[ 1024 ];
   va_list argptr;
@@ -274,7 +274,7 @@ qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen )
 
 /*---------------------------------------------------------------------------*/
 
-static int QDECL SortClients( const void *a, const void *b )
+static int  SortClients( const void *a, const void *b )
 {
   return *(int *)a - *(int *)b;
 }

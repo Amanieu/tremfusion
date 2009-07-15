@@ -247,7 +247,7 @@ typedef struct {
 SV_QsortEntityNumbers
 =======================
 */
-static int QDECL SV_QsortEntityNumbers( const void *a, const void *b ) {
+static int  SV_QsortEntityNumbers( const void *a, const void *b ) {
 	int	*ea, *eb;
 
 	ea = (int *)a;

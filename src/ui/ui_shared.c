@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "ui_shared.h"
 
+#define BLINK_DIVISOR             200
+#define PULSE_DIVISOR             75
+
 #define SCROLL_TIME_START         500
 #define SCROLL_TIME_ADJUST        150
 #define SCROLL_TIME_ADJUSTOFFSET  40
@@ -483,7 +486,7 @@ OpPrec
 Return a value reflecting operator precedence
 =================
 */
-static ID_INLINE int OpPrec( char op )
+static inline int OpPrec( char op )
 {
   switch( op )
   {

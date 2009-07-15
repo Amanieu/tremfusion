@@ -336,7 +336,6 @@ static long FS_HashFileName( const char *fname, int hashSize ) {
 		letter = tolower(fname[i]);
 		if (letter =='.') break;				// don't include extension
 		if (letter =='\\') letter = '/';		// damn path names
-		if (letter == PATH_SEP) letter = '/';		// damn path names
 		hash+=(long)(letter)*(i+119);
 		i++;
 	}
@@ -412,8 +411,8 @@ static void FS_ReplaceSeparators( char *path ) {
 	char	*s;
 
 	for ( s = path ; *s ; s++ ) {
-		if ( *s == '/' || *s == '\\' ) {
-			*s = PATH_SEP;
+		if ( *s == '\\' ) {
+			*s = '/';
 		}
 	}
 }
@@ -462,11 +461,11 @@ static qboolean FS_CreatePath (char *OSPath) {
 	}
 
 	for (ofs = OSPath+1 ; *ofs ; ofs++) {
-		if (*ofs == PATH_SEP) {	
+		if (*ofs == '/' || *ofs == '\\') {	
 			// create the directory
 			*ofs = 0;
 			Sys_Mkdir (OSPath);
-			*ofs = PATH_SEP;
+			*ofs = '/';
 		}
 	}
 	return qfalse;
@@ -1308,7 +1307,7 @@ int FS_Write( const void *buffer, int len, fileHandle_t h ) {
 	return len;
 }
 
-void QDECL FS_Printf( fileHandle_t h, const char *fmt, ... ) {
+void  FS_Printf( fileHandle_t h, const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
 
@@ -2468,7 +2467,7 @@ void FS_Which_f( void ) {
 //===========================================================================
 
 
-static int QDECL paksort( const void *a, const void *b ) {
+static int  paksort( const void *a, const void *b ) {
 	char	*aa, *bb;
 
 	aa = *(char **)a;

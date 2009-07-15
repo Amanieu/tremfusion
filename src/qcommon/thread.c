@@ -32,7 +32,7 @@ GENERIC THREAD CONTROL FUNCTION
 */
 
 // Per thread ID, set on thread init
-static THREAD_LOCAL qthread_t threadID = MASTER_THREAD;
+static __thread qthread_t threadID = MASTER_THREAD;
 
 // All of the information about a running thread
 typedef struct {
@@ -143,7 +143,7 @@ qthread_handle_t Com_GetThreadHandle(qthread_t id)
 GetNumCPUs
 =================
 */
-static ID_INLINE int GetNumCPUs(void)
+static inline int GetNumCPUs(void)
 {
 #ifdef _WIN32
 	SYSTEM_INFO info;
@@ -169,7 +169,7 @@ THREAD POOL AND JOB MANAGEMENT
 */
 
 static int numWorkerThreads = 0;
-static THREAD_LOCAL qthread_t workerID;
+static __thread qthread_t workerID;
 
 static mutex_t jobListMutex;
 static cond_t newJobs;
