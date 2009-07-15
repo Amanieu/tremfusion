@@ -2457,7 +2457,7 @@ void Com_Init( char *commandLine ) {
 	Com_Memset( &sys_packetReceived[ 0 ], 0, MAX_MSGLEN * sizeof( byte ) );
 
 	// initialize the multithreading thread pool
-	Com_InitThreadPool(Com_GetNumCPUs());
+	Com_InitThreadPool();
 
 	// initialize the weak pseudo-random number generator for use later.
 	Com_InitRand();

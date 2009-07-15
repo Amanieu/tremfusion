@@ -246,6 +246,7 @@ static ID_INLINE void Com_RWL_UnlockWrite(rwlock_t *rwlock)
 // Thread control functions
 #define MAX_THREADS 256
 #define INVALID_THREAD -1
+#define MASTER_THREAD -2
 typedef void (*thread_func_t)(void *);
 qthread_t Com_SpawnThread(thread_func_t func, void *arg);
 void Com_JoinThread(qthread_t id);
@@ -254,15 +255,13 @@ qthread_handle_t Com_GetThreadHandle(qthread_t id);
 
 
 // Thread pool and job management
-#define JOBTYPE_ANY -1
 typedef struct jobHeader_s {
 	struct jobHeader_s *next;
 	void (*jobfunc)(struct jobHeader_s *header);
 	int priority;
 	// Add your own stuff after this header.
 } jobHeader_t;
-int Com_GetNumCPUs(void);
-void Com_InitThreadPool(int numThreads);
+void Com_InitThreadPool(void);
 void Com_ShutdownThreadPool(void);
 int Com_GetNumThreadsInPool(void);
 // This is NOT the same as Com_GetThreadID(). This is the index of the worker
