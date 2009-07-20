@@ -435,9 +435,9 @@ char *FS_BuildOSPath( const char *base, const char *game, const char *qpath ) {
 		game = fs_gamedir;
 	}
 
-	Com_sprintf( temp, sizeof(temp), "/%s/%s", game, qpath );
+	Q_snprintf( temp, sizeof(temp), "/%s/%s", game, qpath );
 	FS_ReplaceSeparators( temp );	
-	Com_sprintf( ospath[toggle], sizeof( ospath[0] ), "%s%s", base, temp );
+	Q_snprintf( ospath[toggle], sizeof( ospath[0] ), "%s%s", base, temp );
 	
 	return ospath[toggle];
 }
@@ -1041,7 +1041,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 		return qfalse;
 	}
 
-	Com_sprintf (demoExt, sizeof(demoExt), ".dm_%d",PROTOCOL_VERSION );
+	Q_snprintf (demoExt, sizeof(demoExt), ".dm_%d",PROTOCOL_VERSION );
 
 	//
 	// search through the path, one element at a time
@@ -1309,7 +1309,7 @@ int FS_Write( const void *buffer, int len, fileHandle_t h ) {
 
 void  FS_Printf( fileHandle_t h, const char *fmt, ... ) {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		msg[MAX_PRINTMSG];
 
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
@@ -2635,7 +2635,7 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 					char st[MAX_ZPATH];
 					// We already have one called this, we need to download it to another name
 					// Make something up with the checksum in it
-					Com_sprintf( st, sizeof( st ), "%s.%08x.pk3", fs_serverReferencedPakNames[i], fs_serverReferencedPaks[i] );
+					Q_snprintf( st, sizeof( st ), "%s.%08x.pk3", fs_serverReferencedPakNames[i], fs_serverReferencedPaks[i] );
 					Q_strcat( neededpaks, len, st );
 				}
 				else

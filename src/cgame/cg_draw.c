@@ -134,7 +134,7 @@ static void CG_DrawFieldPadded( int x, int y, int width, int cw, int ch, int val
       break;
   }
 
-  Com_sprintf( num, sizeof( num ), "%d", value );
+  Q_snprintf( num, sizeof( num ), "%d", value );
   l = strlen( num );
 
   if( l > width )
@@ -214,7 +214,7 @@ void CG_DrawField( float x, float y, int width, float cw, float ch, int value )
       break;
   }
 
-  Com_sprintf( num, sizeof( num ), "%d", value );
+  Q_snprintf( num, sizeof( num ), "%d", value );
   l = strlen( num );
 
   if( l > width )
@@ -288,7 +288,7 @@ static void CG_DrawProgressBar( rectDef_t *rect, vec4_t color, float scale,
   //draw text
   if( scale > 0.0 )
   {
-    Com_sprintf( textBuffer, sizeof( textBuffer ), "%d%%", (int)( progress * 100 ) );
+    Q_snprintf( textBuffer, sizeof( textBuffer ), "%d%%", (int)( progress * 100 ) );
     CG_AlignText( rect, textBuffer, scale, 0.0f, 0.0f, textalign, VALIGN_CENTER, &tx, &ty );
 
     UI_Text_Paint( tx, ty, scale, color, textBuffer, 0, 0, textStyle );
@@ -1709,13 +1709,13 @@ static void CG_DrawTeamLabel( rectDef_t *rect, team_t team, float text_x, float 
     case TEAM_ALIENS:
       t = "Aliens";
       if( cg.intermissionStarted )
-        Com_sprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.alienStage + 1 );
+        Q_snprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.alienStage + 1 );
       break;
 
     case TEAM_HUMANS:
       t = "Humans";
       if( cg.intermissionStarted )
-        Com_sprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.humanStage + 1 );
+        Q_snprintf( stage, MAX_TOKEN_CHARS, "(Stage %d)", cgs.humanStage + 1 );
       break;
 
     default:
@@ -1769,12 +1769,12 @@ static void CG_DrawStageReport( rectDef_t *rect, float text_x, float text_y,
       reward = "enemy stagedown";
 
     if( cgs.alienNextStageThreshold < 0 )
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d", cgs.alienStage + 1 );
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d", cgs.alienStage + 1 );
     else if( frags == 1 )
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d, 1 frag for %s",
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d, 1 frag for %s",
                    cgs.alienStage + 1, reward );
     else
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d, %d frags for %s",
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d, %d frags for %s",
                    cgs.alienStage + 1, frags, reward );
   }
   else if( cg.snap->ps.stats[ STAT_TEAM ] == TEAM_HUMANS )
@@ -1790,12 +1790,12 @@ static void CG_DrawStageReport( rectDef_t *rect, float text_x, float text_y,
       reward = "enemy stagedown";
 
     if( cgs.humanNextStageThreshold < 0 )
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d", cgs.humanStage + 1 );
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d", cgs.humanStage + 1 );
     else if( credits == 1 )
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d, 1 credit for %s",
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d, 1 credit for %s",
                    cgs.humanStage + 1, reward );
     else
-      Com_sprintf( s, MAX_TOKEN_CHARS, "Stage %d, %d credits for %s",
+      Q_snprintf( s, MAX_TOKEN_CHARS, "Stage %d, %d credits for %s",
                    cgs.humanStage + 1, credits, reward );
   }
 
@@ -3459,18 +3459,18 @@ static qboolean CG_DrawQueue( void )
     ordinal = "nd";
   else if( remainder == 3 )
     ordinal = "rd";
-  Com_sprintf( buffer, MAX_STRING_CHARS, "You are %d%s in the spawn queue",
+  Q_snprintf( buffer, MAX_STRING_CHARS, "You are %d%s in the spawn queue",
                position, ordinal );
 
   w = UI_Text_Width( buffer, 0.7f, 0 );
   UI_Text_Paint( 320 - w / 2, 360, 0.7f, color, buffer, 0, 0, ITEM_TEXTSTYLE_SHADOWED );
 
   if( cg.snap->ps.persistant[ PERS_SPAWNS ] == 0 )
-    Com_sprintf( buffer, MAX_STRING_CHARS, "There are no spawns remaining" );
+    Q_snprintf( buffer, MAX_STRING_CHARS, "There are no spawns remaining" );
   else if( cg.snap->ps.persistant[ PERS_SPAWNS ] == 1 )
-    Com_sprintf( buffer, MAX_STRING_CHARS, "There is 1 spawn remaining" );
+    Q_snprintf( buffer, MAX_STRING_CHARS, "There is 1 spawn remaining" );
   else
-    Com_sprintf( buffer, MAX_STRING_CHARS, "There are %d spawns remaining",
+    Q_snprintf( buffer, MAX_STRING_CHARS, "There are %d spawns remaining",
                  cg.snap->ps.persistant[ PERS_SPAWNS ] );
 
   w = UI_Text_Width( buffer, 0.7f, 0 );

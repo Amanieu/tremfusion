@@ -745,14 +745,14 @@ void CG_RegisterWeapon( int weaponNum )
   if( strlen( BG_Weapon( weaponNum )->name ) <= 0 )
     CG_Error( "Couldn't find weapon %i", weaponNum );
 
-  Com_sprintf( path, MAX_QPATH, "models/weapons/%s/weapon.cfg", BG_Weapon( weaponNum )->name );
+  Q_snprintf( path, MAX_QPATH, "models/weapons/%s/weapon.cfg", BG_Weapon( weaponNum )->name );
 
   weaponInfo->humanName = BG_Weapon( weaponNum )->humanName;
 
   if( !CG_ParseWeaponFile( path, weaponInfo ) )
     Com_Printf( S_COLOR_RED "ERROR: failed to parse %s\n", path );
 
-  Com_sprintf( path, MAX_QPATH, "models/weapons/%s/animation.cfg", BG_Weapon( weaponNum )->name );
+  Q_snprintf( path, MAX_QPATH, "models/weapons/%s/animation.cfg", BG_Weapon( weaponNum )->name );
 
   if( !cg_suppressWAnimWarnings.integer && 
       !CG_ParseWeaponAnimationFile( path, weaponInfo ) )

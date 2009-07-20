@@ -1893,7 +1893,7 @@ void  G_AdminMessage( const char *prefix, const char *fmt, ... )
   }
 
   // Create the final string
-  Com_sprintf( outstring, sizeof( outstring ), "%s " S_COLOR_MAGENTA "%s",
+  Q_snprintf( outstring, sizeof( outstring ), "%s " S_COLOR_MAGENTA "%s",
                prefix, string );
 
   // Send to all appropriate clients
@@ -1926,7 +1926,7 @@ void  G_LogPrintf( const char *fmt, ... )
   tens = sec / 10;
   sec -= tens * 10;
 
-  Com_sprintf( string, sizeof( string ), "%3i:%i%i ", min, tens, sec );
+  Q_snprintf( string, sizeof( string ), "%3i:%i%i ", min, tens, sec );
 
   va_start( argptr, fmt );
   Q_vsnprintf( string + 7, sizeof( string ) - 7, fmt, argptr );
@@ -1966,7 +1966,7 @@ void G_SendGameStat( team_t team )
     default: return;
   }
 
-  Com_sprintf( data, BIG_INFO_STRING,
+  Q_snprintf( data, BIG_INFO_STRING,
       "%s %s T:%c A:%f H:%f M:%s D:%d SD:%d AS:%d AS2T:%d AS3T:%d HS:%d HS2T:%d HS3T:%d CL:%d",
       Q3_VERSION,
       g_tag.string,
@@ -2005,7 +2005,7 @@ void G_SendGameStat( team_t team )
       default: return;
     }
 
-    Com_sprintf( entry, MAX_STRING_CHARS,
+    Q_snprintf( entry, MAX_STRING_CHARS,
       " \"%s\" %c %d %d %d",
       cl->pers.netname,
       teamChar,
@@ -2140,7 +2140,7 @@ void CheckIntermissionExit( void )
   // whereas a decimal string would have to all be written at once 
   // (and we can't fit a number that large in an int)
   for( i = 0; i < ( g_maxclients.integer + 7 ) / 8; i++ )
-    Com_sprintf( &readyString[ i * 2 ], sizeof( readyString ) - i * 2,
+    Q_snprintf( &readyString[ i * 2 ], sizeof( readyString ) - i * 2,
                  "%2.2x", readyMasks[ i ] );
 
   trap_SetConfigstring( CS_CLIENTS_READY, readyString );

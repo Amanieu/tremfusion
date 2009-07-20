@@ -3574,7 +3574,7 @@ void G_LayoutSave( char *name )
     G_Printf( "LayoutSave( ): no map is loaded\n" );
     return;
   }
-  Com_sprintf( fileName, sizeof( fileName ), "layouts/%s/%s.dat", map, name );
+  Q_snprintf( fileName, sizeof( fileName ), "layouts/%s/%s.dat", map, name );
 
   len = trap_FS_FOpenFile( fileName, &f, FS_WRITE );
   if( len < 0 )
@@ -3707,7 +3707,7 @@ void G_LayoutSelect( void )
       continue;
     }
 
-    Com_sprintf( fileName, sizeof( fileName ), "layouts/%s/%s.dat", map, s );
+    Q_snprintf( fileName, sizeof( fileName ), "layouts/%s/%s.dat", map, s );
     if( trap_FS_FOpenFile( fileName, NULL, FS_READ ) > 0 )
     {
       Q_strcat( layouts, sizeof( layouts ), s );

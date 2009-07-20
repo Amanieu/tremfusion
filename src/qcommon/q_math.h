@@ -30,8 +30,8 @@ typedef float vec_t;
 typedef vec_t vec2_t[2];
 
 // Align all vectors to 16 bytes to allow SSE optimisations
-typedef vec_t vec4_t[4] ALIGNED(16);
-typedef vec4_t vec3a_t ALIGNED(16);
+typedef vec_t vec4_t[4] __aligned(16);
+typedef vec4_t vec3a_t __aligned(16);
 typedef vec_t vec3_t[3];
 
 #if id386_sse >= 1
@@ -41,10 +41,10 @@ typedef vec_t vec3_t[3];
 #define vec3Store(vec3, v4f)   v4f_to_vec3(vec3, v4f)
 #endif
 
-typedef vec3_t  axis_t[3] ALIGNED(16);
-typedef vec_t   matrix3x3_t[9] ALIGNED(16);
-typedef vec_t   matrix_t[16] ALIGNED(16);
-typedef vec_t   quat_t[4] ALIGNED(16);		// | x y z w |
+typedef vec3_t  axis_t[3] __aligned(16);
+typedef vec_t   matrix3x3_t[9] __aligned(16);
+typedef vec_t   matrix_t[16] __aligned(16);
+typedef vec_t   quat_t[4] __aligned(16);		// | x y z w |
 
 typedef	int	fixed4_t;
 typedef	int	fixed8_t;

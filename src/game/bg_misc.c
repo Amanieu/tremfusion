@@ -3895,7 +3895,7 @@ char *BG_ClientListString( clientList_t *list )
   s[ 0 ] = '\0';
   if( !list )
     return s;
-  Com_sprintf( s, sizeof( s ), "%08x%08x", list->hi, list->lo );
+  Q_snprintf( s, sizeof( s ), "%08x%08x", list->hi, list->lo );
   return s;
 }
 

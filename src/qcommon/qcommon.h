@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/cm_public.h"
 #include "thread.h"
+#include "print.h"
+#include "mem.h"
 
 //============================================================================
 
@@ -753,10 +755,6 @@ typedef enum
   CF_ALTIVEC    = 1 << 7
 } cpuFeatures_t;
 
-// centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
-#define	MAXPRINTMSG	4096
-
-
 typedef enum {
 	// SE_NONE must be zero
 	SE_NONE = 0,	// evTime is still valid
@@ -779,20 +777,10 @@ typedef struct {
 void		Com_QueueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 int			Com_EventLoop( void );
 
-char		*CopyString( const char *in );
 void		Info_Print( const char *s );
-
-void		Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *));
-void		Com_EndRedirect( void );
-void 		Com_Printf( const char *fmt, ... ) __printf(1, 2);
-void 		Com_DPrintf( const char *fmt, ... ) __printf(1, 2);
-void 		Com_Error( int code, const char *fmt, ... ) __printf(2, 3) __cold __noreturn;
 void 		Com_Quit_f( void );
 
 int			Com_Milliseconds( void );	// will be journaled properly
-unsigned	Com_BlockChecksum( const void *buffer, int length );
-char		*Com_MD5File(const char *filename, int length, const char *prefix, int prefix_len);
-int			Com_HashKey(char *string, int maxlen);
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);
@@ -842,68 +830,6 @@ extern	qboolean	com_errorEntered;
 
 extern	fileHandle_t	com_journalFile;
 extern	fileHandle_t	com_journalDataFile;
-
-typedef enum {
-	TAG_FREE,
-	TAG_GENERAL,
-	TAG_BOTLIB,
-	TAG_RENDERER,
-	TAG_SMALL,
-	TAG_STATIC
-} memtag_t;
-
-/*
-
---- low memory ----
-server vm
-server clipmap
----mark---
-renderer initialization (shaders, etc)
-UI vm
-cgame vm
-renderer map
-renderer models
-
----free---
-
-temp file loading
---- high memory ---
-
-*/
-
-#if defined(_DEBUG) && !defined(BSPC)
-	#define ZONE_DEBUG
-#endif
-
-#ifdef ZONE_DEBUG
-#define Z_TagMalloc(size, tag)			Z_TagMallocDebug(size, tag, #size, __FILE__, __LINE__)
-#define Z_Malloc(size)					Z_MallocDebug(size, #size, __FILE__, __LINE__)
-#define S_Malloc(size)					S_MallocDebug(size, #size, __FILE__, __LINE__)
-void *Z_TagMallocDebug( int size, int tag, char *label, char *file, int line );	// NOT 0 filled memory
-void *Z_MallocDebug( int size, char *label, char *file, int line );			// returns 0 filled memory
-void *S_MallocDebug( int size, char *label, char *file, int line );			// returns 0 filled memory
-#else
-void *Z_TagMalloc( int size, int tag );	// NOT 0 filled memory
-void *Z_Malloc( int size );			// returns 0 filled memory
-void *S_Malloc( int size );			// NOT 0 filled memory only for small allocations
-#endif
-void Z_Free( void *ptr );
-void Z_FreeTags( int tag );
-int Z_AvailableMemory( void );
-void Z_LogHeap( void );
-
-void Hunk_Clear( void );
-void Hunk_ClearToMark( void );
-void Hunk_SetMark( void );
-qboolean Hunk_CheckMark( void );
-void Hunk_ClearTempMemory( void );
-void *Hunk_AllocateTempMemory( int size );
-void Hunk_FreeTempMemory( void *buf );
-int	Hunk_MemoryRemaining( void );
-void Hunk_Log( void);
-void Hunk_Trash( void );
-
-void Com_TouchMemory( void );
 
 // commandLine should not include the executable name (argv[0])
 void Com_Init( char *commandLine );

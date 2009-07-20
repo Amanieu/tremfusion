@@ -189,7 +189,7 @@ void Con_Search_f (void)
 {
 	int		l, i, x;
 	short	*line;
-	char	buffer[MAXPRINTMSG];
+	char	buffer[MAX_PRINTMSG];
 	int		direction;
 	int		c = Cmd_Argc();
 
@@ -492,7 +492,7 @@ void CL_ConsolePrint( char *txt ) {
 
 		*p = '\0';
 
-		Com_sprintf( buf, sizeof(buf), "!namelog %s", text );
+		Q_snprintf( buf, sizeof(buf), "!namelog %s", text );
 		CL_AddReliableCommand( buf );
 		}
 	}
@@ -607,7 +607,7 @@ void Con_DrawInput (void) {
 
 	y = con.vislines - ( SCR_ConsoleFontCharHeight() * 2 ) + 2 ;
 
-	Com_sprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 %s", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min, cl_consolePrompt->string );
+	Q_snprintf( prompt,  sizeof( prompt ), "^0[^3%02d%c%02d^0]^7 %s", realtime.tm_hour, (realtime.tm_sec & 1) ? ':' : ' ', realtime.tm_min, cl_consolePrompt->string );
 
 	color[0] = 1.0f;
 	color[1] = 1.0f;

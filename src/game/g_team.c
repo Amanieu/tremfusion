@@ -263,10 +263,10 @@ qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen )
     if( best->count > 7 )
       best->count = 7;
 
-    Com_sprintf( loc, loclen, "%c%c%s" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message );
+    Q_snprintf( loc, loclen, "%c%c%s" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message );
   }
   else
-    Com_sprintf( loc, loclen, "%s", best->message );
+    Q_snprintf( loc, loclen, "%s", best->message );
 
   return qtrue;
 }
@@ -334,7 +334,7 @@ void TeamplayInfoMessage( gentity_t *ent )
       if( h < 0 )
         h = 0;
 
-      Com_sprintf( entry, sizeof( entry ),
+      Q_snprintf( entry, sizeof( entry ),
         " %i %i %i %i %i",
         i, player->client->pers.location, h, a,
         player->client->ps.weapon );

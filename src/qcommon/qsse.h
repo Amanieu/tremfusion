@@ -852,7 +852,7 @@ v4f_to_vec3(vec3_t trg, v4f src) {
 	trg[1] = s4fToFloat( v4fY( src ) );
 	trg[2] = s4fToFloat( v4fZ( src ) );
 #else
-	float tmp[4] ALIGNED(16);
+	float tmp[4] __aligned(16);
 	
 	v4fStoreA( tmp, src );
 	*(int *)&(trg[0]) = *(int *)&(tmp[0]);

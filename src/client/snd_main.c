@@ -412,7 +412,7 @@ void S_Play_f( void ) {
 	i = 1;
 	while ( i<Cmd_Argc() ) {
 		if ( !Q_strrchr(Cmd_Argv(i), '.') ) {
-			Com_sprintf( name, sizeof(name), "%s.wav", Cmd_Argv(1) );
+			Q_snprintf( name, sizeof(name), "%s.wav", Cmd_Argv(1) );
 		} else {
 			Q_strncpyz( name, Cmd_Argv(i), sizeof(name) );
 		}

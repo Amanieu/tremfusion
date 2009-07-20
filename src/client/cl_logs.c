@@ -74,7 +74,7 @@ void CL_WriteClientLog( char *text ) {
 		}
 		if( FS_Initialized() && LogFileOpened == qtrue ) {
 			// varibles
-			char NoColorMsg[MAXPRINTMSG];
+			char NoColorMsg[MAX_PRINTMSG];
 			//decolor the string
 			Q_strncpyz( NoColorMsg, text, sizeof(NoColorMsg) );
 			Q_CleanStr( NoColorMsg );
@@ -98,9 +98,9 @@ void CL_WriteClientChatLog( char *text ) {
 		if( FS_Initialized() && LogFileOpened == qtrue ) {
 			if( cl.serverTime > 0 ) {
 				// varibles
-				char NoColorMsg[MAXPRINTMSG];
+				char NoColorMsg[MAX_PRINTMSG];
 				char Timestamp[ 60 ];
-				char LogText[ 60 + MAXPRINTMSG ];
+				char LogText[ 60 + MAX_PRINTMSG ];
 				if( cl_logs->integer == 1 ) {
 					//just do 3 stars to seperate from normal logging stuff
 					Q_strncpyz( Timestamp, "***", sizeof( Timestamp ) );

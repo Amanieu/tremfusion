@@ -53,7 +53,7 @@ v4f mixMask0000, mixMask0001, mixMask0010, mixMask0011,
     mixMask1100, mixMask1101, mixMask1110, mixMask1111;
 
 static v4f loadInts(int a, int b, int c, int d) {
-	floatint_t x[4] ALIGNED(16);
+	floatint_t x[4] __aligned(16);
 	
 	x[0].i = a;
 	x[1].i = b;

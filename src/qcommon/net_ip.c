@@ -463,7 +463,7 @@ const char	*NET_AdrToString (netadr_t a)
 	static	char	s[NET_ADDRSTRMAXLEN];
 
 	if (a.type == NA_LOOPBACK)
-		Com_sprintf (s, sizeof(s), "loopback");
+		Q_snprintf (s, sizeof(s), "loopback");
 	else if (a.type == NA_IP || a.type == NA_IP6)
 	{
 		struct sockaddr_storage sadr;
@@ -481,11 +481,11 @@ const char	*NET_AdrToStringwPort (netadr_t a)
 	static	char	s[NET_ADDRSTRMAXLEN];
 
 	if (a.type == NA_LOOPBACK)
-		Com_sprintf (s, sizeof(s), "loopback");
+		Q_snprintf (s, sizeof(s), "loopback");
 	else if(a.type == NA_IP)
-		Com_sprintf(s, sizeof(s), "%s:%hu", NET_AdrToString(a), ntohs(a.port));
+		Q_snprintf(s, sizeof(s), "%s:%hu", NET_AdrToString(a), ntohs(a.port));
 	else if(a.type == NA_IP6)
-		Com_sprintf(s, sizeof(s), "[%s]:%hu", NET_AdrToString(a), ntohs(a.port));
+		Q_snprintf(s, sizeof(s), "[%s]:%hu", NET_AdrToString(a), ntohs(a.port));
 
 	return s;
 }

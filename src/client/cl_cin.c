@@ -1521,9 +1521,9 @@ int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBi
 	int		i;
 
 	if (strstr(arg, "/") == NULL && strstr(arg, "\\") == NULL) {
-		Com_sprintf (name, sizeof(name), "video/%s", arg);
+		Q_snprintf (name, sizeof(name), "video/%s", arg);
 	} else {
-		Com_sprintf (name, sizeof(name), "%s", arg);
+		Q_snprintf (name, sizeof(name), "%s", arg);
 	}
 
 	if (!(systemBits & CIN_system)) {

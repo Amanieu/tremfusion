@@ -153,7 +153,7 @@ CON_ColorPrint
 */
 static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 {
-	static char buffer[MAXPRINTMSG];
+	static char buffer[MAX_PRINTMSG];
 	int length = 0;
 
 	CON_SetColor(win, 7);
@@ -177,12 +177,12 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 				if (stripcodes)
 					msg += 2;
 				else {
-					if (length >= MAXPRINTMSG - 1)
+					if (length >= MAX_PRINTMSG - 1)
 						break;
 					buffer[length] = *msg;
 					length++;
 					msg++;
-					if (length >= MAXPRINTMSG - 1)
+					if (length >= MAX_PRINTMSG - 1)
 						break;
 					buffer[length] = *msg;
 					length++;
@@ -190,7 +190,7 @@ static void CON_ColorPrint(WINDOW *win, const char *msg, qboolean stripcodes)
 				}
 			}
 		} else {
-			if (length >= MAXPRINTMSG - 1)
+			if (length >= MAX_PRINTMSG - 1)
 				break;
 
 			buffer[length] = *msg;

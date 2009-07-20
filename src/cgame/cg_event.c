@@ -266,49 +266,49 @@ static void CG_Obituary( entityState_t *ent )
         break;
       case MOD_LEVEL1_CLAW:
         message = "was swiped by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL1 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL2_CLAW:
         message = "was clawed by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL2_ZAP:
         message = "was zapped by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL2 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL3_CLAW:
         message = "was chomped by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL3_POUNCE:
         message = "was pounced upon by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL3_BOUNCEBALL:
         message = "was sniped by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL3 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL4_CLAW:
         message = "was mauled by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName );
         message2 = className;
         break;
       case MOD_LEVEL4_TRAMPLE:
         message = "should have gotten out of the way of";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL4 )->humanName );
         message2 = className;
         break;
@@ -323,7 +323,7 @@ static void CG_Obituary( entityState_t *ent )
         break;
       case MOD_LEVEL1_PCLOUD:
         message = "was gassed by";
-        Com_sprintf( className, 64, "'s %s",
+        Q_snprintf( className, 64, "'s %s",
             BG_ClassConfig( PCL_ALIEN_LEVEL1 )->humanName );
         message2 = className;
         break;

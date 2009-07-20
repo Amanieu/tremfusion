@@ -71,7 +71,7 @@ void CG_WritePTRCode( int code )
   char          text[ 16 ];
   fileHandle_t  f;
 
-  Com_sprintf( text, 16, "%d", code );
+  Q_snprintf( text, 16, "%d", code );
 
   // open file
   if( trap_FS_FOpenFile( PTRC_FILE, &f, FS_WRITE ) < 0 )

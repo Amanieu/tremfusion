@@ -82,6 +82,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <limits.h>
 #include <float.h>				// Tr3B - for DBL_MAX and FLT_MAX
+// For alloca()
+#ifdef _WIN32
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 
 // vsnprintf is ISO/IEC 9899:1999
 // abstracting this to make it portable
@@ -130,8 +136,6 @@ typedef int		fileHandle_t;
 typedef int		clipHandle_t;
 
 #define PAD(x,y) (((x)+(y)-1) & ~((y)-1))
-
-#define ALIGNED(x) __aligned(x)
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -204,51 +208,12 @@ typedef enum {
 #define	MAX_MAP_AREA_BYTES		32		// bit vector of area visibility
 
 
-// print levels from renderer (FIXME: set up for game / cgame?)
-typedef enum {
-	PRINT_ALL,
-	PRINT_DEVELOPER,		// only print when "developer 1"
-	PRINT_WARNING,
-	PRINT_ERROR
-} printParm_t;
-
-
-#ifdef ERR_FATAL
-#undef ERR_FATAL			// this is be defined in malloc.h
-#endif
-
-// parameters to the main Error routine
-typedef enum {
-	ERR_FATAL,					// exit the entire game with a popup window
-	ERR_DROP,					// print to console and disconnect from game
-	ERR_SERVERDISCONNECT,		// don't kill server
-	ERR_DISCONNECT,				// client disconnected from the server
-} errorParm_t;
-
-
 //=============================================================
 
 #include "q_math.h"
 
 //=============================================================
 
-
-#if defined(_DEBUG) && !defined(BSPC)
-	#define HUNK_DEBUG
-#endif
-
-typedef enum {
-	h_high,
-	h_low,
-	h_dontcare
-} ha_pref;
-
-#ifdef HUNK_DEBUG
-#define Hunk_Alloc( size, preference )				Hunk_AllocDebug(size, preference, #size, __FILE__, __LINE__)
-void *Hunk_AllocDebug( int size, ha_pref preference, char *label, char *file, int line );
-#else
-void *Hunk_Alloc( int size, ha_pref preference );
-#endif
 
 #define Com_Memset memset
 #define Com_Memcpy memcpy
@@ -363,8 +328,6 @@ void Com_Parse2DMatrix (char **buf_p, int y, int x, float *m);
 void Com_Parse3DMatrix (char **buf_p, int z, int y, int x, float *m);
 int Com_HexStrToInt( const char *str );
 
-void Com_sprintf (char *dest, int size, const char *fmt, ...) __printf(3, 4);
-
 char *Com_SkipTokens( char *s, int numTokens, char *sep );
 char *Com_SkipCharset( char *s, char *sep );
 
@@ -434,10 +397,6 @@ void Info_SetValueForKey( char *s, const char *key, const char *value );
 void Info_SetValueForKey_Big( char *s, const char *key, const char *value );
 qboolean Info_Validate( const char *s );
 void Info_NextPair( const char **s, char *key, char *value );
-
-// this is only here so the functions in q_shared.c and bg_*.c can link
-void Com_Error( int level, const char *error, ... ) __printf(2, 3) __cold __noreturn;
-void Com_Printf( const char *msg, ... ) __printf(1, 2);
 
 
 /*
@@ -962,14 +921,6 @@ typedef enum {
 	FMV_LOOPED,
 	FMV_ID_WAIT
 } e_status;
-
-typedef enum _flag_status {
-	FLAG_ATBASE = 0,
-	FLAG_TAKEN,			// CTF
-	FLAG_TAKEN_RED,		// One Flag CTF
-	FLAG_TAKEN_BLUE,	// One Flag CTF
-	FLAG_DROPPED
-} flagStatus_t;
 
 typedef enum {
 	DS_NONE,

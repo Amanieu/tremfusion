@@ -87,7 +87,7 @@ qthread_t Com_SpawnThread(thread_func_t func, void *arg)
 	}
 
 	if (i >= MAX_THREADS)
-		Com_Error(ERR_FATAL, "Exceeded maximum number of threads");
+		Error("Exceeded maximum number of threads");
 
 	threads[i].func = func;
 	threads[i].arg = arg;
@@ -95,10 +95,10 @@ qthread_t Com_SpawnThread(thread_func_t func, void *arg)
 #ifdef _WIN32
 	threads[i].handle = CreateThread(NULL, 0, ThreadStart, (void *)i, 0, NULL);
 	if (!threads[i].handle)
-		Com_Error(ERR_FATAL, "Error spawning thread %d", (int)i);
+		Error("Error spawning thread %d", (int)i);
 #else
 	if (pthread_create(&threads[i].handle, NULL, ThreadStart, (void *)i))
-		Com_Error(ERR_FATAL, "Error spawning thread %d", (int)i);
+		Error("Error spawning thread %d", (int)i);
 #endif
 
 	return i;

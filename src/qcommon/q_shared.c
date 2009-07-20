@@ -646,7 +646,7 @@ void Com_DefaultExtension (char *path, int maxSize, const char *extension ) {
 	}
 
 	Q_strncpyz( oldPath, path, sizeof( oldPath ) );
-	Com_sprintf( path, maxSize, "%s%s", oldPath, extension );
+	Q_snprintf( path, maxSize, "%s%s", oldPath, extension );
 }
 
 /*
@@ -1632,28 +1632,6 @@ int Q_CountChar(const char *string, char tocount)
 	return count;
 }
 
-void  Com_sprintf( char *dest, int size, const char *fmt, ...) {
-	int		len;
-	va_list		argptr;
-	char	bigbuffer[32000];	// big, but small enough to fit in PPC stack
-
-	va_start (argptr,fmt);
-	len = Q_vsnprintf (bigbuffer, sizeof(bigbuffer), fmt,argptr);
-	va_end (argptr);
-	if ( len >= sizeof( bigbuffer ) ) {
-		Com_Error( ERR_FATAL, "Com_sprintf: overflowed bigbuffer" );
-	}
-	if (len >= size) {
-		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
-#if defined(_MSC_VER) && defined(_DEBUG)
-		__asm {
-			int 3;
-		}
-#endif
-	}
-	Q_strncpyz (dest, bigbuffer, size );
-}
-
 
 /*
 ============
@@ -1968,7 +1946,7 @@ void Info_SetValueForKey( char *s, const char *key, const char *value ) {
 	if (!value || !strlen(value))
 		return;
 
-	Com_sprintf (newi, sizeof(newi), "\\%s\\%s", key, value);
+	Q_snprintf (newi, sizeof(newi), "\\%s\\%s", key, value);
 
 	if (strlen(newi) + strlen(s) >= MAX_INFO_STRING)
 	{
@@ -2008,7 +1986,7 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 	if (!value || !strlen(value))
 		return;
 
-	Com_sprintf (newi, sizeof(newi), "\\%s\\%s", key, value);
+	Q_snprintf (newi, sizeof(newi), "\\%s\\%s", key, value);
 
 	if (strlen(newi) + strlen(s) >= BIG_INFO_STRING)
 	{

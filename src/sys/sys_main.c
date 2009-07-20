@@ -208,7 +208,7 @@ Transform Q3 colour codes to ANSI escape sequences
 */
 void Sys_AnsiColorPrint( const char *msg )
 {
-	static char buffer[ MAXPRINTMSG ];
+	static char buffer[ MAX_PRINTMSG ];
 	int         length = 0;
 	static int  q3ToAnsi[ 8 ] =
 	{
@@ -243,7 +243,7 @@ void Sys_AnsiColorPrint( const char *msg )
 			else
 			{
 				// Print the color code
-				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm",
+				Q_snprintf( buffer, sizeof( buffer ), "\033[%dm",
 						q3ToAnsi[ ColorIndex( *( msg + 1 ) ) ] );
 				fputs( buffer, stderr );
 				msg += 2;
@@ -251,7 +251,7 @@ void Sys_AnsiColorPrint( const char *msg )
 		}
 		else
 		{
-			if( length >= MAXPRINTMSG - 1 )
+			if( length >= MAX_PRINTMSG - 1 )
 				break;
 
 			buffer[ length ] = *msg;

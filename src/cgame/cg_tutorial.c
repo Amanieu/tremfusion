@@ -143,7 +143,7 @@ static const char *CG_KeyNameForCommand( const char *command )
       }
       else
       {
-        Com_sprintf( buffer, MAX_STRING_CHARS, "\"%s\" (unbound)",
+        Q_snprintf( buffer, MAX_STRING_CHARS, "\"%s\" (unbound)",
           bindings[ i ].humanName );
       }
 

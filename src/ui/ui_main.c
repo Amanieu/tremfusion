@@ -596,7 +596,7 @@ static int UI_GetServerStatusInfo( const char *serverAddress, serverStatusInfo_t
 
         name = p;
 
-        Com_sprintf( &info->pings[len], sizeof( info->pings ) - len, "%d", i );
+        Q_snprintf( &info->pings[len], sizeof( info->pings ) - len, "%d", i );
 
         info->lines[info->numLines][0] = &info->pings[len];
 
@@ -698,7 +698,7 @@ static void UI_BuildFindPlayerList( qboolean force )
     trap_LAN_ServerStatus( NULL, NULL, 0 );
     //
     uiInfo.numFoundPlayerServers = 1;
-    Com_sprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
+    Q_snprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
                  sizeof( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1] ),
                  "searching %d...", uiInfo.pendingServerStatus.num );
     numFound = 0;
@@ -765,7 +765,7 @@ static void UI_BuildFindPlayerList( qboolean force )
           }
         }
 
-        Com_sprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
+        Q_snprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
                      sizeof( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1] ),
                      "searching %d/%d...", numFound, uiInfo.pendingServerStatus.num );
         // retrieved the server status so reuse this spot
@@ -805,7 +805,7 @@ static void UI_BuildFindPlayerList( qboolean force )
 
         uiInfo.pendingServerStatus.server[i].valid = qtrue;
         uiInfo.pendingServerStatus.num++;
-        Com_sprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
+        Q_snprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
                      sizeof( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1] ),
                      "searching %d/%d...", numFound, uiInfo.pendingServerStatus.num );
       }
@@ -827,12 +827,12 @@ static void UI_BuildFindPlayerList( qboolean force )
 
     if( !uiInfo.numFoundPlayerServers )
     {
-      Com_sprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
+      Q_snprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
                    sizeof( uiInfo.foundPlayerServerAddresses[0] ), "no servers found" );
     }
     else
     {
-      Com_sprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
+      Q_snprintf( uiInfo.foundPlayerServerNames[uiInfo.numFoundPlayerServers-1],
                    sizeof( uiInfo.foundPlayerServerAddresses[0] ),
                    "%d server%s found with player %s", uiInfo.numFoundPlayerServers - 1,
                    uiInfo.numFoundPlayerServers == 2 ? "" : "s", uiInfo.findPlayerName );
@@ -1927,7 +1927,7 @@ static void UI_DrawGLInfo( rectDef_t *rect, float scale, int textalign, int text
 {
   char      buffer[ 4096 ];
 
-  Com_sprintf( buffer, sizeof( buffer ), "VENDOR: %s\nVERSION: %s\n"
+  Q_snprintf( buffer, sizeof( buffer ), "VENDOR: %s\nVERSION: %s\n"
                "PIXELFORMAT: color(%d-bits) Z(%d-bits) stencil(%d-bits)\n%s",
                uiInfo.uiDC.glconfig.vendor_string, uiInfo.uiDC.glconfig.renderer_string,
                uiInfo.uiDC.glconfig.colorBits, uiInfo.uiDC.glconfig.depthBits,
@@ -2436,12 +2436,12 @@ static void UI_LoadHumanArmouryBuys( void )
       int price = BG_Weapon( i )->price;
       if( uiInfo.weapon != WP_NONE && uiInfo.weapon != WP_BLASTER )
       {
-        Com_sprintf( buffer, sizeof( buffer ), "cmd sell %s;", BG_Weapon( uiInfo.weapon )->name );
+        Q_snprintf( buffer, sizeof( buffer ), "cmd sell %s;", BG_Weapon( uiInfo.weapon )->name );
         price -= BG_Weapon( uiInfo.weapon )->price;
       }
       uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
         BG_Weapon( i )->humanName : va( "^1%s", BG_Weapon( i )->humanName ) );
-      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Weapon( i )->name );
+      Q_snprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Weapon( i )->name );
       uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_WEAPON;
       uiInfo.humanArmouryBuyList[ j ].v.weapon = i;
@@ -2467,13 +2467,13 @@ static void UI_LoadHumanArmouryBuys( void )
         if( ( uiInfo.upgrades & ( 1 << i2 ) ) &&
             ( BG_Upgrade( i2 )->slots & BG_Upgrade( i )->slots ) )
         {
-          Com_sprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
+          Q_snprintf( buffer, sizeof( buffer ), "%scmd sell %s;", buffer, BG_Upgrade( i2 )->name );
           price -= BG_Upgrade( i2 )->price;
         }
       }
       uiInfo.humanArmouryBuyList[ j ].text = String_Alloc( price <= uiInfo.credits ?
         BG_Upgrade( i )->humanName : va( "^1%s", BG_Upgrade( i )->humanName ) );
-      Com_sprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Upgrade( i )->name );
+      Q_snprintf( buffer, sizeof( buffer ), "%scmd buy %s\n", buffer, BG_Upgrade( i )->name );
       uiInfo.humanArmouryBuyList[ j ].cmd = String_Alloc( buffer );
       uiInfo.humanArmouryBuyList[ j ].type = INFOTYPE_UPGRADE;
       uiInfo.humanArmouryBuyList[ j ].v.upgrade = i;
@@ -2738,11 +2738,11 @@ static void UI_LoadDemos( void )
   char  *demoname;
   int   i, len;
 
-  Com_sprintf( demoExt, sizeof( demoExt ), "dm_%d", ( int )trap_Cvar_VariableValue( "protocol" ) );
+  Q_snprintf( demoExt, sizeof( demoExt ), "dm_%d", ( int )trap_Cvar_VariableValue( "protocol" ) );
 
   uiInfo.demoCount = trap_FS_GetFileList( "demos", demoExt, demolist, 4096 );
 
-  Com_sprintf( demoExt, sizeof( demoExt ), ".dm_%d", ( int )trap_Cvar_VariableValue( "protocol" ) );
+  Q_snprintf( demoExt, sizeof( demoExt ), ".dm_%d", ( int )trap_Cvar_VariableValue( "protocol" ) );
 
   if( uiInfo.demoCount )
   {
@@ -3142,7 +3142,7 @@ static void UI_RunMenuScript( char **args )
         trap_FS_Read( text, len, f );
         text[ len ] = 0;
 
-        Com_sprintf( command, 32, "ptrcrestore %s", text );
+        Q_snprintf( command, 32, "ptrcrestore %s", text );
 
         trap_Cmd_ExecuteText( EXEC_APPEND, command );
       }
@@ -3642,7 +3642,7 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
           {
             if( ui_netSource.integer == AS_LOCAL )
             {
-              Com_sprintf( hostname, sizeof( hostname ), "%s [%s]",
+              Q_snprintf( hostname, sizeof( hostname ), "%s [%s]",
                            Info_ValueForKey( info, "hostname" ),
                            netnames[atoi( Info_ValueForKey( info, "nettype" ) )] );
               return hostname;
@@ -3651,7 +3651,7 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
             {
               char *text;
 
-              Com_sprintf( hostname, sizeof( hostname ), "%s", Info_ValueForKey( info, "hostname" ) );
+              Q_snprintf( hostname, sizeof( hostname ), "%s", Info_ValueForKey( info, "hostname" ) );
 
               // Strip leading whitespace
               text = hostname;
@@ -3667,7 +3667,7 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
           return Info_ValueForKey( info, "mapname" );
 
         case SORT_CLIENTS:
-          Com_sprintf( clientBuff, sizeof( clientBuff ), "%s (%s)",
+          Q_snprintf( clientBuff, sizeof( clientBuff ), "%s (%s)",
                        Info_ValueForKey( info, "clients" ), Info_ValueForKey( info, "sv_maxclients" ) );
           return clientBuff;
 
@@ -3801,12 +3801,12 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
     {
       if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
       {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+        Q_snprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
         return resolution;
       }
     }
 
-    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+    Q_snprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
     return resolution;
   }
 
@@ -4308,23 +4308,23 @@ static void UI_ReadableSize ( char *buf, int bufsize, int value )
 {
   if( value > 1024 * 1024 * 1024 )
   { // gigs
-    Com_sprintf( buf, bufsize, "%d", value / ( 1024 * 1024 * 1024 ) );
-    Com_sprintf( buf + strlen( buf ), bufsize - strlen( buf ), ".%02d GB",
+    Q_snprintf( buf, bufsize, "%d", value / ( 1024 * 1024 * 1024 ) );
+    Q_snprintf( buf + strlen( buf ), bufsize - strlen( buf ), ".%02d GB",
         ( value % ( 1024 * 1024 * 1024 ) ) * 100 / ( 1024 * 1024 * 1024 ) );
   }
   else if( value > 1024 * 1024 )
   { // megs
-    Com_sprintf( buf, bufsize, "%d", value / ( 1024 * 1024 ) );
-    Com_sprintf( buf + strlen( buf ), bufsize - strlen( buf ), ".%02d MB",
+    Q_snprintf( buf, bufsize, "%d", value / ( 1024 * 1024 ) );
+    Q_snprintf( buf + strlen( buf ), bufsize - strlen( buf ), ".%02d MB",
         ( value % ( 1024 * 1024 ) ) * 100 / ( 1024 * 1024 ) );
   }
   else if( value > 1024 )
   { // kilos
-    Com_sprintf( buf, bufsize, "%d KB", value / 1024 );
+    Q_snprintf( buf, bufsize, "%d KB", value / 1024 );
   }
   else
   { // bytes
-    Com_sprintf( buf, bufsize, "%d bytes", value );
+    Q_snprintf( buf, bufsize, "%d bytes", value );
   }
 }
 
@@ -4335,15 +4335,15 @@ static void UI_PrintTime ( char *buf, int bufsize, int time )
 
   if( time > 3600 )
   { // in the hours range
-    Com_sprintf( buf, bufsize, "%d hr %d min", time / 3600, ( time % 3600 ) / 60 );
+    Q_snprintf( buf, bufsize, "%d hr %d min", time / 3600, ( time % 3600 ) / 60 );
   }
   else if( time > 60 )
   { // mins
-    Com_sprintf( buf, bufsize, "%d min %d sec", time / 60, time % 60 );
+    Q_snprintf( buf, bufsize, "%d min %d sec", time / 60, time % 60 );
   }
   else
   { // secs
-    Com_sprintf( buf, bufsize, "%d sec", time );
+    Q_snprintf( buf, bufsize, "%d sec", time );
   }
 }
 
@@ -4547,7 +4547,7 @@ void UI_DrawConnectScreen( qboolean overlay )
                       "Starting up...", ITEM_TEXTSTYLE_SHADOWEDMORE );
   else
   {
-    Com_sprintf( text, sizeof( text ), "Connecting to %s", cstate.servername );
+    Q_snprintf( text, sizeof( text ), "Connecting to %s", cstate.servername );
     Text_PaintCenter( centerPoint, yStart + 48, scale, colorWhite, text , ITEM_TEXTSTYLE_SHADOWEDMORE );
   }
 

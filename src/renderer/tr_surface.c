@@ -638,10 +638,10 @@ static void LerpMeshVertexes_altivec(md3Surface_t *surf, float backlerp)
 {
 	short	*oldXyz, *newXyz, *oldNormals, *newNormals;
 	float	*outXyz, *outNormal;
-	float	oldXyzScale ALIGNED(16);
-	float   newXyzScale ALIGNED(16);
-	float	oldNormalScale ALIGNED(16);
-	float newNormalScale ALIGNED(16);
+	float	oldXyzScale __aligned(16);
+	float   newXyzScale __aligned(16);
+	float	oldNormalScale __aligned(16);
+	float newNormalScale __aligned(16);
 	int		vertNum;
 	unsigned lat, lng;
 	int		numVerts;

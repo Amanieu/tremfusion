@@ -327,10 +327,10 @@ void CG_InitBuildables( void )
   {
     strcpy( soundfile, cg_buildableSoundNames[ j - 1 ] );
 
-    Com_sprintf( filename, sizeof( filename ), "sound/buildables/alien/%s", soundfile );
+    Q_snprintf( filename, sizeof( filename ), "sound/buildables/alien/%s", soundfile );
     defaultAlienSounds[ j ] = trap_S_RegisterSound( filename, qfalse );
 
-    Com_sprintf( filename, sizeof( filename ), "sound/buildables/human/%s", soundfile );
+    Q_snprintf( filename, sizeof( filename ), "sound/buildables/human/%s", soundfile );
     defaultHumanSounds[ j ] = trap_S_RegisterSound( filename, qfalse );
   }
 
@@ -341,12 +341,12 @@ void CG_InitBuildables( void )
     buildableName = BG_Buildable( i )->name;
 
     //animation.cfg
-    Com_sprintf( filename, sizeof( filename ), "models/buildables/%s/animation.cfg", buildableName );
+    Q_snprintf( filename, sizeof( filename ), "models/buildables/%s/animation.cfg", buildableName );
     if ( !CG_ParseBuildableAnimationFile( filename, i ) )
       Com_Printf( S_COLOR_YELLOW "WARNING: failed to load animation file %s\n", filename );
 
     //sound.cfg
-    Com_sprintf( filename, sizeof( filename ), "sound/buildables/%s/sound.cfg", buildableName );
+    Q_snprintf( filename, sizeof( filename ), "sound/buildables/%s/sound.cfg", buildableName );
     if ( !CG_ParseBuildableSoundFile( filename, i ) )
       Com_Printf( S_COLOR_YELLOW "WARNING: failed to load sound file %s\n", filename );
 
@@ -362,7 +362,7 @@ void CG_InitBuildables( void )
     for( j = BANIM_NONE + 1; j < MAX_BUILDABLE_ANIMATIONS; j++ )
     {
       strcpy( soundfile, cg_buildableSoundNames[ j - 1 ] );
-      Com_sprintf( filename, sizeof( filename ), "sound/buildables/%s/%s", buildableName, soundfile );
+      Q_snprintf( filename, sizeof( filename ), "sound/buildables/%s/%s", buildableName, soundfile );
 
       if( cg_buildables[ i ].sounds[ j ].enabled )
       {

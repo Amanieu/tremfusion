@@ -388,17 +388,17 @@ static qboolean CG_RegisterClientSkin( clientInfo_t *ci, const char *modelName, 
 
   if( !ci->nonsegmented )
   {
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/lower_%s.skin", modelName, skinName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/lower_%s.skin", modelName, skinName );
     ci->legsSkin = trap_R_RegisterSkin( filename );
     if( !ci->legsSkin )
       Com_Printf( "Leg skin load failure: %s\n", filename );
 
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/upper_%s.skin", modelName, skinName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/upper_%s.skin", modelName, skinName );
     ci->torsoSkin = trap_R_RegisterSkin( filename );
     if( !ci->torsoSkin )
       Com_Printf( "Torso skin load failure: %s\n", filename );
 
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/head_%s.skin", modelName, skinName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/head_%s.skin", modelName, skinName );
     ci->headSkin = trap_R_RegisterSkin( filename );
     if( !ci->headSkin )
       Com_Printf( "Head skin load failure: %s\n", filename );
@@ -408,7 +408,7 @@ static qboolean CG_RegisterClientSkin( clientInfo_t *ci, const char *modelName, 
   }
   else
   {
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/nonseg_%s.skin", modelName, skinName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/nonseg_%s.skin", modelName, skinName );
     ci->nonSegSkin = trap_R_RegisterSkin( filename );
     if( !ci->nonSegSkin )
       Com_Printf( "Non-segmented skin load failure: %s\n", filename );
@@ -431,7 +431,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
 
   // do this first so the nonsegmented property is set
   // load the animations
-  Com_sprintf( filename, sizeof( filename ), "models/players/%s/animation.cfg", modelName );
+  Q_snprintf( filename, sizeof( filename ), "models/players/%s/animation.cfg", modelName );
   if( !CG_ParseAnimationFile( filename, ci ) )
   {
     Com_Printf( "Failed to load animation file %s\n", filename );
@@ -442,7 +442,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
 
   if( !ci->nonsegmented )
   {
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/lower.md3", modelName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/lower.md3", modelName );
     ci->legsModel = trap_R_RegisterModel( filename );
     if( !ci->legsModel )
     {
@@ -450,7 +450,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
       return qfalse;
     }
 
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/upper.md3", modelName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/upper.md3", modelName );
     ci->torsoModel = trap_R_RegisterModel( filename );
     if( !ci->torsoModel )
     {
@@ -458,7 +458,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
       return qfalse;
     }
 
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/head.md3", modelName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/head.md3", modelName );
     ci->headModel = trap_R_RegisterModel( filename );
     if( !ci->headModel )
     {
@@ -468,7 +468,7 @@ static qboolean CG_RegisterClientModelname( clientInfo_t *ci, const char *modelN
   }
   else
   {
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/nonseg.md3", modelName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/nonseg.md3", modelName );
     ci->nonSegModel = trap_R_RegisterModel( filename );
     if( !ci->nonSegModel )
     {

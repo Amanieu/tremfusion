@@ -126,7 +126,7 @@ void CG_ParseServerinfo( void )
   cgs.maxclients = atoi( Info_ValueForKey( info, "sv_maxclients" ) );
   cgs.markDeconstruct = atoi( Info_ValueForKey( info, "g_markDeconstruct" ) );
   mapname = Info_ValueForKey( info, "mapname" );
-  Com_sprintf( cgs.mapname, sizeof( cgs.mapname ), "maps/%s.bsp", mapname );
+  Q_snprintf( cgs.mapname, sizeof( cgs.mapname ), "maps/%s.bsp", mapname );
 }
 
 /*
@@ -919,7 +919,7 @@ static void CG_Say( int clientNum, char *text )
     return;
 
   ci = &cgs.clientinfo[ clientNum ];
-  Com_sprintf( sayText, sizeof( sayText ),
+  Q_snprintf( sayText, sizeof( sayText ),
     "%s: " S_COLOR_WHITE S_COLOR_GREEN "%s" S_COLOR_WHITE "\n",
     ci->name, text );
   
@@ -943,7 +943,7 @@ static void CG_SayTeam( int clientNum, char *text )
     return;
 
   ci = &cgs.clientinfo[ clientNum ];
-  Com_sprintf( sayText, sizeof( sayText ),
+  Q_snprintf( sayText, sizeof( sayText ),
     "%s: " S_COLOR_CYAN "%s" S_COLOR_WHITE "\n",
     ci->name, text );
 

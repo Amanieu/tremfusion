@@ -785,7 +785,7 @@ void G_InitDamageLocations( void )
   for( i = PCL_NONE + 1; i < PCL_NUM_CLASSES; i++ )
   {
     modelName = BG_ClassConfig( i )->modelName;
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/locdamage.cfg", modelName );
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/locdamage.cfg", modelName );
 
     len = trap_FS_FOpenFile( filename, &fileHandle, FS_READ );
     if ( !fileHandle )
@@ -812,7 +812,7 @@ void G_InitDamageLocations( void )
   for( i = UP_NONE + 1; i < UP_NUM_UPGRADES; i++ )
   {
     modelName = BG_Upgrade( i )->name;
-    Com_sprintf( filename, sizeof( filename ), "armour/%s.armour", modelName );
+    Q_snprintf( filename, sizeof( filename ), "armour/%s.armour", modelName );
 
     len = trap_FS_FOpenFile( filename, &fileHandle, FS_READ );
 

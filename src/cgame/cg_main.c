@@ -709,16 +709,16 @@ static void CG_RegisterSounds( void )
 
   for( i = 0; i < 4; i++ )
   {
-    Com_sprintf( name, sizeof( name ), "sound/player/footsteps/step%i.wav", i + 1 );
+    Q_snprintf( name, sizeof( name ), "sound/player/footsteps/step%i.wav", i + 1 );
     cgs.media.footsteps[ FOOTSTEP_NORMAL ][ i ] = trap_S_RegisterSound( name, qfalse );
 
-    Com_sprintf( name, sizeof( name ), "sound/player/footsteps/flesh%i.wav", i + 1 );
+    Q_snprintf( name, sizeof( name ), "sound/player/footsteps/flesh%i.wav", i + 1 );
     cgs.media.footsteps[ FOOTSTEP_FLESH ][ i ] = trap_S_RegisterSound( name, qfalse );
 
-    Com_sprintf( name, sizeof( name ), "sound/player/footsteps/splash%i.wav", i + 1 );
+    Q_snprintf( name, sizeof( name ), "sound/player/footsteps/splash%i.wav", i + 1 );
     cgs.media.footsteps[ FOOTSTEP_SPLASH ][ i ] = trap_S_RegisterSound( name, qfalse );
 
-    Com_sprintf( name, sizeof( name ), "sound/player/footsteps/clank%i.wav", i + 1 );
+    Q_snprintf( name, sizeof( name ), "sound/player/footsteps/clank%i.wav", i + 1 );
     cgs.media.footsteps[ FOOTSTEP_METAL ][ i ] = trap_S_RegisterSound( name, qfalse );
   }
 
@@ -944,7 +944,7 @@ static void CG_RegisterGraphics( void )
     vec3_t  mins, maxs;
     int     j;
 
-    Com_sprintf( name, sizeof( name ), "*%i", i );
+    Q_snprintf( name, sizeof( name ), "*%i", i );
 
     cgs.inlineDrawModel[ i ] = trap_R_RegisterModel( name );
     trap_R_ModelBounds( cgs.inlineDrawModel[ i ], mins, maxs );

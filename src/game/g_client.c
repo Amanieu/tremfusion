@@ -1084,16 +1084,16 @@ void ClientUserinfoChanged( int clientNum )
     //model details to that of the spawning class or the info change will not be
     //registered and an axis appears instead of the player model. There is zero chance
     //the player can spawn with the battlesuit, hence this choice.
-    Com_sprintf( buffer, MAX_QPATH, "%s/%s",  BG_ClassConfig( PCL_HUMAN_BSUIT )->modelName,
+    Q_snprintf( buffer, MAX_QPATH, "%s/%s",  BG_ClassConfig( PCL_HUMAN_BSUIT )->modelName,
                                               BG_ClassConfig( PCL_HUMAN_BSUIT )->skinName );
   }
   else
   {
-    Com_sprintf( buffer, MAX_QPATH, "%s/%s",  BG_ClassConfig( client->pers.classSelection )->modelName,
+    Q_snprintf( buffer, MAX_QPATH, "%s/%s",  BG_ClassConfig( client->pers.classSelection )->modelName,
                                               BG_ClassConfig( client->pers.classSelection )->skinName );
 
     //model segmentation
-    Com_sprintf( filename, sizeof( filename ), "models/players/%s/animation.cfg",
+    Q_snprintf( filename, sizeof( filename ), "models/players/%s/animation.cfg",
                  BG_ClassConfig( client->pers.classSelection )->modelName );
 
     if( G_NonSegModel( filename ) )
@@ -1160,7 +1160,7 @@ void ClientUserinfoChanged( int clientNum )
   // send over a subset of the userinfo keys so other clients can
   // print scoreboards, display models, and play custom sounds
 
-  Com_sprintf( userinfo, sizeof( userinfo ),
+  Q_snprintf( userinfo, sizeof( userinfo ),
     "n\\%s\\t\\%i\\model\\%s\\c1\\%s\\c2\\%s\\"
     "hc\\%i\\ig\\%16s\\v\\%s",
     client->pers.netname, client->pers.teamSelection, model, c1, c2,

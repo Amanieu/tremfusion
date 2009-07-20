@@ -322,7 +322,7 @@ void CL_VoipParseTargets( void )
 		if( player < 0 )
 			Q_strncpyz( buffer, "none", sizeof( buffer ) );
 		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+			Q_snprintf( buffer, sizeof( buffer ), "%d", player );
 		target = buffer;
 	}
 	else if( Q_stricmp( target, "crosshair" ) == 0 )
@@ -331,7 +331,7 @@ void CL_VoipParseTargets( void )
 		if( player < 0 )
 			Q_strncpyz( buffer, "none", sizeof( buffer ) );
 		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
+			Q_snprintf( buffer, sizeof( buffer ), "%d", player );
 		target = buffer;
 	}
 
@@ -703,7 +703,7 @@ void CL_DemoFilename( int number, char *fileName ) {
 	number -= c*10;
 	d = number;
 
-	Com_sprintf( fileName, MAX_OSPATH, "demo%i%i%i%i"
+	Q_snprintf( fileName, MAX_OSPATH, "demo%i%i%i%i"
 		, a, b, c, d );
 }
 
@@ -752,14 +752,14 @@ void CL_Record_f( void ) {
 	if ( Cmd_Argc() == 2 ) {
 		s = Cmd_Argv(1);
 		Q_strncpyz( demoName, s, sizeof( demoName ) );
-		Com_sprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, PROTOCOL_VERSION );
+		Q_snprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, PROTOCOL_VERSION );
 	} else {
 		int		number;
 
 		// scan for a free demo name
 		for ( number = 0 ; number <= 9999 ; number++ ) {
 			CL_DemoFilename( number, demoName );
-			Com_sprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, PROTOCOL_VERSION );
+			Q_snprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, PROTOCOL_VERSION );
 
 			if (!FS_FileExists(name))
 				break;	// file doesn't exist
@@ -900,7 +900,7 @@ void CL_DemoCompleted( void )
 		{
 			// Millisecond times are frame durations:
 			// minimum/average/maximum/std deviation
-			Com_sprintf( buffer, sizeof( buffer ),
+			Q_snprintf( buffer, sizeof( buffer ),
 					"%i frames %3.1f seconds %3.1f fps %d.0/%.1f/%d.0/%.1f ms\n",
 					clc.timeDemoFrames,
 					time/1000.0,
@@ -1011,7 +1011,7 @@ static void CL_WalkDemoExt(char *arg, char *name, int *demofile)
 	*demofile = 0;
 	while(demo_protocols[i])
 	{
-		Com_sprintf (name, MAX_OSPATH, "demos/%s.dm_%d", arg, demo_protocols[i]);
+		Q_snprintf (name, MAX_OSPATH, "demos/%s.dm_%d", arg, demo_protocols[i]);
 		FS_FOpenFileRead( name, demofile, qtrue );
 		if (*demofile)
 		{
@@ -1035,7 +1035,7 @@ static void CL_CompleteDemoName( char *args, int argNum )
 	{
 		char demoExt[ 16 ];
 
-		Com_sprintf( demoExt, sizeof( demoExt ), ".dm_%d", PROTOCOL_VERSION );
+		Q_snprintf( demoExt, sizeof( demoExt ), ".dm_%d", PROTOCOL_VERSION );
 		Field_CompleteFilename( "demos", demoExt, qtrue );
 	}
 }
@@ -1076,7 +1076,7 @@ void CL_PlayDemo_f( void ) {
 		}
 		if (demo_protocols[i])
 		{
-			Com_sprintf (name, sizeof(name), "demos/%s", arg);
+			Q_snprintf (name, sizeof(name), "demos/%s", arg);
 			FS_FOpenFileRead( name, &demofile, qtrue );
 		} else {
 			Com_Printf("Protocol %d not supported for demos\n", protocol);
@@ -1480,7 +1480,7 @@ void CL_GetMotd_f( void ) {
 
 	info[0] = 0;
 
-	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ),
+	Q_snprintf( cls.updateChallenge, sizeof( cls.updateChallenge ),
 			"%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
 
 	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
@@ -1753,7 +1753,7 @@ void CL_SendPureChecksums( void ) {
 	char cMsg[MAX_INFO_VALUE];
 
 	// if we are pure we need to send back a command with our referenced pk3 checksums
-	Com_sprintf(cMsg, sizeof(cMsg), "cp %d %s", cl.serverId, FS_ReferencedPakPureChecksums());
+	Q_snprintf(cMsg, sizeof(cMsg), "cp %d %s", cl.serverId, FS_ReferencedPakPureChecksums());
 	CL_AddReliableCommand( cMsg );
 }
 
@@ -2029,7 +2029,7 @@ void CL_BeginDownload( const char *localName, const char *remoteName ) {
 				"****************************\n", localName, remoteName);
 
 	Q_strncpyz ( clc.downloadName, localName, sizeof(clc.downloadName) );
-	Com_sprintf( clc.downloadTempName, sizeof(clc.downloadTempName), "%s.tmp", localName );
+	Q_snprintf( clc.downloadTempName, sizeof(clc.downloadTempName), "%s.tmp", localName );
 
 	// Set so UI gets access to it
 	Cvar_Set( "cl_downloadName", remoteName );
@@ -2097,7 +2097,7 @@ void CL_NextDownload(void) {
 		    	swap = *head;
 		    	*head = 0;
 		    	if( i++ < max_list )
-			    	Com_sprintf( files, sizeof( files ), "%s%s%s",
+			    	Q_snprintf( files, sizeof( files ), "%s%s%s",
 			    	             files, i > 1 ? ", " : "", name );
 			    else
 			    	others++;
@@ -2112,7 +2112,7 @@ void CL_NextDownload(void) {
 		    	name = head + 1;
 		    } while( *head );
 		    if( others )
-		    	Com_sprintf( files, sizeof( files ),
+		    	Q_snprintf( files, sizeof( files ),
 		    	             "%s (%d other file%s)\n", files, others,
 		    	             others > 1 ? "s" : "" );
 
@@ -2289,7 +2289,7 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "protocol", va("%i", PROTOCOL_VERSION ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
-		Com_sprintf( data, sizeof( data ), "connect \"%s\"", info );
+		Q_snprintf( data, sizeof( data ), "connect \"%s\"", info );
 
 		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, (byte *)data, strlen( data ) + 1 );
 		// the most current userinfo has been sent, so watch for any
@@ -2981,7 +2981,7 @@ DLL glue
 */
 void  CL_RefPrintf( int print_level, const char *fmt, ...) {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		msg[MAX_PRINTMSG];
 	
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
@@ -3218,7 +3218,7 @@ void CL_Video_f( void )
   if( Cmd_Argc( ) == 2 )
   {
     // explicit filename
-    Com_sprintf( filename, MAX_OSPATH, "videos/%s.avi", Cmd_Argv( 1 ) );
+    Q_snprintf( filename, MAX_OSPATH, "videos/%s.avi", Cmd_Argv( 1 ) );
   }
   else
   {
@@ -3237,7 +3237,7 @@ void CL_Video_f( void )
       last -= c * 10;
       d = last;
 
-      Com_sprintf( filename, MAX_OSPATH, "videos/video%d%d%d%d.avi",
+      Q_snprintf( filename, MAX_OSPATH, "videos/video%d%d%d%d.avi",
           a, b, c, d );
 
       if( !FS_FileExists( filename ) )
@@ -3874,7 +3874,7 @@ void CL_ServerStatusResponse( netadr_t from, msg_t *msg ) {
 	s = MSG_ReadStringLine( msg );
 
 	len = 0;
-	Com_sprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "%s", s);
+	Q_snprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "%s", s);
 
 	if (serverStatus->print) {
 		Com_Printf("Server settings:\n");
@@ -3905,7 +3905,7 @@ void CL_ServerStatusResponse( netadr_t from, msg_t *msg ) {
 	}
 
 	len = strlen(serverStatus->string);
-	Com_sprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\");
+	Q_snprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\");
 
 	if (serverStatus->print) {
 		Com_Printf("\nPlayers:\n");
@@ -3914,7 +3914,7 @@ void CL_ServerStatusResponse( netadr_t from, msg_t *msg ) {
 	for (i = 0, s = MSG_ReadStringLine( msg ); *s; s = MSG_ReadStringLine( msg ), i++) {
 
 		len = strlen(serverStatus->string);
-		Com_sprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\%s", s);
+		Q_snprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\%s", s);
 
 		if (serverStatus->print) {
 			score = ping = 0;
@@ -3930,7 +3930,7 @@ void CL_ServerStatusResponse( netadr_t from, msg_t *msg ) {
 		}
 	}
 	len = strlen(serverStatus->string);
-	Com_sprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\");
+	Q_snprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "\\");
 
 	serverStatus->time = Com_Milliseconds();
 	serverStatus->address = from;
@@ -4038,7 +4038,7 @@ void CL_GlobalServers_f( void ) {
 	}
 	else
 		cmdname = "getservers";
-	Com_sprintf( command, sizeof(command), "%s %s", cmdname, Cmd_Argv(2) );
+	Q_snprintf( command, sizeof(command), "%s %s", cmdname, Cmd_Argv(2) );
 
 	for (i=3; i < count; i++)
 	{

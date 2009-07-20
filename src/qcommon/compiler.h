@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 /* Compiler-specific optimisations */
 
 #ifdef __GNUC__
+
 /* Emit a nice warning when a function is used */
 #define __deprecated __attribute__((deprecated))
 
@@ -38,8 +39,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 /* Indicates that a function does not return */
 #define __noreturn __attribute__((noreturn))
 
-/* Pure functions depend only on their arguments or global variables, and have
- * no effect other than their return value */
+/* Pure functions depend only on their arguments, do not modify any global
+ * state, and have no effect other than their return value */
 #define __pure __attribute__((pure))
 
 /* Const functions do not reference any global memory or pointers, only their
@@ -64,6 +65,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __dllimport
 #endif
 
+/* Marks that this function will return a pointer that is not aliased to any
+ * other pointer */
+#define __restrict __attribute__((malloc))
+
 #if __GNUC__ >= 4
 #if __GNUC_MINOR__ >= 3
 
@@ -84,31 +89,37 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __target(x)
 #endif
 #endif
+
 #elif _MSC_VER
+
 #define __deprecated __declspec(deprecated)
 #define __packed
 #define __aligned(x) __declspec(align(x))
 #define __noreturn __declspec(noreturn)
+#define __pure __declspec(noalias)
 #define __const_func
-#define __pure
 #define __printf(a, b)
 #define __dllexport __declspec(dllexport)
 #define __dllimport __declspec(dllimport)
+#define __restrict __declspec(restrict)
 #define __cold
 #define __target(x)
 // This doesn't work in dlls
 #define __thread __declspec(thread)
+
 #else
+
 #warning "Unsupported compiler"
 #define __deprecated
 #define __packed
 #define __aligned(x)
 #define __noreturn
-#define __const_func
 #define __pure
+#define __const_func
 #define __printf(a, b)
 #define __dllexport
 #define __dllimport
+#define __restrict
 #define __cold
 #define __target(x)
 #endif

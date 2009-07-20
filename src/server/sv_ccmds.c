@@ -43,7 +43,7 @@ static void SV_CompleteDemoName( char *args, int argNum )
 	{
 		char demoExt[ 16 ];
 
-		Com_sprintf( demoExt, sizeof( demoExt ), ".svdm_%d", PROTOCOL_VERSION );
+		Q_snprintf( demoExt, sizeof( demoExt ), ".svdm_%d", PROTOCOL_VERSION );
 		Field_CompleteFilename( "svdemos", demoExt, qtrue );
 	}
 }
@@ -71,7 +71,7 @@ static void SV_Map_f( void ) {
 
 	// make sure the level exists before trying to change, so that
 	// a typo at the server console won't end the game
-	Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
+	Q_snprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
 	if ( FS_ReadFile (expanded, NULL) == -1 ) {
 		Com_Printf ("Can't find map %s\n", expanded);
 		return;
@@ -357,7 +357,7 @@ static void SV_Demo_Record_f( void ) {
 		int	number;
 		// scan for a free demo name
 		for (number = 0 ; number >= 0 ; number++) {
-			Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%d.svdm_%d", number, PROTOCOL_VERSION);
+			Q_snprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%d.svdm_%d", number, PROTOCOL_VERSION);
 			if (!FS_FileExists(sv.demoName))
 				break;	// file doesn't exist
 		}
@@ -402,9 +402,9 @@ static void SV_Demo_Play_f( void ) {
 	// check for an extension .svdm_?? (?? is protocol)
 	arg = Cmd_Argv(1);
 	if (!strcmp(arg + strlen(arg) - 6, va(".svdm_%d", PROTOCOL_VERSION)))
-		Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s", arg);
+		Q_snprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s", arg);
 	else
-		Com_sprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s.svdm_%d", arg, PROTOCOL_VERSION);
+		Q_snprintf(sv.demoName, sizeof(sv.demoName), "svdemos/%s.svdm_%d", arg, PROTOCOL_VERSION);
 
 	FS_FOpenFileRead(sv.demoName, &sv.demoFile, qtrue);
 	if (!sv.demoFile) {

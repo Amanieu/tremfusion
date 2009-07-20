@@ -154,7 +154,7 @@ static void CG_TellTarget_f( void )
     return;
 
   trap_Args( message, 128 );
-  Com_sprintf( command, 128, "tell %i %s", clientNum, message );
+  Q_snprintf( command, 128, "tell %i %s", clientNum, message );
   trap_SendClientCommand( command );
 }
 
@@ -169,7 +169,7 @@ static void CG_TellAttacker_f( void )
     return;
 
   trap_Args( message, 128 );
-  Com_sprintf( command, 128, "tell %i %s", clientNum, message );
+  Q_snprintf( command, 128, "tell %i %s", clientNum, message );
   trap_SendClientCommand( command );
 }
 

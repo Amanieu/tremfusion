@@ -71,7 +71,7 @@ const char *BuildShaderStateConfig( void )
 
   for( i = 0; i < remapCount; i++ )
   {
-    Com_sprintf( out, ( MAX_QPATH * 2 ) + 5, "%s=%s:%5.2f@", remappedShaders[ i ].oldShader,
+    Q_snprintf( out, ( MAX_QPATH * 2 ) + 5, "%s=%s:%5.2f@", remappedShaders[ i ].oldShader,
                  remappedShaders[ i ].newShader, remappedShaders[ i ].timeOffset );
     Q_strcat( buff, sizeof( buff ), out );
   }
@@ -350,7 +350,7 @@ char *vtos( const vec3_t v )
   s = str[ index ];
   index = ( index + 1 ) & 7;
 
-  Com_sprintf( s, 32, "(%i %i %i)", (int)v[ 0 ], (int)v[ 1 ], (int)v[ 2 ] );
+  Q_snprintf( s, 32, "(%i %i %i)", (int)v[ 0 ], (int)v[ 1 ], (int)v[ 2 ] );
 
   return s;
 }
@@ -829,7 +829,7 @@ void G_TriggerMenu( int clientNum, dynMenu_t menu )
 {
   char buffer[ 32 ];
 
-  Com_sprintf( buffer, sizeof( buffer ), "servermenu %d", menu );
+  Q_snprintf( buffer, sizeof( buffer ), "servermenu %d", menu );
   trap_SendServerCommand( clientNum, buffer );
 }
 
@@ -844,7 +844,7 @@ void G_TriggerMenu2( int clientNum, dynMenu_t menu, int arg )
 {
   char buffer[ 64 ];
 
-  Com_sprintf( buffer, sizeof( buffer ), "servermenu %d %d", menu, arg );
+  Q_snprintf( buffer, sizeof( buffer ), "servermenu %d %d", menu, arg );
   trap_SendServerCommand( clientNum, buffer );
 }
 
@@ -859,6 +859,6 @@ void G_CloseMenus( int clientNum )
 {
   char buffer[ 32 ];
 
-  Com_sprintf( buffer, 32, "serverclosemenus" );
+  Q_snprintf( buffer, 32, "serverclosemenus" );
   trap_SendServerCommand( clientNum, buffer );
 }

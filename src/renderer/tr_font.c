@@ -387,11 +387,11 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     //Compatibility: If there is no extension, assume this is loading one of the legacy fonts
     if(!Q_stricmp(strippedName, fontName))
     {
-        Com_sprintf(name, sizeof(name), "fonts/fontImage_%i.dat",pointSize);
+        Q_snprintf(name, sizeof(name), "fonts/fontImage_%i.dat",pointSize);
     }
     else
     {
-        Com_sprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
+        Q_snprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
     }
 
     for (i = 0; i < registeredFontCount; i++) {
@@ -442,7 +442,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
     return;
   }
 
-  Com_sprintf(name, sizeof(name), "%s", fontName);
+  Q_snprintf(name, sizeof(name), "%s", fontName);
 
   len = ri.FS_ReadFile(fontName, &faceData);
   if (len <= 0) {
@@ -528,7 +528,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
         imageBuff[left++] = ((float)out[k] * max);
       }
 
-			Com_sprintf(name, sizeof(name), "%s_%i_%i.tga", strippedName, imageNumber++, pointSize);
+			Q_snprintf(name, sizeof(name), "%s_%i_%i.tga", strippedName, imageNumber++, pointSize);
 			if(!ri.FS_FileExists(name) && r_saveFontData->integer)  
 			{
 			  WriteTGA(name, imageBuff, 256, 256);
@@ -573,7 +573,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
 	registeredFont[registeredFontCount].glyphScale = glyphScale;
 	font->glyphScale = glyphScale;
 
-	Com_sprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
+	Q_snprintf(name, sizeof(name), "%s_%i.dat", strippedName, pointSize);
 	Q_strncpyz(font->name, name, sizeof(font->name));
 	Com_Memcpy(&registeredFont[registeredFontCount++], font, sizeof(fontInfo_t));
 

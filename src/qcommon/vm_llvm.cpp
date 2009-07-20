@@ -43,7 +43,7 @@ void           *VM_LoadLLVM(vm_t * vm, intptr_t(*systemcalls) (intptr_t, ...))
 					std::string error;
 
 					Com_StripExtension(vm->name, name, sizeof(name));
-					Com_sprintf(filename, sizeof(filename), "%sllvm.bc", name);
+					Q_snprintf(filename, sizeof(filename), "%sllvm.bc", name);
 					len = FS_ReadFile(filename, (void **)&bytes);
 
 	if              (!bytes)

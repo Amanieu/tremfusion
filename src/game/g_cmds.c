@@ -153,7 +153,7 @@ void G_MatchOnePlayer( int *plist, int num, char *err, int len )
       cl = &level.clients[ plist[ i ] ];
       if( cl->pers.connected == CON_DISCONNECTED )
         continue;
-      Com_sprintf( line, sizeof( line ), "%2i - %s^7\n",
+      Q_snprintf( line, sizeof( line ), "%2i - %s^7\n",
         plist[ i ], cl->pers.netname );
       if( strlen( err ) + strlen( line ) > len )
         break;
@@ -280,7 +280,7 @@ void ScoreboardMessage( gentity_t *ent )
       upgrade = UP_NONE;
     }
 
-    Com_sprintf( entry, sizeof( entry ),
+    Q_snprintf( entry, sizeof( entry ),
       " %d %d %d %d %d %d", level.sortedClients[ i ], cl->ps.persistant[ PERS_SCORE ],
       ping, ( level.time - cl->pers.enterTime ) / 60000, weapon, upgrade );
 
@@ -732,7 +732,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
     case SAY_ALL:
       G_LogPrintf( "say: %s%s^7: " S_COLOR_GREEN "%s\n", prefix,
         ( ent ) ? ent->client->pers.netname : "console", chatText );
-      Com_sprintf( name, sizeof( name ), "%s%s" S_COLOR_WHITE ": ", prefix,
+      Q_snprintf( name, sizeof( name ), "%s%s" S_COLOR_WHITE ": ", prefix,
                    ( ent ) ? ent->client->pers.netname : "console" );
       color = COLOR_GREEN;
       G_DemoCommand( DC_SERVER_COMMAND, va( "chat \"%s^2%s\"", name, chatText ) );
@@ -742,10 +742,10 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
       G_LogPrintf( "sayteam: %s%s^7: " S_COLOR_CYAN "%s\n", prefix,
         ent->client->pers.netname, chatText );
       if( Team_GetLocationMsg( ent, location, sizeof( location ) ) )
-        Com_sprintf( name, sizeof( name ), "(%s" S_COLOR_WHITE ") (%s): ",
+        Q_snprintf( name, sizeof( name ), "(%s" S_COLOR_WHITE ") (%s): ",
           ent->client->pers.netname, location );
       else
-        Com_sprintf( name, sizeof( name ), "(%s" S_COLOR_WHITE "): ",
+        Q_snprintf( name, sizeof( name ), "(%s" S_COLOR_WHITE "): ",
           ent->client->pers.netname );
       color = COLOR_CYAN;
       G_DemoCommand( DC_SERVER_COMMAND, va( "tchat \"%s^5%s\"", name, chatText ) );
@@ -754,10 +754,10 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText )
     case SAY_TELL:
       if( target && OnSameTeam( target, ent ) &&
           Team_GetLocationMsg( ent, location, sizeof( location ) ) )
-        Com_sprintf( name, sizeof( name ), "[%s" S_COLOR_WHITE "] (%s): ",
+        Q_snprintf( name, sizeof( name ), "[%s" S_COLOR_WHITE "] (%s): ",
           ( ent ) ? ent->client->pers.netname : "console", location );
       else
-        Com_sprintf( name, sizeof( name ), "[%s" S_COLOR_WHITE "]: ",
+        Q_snprintf( name, sizeof( name ), "[%s" S_COLOR_WHITE "]: ",
           ( ent ) ? ent->client->pers.netname : "console" );
       color = COLOR_MAGENTA;
       break;
@@ -807,7 +807,7 @@ static void Cmd_SayArea_f( gentity_t *ent )
     prefix = "";
 
   G_LogPrintf( "sayarea: %s%s^7: %s\n", prefix, ent->client->pers.netname, msg );
-  Com_sprintf( name, sizeof( name ), "%s<%s%c%c> ",
+  Q_snprintf( name, sizeof( name ), "%s<%s%c%c> ",
     prefix, ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 
   VectorAdd( ent->s.origin, range, maxs );
@@ -1159,10 +1159,10 @@ void Cmd_CallVote_f( gentity_t *ent )
     }
 
     // use ip in case this player disconnects before the vote ends
-    Com_sprintf( level.voteString, sizeof( level.voteString ),
+    Q_snprintf( level.voteString, sizeof( level.voteString ),
       "!ban %s \"1s%s\" vote kick", level.clients[ clientNum ].pers.ip,
       g_adminTempBan.string );
-    Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
+    Q_snprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
       "Kick player \'%s\'", name );
   }
   else if( !Q_stricmp( arg1, "mute" ) )
@@ -1180,9 +1180,9 @@ void Cmd_CallVote_f( gentity_t *ent )
         "print \"callvote: admin is immune from vote mute\n\"" );
       return;
     }
-    Com_sprintf( level.voteString, sizeof( level.voteString ),
+    Q_snprintf( level.voteString, sizeof( level.voteString ),
       "!mute %i", clientNum );
-    Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
+    Q_snprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
       "Mute player \'%s\'", name );
   }
   else if( !Q_stricmp( arg1, "unmute" ) )
@@ -1193,15 +1193,15 @@ void Cmd_CallVote_f( gentity_t *ent )
         "print \"callvote: player is not currently muted\n\"" );
       return;
     }
-    Com_sprintf( level.voteString, sizeof( level.voteString ),
+    Q_snprintf( level.voteString, sizeof( level.voteString ),
       "!unmute %i", clientNum );
-    Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
+    Q_snprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
       "Un-Mute player \'%s\'", name );
   }
   else if( !Q_stricmp( arg1, "map_restart" ) )
   {
-    Com_sprintf( level.voteString, sizeof( level.voteString ), "%s", arg1 );
-    Com_sprintf( level.voteDisplayString,
+    Q_snprintf( level.voteString, sizeof( level.voteString ), "%s", arg1 );
+    Q_snprintf( level.voteDisplayString,
         sizeof( level.voteDisplayString ), "Restart current map" );
   }
   else if( !Q_stricmp( arg1, "map" ) )
@@ -1213,8 +1213,8 @@ void Cmd_CallVote_f( gentity_t *ent )
       return;
     }
 
-    Com_sprintf( level.voteString, sizeof( level.voteString ), "%s %s", arg1, arg2 );
-    Com_sprintf( level.voteDisplayString,
+    Q_snprintf( level.voteString, sizeof( level.voteString ), "%s %s", arg1, arg2 );
+    Q_snprintf( level.voteDisplayString,
         sizeof( level.voteDisplayString ), "Change to map '%s'", arg2 );
   }
   else if( !Q_stricmp( arg1, "nextmap" ) )
@@ -1233,16 +1233,16 @@ void Cmd_CallVote_f( gentity_t *ent )
       return;
     }
 
-    Com_sprintf( level.voteString, sizeof( level.voteString ),
+    Q_snprintf( level.voteString, sizeof( level.voteString ),
       "set g_nextMap %s", arg2 );
 
-    Com_sprintf( level.voteDisplayString,
+    Q_snprintf( level.voteDisplayString,
       sizeof( level.voteDisplayString ), "Set the next map to '%s^7'", arg2 );
   }
   else if( !Q_stricmp( arg1, "draw" ) )
   {
-    Com_sprintf( level.voteString, sizeof( level.voteString ), "evacuation" );
-    Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
+    Q_snprintf( level.voteString, sizeof( level.voteString ), "evacuation" );
+    Q_snprintf( level.voteDisplayString, sizeof( level.voteDisplayString ),
         "End match in a draw" );
   }
   else if( !Q_stricmp( arg1, "sudden_death" ) ||
@@ -1269,8 +1269,8 @@ void Cmd_CallVote_f( gentity_t *ent )
     else 
     {
       level.votePassThreshold = g_suddenDeathVotePercent.integer;
-      Com_sprintf( level.voteString, sizeof( level.voteString ), "suddendeath" );
-      Com_sprintf( level.voteDisplayString,
+      Q_snprintf( level.voteString, sizeof( level.voteString ), "suddendeath" );
+      Q_snprintf( level.voteDisplayString,
           sizeof( level.voteDisplayString ), "Begin sudden death" );
 
       if( g_suddenDeathVoteDelay.integer )
@@ -1472,11 +1472,11 @@ void Cmd_CallTeamVote_f( gentity_t *ent )
     }
 
     // use ip in case this player disconnects before the vote ends
-    Com_sprintf( level.teamVoteString[ cs_offset ],
+    Q_snprintf( level.teamVoteString[ cs_offset ],
       sizeof( level.teamVoteString[ cs_offset ] ),
       "!ban %s \"1s%s\" team vote kick", level.clients[ clientNum ].pers.ip,
       g_adminTempBan.string );
-    Com_sprintf( level.teamVoteDisplayString[ cs_offset ],
+    Q_snprintf( level.teamVoteDisplayString[ cs_offset ],
         sizeof( level.teamVoteDisplayString[ cs_offset ] ),
         "Kick player '%s'", name );
   }
@@ -1496,9 +1496,9 @@ void Cmd_CallTeamVote_f( gentity_t *ent )
       return;
     }
 
-    Com_sprintf( level.teamVoteString[ cs_offset ],
+    Q_snprintf( level.teamVoteString[ cs_offset ],
       sizeof( level.teamVoteString[ cs_offset ] ), "!denybuild %i", clientNum );
-    Com_sprintf( level.teamVoteDisplayString[ cs_offset ],
+    Q_snprintf( level.teamVoteDisplayString[ cs_offset ],
         sizeof( level.teamVoteDisplayString[ cs_offset ] ),
         "Take away building rights from '%s'", name );
   }
@@ -1511,9 +1511,9 @@ void Cmd_CallTeamVote_f( gentity_t *ent )
       return;
     }
 
-    Com_sprintf( level.teamVoteString[ cs_offset ],
+    Q_snprintf( level.teamVoteString[ cs_offset ],
       sizeof( level.teamVoteString[ cs_offset ] ), "!allowbuild %i", clientNum );
-    Com_sprintf( level.teamVoteDisplayString[ cs_offset ],
+    Q_snprintf( level.teamVoteDisplayString[ cs_offset ],
         sizeof( level.teamVoteDisplayString[ cs_offset ] ),
         "Allow '%s' to build", name );
   }
@@ -1524,9 +1524,9 @@ void Cmd_CallTeamVote_f( gentity_t *ent )
       trap_SendServerCommand( ent-g_entities, "print \"You have already surrendered\n\"");
       return;
     }
-    Com_sprintf( level.teamVoteString[ cs_offset ],
+    Q_snprintf( level.teamVoteString[ cs_offset ],
       sizeof( level.teamVoteString[ cs_offset ] ), "admitdefeat %i", team );
-    Com_sprintf( level.teamVoteDisplayString[ cs_offset ],
+    Q_snprintf( level.teamVoteDisplayString[ cs_offset ],
         sizeof( level.teamVoteDisplayString[ cs_offset ] ),
         "Admit Defeat" );
   }
@@ -3436,7 +3436,7 @@ void Cmd_PrivateMessage_f( gentity_t *ent )
 
   color = teamonly ? COLOR_CYAN : COLOR_YELLOW;
 
-  Com_sprintf( str, sizeof( str ), "^%csent to %i player%s: ^7", color, matches,
+  Q_snprintf( str, sizeof( str ), "^%csent to %i player%s: ^7", color, matches,
     ( matches == 1 ) ? "" : "s" );
 
   for( i=0; i < matches; i++ )
@@ -3483,7 +3483,7 @@ void Cmd_PrivateMessage_f( gentity_t *ent )
 
   if( ignored )
   {
-    Com_sprintf( str, sizeof( str ), "^%cignored by %i player%s: ^7", color,
+    Q_snprintf( str, sizeof( str ), "^%cignored by %i player%s: ^7", color,
       ignored, ( ignored == 1 ) ? "" : "s" );
     for( i=0; i < ignored; i++ )
     {
@@ -3513,7 +3513,7 @@ void Cmd_AdminMessage_f( gentity_t *ent )
   // Check permissions and add the appropriate user [prefix]
   if( !ent )
   {
-    Com_sprintf( prefix, sizeof( prefix ), "[CONSOLE]:" );
+    Q_snprintf( prefix, sizeof( prefix ), "[CONSOLE]:" );
   }
   else if( !G_admin_permission( ent, ADMF_ADMINCHAT ) )
   {
@@ -3524,7 +3524,7 @@ void Cmd_AdminMessage_f( gentity_t *ent )
     }
     else
     {
-      Com_sprintf( prefix, sizeof( prefix ), "[PLAYER] %s" S_COLOR_WHITE ":",
+      Q_snprintf( prefix, sizeof( prefix ), "[PLAYER] %s" S_COLOR_WHITE ":",
                    ent->client->pers.netname );
       ADMP( "Your message has been sent to any available admins "
             "and to the server logs.\n" );
@@ -3532,7 +3532,7 @@ void Cmd_AdminMessage_f( gentity_t *ent )
   }
   else
   {
-    Com_sprintf( prefix, sizeof( prefix ), "[ADMIN] %s" S_COLOR_WHITE ":",
+    Q_snprintf( prefix, sizeof( prefix ), "[ADMIN] %s" S_COLOR_WHITE ":",
                  ent->client->pers.netname );
   }
 

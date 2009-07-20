@@ -898,7 +898,7 @@ void Cmd_WriteAliases(fileHandle_t f)
 	FS_Write(buffer, strlen(buffer), f);
 	while (alias)
 	{
-		Com_sprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, Cmd_EscapeString(alias->exec));
+		Q_snprintf(buffer, sizeof(buffer), "alias %s \"%s\"\n", alias->name, Cmd_EscapeString(alias->exec));
 		FS_Write(buffer, strlen(buffer), f);
 		alias = alias->next;
 	}

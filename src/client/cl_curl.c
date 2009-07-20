@@ -239,7 +239,7 @@ void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 	CL_cURL_Cleanup();
 	Q_strncpyz(clc.downloadURL, remoteURL, sizeof(clc.downloadURL));
 	Q_strncpyz(clc.downloadName, localName, sizeof(clc.downloadName));
-	Com_sprintf(clc.downloadTempName, sizeof(clc.downloadTempName),
+	Q_snprintf(clc.downloadTempName, sizeof(clc.downloadTempName),
 		"%s.tmp", localName);
 
 	// Set so UI gets access to it
@@ -268,9 +268,9 @@ void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 		qcurl_easy_setopt(clc.downloadCURL, CURLOPT_VERBOSE, 1);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_URL, clc.downloadURL);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_TRANSFERTEXT, 0);
-	Com_sprintf(referer, sizeof(referer), "Tremulous://%s", NET_AdrToString(clc.serverAddress));
+	Q_snprintf(referer, sizeof(referer), "Tremulous://%s", NET_AdrToString(clc.serverAddress));
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_REFERER, referer);
-	Com_sprintf(useragent, sizeof(useragent), "%s %s", Q3_VERSION, qcurl_version());
+	Q_snprintf(useragent, sizeof(useragent), "%s %s", Q3_VERSION, qcurl_version());
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_USERAGENT, useragent);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_WRITEFUNCTION,
 		CL_cURL_CallbackWrite);

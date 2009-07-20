@@ -594,7 +594,7 @@ void Console_Key (int key) {
 			char	temp[MAX_EDIT_LINE-1];
 
 			Q_strncpyz( temp, g_consoleField.buffer, sizeof( temp ) );
-			Com_sprintf( g_consoleField.buffer, sizeof( g_consoleField.buffer ), "\\%s", temp );
+			Q_snprintf( g_consoleField.buffer, sizeof( g_consoleField.buffer ), "\\%s", temp );
 			g_consoleField.cursor++;
 		}
 
@@ -1081,7 +1081,7 @@ void CL_ParseBinding( int key, qboolean down, unsigned time )
 			// so that multiple sources can be discriminated and
 			// subframe corrected
 			char cmd[1024];
-			Com_sprintf( cmd, sizeof( cmd ), "%c%s %d %d\n",
+			Q_snprintf( cmd, sizeof( cmd ), "%c%s %d %d\n",
 				( down ) ? '+' : '-', p + 1, key, time );
 			Cbuf_AddText( cmd );
 		}

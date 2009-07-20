@@ -1295,13 +1295,14 @@ Q3OBJ_ = \
   $(B)/client/common.o \
   $(B)/client/cvar.o \
   $(B)/client/files.o \
-  $(B)/client/md4.o \
   $(B)/client/md5.o \
+  $(B)/client/mem.o \
   $(B)/client/msg.o \
   $(B)/client/net_chan.o \
   $(B)/client/net_ip.o \
   $(B)/client/huffman.o \
   $(B)/client/parse.o \
+  $(B)/client/print.o \
   \
   $(B)/client/snd_adpcm.o \
   $(B)/client/snd_dma.o \
@@ -1592,12 +1593,14 @@ Q3DOBJ = \
   $(B)/ded/common.o \
   $(B)/ded/cvar.o \
   $(B)/ded/files.o \
-  $(B)/ded/md4.o \
+  $(B)/ded/md5.o \
+  $(B)/ded/mem.o \
   $(B)/ded/msg.o \
   $(B)/ded/net_chan.o \
   $(B)/ded/net_ip.o \
   $(B)/ded/huffman.o \
   $(B)/ded/parse.o \
+  $(B)/ded/print.o \
   \
   $(B)/ded/q_math.o \
   $(B)/ded/q_shared.o \
