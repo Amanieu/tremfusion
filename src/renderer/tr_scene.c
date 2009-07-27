@@ -309,6 +309,9 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	Com_Memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
 
+	// copy array of sorted shaders for this frame
+	Com_Memcpy( tr.lastSortedShaders, tr.sortedShaders, tr.numShaders * sizeof(shader_t *) );
+
 	tr.refdef.x = fd->x;
 	tr.refdef.y = fd->y;
 	tr.refdef.width = fd->width;

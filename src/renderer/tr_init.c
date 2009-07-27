@@ -95,6 +95,10 @@ cvar_t	*r_ext_compiled_vertex_array;
 cvar_t	*r_ext_texture_env_add;
 cvar_t	*r_ext_texture_filter_anisotropic;
 cvar_t	*r_ext_max_anisotropy;
+cvar_t	*r_ext_vertex_buffer_object;
+cvar_t	*r_ext_vertex_shader;
+cvar_t  *r_ext_framebuffer_object;
+cvar_t	*r_ext_occlusion_query;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -104,7 +108,7 @@ cvar_t	*r_depthbits;
 cvar_t	*r_colorbits;
 cvar_t	*r_primitives;
 cvar_t	*r_texturebits;
-cvar_t  *r_ext_multisample;
+cvar_t	*r_ext_multisample;
 
 cvar_t	*r_drawBuffer;
 cvar_t	*r_lightmap;
@@ -167,6 +171,8 @@ cvar_t	*r_saveFontData;
 cvar_t	*r_celshadalgo;
 //. next one for enable/disable cel bordering all together.
 cvar_t	*r_celoutline;
+
+cvar_t	*r_flush;
 
 cvar_t	*r_maxpolys;
 int		max_polys;
@@ -917,6 +923,10 @@ void R_Register( void )
 	r_ext_multitexture = ri.Cvar_Get( "r_ext_multitexture", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_ext_texture_env_add = ri.Cvar_Get( "r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_vertex_buffer_object = ri.Cvar_Get( "r_ext_vertex_buffer_object", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_vertex_shader = ri.Cvar_Get( "r_ext_vertex_shader", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_framebuffer_object = ri.Cvar_Get( "r_ext_framebuffer_object", "1", CVAR_ARCHIVE | CVAR_LATCH);
+	r_ext_occlusion_query = ri.Cvar_Get( "r_ext_occlusion_query", "1", CVAR_ARCHIVE | CVAR_LATCH);
 
 	r_picmip = ri.Cvar_Get ("r_picmip", GENERIC_HW_R_PICMIP_DEFAULT,
 			CVAR_ARCHIVE | CVAR_LATCH );
@@ -934,6 +944,7 @@ void R_Register( void )
 	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_multisample = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	ri.Cvar_CheckRange( r_ext_multisample, 0, 4, qtrue );
+
 	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
@@ -1063,6 +1074,8 @@ void R_Register( void )
 	// cel outline option
 	r_celoutline = ri.Cvar_Get("r_celoutline","0", CVAR_ARCHIVE);
 
+	r_flush = ri.Cvar_Get("r_flush","0", 0);
+
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
 	ri.Cmd_AddCommand( "imagelist", R_ImageList_f );
@@ -1092,11 +1105,6 @@ void R_Init( void ) {
 	Com_Memset( &tess, 0, sizeof( tess ) );
 
 //	Swap_Init();
-
-	if ( (intptr_t)tess.xyz & 15 ) {
-		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
-	}
-	Com_Memset( tess.constantColor255, 255, sizeof( tess.constantColor255 ) );
 
 	//
 	// init function tables
@@ -1175,6 +1183,18 @@ void R_Init( void ) {
 	ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
 }
 
+static void freeVboInfo(vboInfo_t *info) {
+	if( info ) {
+		freeVboInfo( info->left );
+		freeVboInfo( info->right );
+		if ( qglIsBufferARB( info->ibo ) )
+			qglDeleteBuffersARB( 1, &info->ibo );
+		if ( qglIsBufferARB( info->vbo ) )
+			qglDeleteBuffersARB( 1, &info->vbo );
+		ri.Free( info );
+	}
+}
+
 /*
 ===============
 RE_Shutdown
@@ -1199,6 +1219,30 @@ void RE_Shutdown( qboolean destroyWindow ) {
 		R_SyncRenderThread();
 		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
+
+		if ( qglDeleteQueriesARB && tr.numShaders ) {
+			int shader;
+			
+			for ( shader = 0; shader < tr.numShaders; shader++ ) {
+				if ( tr.shaders[shader]->QueryID ) {
+					qglDeleteQueriesARB( 1, &tr.shaders[shader]->QueryID );
+					tr.shaders[shader]->QueryID = 0;
+				}
+			}
+		}
+
+		if ( qglIsBufferARB && tr.numShaders ) {
+			int shader;
+			
+			GL_VBO( 0, 0 );
+
+			for ( shader = 0; shader < tr.numShaders; shader++ ) {
+				freeVboInfo( tr.shaders[shader]->VBOs );
+				tr.shaders[shader]->VBOs = NULL;
+			}
+			if ( qglIsBufferARB( backEnd.worldVBO ) )
+				qglDeleteBuffersARB( 1, &backEnd.worldVBO );
+		}
 	}
 
 	R_DoneFreeType();

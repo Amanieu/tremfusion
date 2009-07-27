@@ -55,6 +55,11 @@ long myftol( float f );
 #define MAX_STATES_PER_SHADER 32
 #define MAX_STATE_NAME 32
 
+#define NUM_TEXTURE_BUNDLES 4
+
+// add byte offset to pointer
+#define ptrPlusOffset(ptr, off) (typeof(ptr))((byte *)(ptr) + (off))
+
 // can't be increased without changing bit packing for drawsurfs
 
 
@@ -104,6 +109,7 @@ typedef struct image_s {
 
 	qboolean	mipmap;
 	qboolean	allowPicmip;
+	qboolean        hasAlpha;
 	int			wrapClampMode;		// GL_CLAMP_TO_EDGE or GL_REPEAT
 
 	struct image_s*	next;
@@ -297,9 +303,8 @@ typedef struct {
 	qboolean		isLightmap;
 	qboolean		vertexLightmap;
 	qboolean		isVideoMap;
+	int		multitextureEnv;		// 0, GL_MODULATE, GL_ADD
 } textureBundle_t;
-
-#define NUM_TEXTURE_BUNDLES 2
 
 typedef struct {
 	qboolean		active;
@@ -319,6 +324,7 @@ typedef struct {
 	acff_t			adjustColorsForFog;
 
 	qboolean		isDetail;
+	GLuint			GLSLprogram;			    // GLSL shader program
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -353,6 +359,44 @@ typedef struct {
 } fogParms_t;
 
 
+typedef byte color4ub_t[4];
+
+#define VBOKEY_TYPEMASK	0x70000000
+#define VBOKEY_IDXMASK	0x0fffffff
+#define VBOKEY_VIS	0x10000000
+#define VBOKEY_MODEL	0x20000000
+#define VBOKEY_MD3	0x30000000
+
+typedef struct vboInfo_s {
+	struct vboInfo_s *left, *right;
+	int	key;
+	GLuint  vbo;
+	GLuint  ibo;
+	int	numIndexes;
+	int     minIndex;
+	int     maxIndex;
+} vboInfo_t;
+
+/* This is the interleaved layout of the vertex data in a VBO.
+ * The VBO simply stores all known data per vertex, even if
+ * it isn't needed because the shaders doesn't use e.g. normals.
+ * But keeping track of all shaders that may affect a vertex is
+ * simply too much hassle and building a new VBO for each shader
+ * is probably wasting more graphics memory than the unused data
+ * here.
+ */
+typedef struct vboVertex_s {
+  vec4_t	xyz;
+  vec4_t	normal;
+  vec2_t	tc1;
+  vec2_t	tc2;
+  vec2_t	tc3;		//unused
+  color4ub_t	color;
+  int		dlights;	//unused in VBO
+} vboVertex_t;  // => exactly 64 Bytes
+#define vboOffset(fld) ((byte *)NULL + offsetof(vboVertex_t, fld))
+
+
 typedef struct shader_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			lightmapIndex;			// for a shader to match, both name and lightmapIndex must match
@@ -381,8 +425,6 @@ typedef struct shader_s {
 
 	float		portalRange;			// distance to fog out at
 
-	int			multitextureEnv;		// 0, GL_MODULATE, GL_ADD (FIXME: put in stage)
-
 	cullType_t	cullType;				// CT_FRONT_SIDED, CT_BACK_SIDED, or CT_TWO_SIDED
 	qboolean	polygonOffset;			// set for decals and other items that must be offset 
 	qboolean	noMipMaps;				// for console fonts, 2D elements, etc.
@@ -394,6 +436,7 @@ typedef struct shader_s {
 	qboolean	needsST1;
 	qboolean	needsST2;
 	qboolean	needsColor;
+	qboolean        useVBO;
 
 	int			numDeforms;
 	deformStage_t	deforms[MAX_SHADER_DEFORMS];
@@ -415,6 +458,10 @@ typedef struct shader_s {
   struct shader_s *remappedShader;                  // current shader this one is remapped too
 
   int shaderStates[MAX_STATES_PER_SHADER];          // index to valid shader states
+  vboInfo_t	*VBOs;
+
+  GLuint        QueryID;
+  GLint		QueryResult;
 
 	struct	shader_s	*next;
 } shader_t;
@@ -506,10 +553,12 @@ typedef struct {
 	int			viewportX, viewportY, viewportWidth, viewportHeight;
 	float		fovX, fovY;
 	float		projectionMatrix[16];
-	cplane_t	frustum[4];
+	cplane_t	frustum[5];
 	vec3_t		visBounds[2];
 	float		zFar;
 	stereoFrame_t	stereoFrame;
+	int		viewCluster;
+	int		frustPlanes, frustType;
 } viewParms_t;
 
 
@@ -596,6 +645,7 @@ typedef struct srfGridMesh_s {
 
 	// vertexes
 	int				width, height;
+	int			vboStart;
 	float			*widthLodError;
 	float			*heightLodError;
 	drawVert_t		verts[1];		// variable sized
@@ -615,6 +665,7 @@ typedef struct {
 	int			numPoints;
 	int			numIndices;
 	int			ofsIndices;
+	int			vboStart;
 	float		points[1][VERTEXSIZE];	// variable sized
 										// there is a variable length list of indices here also
 } srfSurfaceFace_t;
@@ -637,11 +688,12 @@ typedef struct {
 	int				*indexes;
 
 	int				numVerts;
+	int				vboStart;
+
 	drawVert_t		*verts;
 } srfTriangles_t;
 
-
-extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
+extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(surfaceType_t *);
 
 /*
 ==============================================================================
@@ -697,6 +749,10 @@ typedef struct {
 } bmodel_t;
 
 typedef struct {
+	vec3_t		mins, maxs;		// for bounding box culling
+} mcluster_t;
+
+typedef struct {
 	char		name[MAX_QPATH];		// ie: maps/tim_dm2.bsp
 	char		baseName[MAX_QPATH];	// ie: tim_dm2
 
@@ -733,6 +789,7 @@ typedef struct {
 	int			numClusters;
 	int			clusterBytes;
 	const byte	*vis;			// may be passed in by CM_LoadMap to save space
+	mcluster_t      *clusters;
 
 	byte		*novis;			// clusterBytes of 0xff
 
@@ -834,12 +891,13 @@ typedef struct {
 
 // the renderer front end should never modify glstate_t
 typedef struct {
-	int			currenttextures[2];
+	int			currenttextures[NUM_TEXTURE_BUNDLES];
 	int			currenttmu;
 	qboolean	finishCalled;
-	int			texEnv[2];
+	int			texEnv[NUM_TEXTURE_BUNDLES];
 	int			faceCulling;
 	unsigned long	glStateBits;
+	GLuint		currentVBO, currentIBO;
 } glstate_t;
 
 
@@ -875,7 +933,9 @@ typedef struct {
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 	qboolean	doneBloom;		// done bloom this frame
 	qboolean	doneSurfaces;   // done any 3d surfaces already
-	
+
+	GLuint		worldVBO;	// VBO containing all world vertexes
+	int		worldVertexes;	// number of vertexes in the VBO
 } backEndState_t;
 
 /*
@@ -903,6 +963,7 @@ typedef struct {
 	world_t					*world;
 
 	const byte				*externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
+	mcluster_t				*clusters;
 
 	image_t					*defaultImage;
 	image_t					*scratchImage[32];
@@ -938,8 +999,6 @@ typedef struct {
 
 	trRefdef_t				refdef;
 
-	int						viewCluster;
-
 	vec3_t					sunLight;			// from the sky shader for this level
 	vec3_t					sunDirection;
 
@@ -962,6 +1021,7 @@ typedef struct {
 	int						numShaders;
 	shader_t				*shaders[MAX_SHADERS];
 	shader_t				*sortedShaders[MAX_SHADERS];
+	shader_t				*lastSortedShaders[MAX_SHADERS];
 
 	int						numSkins;
 	skin_t					*skins[MAX_SKINS];
@@ -1005,11 +1065,11 @@ extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
 extern cvar_t	*r_texturebits;			// number of desired texture bits
+						// 0 = use framebuffer depth
+						// 16 = use 16-bit textures
+						// 32 = use 32-bit textures
+						// all else = error
 extern cvar_t	*r_ext_multisample;
-										// 0 = use framebuffer depth
-										// 16 = use 16-bit textures
-										// 32 = use 32-bit textures
-										// all else = error
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 
@@ -1067,6 +1127,10 @@ extern cvar_t	*r_ext_texture_env_add;
 
 extern cvar_t	*r_ext_texture_filter_anisotropic;
 extern cvar_t	*r_ext_max_anisotropy;
+extern cvar_t   *r_ext_vertex_buffer_object;
+extern cvar_t   *r_ext_vertex_shader;
+extern cvar_t   *r_ext_framebuffer_object;
+extern cvar_t	*r_ext_occlusion_query;
 
 extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
@@ -1131,6 +1195,8 @@ extern	cvar_t	*r_GLlibCoolDownMsec;
 extern	cvar_t	*r_celshadalgo;					// Cell shading, chooses method: 0 = disabled, 1 = kuwahara, 2 = whiteTexture
 extern	cvar_t	*r_celoutline;						//. cel outline. 1 on, 0 off. (maybe other options later)
 
+extern	cvar_t	*r_flush;
+
 //====================================================================
 
 float R_NoiseGet4f( float x, float y, float z, float t );
@@ -1175,6 +1241,7 @@ void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( unsigned long stateVector );
+void	GL_VBO( GLuint vbo, GLuint IBO );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 
@@ -1267,6 +1334,7 @@ shader_t	*R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 shader_t	*R_GetShaderByHandle( qhandle_t hShader );
 shader_t	*R_GetShaderByState( int index, long *cycleTime );
 shader_t *R_FindShaderByName( const char *name );
+void		R_SortShaders( void );
 void		R_InitShaders( void );
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
@@ -1305,36 +1373,31 @@ TESSELATOR/SHADER DECLARATIONS
 
 ====================================================================
 */
-typedef byte color4ub_t[4];
 
 typedef struct stageVars
 {
-	color4ub_t	colors[SHADER_MAX_VERTEXES];
-	vec2_t		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES];
+	color4ub_t	*colors;
+	vec2_t		*texcoords[NUM_TEXTURE_BUNDLES];
 } stageVars_t;
-
 
 typedef struct shaderCommands_s 
 {
-	glIndex_t	indexes[SHADER_MAX_INDEXES] ALIGNED(16);
-	vec4_t		xyz[SHADER_MAX_VERTEXES] ALIGNED(16);
-	vec4_t		normal[SHADER_MAX_VERTEXES] ALIGNED(16);
-	vec2_t		texCoords[SHADER_MAX_VERTEXES][2] ALIGNED(16);
-	color4ub_t	vertexColors[SHADER_MAX_VERTEXES] ALIGNED(16);
-	int			vertexDlightBits[SHADER_MAX_VERTEXES] ALIGNED(16);
+	GLushort	*indexPtr;  // can also be GLuint * for 32bit indexes
+	vboVertex_t	*vertexPtr;
+	size_t		indexInc;
+	int		numIndexes;
+	int		numVertexes;
+	int		minIndex, maxIndex;
+	byte		*vertexBuffer, *vertexBufferEnd;
 
-	stageVars_t	svars ALIGNED(16);
+	int		dlightBits;	// or together of all vertexDlightBits
+	stageVars_t	svars;
 
-	color4ub_t	constantColor255[SHADER_MAX_VERTEXES] ALIGNED(16);
+	vboInfo_t	*renderVBO;
 
 	shader_t	*shader;
-  float   shaderTime;
+	float			shaderTime;
 	int			fogNum;
-
-	int			dlightBits;	// or together of all vertexDlightBits
-
-	int			numIndexes;
-	int			numVertexes;
 
 	// info extracted from current shader
 	int			numPasses;
@@ -1347,13 +1410,15 @@ extern	shaderCommands_t	tess;
 void RB_SetGL2D (void);
 void RB_BeginSurface(shader_t *shader, int fogNum );
 void RB_EndSurface(void);
-void RB_CheckOverflow( int verts, int indexes );
-#define RB_CHECKOVERFLOW(v,i) if (tess.numVertexes + (v) >= SHADER_MAX_VERTEXES || tess.numIndexes + (i) >= SHADER_MAX_INDEXES ) {RB_CheckOverflow(v,i);}
+void RB_ClearVertexBuffer( void );
+void RB_SetupVertexBuffer(shader_t *shader);
+void RB_SetupVBOBuffer(GLuint *vbo);
 
 void RB_StageIteratorGeneric( void );
 void RB_StageIteratorSky( void );
 void RB_StageIteratorVertexLitTexture( void );
 void RB_StageIteratorLightmappedMultitexture( void );
+void RB_LightSurface( void );
 
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color );
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 );
@@ -1504,10 +1569,10 @@ ANIMATED MODELS
 
 // void R_MakeAnimModel( model_t *model );      haven't seen this one really, so not needed I guess.
 void R_AddAnimSurfaces( trRefEntity_t *ent );
-void RB_SurfaceAnim( md4Surface_t *surfType );
+void RB_SurfaceAnim( surfaceType_t *surfType );
 #ifdef RAVENMD4
 void R_MDRAddAnimSurfaces( trRefEntity_t *ent );
-void RB_MDRSurfaceAnim( md4Surface_t *surface );
+void RB_MDRSurfaceAnim( surfaceType_t *surface );
 #endif
 
 /*
@@ -1534,25 +1599,25 @@ void	R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t
 
 void	RB_DeformTessGeometry( void );
 
-void	RB_CalcEnvironmentTexCoords( float *dstTexCoords );
-void	RB_CalcFogTexCoords( float *dstTexCoords );
-void	RB_CalcScrollTexCoords( const float scroll[2], float *dstTexCoords );
-void	RB_CalcRotateTexCoords( float rotSpeed, float *dstTexCoords );
-void	RB_CalcScaleTexCoords( const float scale[2], float *dstTexCoords );
-void	RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *dstTexCoords );
-void	RB_CalcTransformTexCoords( const texModInfo_t *tmi, float *dstTexCoords );
-void	RB_CalcModulateColorsByFog( unsigned char *dstColors );
-void	RB_CalcModulateAlphasByFog( unsigned char *dstColors );
-void	RB_CalcModulateRGBAsByFog( unsigned char *dstColors );
-void	RB_CalcWaveAlpha( const waveForm_t *wf, unsigned char *dstColors );
-void	RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors );
-void	RB_CalcAlphaFromEntity( unsigned char *dstColors );
-void	RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors );
-void	RB_CalcStretchTexCoords( const waveForm_t *wf, float *texCoords );
-void	RB_CalcColorFromEntity( unsigned char *dstColors );
-void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
-void	RB_CalcSpecularAlpha( unsigned char *alphas );
-void	RB_CalcDiffuseColor( unsigned char *colors );
+void	RB_CalcEnvironmentTexCoords( vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcFogTexCoords( vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcScrollTexCoords( const float scroll[2], vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcRotateTexCoords( float rotSpeed, vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcScaleTexCoords( const float scale[2], vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcTurbulentTexCoords( const waveForm_t *wf, vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcTransformTexCoords( const texModInfo_t *tmi, vec2_t *dstTexCoords, int numVertexes );
+void	RB_CalcModulateColorsByFog( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcModulateAlphasByFog( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcModulateRGBAsByFog( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcWaveAlpha( const waveForm_t *wf, color4ub_t *dstColors, int numVertexes );
+void	RB_CalcWaveColor( const waveForm_t *wf, color4ub_t *dstColors, int numVertexes );
+void	RB_CalcAlphaFromEntity( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcAlphaFromOneMinusEntity( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcStretchTexCoords( const waveForm_t *wf, vec2_t *texCoords, int numVertexes );
+void	RB_CalcColorFromEntity( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcColorFromOneMinusEntity( color4ub_t *dstColors, int numVertexes );
+void	RB_CalcSpecularAlpha( color4ub_t *alphas, int numVertexes );
+void	RB_CalcDiffuseColor( color4ub_t *colors, int numVertexes );
 
 /*
 =============================================================

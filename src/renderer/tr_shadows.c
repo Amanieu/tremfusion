@@ -80,14 +80,14 @@ void R_RenderShadowEdges( void ) {
 		i3 = tess.indexes[ i*3 + 2 ];
 
 		qglBegin( GL_TRIANGLE_STRIP );
-		qglVertex3fv( tess.xyz[ i1 ] );
-		qglVertex3fv( tess.xyz[ i1 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i2 ] );
-		qglVertex3fv( tess.xyz[ i2 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i3 ] );
-		qglVertex3fv( tess.xyz[ i3 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i1 ] );
-		qglVertex3fv( tess.xyz[ i1 + tess.numVertexes ] );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i1 * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i1 + tess.numVertexes) * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i2 * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i2 + tess.numVertexes) * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i3 * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i3 + tess.numVertexes) * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i1 * tess.xyzInc) );
+		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i1 + tess.numVertexes) * tess.xyzInc) );
 		qglEnd();
 	}
 #else
@@ -126,10 +126,10 @@ void R_RenderShadowEdges( void ) {
 			// triangle, it is a sil edge
 			if ( hit[ 1 ] == 0 ) {
 				qglBegin( GL_TRIANGLE_STRIP );
-				qglVertex3fv( tess.xyz[ i ] );
-				qglVertex3fv( tess.xyz[ i + tess.numVertexes ] );
-				qglVertex3fv( tess.xyz[ i2 ] );
-				qglVertex3fv( tess.xyz[ i2 + tess.numVertexes ] );
+				qglVertex3fv( tess.vertexPtr[i].xyz );
+				qglVertex3fv( tess.vertexPtr[i + tess.numVertexes].xyz );
+				qglVertex3fv( tess.vertexPtr[i2].xyz );
+				qglVertex3fv( tess.vertexPtr[i2 + tess.numVertexes].xyz );
 				qglEnd();
 				c_edges++;
 			} else {
@@ -171,7 +171,8 @@ void RB_ShadowTessEnd( void ) {
 
 	// project vertexes away from light direction
 	for ( i = 0 ; i < tess.numVertexes ; i++ ) {
-		VectorMA( tess.xyz[i], -512, lightDir, tess.xyz[i+tess.numVertexes] );
+		VectorMA( tess.vertexPtr[i].xyz, -512,
+			  lightDir, tess.vertexPtr[i+tess.numVertexes].xyz );
 	}
 
 	// decide which triangles face the light
@@ -179,21 +180,21 @@ void RB_ShadowTessEnd( void ) {
 
 	numTris = tess.numIndexes / 3;
 	for ( i = 0 ; i < numTris ; i++ ) {
-		int		i1, i2, i3;
+		GLushort	i1, i2, i3;
 		vec3_t	d1, d2, normal;
-		float	*v1, *v2, *v3;
+		vec4_t	*v1, *v2, *v3;
 		float	d;
 
-		i1 = tess.indexes[ i*3 + 0 ];
-		i2 = tess.indexes[ i*3 + 1 ];
-		i3 = tess.indexes[ i*3 + 2 ];
+		i1 = tess.indexPtr[ i*3 + 0 ];
+		i2 = tess.indexPtr[ i*3 + 1 ];
+		i3 = tess.indexPtr[ i*3 + 2 ];
 
-		v1 = tess.xyz[ i1 ];
-		v2 = tess.xyz[ i2 ];
-		v3 = tess.xyz[ i3 ];
+		v1 = &tess.vertexPtr[i1].xyz;
+		v2 = &tess.vertexPtr[i2].xyz;
+		v3 = &tess.vertexPtr[i3].xyz;
 
-		VectorSubtract( v2, v1, d1 );
-		VectorSubtract( v3, v1, d2 );
+		VectorSubtract( *v2, *v1, d1 );
+		VectorSubtract( *v3, *v1, d2 );
 		CrossProduct( d1, d2, normal );
 
 		d = DotProduct( normal, lightDir );
@@ -304,7 +305,6 @@ RB_ProjectionShadowDeform
 =================
 */
 void RB_ProjectionShadowDeform( void ) {
-	float	*xyz;
 	int		i;
 	float	h;
 	vec3_t	ground;
@@ -312,8 +312,6 @@ void RB_ProjectionShadowDeform( void ) {
 	float	groundDist;
 	float	d;
 	vec3_t	lightDir;
-
-	xyz = ( float * ) tess.xyz;
 
 	ground[0] = backEnd.or.axis[0][2];
 	ground[1] = backEnd.or.axis[1][2];
@@ -334,11 +332,11 @@ void RB_ProjectionShadowDeform( void ) {
 	light[1] = lightDir[1] * d;
 	light[2] = lightDir[2] * d;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
-		h = DotProduct( xyz, ground ) + groundDist;
+	for ( i = 0; i < tess.numVertexes; i++ ) {
+		h = DotProduct( tess.vertexPtr[i].xyz, ground ) + groundDist;
 
-		xyz[0] -= light[0] * h;
-		xyz[1] -= light[1] * h;
-		xyz[2] -= light[2] * h;
+		tess.vertexPtr[i].xyz[0] -= light[0] * h;
+		tess.vertexPtr[i].xyz[1] -= light[1] * h;
+		tess.vertexPtr[i].xyz[2] -= light[2] * h;
 	}
 }

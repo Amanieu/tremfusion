@@ -314,7 +314,8 @@ void RB_RenderFlare( flare_t *f ) {
 	vec3_t			color;
 	int				iColor[3];
 	float distance, intensity, factor;
-	byte fogFactors[3] = {255, 255, 255};
+	color4ub_t fogFactors = {255, 255, 255, 255};
+	static GLushort indexes[6] = { 0, 1, 2, 0, 2, 3 };
 
 	backEnd.pc.c_flareRenders++;
 
@@ -354,18 +355,28 @@ void RB_RenderFlare( flare_t *f ) {
 
 	VectorScale(f->color, f->drawIntensity * intensity, color);
 
-// Calculations for fogging
+	tess.numVertexes = 4;
+	tess.numIndexes  = 6;
+	RB_SetupVertexBuffer(tr.flareShader);
+	
+	// Calculations for fogging
 	if(tr.world && f->fogNum < tr.world->numfogs)
 	{
 		tess.numVertexes = 1;
-		VectorCopy(f->origin, tess.xyz[0]);
+		tess.numIndexes = 0;
+
+		VectorCopy(f->origin, tess.vertexPtr->xyz);
 		tess.fogNum = f->fogNum;
 	
-		RB_CalcModulateColorsByFog(fogFactors);
+		RB_CalcModulateColorsByFog( &fogFactors, 1);
 		
 		// We don't need to render the flare if colors are 0 anyways.
-		if(!(fogFactors[0] || fogFactors[1] || fogFactors[2]))
+		if(!(fogFactors[0] || fogFactors[1] || fogFactors[2])) {
+			RB_ClearVertexBuffer ();
 			return;
+		}
+		tess.numVertexes = 4;
+		tess.numIndexes  = 6;
 	}
 
 	iColor[0] = color[0] * fogFactors[0];
@@ -375,54 +386,54 @@ void RB_RenderFlare( flare_t *f ) {
 	RB_BeginSurface( tr.flareShader, f->fogNum );
 
 	// FIXME: use quadstamp?
-	tess.xyz[tess.numVertexes][0] = f->windowX - size;
-	tess.xyz[tess.numVertexes][1] = f->windowY - size;
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
-	tess.vertexColors[tess.numVertexes][0] = iColor[0];
-	tess.vertexColors[tess.numVertexes][1] = iColor[1];
-	tess.vertexColors[tess.numVertexes][2] = iColor[2];
-	tess.vertexColors[tess.numVertexes][3] = 255;
-	tess.numVertexes++;
+	tess.vertexPtr[0].xyz[0] = f->windowX - size;
+	tess.vertexPtr[0].xyz[1] = f->windowY - size;
+	tess.vertexPtr[0].xyz[2] = 0.0f;
+	tess.vertexPtr[0].xyz[3] = 1.0f;
+	tess.vertexPtr[0].tc1[0] = 0.0f;
+	tess.vertexPtr[0].tc1[1] = 0.0f;
+	tess.vertexPtr[0].color[0] = iColor[0];
+	tess.vertexPtr[0].color[1] = iColor[1];
+	tess.vertexPtr[0].color[2] = iColor[2];
+	tess.vertexPtr[0].color[3] = 255;
 
-	tess.xyz[tess.numVertexes][0] = f->windowX - size;
-	tess.xyz[tess.numVertexes][1] = f->windowY + size;
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
-	tess.vertexColors[tess.numVertexes][0] = iColor[0];
-	tess.vertexColors[tess.numVertexes][1] = iColor[1];
-	tess.vertexColors[tess.numVertexes][2] = iColor[2];
-	tess.vertexColors[tess.numVertexes][3] = 255;
-	tess.numVertexes++;
+	tess.vertexPtr[1].xyz[0] = f->windowX - size;
+	tess.vertexPtr[1].xyz[1] = f->windowY + size;
+	tess.vertexPtr[1].xyz[2] = 0.0f;
+	tess.vertexPtr[1].xyz[3] = 1.0f;
+	tess.vertexPtr[1].tc1[0] = 0.0f;
+	tess.vertexPtr[1].tc1[1] = 1.0f;
+	tess.vertexPtr[1].color[0] = iColor[0];
+	tess.vertexPtr[1].color[1] = iColor[1];
+	tess.vertexPtr[1].color[2] = iColor[2];
+	tess.vertexPtr[1].color[3] = 255;
 
-	tess.xyz[tess.numVertexes][0] = f->windowX + size;
-	tess.xyz[tess.numVertexes][1] = f->windowY + size;
-	tess.texCoords[tess.numVertexes][0][0] = 1;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
-	tess.vertexColors[tess.numVertexes][0] = iColor[0];
-	tess.vertexColors[tess.numVertexes][1] = iColor[1];
-	tess.vertexColors[tess.numVertexes][2] = iColor[2];
-	tess.vertexColors[tess.numVertexes][3] = 255;
-	tess.numVertexes++;
+	tess.vertexPtr[2].xyz[0] = f->windowX + size;
+	tess.vertexPtr[2].xyz[1] = f->windowY + size;
+	tess.vertexPtr[2].xyz[2] = 0.0f;
+	tess.vertexPtr[2].xyz[3] = 1.0f;
+	tess.vertexPtr[2].tc1[0] = 1.0f;
+	tess.vertexPtr[2].tc1[1] = 1.0f;
+	tess.vertexPtr[2].color[0] = iColor[0];
+	tess.vertexPtr[2].color[1] = iColor[1];
+	tess.vertexPtr[2].color[2] = iColor[2];
+	tess.vertexPtr[2].color[3] = 255;
 
-	tess.xyz[tess.numVertexes][0] = f->windowX + size;
-	tess.xyz[tess.numVertexes][1] = f->windowY - size;
-	tess.texCoords[tess.numVertexes][0][0] = 1;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
-	tess.vertexColors[tess.numVertexes][0] = iColor[0];
-	tess.vertexColors[tess.numVertexes][1] = iColor[1];
-	tess.vertexColors[tess.numVertexes][2] = iColor[2];
-	tess.vertexColors[tess.numVertexes][3] = 255;
-	tess.numVertexes++;
+	tess.vertexPtr[3].xyz[0] = f->windowX + size;
+	tess.vertexPtr[3].xyz[1] = f->windowY - size;
+	tess.vertexPtr[3].xyz[2] = 0.0f;
+	tess.vertexPtr[3].xyz[3] = 1.0f;
+	tess.vertexPtr[3].tc1[0] = 1.0f;
+	tess.vertexPtr[3].tc1[1] = 0.0f;
+	tess.vertexPtr[3].color[0] = iColor[0];
+	tess.vertexPtr[3].color[1] = iColor[1];
+	tess.vertexPtr[3].color[2] = iColor[2];
+	tess.vertexPtr[3].color[3] = 255;
 
-	tess.indexes[tess.numIndexes++] = 0;
-	tess.indexes[tess.numIndexes++] = 1;
-	tess.indexes[tess.numIndexes++] = 2;
-	tess.indexes[tess.numIndexes++] = 0;
-	tess.indexes[tess.numIndexes++] = 2;
-	tess.indexes[tess.numIndexes++] = 3;
+	Com_Memcpy( tess.indexPtr, indexes, 6 * sizeof(GLushort) );
 
 	RB_EndSurface();
+	RB_ClearVertexBuffer();
 }
 
 /*

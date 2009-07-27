@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
 
+#define SKY_MAX_QUADS		(5 * SKY_SUBDIVISIONS * SKY_SUBDIVISIONS)
+#define SKY_MAX_VERTEXES	(4 * SKY_MAX_QUADS)
+#define SKY_MAX_INDEXES		(6 * SKY_MAX_QUADS)
+
 static float s_cloudTexCoords[6][SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 static float s_cloudTexP[6][SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1];
 
@@ -269,9 +273,9 @@ void RB_ClipSkyPolygons( shaderCommands_t *input )
 	{
 		for (j = 0 ; j < 3 ; j++) 
 		{
-			VectorSubtract( input->xyz[input->indexes[i+j]],
-							backEnd.viewParms.or.origin, 
-							p[j] );
+			VectorSubtract( tess.vertexPtr[tess.indexPtr[i+j]].xyz,
+					backEnd.viewParms.or.origin, 
+					p[j] );
 		}
 		ClipSkyPolygon( 3, p[0], 0 );
 	}
@@ -460,6 +464,7 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean ad
 	int s, t;
 	int vertexStart = tess.numVertexes;
 	int tHeight, sWidth;
+	vboVertex_t	*vertexPtr = tess.vertexPtr + tess.numVertexes;
 
 	tHeight = maxs[1] - mins[1] + 1;
 	sWidth = maxs[0] - mins[0] + 1;
@@ -468,15 +473,16 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean ad
 	{
 		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
-			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.or.origin, tess.xyz[tess.numVertexes] );
-			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
-			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
+			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.or.origin, vertexPtr->xyz );
+			vertexPtr->tc1[0] = s_skyTexCoords[t][s][0];
+			vertexPtr->tc1[1] = s_skyTexCoords[t][s][1];
 
 			tess.numVertexes++;
+			vertexPtr++;
 
-			if ( tess.numVertexes >= SHADER_MAX_VERTEXES )
+			if ( tess.numVertexes >= SKY_MAX_VERTEXES )
 			{
-				ri.Error( ERR_DROP, "SHADER_MAX_VERTEXES hit in FillCloudySkySide()\n" );
+				ri.Error( ERR_DROP, "SKY_MAX_VERTEXES hit in FillCloudySkySide()\n" );
 			}
 		}
 	}
@@ -487,18 +493,18 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean ad
 		{	
 			for ( s = 0; s < sWidth-1; s++ )
 			{
-				tess.indexes[tess.numIndexes] = vertexStart + s + t * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + t * ( sWidth );
 				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + ( t + 1 ) * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + ( t + 1 ) * ( sWidth );
 				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + 1 + t * ( sWidth );
 				tess.numIndexes++;
 
-				tess.indexes[tess.numIndexes] = vertexStart + s + ( t + 1 ) * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + ( t + 1 ) * ( sWidth );
 				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + ( t + 1 ) * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + 1 + ( t + 1 ) * ( sWidth );
 				tess.numIndexes++;
-				tess.indexes[tess.numIndexes] = vertexStart + s + 1 + t * ( sWidth );
+				tess.indexPtr[tess.numIndexes] = vertexStart + s + 1 + t * ( sWidth );
 				tess.numIndexes++;
 			}
 		}
@@ -615,6 +621,10 @@ void R_BuildCloudData( shaderCommands_t *input )
 	sky_min = 1.0 / 256.0f;		// FIXME: not correct?
 	sky_max = 255.0 / 256.0f;
 
+	tess.numIndexes = SKY_MAX_INDEXES;
+	tess.numVertexes = SKY_MAX_VERTEXES;
+	RB_SetupVertexBuffer( shader );
+
 	// set up for drawing
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
@@ -702,6 +712,7 @@ void RB_DrawSun( void ) {
 	float		dist;
 	vec3_t		origin, vec1, vec2;
 	vec3_t		temp;
+	vboVertex_t	*vertexPtr;
 
 	if ( !backEnd.skyRenderedThisView ) {
 		return;
@@ -727,58 +738,66 @@ void RB_DrawSun( void ) {
 
 	// FIXME: use quad stamp
 	RB_BeginSurface( tr.sunShader, tess.fogNum );
-		VectorCopy( origin, temp );
-		VectorSubtract( temp, vec1, temp );
-		VectorSubtract( temp, vec2, temp );
-		VectorCopy( temp, tess.xyz[tess.numVertexes] );
-		tess.texCoords[tess.numVertexes][0][0] = 0;
-		tess.texCoords[tess.numVertexes][0][1] = 0;
-		tess.vertexColors[tess.numVertexes][0] = 255;
-		tess.vertexColors[tess.numVertexes][1] = 255;
-		tess.vertexColors[tess.numVertexes][2] = 255;
-		tess.numVertexes++;
 
-		VectorCopy( origin, temp );
-		VectorAdd( temp, vec1, temp );
-		VectorSubtract( temp, vec2, temp );
-		VectorCopy( temp, tess.xyz[tess.numVertexes] );
-		tess.texCoords[tess.numVertexes][0][0] = 0;
-		tess.texCoords[tess.numVertexes][0][1] = 1;
-		tess.vertexColors[tess.numVertexes][0] = 255;
-		tess.vertexColors[tess.numVertexes][1] = 255;
-		tess.vertexColors[tess.numVertexes][2] = 255;
-		tess.numVertexes++;
+	tess.numVertexes = 4;
+	tess.numIndexes  = 6;
+	RB_SetupVertexBuffer( tr.sunShader );
 
-		VectorCopy( origin, temp );
-		VectorAdd( temp, vec1, temp );
-		VectorAdd( temp, vec2, temp );
-		VectorCopy( temp, tess.xyz[tess.numVertexes] );
-		tess.texCoords[tess.numVertexes][0][0] = 1;
-		tess.texCoords[tess.numVertexes][0][1] = 1;
-		tess.vertexColors[tess.numVertexes][0] = 255;
-		tess.vertexColors[tess.numVertexes][1] = 255;
-		tess.vertexColors[tess.numVertexes][2] = 255;
-		tess.numVertexes++;
+	vertexPtr = tess.vertexPtr;
 
-		VectorCopy( origin, temp );
-		VectorSubtract( temp, vec1, temp );
-		VectorAdd( temp, vec2, temp );
-		VectorCopy( temp, tess.xyz[tess.numVertexes] );
-		tess.texCoords[tess.numVertexes][0][0] = 1;
-		tess.texCoords[tess.numVertexes][0][1] = 0;
-		tess.vertexColors[tess.numVertexes][0] = 255;
-		tess.vertexColors[tess.numVertexes][1] = 255;
-		tess.vertexColors[tess.numVertexes][2] = 255;
-		tess.numVertexes++;
-
-		tess.indexes[tess.numIndexes++] = 0;
-		tess.indexes[tess.numIndexes++] = 1;
-		tess.indexes[tess.numIndexes++] = 2;
-		tess.indexes[tess.numIndexes++] = 0;
-		tess.indexes[tess.numIndexes++] = 2;
-		tess.indexes[tess.numIndexes++] = 3;
+	VectorCopy( origin, temp );
+	VectorSubtract( temp, vec1, temp );
+	VectorSubtract( temp, vec2, temp );
+	VectorCopy( temp, vertexPtr->xyz );
+	vertexPtr->tc1[0] = 0;
+	vertexPtr->tc1[1] = 0;
+	vertexPtr->color[0] = 255;
+	vertexPtr->color[1] = 255;
+	vertexPtr->color[2] = 255;
+	vertexPtr++;
+	
+	VectorCopy( origin, temp );
+	VectorAdd( temp, vec1, temp );
+	VectorSubtract( temp, vec2, temp );
+	VectorCopy( temp, vertexPtr->xyz );
+	vertexPtr->tc1[0] = 0;
+	vertexPtr->tc1[1] = 1;
+	vertexPtr->color[0] = 255;
+	vertexPtr->color[1] = 255;
+	vertexPtr->color[2] = 255;
+	vertexPtr++;
+	
+	VectorCopy( origin, temp );
+	VectorAdd( temp, vec1, temp );
+	VectorAdd( temp, vec2, temp );
+	VectorCopy( temp, vertexPtr->xyz );
+	vertexPtr->tc1[0] = 1;
+	vertexPtr->tc1[1] = 1;
+	vertexPtr->color[0] = 255;
+	vertexPtr->color[1] = 255;
+	vertexPtr->color[2] = 255;
+	vertexPtr++;
+	
+	VectorCopy( origin, temp );
+	VectorSubtract( temp, vec1, temp );
+	VectorAdd( temp, vec2, temp );
+	VectorCopy( temp, vertexPtr->xyz );
+	vertexPtr->tc1[0] = 1;
+	vertexPtr->tc1[1] = 0;
+	vertexPtr->color[0] = 255;
+	vertexPtr->color[1] = 255;
+	vertexPtr->color[2] = 255;
+	vertexPtr++;
+	
+	tess.indexPtr[0] = 0;
+	tess.indexPtr[1] = 1;
+	tess.indexPtr[2] = 2;
+	tess.indexPtr[3] = 0;
+	tess.indexPtr[4] = 2;
+	tess.indexPtr[5] = 3;
 
 	RB_EndSurface();
+	RB_ClearVertexBuffer();
 
 	// back to normal depth range
 	qglDepthRange( 0.0, 1.0 );

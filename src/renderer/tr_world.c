@@ -166,7 +166,12 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	int			i;
 	dlight_t	*dl;
 
-	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
+        if ( !dlightBits ) { 
+		face->dlightBits[ tr.smpFrame ] = dlightBits; 
+		return dlightBits; 
+	} 
+	
+ 	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
 		if ( ! ( dlightBits & ( 1 << i ) ) ) {
 			continue;
 		}
@@ -190,7 +195,12 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 	int			i;
 	dlight_t	*dl;
 
-	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
+        if ( !dlightBits ) { 
+		grid->dlightBits[ tr.smpFrame ] = dlightBits; 
+		return dlightBits; 
+	}
+	
+ 	for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
 		if ( ! ( dlightBits & ( 1 << i ) ) ) {
 			continue;
 		}
@@ -216,10 +226,6 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 
 
 static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
-	// FIXME: more dlight culling to trisurfs...
-	surf->dlightBits[ tr.smpFrame ] = dlightBits;
-	return dlightBits;
-#if 0
 	int			i;
 	dlight_t	*dl;
 
@@ -228,12 +234,12 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 			continue;
 		}
 		dl = &tr.refdef.dlights[i];
-		if ( dl->origin[0] - dl->radius > grid->meshBounds[1][0]
-			|| dl->origin[0] + dl->radius < grid->meshBounds[0][0]
-			|| dl->origin[1] - dl->radius > grid->meshBounds[1][1]
-			|| dl->origin[1] + dl->radius < grid->meshBounds[0][1]
-			|| dl->origin[2] - dl->radius > grid->meshBounds[1][2]
-			|| dl->origin[2] + dl->radius < grid->meshBounds[0][2] ) {
+		if ( dl->origin[0] - dl->radius > surf->bounds[1][0]
+			|| dl->origin[0] + dl->radius < surf->bounds[0][0]
+			|| dl->origin[1] - dl->radius > surf->bounds[1][1]
+			|| dl->origin[1] + dl->radius < surf->bounds[0][1]
+			|| dl->origin[2] - dl->radius > surf->bounds[1][2]
+			|| dl->origin[2] + dl->radius < surf->bounds[0][2] ) {
 			// dlight doesn't reach the bounds
 			dlightBits &= ~( 1 << i );
 		}
@@ -243,9 +249,8 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 		tr.pc.c_dlightSurfacesCulled++;
 	}
 
-	grid->dlightBits[ tr.smpFrame ] = dlightBits;
+	surf->dlightBits[ tr.smpFrame ] = dlightBits;
 	return dlightBits;
-#endif
 }
 
 /*
@@ -291,15 +296,14 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits ) {
 	// FIXME: bmodel fog?
 
 	// try to cull before dlighting or adding
-	if ( R_CullSurface( surf->data, surf->shader ) ) {
+	if ( !qglBindBufferARB &&
+	     R_CullSurface( surf->data, surf->shader ) ) {
 		return;
 	}
 
 	// check for dlighting
-	if ( dlightBits ) {
-		dlightBits = R_DlightSurface( surf, dlightBits );
-		dlightBits = ( dlightBits != 0 );
-	}
+	dlightBits = R_DlightSurface( surf, dlightBits );
+	dlightBits = ( dlightBits != 0 );
 
 	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, dlightBits );
 }
@@ -358,6 +362,7 @@ static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
 
 	do {
 		int			newDlights[2];
+		int			r;
 
 		// if the node wasn't marked as potentially visible, exit
 		if (node->visframe != tr.visCount) {
@@ -367,49 +372,54 @@ static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
 		// if the bounding volume is outside the frustum, nothing
 		// inside can be visible OPTIMIZE: don't do this all the way to leafs?
 
-		if ( !r_nocull->integer ) {
-			int		r;
-
-			if ( planeBits & 1 ) {
-				r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[0]);
-				if (r == 2) {
-					return;						// culled
-				}
-				if ( r == 1 ) {
-					planeBits &= ~1;			// all descendants will also be in front
-				}
+		if ( planeBits & 1 ) {
+			r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[0]);
+			if (r == 2) {
+				return;						// culled
 			}
-
-			if ( planeBits & 2 ) {
-				r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[1]);
-				if (r == 2) {
-					return;						// culled
-				}
-				if ( r == 1 ) {
-					planeBits &= ~2;			// all descendants will also be in front
-				}
+			if ( r == 1 ) {
+				planeBits &= ~1;			// all descendants will also be in front
 			}
-
-			if ( planeBits & 4 ) {
-				r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[2]);
-				if (r == 2) {
-					return;						// culled
-				}
-				if ( r == 1 ) {
-					planeBits &= ~4;			// all descendants will also be in front
-				}
+		}
+		
+		if ( planeBits & 2 ) {
+			r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[1]);
+			if (r == 2) {
+				return;						// culled
 			}
-
-			if ( planeBits & 8 ) {
-				r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[3]);
-				if (r == 2) {
-					return;						// culled
-				}
-				if ( r == 1 ) {
-					planeBits &= ~8;			// all descendants will also be in front
-				}
+			if ( r == 1 ) {
+				planeBits &= ~2;			// all descendants will also be in front
 			}
+		}
+		
+		if ( planeBits & 4 ) {
+			r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[2]);
+			if (r == 2) {
+				return;						// culled
+			}
+			if ( r == 1 ) {
+				planeBits &= ~4;			// all descendants will also be in front
+			}
+		}
+		
+		if ( planeBits & 8 ) {
+			r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[3]);
+			if (r == 2) {
+				return;						// culled
+			}
+			if ( r == 1 ) {
+				planeBits &= ~8;			// all descendants will also be in front
+			}
+		}
 
+		if ( planeBits & 16 ) {
+			r = BoxOnPlaneSide(node->mins, node->maxs, &tr.viewParms.frustum[4]);
+			if (r == 2) {
+				return;						// culled
+			}
+			if ( r == 1 ) {
+				planeBits &= ~16;			// all descendants will also be in front
+			}
 		}
 
 		if ( node->contents != -1 ) {
@@ -585,7 +595,7 @@ static void R_MarkLeaves (void) {
 	// hasn't changed, we don't need to mark everything again
 
 	// if r_showcluster was just turned on, remark everything 
-	if ( tr.viewCluster == cluster && !tr.refdef.areamaskModified 
+	if ( tr.viewParms.viewCluster == cluster && !tr.refdef.areamaskModified 
 		&& !r_showcluster->modified ) {
 		return;
 	}
@@ -598,9 +608,9 @@ static void R_MarkLeaves (void) {
 	}
 
 	tr.visCount++;
-	tr.viewCluster = cluster;
+	tr.viewParms.viewCluster = cluster;
 
-	if ( r_novis->integer || tr.viewCluster == -1 ) {
+	if ( r_novis->integer || tr.viewParms.viewCluster == -1 ) {
 		for (i=0 ; i<tr.world->numnodes ; i++) {
 			if (tr.world->nodes[i].contents != CONTENTS_SOLID) {
 				tr.world->nodes[i].visframe = tr.visCount;
@@ -609,7 +619,7 @@ static void R_MarkLeaves (void) {
 		return;
 	}
 
-	vis = R_ClusterPVS (tr.viewCluster);
+	vis = R_ClusterPVS (tr.viewParms.viewCluster);
 	
 	for (i=0,leaf=tr.world->nodes ; i<tr.world->numnodes ; i++, leaf++) {
 		cluster = leaf->cluster;
@@ -623,7 +633,8 @@ static void R_MarkLeaves (void) {
 		}
 
 		// check for door connection
-		if ( (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
+		if ( !qglBindBufferARB &&
+		     (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
 			continue;		// not visible
 		}
 
@@ -660,10 +671,32 @@ void R_AddWorldSurfaces (void) {
 
 	// clear out the visible min/max
 	ClearBounds( tr.viewParms.visBounds[0], tr.viewParms.visBounds[1] );
-
-	// perform frustum culling and add all the potentially visible surfaces
-	if ( tr.refdef.num_dlights > 32 ) {
-		tr.refdef.num_dlights = 32 ;
+	
+	switch ( tr.viewParms.frustType ) {
+	case 1:
+		tr.viewParms.frustum[4].dist = tr.clusters[tr.viewParms.viewCluster].mins[0];
+		break;
+	case 2:
+		tr.viewParms.frustum[4].dist = -tr.clusters[tr.viewParms.viewCluster].maxs[0];
+		break;
+	case 3:
+		tr.viewParms.frustum[4].dist = tr.clusters[tr.viewParms.viewCluster].mins[1];
+		break;
+	case 4:
+		tr.viewParms.frustum[4].dist = -tr.clusters[tr.viewParms.viewCluster].maxs[1];
+		break;
+	case 5:
+		tr.viewParms.frustum[4].dist = tr.clusters[tr.viewParms.viewCluster].mins[2];
+		break;
+	case 6:
+		tr.viewParms.frustum[4].dist = -tr.clusters[tr.viewParms.viewCluster].maxs[2];
+		break;
 	}
-	R_RecursiveWorldNode( tr.world->nodes, 15, ( 1 << tr.refdef.num_dlights ) - 1 );
+	
+	// perform frustum culling and add all the potentially visible surfaces
+	if ( tr.refdef.num_dlights > MAX_TEXTURE_DLIGHTS ) {
+		tr.refdef.num_dlights = MAX_TEXTURE_DLIGHTS ;
+	}
+	
+	R_RecursiveWorldNode( tr.world->nodes, tr.viewParms.frustPlanes, ( 1 << tr.refdef.num_dlights ) - 1 );
 }

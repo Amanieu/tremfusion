@@ -87,7 +87,7 @@ static float EvalWaveFormClamped( const waveForm_t *wf )
 /*
 ** RB_CalcStretchTexCoords
 */
-void RB_CalcStretchTexCoords( const waveForm_t *wf, float *st )
+void RB_CalcStretchTexCoords( const waveForm_t *wf, vec2_t *st, int numVertexes )
 {
 	float p;
 	texModInfo_t tmi;
@@ -102,7 +102,7 @@ void RB_CalcStretchTexCoords( const waveForm_t *wf, float *st )
 	tmi.matrix[1][1] = p;
 	tmi.translate[1] = 0.5f - 0.5f * p;
 
-	RB_CalcTransformTexCoords( &tmi, st );
+	RB_CalcTransformTexCoords( &tmi, st, numVertexes );
 }
 
 /*
@@ -124,41 +124,39 @@ void RB_CalcDeformVertexes( deformStage_t *ds )
 	int i;
 	vec3_t	offset;
 	float	scale;
-	float	*xyz = ( float * ) tess.xyz;
-	float	*normal = ( float * ) tess.normal;
 	float	*table;
 
 	if ( ds->deformationWave.frequency == 0 )
 	{
 		scale = EvalWaveForm( &ds->deformationWave );
 
-		for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
+		for ( i = 0; i < tess.numVertexes; i++ )
 		{
-			VectorScale( normal, scale, offset );
+			VectorScale( tess.vertexPtr[i].normal, scale, offset );
 			
-			xyz[0] += offset[0];
-			xyz[1] += offset[1];
-			xyz[2] += offset[2];
+			tess.vertexPtr[i].xyz[0] += offset[0];
+			tess.vertexPtr[i].xyz[1] += offset[1];
+			tess.vertexPtr[i].xyz[2] += offset[2];
 		}
 	}
 	else
 	{
 		table = TableForFunc( ds->deformationWave.func );
 
-		for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
+		for ( i = 0; i < tess.numVertexes; i++ )
 		{
-			float off = ( xyz[0] + xyz[1] + xyz[2] ) * ds->deformationSpread;
+			float off = ( tess.vertexPtr[i].xyz[0] + tess.vertexPtr[i].xyz[1] + tess.vertexPtr[i].xyz[2] ) * ds->deformationSpread;
 
 			scale = WAVEVALUE( table, ds->deformationWave.base, 
 				ds->deformationWave.amplitude,
 				ds->deformationWave.phase + off,
 				ds->deformationWave.frequency );
 
-			VectorScale( normal, scale, offset );
+			VectorScale( tess.vertexPtr[i].normal, scale, offset );
 			
-			xyz[0] += offset[0];
-			xyz[1] += offset[1];
-			xyz[2] += offset[2];
+			tess.vertexPtr[i].xyz[0] += offset[0];
+			tess.vertexPtr[i].xyz[1] += offset[1];
+			tess.vertexPtr[i].xyz[2] += offset[2];
 		}
 	}
 }
@@ -173,26 +171,24 @@ Wiggle the normals for wavy environment mapping
 void RB_CalcDeformNormals( deformStage_t *ds ) {
 	int i;
 	float	scale;
-	float	*xyz = ( float * ) tess.xyz;
-	float	*normal = ( float * ) tess.normal;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 ) {
+	for ( i = 0; i < tess.numVertexes; i++ ) {
 		scale = 0.98f;
-		scale = R_NoiseGet4f( xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
+		scale = R_NoiseGet4f( tess.vertexPtr[i].xyz[0] * scale, tess.vertexPtr[i].xyz[1] * scale, tess.vertexPtr[i].xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
-		normal[ 0 ] += ds->deformationWave.amplitude * scale;
+		tess.vertexPtr[i].normal[ 0 ] += ds->deformationWave.amplitude * scale;
 
 		scale = 0.98f;
-		scale = R_NoiseGet4f( 100 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
+		scale = R_NoiseGet4f( 100 + tess.vertexPtr[i].xyz[0] * scale, tess.vertexPtr[i].xyz[1] * scale, tess.vertexPtr[i].xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
-		normal[ 1 ] += ds->deformationWave.amplitude * scale;
+		tess.vertexPtr[i].normal[ 1 ] += ds->deformationWave.amplitude * scale;
 
 		scale = 0.98f;
-		scale = R_NoiseGet4f( 200 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
+		scale = R_NoiseGet4f( 200 + tess.vertexPtr[i].xyz[0] * scale, tess.vertexPtr[i].xyz[1] * scale, tess.vertexPtr[i].xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
-		normal[ 2 ] += ds->deformationWave.amplitude * scale;
+		tess.vertexPtr[i].normal[ 2 ] += ds->deformationWave.amplitude * scale;
 
-		VectorNormalizeFast( normal );
+		VectorNormalizeFast( tess.vertexPtr[i].normal );
 	}
 }
 
@@ -204,24 +200,21 @@ RB_CalcBulgeVertexes
 */
 void RB_CalcBulgeVertexes( deformStage_t *ds ) {
 	int i;
-	const float *st = ( const float * ) tess.texCoords[0];
-	float		*xyz = ( float * ) tess.xyz;
-	float		*normal = ( float * ) tess.normal;
 	float		now;
 
 	now = backEnd.refdef.time * ds->bulgeSpeed * 0.001f;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, st += 4, normal += 4 ) {
+	for ( i = 0; i < tess.numVertexes; i++ ) {
 		int		off;
 		float scale;
 
-		off = (float)( FUNCTABLE_SIZE / (M_PI*2) ) * ( st[0] * ds->bulgeWidth + now );
+		off = (float)( FUNCTABLE_SIZE / (M_PI*2) ) * ( tess.vertexPtr[i].tc1[0] * ds->bulgeWidth + now );
 
 		scale = tr.sinTable[ off & FUNCTABLE_MASK ] * ds->bulgeHeight;
 			
-		xyz[0] += normal[0] * scale;
-		xyz[1] += normal[1] * scale;
-		xyz[2] += normal[2] * scale;
+		tess.vertexPtr[i].xyz[0] += tess.vertexPtr[i].normal[0] * scale;
+		tess.vertexPtr[i].xyz[1] += tess.vertexPtr[i].normal[1] * scale;
+		tess.vertexPtr[i].xyz[2] += tess.vertexPtr[i].normal[2] * scale;
 	}
 }
 
@@ -235,7 +228,6 @@ A deformation that can move an entire surface along a wave path
 */
 void RB_CalcMoveVertexes( deformStage_t *ds ) {
 	int			i;
-	float		*xyz;
 	float		*table;
 	float		scale;
 	vec3_t		offset;
@@ -249,9 +241,8 @@ void RB_CalcMoveVertexes( deformStage_t *ds ) {
 
 	VectorScale( ds->moveVector, scale, offset );
 
-	xyz = ( float * ) tess.xyz;
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
-		VectorAdd( xyz, offset, xyz );
+	for ( i = 0; i < tess.numVertexes; i++ ) {
+		VectorAdd( tess.vertexPtr[i].xyz, offset, tess.vertexPtr[i].xyz );
 	}
 }
 
@@ -275,19 +266,19 @@ void DeformText( const char *text ) {
 	height[0] = 0;
 	height[1] = 0;
 	height[2] = -1;
-	CrossProduct( tess.normal[0], height, width );
+	CrossProduct( tess.vertexPtr[0].normal, height, width );
 
 	// find the midpoint of the box
 	VectorClear( mid );
 	bottom = 999999;
 	top = -999999;
 	for ( i = 0 ; i < 4 ; i++ ) {
-		VectorAdd( tess.xyz[i], mid, mid );
-		if ( tess.xyz[i][2] < bottom ) {
-			bottom = tess.xyz[i][2];
+		VectorAdd( tess.vertexPtr[i].xyz, mid, mid );
+		if ( tess.vertexPtr[i].xyz[2] < bottom ) {
+			bottom = tess.vertexPtr[i].xyz[2];
 		}
-		if ( tess.xyz[i][2] > top ) {
-			top = tess.xyz[i][2];
+		if ( tess.vertexPtr[i].xyz[2] > top ) {
+			top = tess.vertexPtr[i].xyz[2];
 		}
 	}
 	VectorScale( mid, 0.25f, origin );
@@ -353,7 +344,6 @@ quads, rebuild them as forward facing sprites
 static void AutospriteDeform( void ) {
 	int		i;
 	int		oldVerts;
-	float	*xyz;
 	vec3_t	mid, delta;
 	float	radius;
 	vec3_t	left, up;
@@ -380,13 +370,11 @@ static void AutospriteDeform( void ) {
 
 	for ( i = 0 ; i < oldVerts ; i+=4 ) {
 		// find the midpoint
-		xyz = tess.xyz[i];
+		mid[0] = 0.25f * (tess.vertexPtr[i].xyz[0] + tess.vertexPtr[i+1].xyz[0] + tess.vertexPtr[i+2].xyz[0] + tess.vertexPtr[i+3].xyz[0]);
+		mid[1] = 0.25f * (tess.vertexPtr[i].xyz[1] + tess.vertexPtr[i+1].xyz[1] + tess.vertexPtr[i+2].xyz[1] + tess.vertexPtr[i+3].xyz[1]);
+		mid[2] = 0.25f * (tess.vertexPtr[i].xyz[2] + tess.vertexPtr[i+1].xyz[2] + tess.vertexPtr[i+2].xyz[2] + tess.vertexPtr[i+3].xyz[2]);
 
-		mid[0] = 0.25f * (xyz[0] + xyz[4] + xyz[8] + xyz[12]);
-		mid[1] = 0.25f * (xyz[1] + xyz[5] + xyz[9] + xyz[13]);
-		mid[2] = 0.25f * (xyz[2] + xyz[6] + xyz[10] + xyz[14]);
-
-		VectorSubtract( xyz, mid, delta );
+		VectorSubtract( tess.vertexPtr[i].xyz, mid, delta );
 		radius = VectorLength( delta ) * 0.707f;		// / sqrt(2)
 
 		VectorScale( leftDir, radius, left );
@@ -396,20 +384,20 @@ static void AutospriteDeform( void ) {
 			VectorSubtract( vec3_origin, left, left );
 		}
 
-	  // compensate for scale in the axes if necessary
-  	if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
-      float axisLength;
-		  axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
-  		if ( !axisLength ) {
-	  		axisLength = 0;
-  		} else {
-	  		axisLength = 1.0f / axisLength;
-  		}
-      VectorScale(left, axisLength, left);
-      VectorScale(up, axisLength, up);
-    }
-
-		RB_AddQuadStamp( mid, left, up, tess.vertexColors[i] );
+		// compensate for scale in the axes if necessary
+		if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
+			float axisLength;
+			axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
+			if ( !axisLength ) {
+				axisLength = 0;
+			} else {
+				axisLength = 1.0f / axisLength;
+			}
+			VectorScale(left, axisLength, left);
+			VectorScale(up, axisLength, up);
+		}
+		
+		RB_AddQuadStamp( mid, left, up, tess.vertexPtr[i].color );
 	}
 }
 
@@ -433,7 +421,6 @@ int edgeVerts[6][2] = {
 static void Autosprite2Deform( void ) {
 	int		i, j, k;
 	int		indexes;
-	float	*xyz;
 	vec3_t	forward;
 
 	if ( tess.numVertexes & 3 ) {
@@ -457,10 +444,7 @@ static void Autosprite2Deform( void ) {
 		int		nums[2];
 		vec3_t	mid[2];
 		vec3_t	major, minor;
-		float	*v1, *v2;
-
-		// find the midpoint
-		xyz = tess.xyz[i];
+		vec4_t	*v1, *v2;
 
 		// identify the two shortest edges
 		nums[0] = nums[1] = 0;
@@ -470,8 +454,8 @@ static void Autosprite2Deform( void ) {
 			float	l;
 			vec3_t	temp;
 
-			v1 = xyz + 4 * edgeVerts[j][0];
-			v2 = xyz + 4 * edgeVerts[j][1];
+			v1 = &tess.vertexPtr[edgeVerts[j][0]].xyz;
+			v2 = &tess.vertexPtr[edgeVerts[j][1]].xyz;
 
 			VectorSubtract( v1, v2, temp );
 			
@@ -488,12 +472,12 @@ static void Autosprite2Deform( void ) {
 		}
 
 		for ( j = 0 ; j < 2 ; j++ ) {
-			v1 = xyz + 4 * edgeVerts[nums[j]][0];
-			v2 = xyz + 4 * edgeVerts[nums[j]][1];
+			v1 = &tess.vertexPtr[edgeVerts[j][0]].xyz;
+			v2 = &tess.vertexPtr[edgeVerts[j][1]].xyz;
 
-			mid[j][0] = 0.5f * (v1[0] + v2[0]);
-			mid[j][1] = 0.5f * (v1[1] + v2[1]);
-			mid[j][2] = 0.5f * (v1[2] + v2[2]);
+			mid[j][0] = 0.5f * ((*v1)[0] + (*v2)[0]);
+			mid[j][1] = 0.5f * ((*v1)[1] + (*v2)[1]);
+			mid[j][2] = 0.5f * ((*v1)[2] + (*v2)[2]);
 		}
 
 		// find the vector of the major axis
@@ -507,26 +491,26 @@ static void Autosprite2Deform( void ) {
 		for ( j = 0 ; j < 2 ; j++ ) {
 			float	l;
 
-			v1 = xyz + 4 * edgeVerts[nums[j]][0];
-			v2 = xyz + 4 * edgeVerts[nums[j]][1];
+			v1 = &tess.vertexPtr[edgeVerts[j][0]].xyz;
+			v2 = &tess.vertexPtr[edgeVerts[j][1]].xyz;
 
 			l = 0.5 * sqrt( lengths[j] );
 			
 			// we need to see which direction this edge
 			// is used to determine direction of projection
 			for ( k = 0 ; k < 5 ; k++ ) {
-				if ( tess.indexes[ indexes + k ] == i + edgeVerts[nums[j]][0]
-					&& tess.indexes[ indexes + k + 1 ] == i + edgeVerts[nums[j]][1] ) {
+				if ( tess.indexPtr[ indexes + k ] == i + edgeVerts[nums[j]][0]
+					&& tess.indexPtr[ indexes + k + 1 ] == i + edgeVerts[nums[j]][1] ) {
 					break;
 				}
 			}
 
 			if ( k == 5 ) {
-				VectorMA( mid[j], l, minor, v1 );
-				VectorMA( mid[j], -l, minor, v2 );
+				VectorMA( mid[j], l, minor, *v1 );
+				VectorMA( mid[j], -l, minor, *v2 );
 			} else {
-				VectorMA( mid[j], -l, minor, v1 );
-				VectorMA( mid[j], l, minor, v2 );
+				VectorMA( mid[j], -l, minor, *v1 );
+				VectorMA( mid[j], l, minor, *v2 );
 			}
 		}
 	}
@@ -547,8 +531,8 @@ void RB_DeformTessGeometry( void ) {
 		ds = &tess.shader->deforms[ i ];
 
 		switch ( ds->deformation ) {
-        case DEFORM_NONE:
-            break;
+		case DEFORM_NONE:
+			break;
 		case DEFORM_NORMALS:
 			RB_CalcDeformNormals( ds );
 			break;
@@ -596,7 +580,7 @@ COLORS
 /*
 ** RB_CalcColorFromEntity
 */
-void RB_CalcColorFromEntity( unsigned char *dstColors )
+void RB_CalcColorFromEntity( color4ub_t *dstColors, int numVertexes )
 {
 	int	i;
 	int *pColors = ( int * ) dstColors;
@@ -607,7 +591,7 @@ void RB_CalcColorFromEntity( unsigned char *dstColors )
 
 	c = * ( int * ) backEnd.currentEntity->e.shaderRGBA;
 
-	for ( i = 0; i < tess.numVertexes; i++, pColors++ )
+	for ( i = 0; i < numVertexes; i++, pColors++ )
 	{
 		*pColors = c;
 	}
@@ -616,7 +600,7 @@ void RB_CalcColorFromEntity( unsigned char *dstColors )
 /*
 ** RB_CalcColorFromOneMinusEntity
 */
-void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
+void RB_CalcColorFromOneMinusEntity( color4ub_t *dstColors, int numVertexes )
 {
 	int	i;
 	int *pColors = ( int * ) dstColors;
@@ -633,7 +617,7 @@ void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
 
 	c = * ( int * ) invModulate;
 
-	for ( i = 0; i < tess.numVertexes; i++, pColors++ )
+	for ( i = 0; i < numVertexes; i++, pColors++ )
 	{
 		*pColors = * ( int * ) invModulate;
 	}
@@ -642,52 +626,48 @@ void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
 /*
 ** RB_CalcAlphaFromEntity
 */
-void RB_CalcAlphaFromEntity( unsigned char *dstColors )
+void RB_CalcAlphaFromEntity( color4ub_t *dstColors, int numVertexes )
 {
 	int	i;
 
 	if ( !backEnd.currentEntity )
 		return;
 
-	dstColors += 3;
-
-	for ( i = 0; i < tess.numVertexes; i++, dstColors += 4 )
+	for ( i = 0; i < numVertexes; i++, dstColors++ )
 	{
-		*dstColors = backEnd.currentEntity->e.shaderRGBA[3];
+		(*dstColors)[3] = backEnd.currentEntity->e.shaderRGBA[3];
 	}
 }
 
 /*
 ** RB_CalcAlphaFromOneMinusEntity
 */
-void RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors )
+void RB_CalcAlphaFromOneMinusEntity( color4ub_t *dstColors, int numVertexes )
 {
 	int	i;
 
 	if ( !backEnd.currentEntity )
 		return;
 
-	dstColors += 3;
-
-	for ( i = 0; i < tess.numVertexes; i++, dstColors += 4 )
+	for ( i = 0; i < numVertexes; i++, dstColors++ )
 	{
-		*dstColors = 0xff - backEnd.currentEntity->e.shaderRGBA[3];
+		(*dstColors)[3] = 0xff - backEnd.currentEntity->e.shaderRGBA[3];
 	}
 }
 
 /*
 ** RB_CalcWaveColor
 */
-void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors )
+void RB_CalcWaveColor( const waveForm_t *wf, color4ub_t *dstColors, int numVertexes )
 {
 	int i;
 	int v;
 	float glow;
 	int *colors = ( int * ) dstColors;
-	byte	color[4];
+	color4ub_t	color;
 
 
-  if ( wf->func == GF_NOISE ) {
+	if ( wf->func == GF_NOISE ) {
 		glow = wf->base + R_NoiseGet4f( 0, 0, 0, ( tess.shaderTime + wf->phase ) * wf->frequency ) * wf->amplitude;
 	} else {
 		glow = EvalWaveForm( wf ) * tr.identityLight;
@@ -705,7 +685,7 @@ void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors )
 	color[3] = 255;
 	v = *(int *)color;
 	
-	for ( i = 0; i < tess.numVertexes; i++, colors++ ) {
+	for ( i = 0; i < numVertexes; i++, colors++ ) {
 		*colors = v;
 	}
 }
@@ -713,7 +693,7 @@ void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors )
 /*
 ** RB_CalcWaveAlpha
 */
-void RB_CalcWaveAlpha( const waveForm_t *wf, unsigned char *dstColors )
+void RB_CalcWaveAlpha( const waveForm_t *wf, color4ub_t *dstColors, int numVertexes )
 {
 	int i;
 	int v;
@@ -723,69 +703,75 @@ void RB_CalcWaveAlpha( const waveForm_t *wf, unsigned char *dstColors )
 
 	v = 255 * glow;
 
-	for ( i = 0; i < tess.numVertexes; i++, dstColors += 4 )
+	for ( i = 0; i < numVertexes; i++, dstColors++ )
 	{
-		dstColors[3] = v;
+		(*dstColors)[3] = v;
 	}
 }
 
 /*
 ** RB_CalcModulateColorsByFog
 */
-void RB_CalcModulateColorsByFog( unsigned char *colors ) {
+void RB_CalcModulateColorsByFog( color4ub_t *colors, int numVertexes ) {
 	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
+	vec2_t	*texCoords;
 
 	// calculate texcoords so we can derive density
 	// this is not wasted, because it would only have
 	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0] );
+	texCoords = ri.Hunk_AllocateTempMemory( sizeof(vec2_t) * numVertexes );
+	RB_CalcFogTexCoords( texCoords, numVertexes );
 
-	for ( i = 0; i < tess.numVertexes; i++, colors += 4 ) {
+	for ( i = 0; i < numVertexes; i++, colors++ ) {
 		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[0] *= f;
-		colors[1] *= f;
-		colors[2] *= f;
+		(*colors)[0] *= f;
+		(*colors)[1] *= f;
+		(*colors)[2] *= f;
 	}
+	ri.Hunk_FreeTempMemory( texCoords );
 }
 
 /*
 ** RB_CalcModulateAlphasByFog
 */
-void RB_CalcModulateAlphasByFog( unsigned char *colors ) {
+void RB_CalcModulateAlphasByFog( color4ub_t *colors, int numVertexes ) {
 	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
+	vec2_t	*texCoords;
 
 	// calculate texcoords so we can derive density
 	// this is not wasted, because it would only have
 	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0] );
+	texCoords = ri.Hunk_AllocateTempMemory( sizeof(vec2_t) * numVertexes );
+	RB_CalcFogTexCoords( texCoords, numVertexes );
 
-	for ( i = 0; i < tess.numVertexes; i++, colors += 4 ) {
+	for ( i = 0; i < numVertexes; i++, colors++ ) {
 		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[3] *= f;
+		(*colors)[3] *= f;
 	}
+	ri.Hunk_FreeTempMemory( texCoords );
 }
 
 /*
 ** RB_CalcModulateRGBAsByFog
 */
-void RB_CalcModulateRGBAsByFog( unsigned char *colors ) {
+void RB_CalcModulateRGBAsByFog( color4ub_t *colors, int numVertexes ) {
 	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
+	vec2_t	*texCoords;
 
 	// calculate texcoords so we can derive density
 	// this is not wasted, because it would only have
 	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0] );
+	texCoords = ri.Hunk_AllocateTempMemory( sizeof(vec2_t) * numVertexes );
+	RB_CalcFogTexCoords( texCoords, numVertexes );
 
-	for ( i = 0; i < tess.numVertexes; i++, colors += 4 ) {
+	for ( i = 0; i < numVertexes; i++, colors++ ) {
 		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[0] *= f;
-		colors[1] *= f;
-		colors[2] *= f;
-		colors[3] *= f;
+		(*colors)[0] *= f;
+		(*colors)[1] *= f;
+		(*colors)[2] *= f;
+		(*colors)[3] *= f;
 	}
+	ri.Hunk_FreeTempMemory( texCoords );
 }
 
 
@@ -806,9 +792,8 @@ projected textures, but I don't trust the drivers and it
 doesn't fit our shader data.
 ========================
 */
-void RB_CalcFogTexCoords( float *st ) {
+void RB_CalcFogTexCoords( vec2_t *st, int numVertexes ) {
 	int			i;
-	float		*v;
 	float		s, t;
 	float		eyeT;
 	qboolean	eyeOutside;
@@ -858,10 +843,10 @@ void RB_CalcFogTexCoords( float *st ) {
 	fogDistanceVector[3] += 1.0/512;
 
 	// calculate density for each point
-	for (i = 0, v = tess.xyz[0] ; i < tess.numVertexes ; i++, v += 4) {
+	for (i = 0 ; i < numVertexes ; i++, st++ ) {
 		// calculate the length in fog
-		s = DotProduct( v, fogDistanceVector ) + fogDistanceVector[3];
-		t = DotProduct( v, fogDepthVector ) + fogDepthVector[3];
+		s = DotProduct( tess.vertexPtr[i].xyz, fogDistanceVector ) + fogDistanceVector[3];
+		t = DotProduct( tess.vertexPtr[i].xyz, fogDepthVector ) + fogDepthVector[3];
 
 		// partially clipped fogs use the T axis		
 		if ( eyeOutside ) {
@@ -878,9 +863,8 @@ void RB_CalcFogTexCoords( float *st ) {
 			}
 		}
 
-		st[0] = s;
-		st[1] = t;
-		st += 2;
+		(*st)[0] = s;
+		(*st)[1] = t;
 	}
 }
 
@@ -889,75 +873,71 @@ void RB_CalcFogTexCoords( float *st ) {
 /*
 ** RB_CalcEnvironmentTexCoords
 */
-void RB_CalcEnvironmentTexCoords( float *st ) 
+void RB_CalcEnvironmentTexCoords( vec2_t *st, int numVertexes )
 {
-	int			i;
-	float		*v, *normal;
+	int		i;
 	vec3_t		viewer, reflected;
 	float		d;
 
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
+	for (i = 0 ; i < numVertexes ; i++, st++ ) 
 	{
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
+		VectorSubtract (backEnd.or.viewOrigin, tess.vertexPtr[i].xyz, viewer);
 		VectorNormalizeFast (viewer);
 
-		d = DotProduct (normal, viewer);
+		d = DotProduct (tess.vertexPtr[i].normal, viewer);
 
-		reflected[0] = normal[0]*2*d - viewer[0];
-		reflected[1] = normal[1]*2*d - viewer[1];
-		reflected[2] = normal[2]*2*d - viewer[2];
+		reflected[0] = tess.vertexPtr[i].normal[0]*2*d - viewer[0];
+		reflected[1] = tess.vertexPtr[i].normal[1]*2*d - viewer[1];
+		reflected[2] = tess.vertexPtr[i].normal[2]*2*d - viewer[2];
 
-		st[0] = 0.5 + reflected[1] * 0.5;
-		st[1] = 0.5 - reflected[2] * 0.5;
+		(*st)[0] = 0.5 + reflected[1] * 0.5;
+		(*st)[1] = 0.5 - reflected[2] * 0.5;
 	}
 }
 
 /*
 ** RB_CalcTurbulentTexCoords
 */
-void RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *st )
+void RB_CalcTurbulentTexCoords( const waveForm_t *wf, vec2_t *st, int numVertexes )
 {
 	int i;
 	float now;
 
 	now = ( wf->phase + tess.shaderTime * wf->frequency );
 
-	for ( i = 0; i < tess.numVertexes; i++, st += 2 )
+	for ( i = 0; i < numVertexes; i++, st++ )
 	{
-		float s = st[0];
-		float t = st[1];
+		float s = (*st)[0];
+		float t = (*st)[1];
 
-		st[0] = s + tr.sinTable[ ( ( int ) ( ( ( tess.xyz[i][0] + tess.xyz[i][2] )* 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
-		st[1] = t + tr.sinTable[ ( ( int ) ( ( tess.xyz[i][1] * 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
+		(*st)[0] = s + tr.sinTable[ ( ( int ) ( ( ( tess.vertexPtr[i].xyz[0] + tess.vertexPtr[i].xyz[2] )* 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
+		(*st)[1] = t + tr.sinTable[ ( ( int ) ( ( tess.vertexPtr[i].xyz[1] * 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
 	}
 }
 
 /*
 ** RB_CalcScaleTexCoords
 */
-void RB_CalcScaleTexCoords( const float scale[2], float *st )
+void RB_CalcScaleTexCoords( const float scale[2], vec2_t *st, int numVertexes )
 {
 	int i;
 
-	for ( i = 0; i < tess.numVertexes; i++, st += 2 )
+	for ( i = 0; i < numVertexes; i++, st++ )
 	{
-		st[0] *= scale[0];
-		st[1] *= scale[1];
+		(*st)[0] *= scale[0];
+		(*st)[1] *= scale[1];
 	}
 }
 
 /*
 ** RB_CalcScrollTexCoords
 */
-void RB_CalcScrollTexCoords( const float scrollSpeed[2], float *st )
+void RB_CalcScrollTexCoords( const float scrollSpeed[2], vec2_t *st, int numVertexes )
 {
 	int i;
 	float timeScale = tess.shaderTime;
 	float adjustedScrollS, adjustedScrollT;
-
+	
 	adjustedScrollS = scrollSpeed[0] * timeScale;
 	adjustedScrollT = scrollSpeed[1] * timeScale;
 
@@ -966,34 +946,34 @@ void RB_CalcScrollTexCoords( const float scrollSpeed[2], float *st )
 	adjustedScrollS = adjustedScrollS - floor( adjustedScrollS );
 	adjustedScrollT = adjustedScrollT - floor( adjustedScrollT );
 
-	for ( i = 0; i < tess.numVertexes; i++, st += 2 )
+	for ( i = 0; i < numVertexes; i++, st++ )
 	{
-		st[0] += adjustedScrollS;
-		st[1] += adjustedScrollT;
+		(*st)[0] += adjustedScrollS;
+		(*st)[1] += adjustedScrollT;
 	}
 }
 
 /*
 ** RB_CalcTransformTexCoords
 */
-void RB_CalcTransformTexCoords( const texModInfo_t *tmi, float *st  )
+void RB_CalcTransformTexCoords( const texModInfo_t *tmi, vec2_t *st, int numVertexes )
 {
 	int i;
 
-	for ( i = 0; i < tess.numVertexes; i++, st += 2 )
+	for ( i = 0; i < numVertexes; i++, st++ )
 	{
-		float s = st[0];
-		float t = st[1];
+		float s = (*st)[0];
+		float t = (*st)[1];
 
-		st[0] = s * tmi->matrix[0][0] + t * tmi->matrix[1][0] + tmi->translate[0];
-		st[1] = s * tmi->matrix[0][1] + t * tmi->matrix[1][1] + tmi->translate[1];
+		(*st)[0] = s * tmi->matrix[0][0] + t * tmi->matrix[1][0] + tmi->translate[0];
+		(*st)[1] = s * tmi->matrix[0][1] + t * tmi->matrix[1][1] + tmi->translate[1];
 	}
 }
 
 /*
 ** RB_CalcRotateTexCoords
 */
-void RB_CalcRotateTexCoords( float degsPerSecond, float *st )
+void RB_CalcRotateTexCoords( float degsPerSecond, vec2_t *st, int numVertexes )
 {
 	float timeScale = tess.shaderTime;
 	float degs;
@@ -1015,7 +995,7 @@ void RB_CalcRotateTexCoords( float degsPerSecond, float *st )
 	tmi.matrix[1][1] = cosValue;
 	tmi.translate[1] = 0.5 - 0.5 * sinValue - 0.5 * cosValue;
 
-	RB_CalcTransformTexCoords( &tmi, st );
+	RB_CalcTransformTexCoords( &tmi, st, numVertexes );
 }
 
 
@@ -1041,39 +1021,31 @@ long myftol( float f ) {
 */
 vec3_t lightOrigin = { -960, 1980, 96 };		// FIXME: track dynamically
 
-void RB_CalcSpecularAlpha( unsigned char *alphas ) {
+void RB_CalcSpecularAlpha( color4ub_t *alphas, int numVertexes ) {
 	int			i;
-	float		*v, *normal;
 	vec3_t		viewer,  reflected;
 	float		l, d;
 	int			b;
 	vec3_t		lightDir;
-	int			numVertexes;
 
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-	alphas += 3;
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4, alphas += 4) {
+	for (i = 0 ; i < numVertexes ; i++, alphas++) {
 		float ilength;
 
-		VectorSubtract( lightOrigin, v, lightDir );
+		VectorSubtract( lightOrigin, tess.vertexPtr[i].xyz, lightDir );
 //		ilength = Q_rsqrt( DotProduct( lightDir, lightDir ) );
 		VectorNormalizeFast( lightDir );
 
 		// calculate the specular color
-		d = DotProduct (normal, lightDir);
+		d = DotProduct (tess.vertexPtr[i].normal, lightDir);
 //		d *= ilength;
 
 		// we don't optimize for the d < 0 case since this tends to
 		// cause visual artifacts such as faceted "snapping"
-		reflected[0] = normal[0]*2*d - lightDir[0];
-		reflected[1] = normal[1]*2*d - lightDir[1];
-		reflected[2] = normal[2]*2*d - lightDir[2];
+		reflected[0] = tess.vertexPtr[i].normal[0]*2*d - lightDir[0];
+		reflected[1] = tess.vertexPtr[i].normal[1]*2*d - lightDir[1];
+		reflected[2] = tess.vertexPtr[i].normal[2]*2*d - lightDir[2];
 
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
+		VectorSubtract (backEnd.or.viewOrigin, tess.vertexPtr[i].xyz, viewer);
 		ilength = Q_rsqrt( DotProduct( viewer, viewer ) );
 		l = DotProduct (reflected, viewer);
 		l *= ilength;
@@ -1089,7 +1061,7 @@ void RB_CalcSpecularAlpha( unsigned char *alphas ) {
 			}
 		}
 
-		*alphas = b;
+		(*alphas)[3] = b;
 	}
 }
 
@@ -1099,14 +1071,13 @@ void RB_CalcSpecularAlpha( unsigned char *alphas ) {
 ** The basic vertex lighting calc
 */
 #if idppc_altivec
-static void RB_CalcDiffuseColor_altivec( unsigned char *colors )
+static void RB_CalcDiffuseColor_altivec( color4ub_t *colors, int numVertexes )
 {
 	int				i;
-	float			*v, *normal;
+	vec4_t			*v, *normal;
 	trRefEntity_t	*ent;
 	int				ambientLightInt;
 	vec3_t			lightDir;
-	int				numVertexes;
 	vector unsigned char vSel = VECCONST_UINT8(0x00, 0x00, 0x00, 0xff,
                                                0x00, 0x00, 0x00, 0xff,
                                                0x00, 0x00, 0x00, 0xff,
@@ -1142,12 +1113,11 @@ static void RB_CalcDiffuseColor_altivec( unsigned char *colors )
 	zero = (vector float)vec_splat_s8(0);
 	VectorCopy( ent->lightDir, lightDir );
 
-	v = tess.xyz[0];
-	normal = tess.normal[0];
+	v = tess.xyzPtr;
+	normal = tess.normalPtr;
 
 	normalPerm = vec_lvsl(0,normal);
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4) {
+	for (i = 0 ; i < numVertexes ; i++) {
 		normalVec0 = vec_ld(0,(vector float *)normal);
 		normalVec1 = vec_ld(11,(vector float *)normal);
 		normalVec0 = vec_perm(normalVec0,normalVec1,normalPerm);
@@ -1164,69 +1134,66 @@ static void RB_CalcDiffuseColor_altivec( unsigned char *colors )
 		jVecShort = vec_pack(jVecInt,jVecInt);		// RGBxRGBx
 		jVecChar = vec_packsu(jVecShort,jVecShort);	// RGBxRGBxRGBxRGBx
 		jVecChar = vec_sel(jVecChar,vSel,vSel);		// RGBARGBARGBARGBA replace alpha with 255
-		vec_ste((vector unsigned int)jVecChar,0,(unsigned int *)&colors[i*4]);	// store color
+		vec_ste((vector unsigned int)jVecChar,0,(unsigned int *)&colors[i]);	// store color
+
+		v = ptrPlusOffset(v, tess.xyzInc);
+		normal = ptrPlusOffset(normal, tess.normalInc);
 	}
 }
 #endif
 
-static void RB_CalcDiffuseColor_scalar( unsigned char *colors )
+static void RB_CalcDiffuseColor_scalar( color4ub_t *colors, int numVertexes )
 {
 	int				i, j;
-	float			*v, *normal;
 	float			incoming;
 	trRefEntity_t	*ent;
 	int				ambientLightInt;
 	vec3_t			ambientLight;
 	vec3_t			lightDir;
 	vec3_t			directedLight;
-	int				numVertexes;
 	ent = backEnd.currentEntity;
 	ambientLightInt = ent->ambientLightInt;
 	VectorCopy( ent->ambientLight, ambientLight );
 	VectorCopy( ent->directedLight, directedLight );
 	VectorCopy( ent->lightDir, lightDir );
 
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4) {
-		incoming = DotProduct (normal, lightDir);
+	for (i = 0 ; i < numVertexes ; i++) {
+		incoming = DotProduct (tess.vertexPtr[i].normal, lightDir);
 		if ( incoming <= 0 ) {
-			*(int *)&colors[i*4] = ambientLightInt;
-			continue;
-		} 
-		j = myftol( ambientLight[0] + incoming * directedLight[0] );
-		if ( j > 255 ) {
-			j = 255;
+			*(int *)&colors[i] = ambientLightInt;
+		} else {
+			j = myftol( ambientLight[0] + incoming * directedLight[0] );
+			if ( j > 255 ) {
+				j = 255;
+			}
+			colors[i][0] = j;
+			
+			j = myftol( ambientLight[1] + incoming * directedLight[1] );
+			if ( j > 255 ) {
+				j = 255;
+			}
+			colors[i][1] = j;
+			
+			j = myftol( ambientLight[2] + incoming * directedLight[2] );
+			if ( j > 255 ) {
+				j = 255;
+			}
+			colors[i][2] = j;
+			
+			colors[i][3] = 255;
 		}
-		colors[i*4+0] = j;
-
-		j = myftol( ambientLight[1] + incoming * directedLight[1] );
-		if ( j > 255 ) {
-			j = 255;
-		}
-		colors[i*4+1] = j;
-
-		j = myftol( ambientLight[2] + incoming * directedLight[2] );
-		if ( j > 255 ) {
-			j = 255;
-		}
-		colors[i*4+2] = j;
-
-		colors[i*4+3] = 255;
 	}
 }
 
-void RB_CalcDiffuseColor( unsigned char *colors )
+void RB_CalcDiffuseColor( color4ub_t *colors, int numVertexes )
 {
 #if idppc_altivec
 	if (com_altivec->integer) {
 		// must be in a seperate function or G3 systems will crash.
-		RB_CalcDiffuseColor_altivec( colors );
+	  RB_CalcDiffuseColor_altivec( colors, numVertexes );
 		return;
 	}
 #endif
-	RB_CalcDiffuseColor_scalar( colors );
+	RB_CalcDiffuseColor_scalar( colors, numVertexes );
 }
 
