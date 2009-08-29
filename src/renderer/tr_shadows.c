@@ -42,9 +42,9 @@ typedef struct {
 
 #define	MAX_EDGE_DEFS	32
 
-static	edgeDef_t	edgeDefs[SHADER_MAX_VERTEXES][MAX_EDGE_DEFS];
-static	int			numEdgeDefs[SHADER_MAX_VERTEXES];
-static	int			facing[SHADER_MAX_INDEXES/3];
+static	edgeDef_t	*edgeDefs;
+static	int		*numEdgeDefs;
+static	int		*facing;
 
 void R_AddEdgeDef( int i1, int i2, int facing ) {
 	int		c;
@@ -53,8 +53,8 @@ void R_AddEdgeDef( int i1, int i2, int facing ) {
 	if ( c == MAX_EDGE_DEFS ) {
 		return;		// overflow
 	}
-	edgeDefs[ i1 ][ c ].i2 = i2;
-	edgeDefs[ i1 ][ c ].facing = facing;
+	edgeDefs[ i1 * MAX_EDGE_DEFS + c ].i2 = i2;
+	edgeDefs[ i1 * MAX_EDGE_DEFS + c ].facing = facing;
 
 	numEdgeDefs[ i1 ]++;
 }
@@ -75,19 +75,26 @@ void R_RenderShadowEdges( void ) {
 			continue;
 		}
 
-		i1 = tess.indexes[ i*3 + 0 ];
-		i2 = tess.indexes[ i*3 + 1 ];
-		i3 = tess.indexes[ i*3 + 2 ];
+		if ( tess.indexInc == sizeof( GLuint ) ) {
+			GLuint *indexPtr32 = (GLuint *)tess.indexPtr;
+			i1 = indexPtr32[ i*3 + 0 ];
+			i2 = indexPtr32[ i*3 + 1 ];
+			i3 = indexPtr32[ i*3 + 2 ];
+		} else {
+			i1 = tess.indexPtr[ i*3 + 0 ];
+			i2 = tess.indexPtr[ i*3 + 1 ];
+			i3 = tess.indexPtr[ i*3 + 2 ];
+		}
 
 		qglBegin( GL_TRIANGLE_STRIP );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i1 * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i1 + tess.numVertexes) * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i2 * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i2 + tess.numVertexes) * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i3 * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i3 + tess.numVertexes) * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, i1 * tess.xyzInc) );
-		qglVertex3fv( (float *)ptrPlusOffset(tess.xyzPtr, (i1 + tess.numVertexes) * tess.xyzInc) );
+		qglVertex3fv( tess.vertexPtr[i1].xyz );
+		qglVertex3fv( tess.vertexPtr[i1 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i2].xyz );
+		qglVertex3fv( tess.vertexPtr[i2 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i3].xyz );
+		qglVertex3fv( tess.vertexPtr[i3 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i1].xyz );
+		qglVertex3fv( tess.vertexPtr[i1 + tess.numVertexes].xyz );
 		qglEnd();
 	}
 #else
@@ -107,18 +114,18 @@ void R_RenderShadowEdges( void ) {
 	for ( i = 0 ; i < tess.numVertexes ; i++ ) {
 		c = numEdgeDefs[ i ];
 		for ( j = 0 ; j < c ; j++ ) {
-			if ( !edgeDefs[ i ][ j ].facing ) {
+			if ( !edgeDefs[ i * MAX_EDGE_DEFS + j ].facing ) {
 				continue;
 			}
 
 			hit[0] = 0;
 			hit[1] = 0;
 
-			i2 = edgeDefs[ i ][ j ].i2;
+			i2 = edgeDefs[ i * MAX_EDGE_DEFS + j ].i2;
 			c2 = numEdgeDefs[ i2 ];
 			for ( k = 0 ; k < c2 ; k++ ) {
-				if ( edgeDefs[ i2 ][ k ].i2 == i ) {
-					hit[ edgeDefs[ i2 ][ k ].facing ]++;
+				if ( edgeDefs[ i2 * MAX_EDGE_DEFS + k ].i2 == i ) {
+					hit[ edgeDefs[ i2 * MAX_EDGE_DEFS + k ].facing ]++;
 				}
 			}
 
@@ -158,11 +165,6 @@ void RB_ShadowTessEnd( void ) {
 	vec3_t	lightDir;
 	GLboolean rgba[4];
 
-	// we can only do this if we have enough space in the vertex buffers
-	if ( tess.numVertexes >= SHADER_MAX_VERTEXES / 2 ) {
-		return;
-	}
-
 	if ( glConfig.stencilBits < 4 ) {
 		return;
 	}
@@ -176,7 +178,10 @@ void RB_ShadowTessEnd( void ) {
 	}
 
 	// decide which triangles face the light
-	Com_Memset( numEdgeDefs, 0, 4 * tess.numVertexes );
+	numEdgeDefs = ri.Hunk_AllocateTempMemory( sizeof( int ) * tess.numVertexes );
+	edgeDefs = ri.Hunk_AllocateTempMemory( sizeof( edgeDef_t ) * tess.numVertexes * MAX_EDGE_DEFS );
+	facing = ri.Hunk_AllocateTempMemory( sizeof( int ) * tess.numIndexes / 3 );
+	Com_Memset( numEdgeDefs, 0, sizeof(int) * tess.numVertexes );
 
 	numTris = tess.numIndexes / 3;
 	for ( i = 0 ; i < numTris ; i++ ) {
@@ -184,11 +189,18 @@ void RB_ShadowTessEnd( void ) {
 		vec3_t	d1, d2, normal;
 		vec4_t	*v1, *v2, *v3;
 		float	d;
-
-		i1 = tess.indexPtr[ i*3 + 0 ];
-		i2 = tess.indexPtr[ i*3 + 1 ];
-		i3 = tess.indexPtr[ i*3 + 2 ];
-
+		
+		if ( tess.indexInc == sizeof( GLuint ) ) {
+			GLuint *indexPtr32 = (GLuint *)tess.indexPtr;
+			i1 = indexPtr32[ i*3 + 0 ];
+			i2 = indexPtr32[ i*3 + 1 ];
+			i3 = indexPtr32[ i*3 + 2 ];
+		} else {
+			i1 = tess.indexPtr[ i*3 + 0 ];
+			i2 = tess.indexPtr[ i*3 + 1 ];
+			i3 = tess.indexPtr[ i*3 + 2 ];
+		}
+		
 		v1 = &tess.vertexPtr[i1].xyz;
 		v2 = &tess.vertexPtr[i2].xyz;
 		v3 = &tess.vertexPtr[i3].xyz;
@@ -250,6 +262,10 @@ void RB_ShadowTessEnd( void ) {
 
 	// reenable writing to the color buffer
 	qglColorMask(rgba[0], rgba[1], rgba[2], rgba[3]);
+
+	ri.Hunk_FreeTempMemory( facing );
+	ri.Hunk_FreeTempMemory( edgeDefs );
+	ri.Hunk_FreeTempMemory( numEdgeDefs );
 }
 
 

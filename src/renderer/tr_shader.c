@@ -1040,6 +1040,14 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 
 		// also alphaFunc makes no sense without alpha
 		atestBits = 0;
+	} else {
+		// image has alpha, if we use alpha blending we can optimise
+		// alphafunc NONE to alphafunc GT0
+		if ( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA &&
+		     blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA &&
+		     atestBits == 0 ) {
+			atestBits = GLS_ATEST_GT_0;
+		}
 	}
 
 	//
@@ -1943,7 +1951,7 @@ static int CollapseMultitexture( void ) {
 	stage = 0;
 	bundle = 0;
 
-	while( stages[stage].active ) {
+	while( stage < MAX_SHADER_STAGES && stages[stage].active ) {
 		if ( bundle + 1 >= glConfig.numTextureUnits ) {
 			// can't add next stage, no more texture units
 			stage++;

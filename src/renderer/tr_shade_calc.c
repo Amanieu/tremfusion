@@ -1074,7 +1074,6 @@ void RB_CalcSpecularAlpha( color4ub_t *alphas, int numVertexes ) {
 static void RB_CalcDiffuseColor_altivec( color4ub_t *colors, int numVertexes )
 {
 	int				i;
-	vec4_t			*v, *normal;
 	trRefEntity_t	*ent;
 	int				ambientLightInt;
 	vec3_t			lightDir;
@@ -1113,13 +1112,10 @@ static void RB_CalcDiffuseColor_altivec( color4ub_t *colors, int numVertexes )
 	zero = (vector float)vec_splat_s8(0);
 	VectorCopy( ent->lightDir, lightDir );
 
-	v = tess.xyzPtr;
-	normal = tess.normalPtr;
-
-	normalPerm = vec_lvsl(0,normal);
+	normalPerm = vec_lvsl(0,&tess.vertexPtr[0].normal);
 	for (i = 0 ; i < numVertexes ; i++) {
-		normalVec0 = vec_ld(0,(vector float *)normal);
-		normalVec1 = vec_ld(11,(vector float *)normal);
+		normalVec0 = vec_ld(0,(vector float *)&tess.vertexPtr[i].normal);
+		normalVec1 = vec_ld(11,(vector float *)&tess.vertexPtr[i].normal);
 		normalVec0 = vec_perm(normalVec0,normalVec1,normalPerm);
 		incomingVec0 = vec_madd(normalVec0, lightDirVec, zero);
 		incomingVec1 = vec_sld(incomingVec0,incomingVec0,4);
@@ -1135,9 +1131,6 @@ static void RB_CalcDiffuseColor_altivec( color4ub_t *colors, int numVertexes )
 		jVecChar = vec_packsu(jVecShort,jVecShort);	// RGBxRGBxRGBxRGBx
 		jVecChar = vec_sel(jVecChar,vSel,vSel);		// RGBARGBARGBARGBA replace alpha with 255
 		vec_ste((vector unsigned int)jVecChar,0,(unsigned int *)&colors[i]);	// store color
-
-		v = ptrPlusOffset(v, tess.xyzInc);
-		normal = ptrPlusOffset(normal, tess.normalInc);
 	}
 }
 #endif

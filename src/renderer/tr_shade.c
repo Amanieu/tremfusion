@@ -738,12 +738,12 @@ static void ProjectDlightTexture_altivec( void ) {
                                                0x00, 0x00, 0x00, 0xff,
                                                0x00, 0x00, 0x00, 0xff,
                                                0x00, 0x00, 0x00, 0xff);
-	float	*texCoords;
-	byte	*colors;
-	byte	clipBits[SHADER_MAX_VERTEXES];
-	float	texCoordsArray[SHADER_MAX_VERTEXES][2];
-	byte	colorArray[SHADER_MAX_VERTEXES][4];
-	GLushort	hitIndexes[SHADER_MAX_INDEXES];
+	vec2_t	*texCoords;
+	color4ub_t	*colors;
+	byte	*clipBits;
+	vec2_t	*texCoordsArray;
+	color4ub_t	*colorArray;
+	GLushort	*hitIndexes;
 	int		numIndexes;
 	float	scale;
 	float	radius;
@@ -751,9 +751,14 @@ static void ProjectDlightTexture_altivec( void ) {
 	float	modulate = 0.0f;
 
 	if ( !backEnd.refdef.num_dlights ||
-	     tess.numVertexes > SHADER_MAX_VERTEXES ) {
+	     tess.numVertexes > 65535 ) { // to avoid GLushort overflow
 		return;
 	}
+
+	clipBits = ri.Hunk_AllocateTempMemory( sizeof(byte) * tess.numVertexes );
+	texCoordsArray = ri.Hunk_AllocateTempMemory( sizeof(vec2_t) * tess.numVertexes );
+	colorArray = ri.Hunk_AllocateTempMemory( sizeof(color4ub_t) * tess.numVertexes );
+	hitIndexes = ri.Hunk_AllocateTempMemory( sizeof(GLushort) * tess.numIndexes );
 
 	// There has to be a better way to do this so that floatColor
 	// and/or modulate are already 16-byte aligned.
@@ -768,8 +773,8 @@ static void ProjectDlightTexture_altivec( void ) {
 		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
 			continue;	// this surface definately doesn't have any of this light
 		}
-		texCoords = texCoordsArray[0];
-		colors = colorArray[0];
+		texCoords = texCoordsArray;
+		colors = colorArray;
 
 		dl = &backEnd.refdef.dlights[l];
 		origin0 = dl->transformed[0];
@@ -794,26 +799,24 @@ static void ProjectDlightTexture_altivec( void ) {
 		floatColorVec0 = vec_ld(0, floatColor);
 		floatColorVec1 = vec_ld(11, floatColor);
 		floatColorVec0 = vec_perm(floatColorVec0,floatColorVec0,floatColorVecPerm);
-		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2, colors += 4 ) {
+		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords++, colors++ ) {
 			int		clip = 0;
 			vec_t dist0, dist1, dist2;
 			
-			ptr = ptrPlusOffset(tess.xyzPtr, i * tess.xyzInc);
-			dist0 = origin0 - *ptr[0];
-			dist1 = origin1 - *ptr[1];
-			dist2 = origin2 - *ptr[2];
+			dist0 = origin0 - tess.vertexPtr[i].xyz[0];
+			dist1 = origin1 - tess.vertexPtr[i].xyz[1];
+			dist2 = origin2 - tess.vertexPtr[i].xyz[2];
 
 			backEnd.pc.c_dlightVertexes++;
 
 			texCoords0 = 0.5f + dist0 * scale;
 			texCoords1 = 0.5f + dist1 * scale;
 
-			ptr = ptrPlusOffset(tess.normalPtr, i * tess.normalInc);
 			if( !r_dlightBacks->integer &&
 			    // dist . tess.normal[i]
-			    ( dist0 * (*ptr)[0] +
-			      dist1 * (*ptr)[1] +
-			      dist2 * (*ptr)[2] ) < 0.0f ) {
+			    ( dist0 * tess.vertexPtr[i].normal[0] +
+			      dist1 * tess.vertexPtr[i].normal[1] +
+			      dist2 * tess.vertexPtr[i].normal[2] ) < 0.0f ) {
 				clip = 63;
 			} else {
 				if ( texCoords0 < 0.0f ) {
@@ -826,8 +829,8 @@ static void ProjectDlightTexture_altivec( void ) {
 				} else if ( texCoords1 > 1.0f ) {
 					clip |= 8;
 				}
-				texCoords[0] = texCoords0;
-				texCoords[1] = texCoords1;
+				(*texCoords)[0] = texCoords0;
+				(*texCoords)[1] = texCoords1;
 
 				// modulate the strength based on the height and color
 				if ( dist2 > radius ) {
@@ -879,7 +882,7 @@ static void ProjectDlightTexture_altivec( void ) {
 		}
 
 		qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-		qglTexCoordPointer( 2, GL_FLOAT, 0, texCoordsArray[0] );
+		qglTexCoordPointer( 2, GL_FLOAT, 0, texCoordsArray );
 
 		qglEnableClientState( GL_COLOR_ARRAY );
 		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, colorArray );
@@ -897,6 +900,11 @@ static void ProjectDlightTexture_altivec( void ) {
 		backEnd.pc.c_totalIndexes += numIndexes;
 		backEnd.pc.c_dlightIndexes += numIndexes;
 	}
+
+	ri.Hunk_FreeTempMemory( hitIndexes );
+	ri.Hunk_FreeTempMemory( colorArray );
+	ri.Hunk_FreeTempMemory( texCoordsArray );
+	ri.Hunk_FreeTempMemory( clipBits );
 }
 #endif
 
@@ -904,12 +912,12 @@ static void ProjectDlightTexture_altivec( void ) {
 static void ProjectDlightTexture_scalar( void ) {
 	int		i, l;
 	vec3_t	origin;
-	float	*texCoords;
-	byte	*colors;
-	byte	clipBits[SHADER_MAX_VERTEXES];
-	float	texCoordsArray[SHADER_MAX_VERTEXES][2];
-	byte	colorArray[SHADER_MAX_VERTEXES][4];
-	GLushort	hitIndexes[SHADER_MAX_INDEXES];
+	vec2_t	*texCoords;
+	color4ub_t	*colors;
+	byte	*clipBits;
+	vec2_t	*texCoordsArray;
+	color4ub_t	*colorArray;
+	GLushort	*hitIndexes;
 	int		numIndexes;
 	float	scale;
 	float	radius;
@@ -918,9 +926,14 @@ static void ProjectDlightTexture_scalar( void ) {
 	float	modulate = 0.0f;
 
 	if ( !backEnd.refdef.num_dlights ||
-	     tess.numVertexes > SHADER_MAX_VERTEXES) {
+	     tess.numVertexes > 65535 ) { // to avoid GLushort overflow
 		return;
 	}
+
+	clipBits = ri.Hunk_AllocateTempMemory( sizeof(byte) * tess.numVertexes );
+	texCoordsArray = ri.Hunk_AllocateTempMemory( sizeof(vec2_t) * tess.numVertexes );
+	colorArray = ri.Hunk_AllocateTempMemory( sizeof(color4ub_t) * tess.numVertexes );
+	hitIndexes = ri.Hunk_AllocateTempMemory( sizeof(GLushort) * tess.numIndexes );
 
 	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ ) {
 		dlight_t	*dl;
@@ -928,8 +941,8 @@ static void ProjectDlightTexture_scalar( void ) {
 		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
 			continue;	// this surface definately doesn't have any of this light
 		}
-		texCoords = texCoordsArray[0];
-		colors = colorArray[0];
+		texCoords = texCoordsArray;
+		colors = colorArray;
 
 		dl = &backEnd.refdef.dlights[l];
 		VectorCopy( dl->transformed, origin );
@@ -950,7 +963,7 @@ static void ProjectDlightTexture_scalar( void ) {
 			floatColor[2] = dl->color[2] * 255.0f;
 		}
 
-		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2, colors += 4 ) {
+		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords++, colors++ ) {
 			int		clip = 0;
 			vec3_t	dist;
 			
@@ -958,8 +971,8 @@ static void ProjectDlightTexture_scalar( void ) {
 
 			backEnd.pc.c_dlightVertexes++;
 
-			texCoords[0] = 0.5f + dist[0] * scale;
-			texCoords[1] = 0.5f + dist[1] * scale;
+			(*texCoords)[0] = 0.5f + dist[0] * scale;
+			(*texCoords)[1] = 0.5f + dist[1] * scale;
 
 			ptr = &tess.vertexPtr[i].normal;
 			if( !r_dlightBacks->integer &&
@@ -969,18 +982,16 @@ static void ProjectDlightTexture_scalar( void ) {
 			      dist[2] * (*ptr)[2] ) < 0.0f ) {
 				clip = 63;
 			} else {
-				if ( texCoords[0] < 0.0f ) {
+				if ( (*texCoords)[0] < 0.0f ) {
 					clip |= 1;
-				} else if ( texCoords[0] > 1.0f ) {
+				} else if ( (*texCoords)[0] > 1.0f ) {
 					clip |= 2;
 				}
-				if ( texCoords[1] < 0.0f ) {
+				if ( (*texCoords)[1] < 0.0f ) {
 					clip |= 4;
-				} else if ( texCoords[1] > 1.0f ) {
+				} else if ( (*texCoords)[1] > 1.0f ) {
 					clip |= 8;
 				}
-				texCoords[0] = texCoords[0];
-				texCoords[1] = texCoords[1];
 
 				// modulate the strength based on the height and color
 				if ( dist[2] > radius ) {
@@ -999,10 +1010,10 @@ static void ProjectDlightTexture_scalar( void ) {
 				}
 			}
 			clipBits[i] = clip;
-			colors[0] = myftol(floatColor[0] * modulate);
-			colors[1] = myftol(floatColor[1] * modulate);
-			colors[2] = myftol(floatColor[2] * modulate);
-			colors[3] = 255;
+			(*colors)[0] = myftol(floatColor[0] * modulate);
+			(*colors)[1] = myftol(floatColor[1] * modulate);
+			(*colors)[2] = myftol(floatColor[2] * modulate);
+			(*colors)[3] = 255;
 		}
 
 		// build a list of triangles that need light
@@ -1029,7 +1040,7 @@ static void ProjectDlightTexture_scalar( void ) {
 		GL_VBO( 0, 0 );
 		
 		qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-		qglTexCoordPointer( 2, GL_FLOAT, 0, texCoordsArray[0] );
+		qglTexCoordPointer( 2, GL_FLOAT, 0, texCoordsArray );
 
 		qglEnableClientState( GL_COLOR_ARRAY );
 		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, colorArray );
@@ -1047,6 +1058,11 @@ static void ProjectDlightTexture_scalar( void ) {
 		backEnd.pc.c_totalIndexes += numIndexes;
 		backEnd.pc.c_dlightIndexes += numIndexes;
 	}
+
+	ri.Hunk_FreeTempMemory( hitIndexes );
+	ri.Hunk_FreeTempMemory( colorArray );
+	ri.Hunk_FreeTempMemory( texCoordsArray );
+	ri.Hunk_FreeTempMemory( clipBits );
 }
 
 static void ProjectDlightTexture( void ) {

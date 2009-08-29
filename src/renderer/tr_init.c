@@ -1243,6 +1243,11 @@ void RE_Shutdown( qboolean destroyWindow ) {
 			if ( qglIsBufferARB( backEnd.worldVBO ) )
 				qglDeleteBuffersARB( 1, &backEnd.worldVBO );
 		}
+		
+		if ( tess.vertexBuffer ) {
+			ri.Free( tess.vertexBuffer );
+			tess.vertexBuffer = NULL;
+		}
 	}
 
 	R_DoneFreeType();

@@ -57,9 +57,6 @@ long myftol( float f );
 
 #define NUM_TEXTURE_BUNDLES 4
 
-// add byte offset to pointer
-#define ptrPlusOffset(ptr, off) (typeof(ptr))((byte *)(ptr) + (off))
-
 // can't be increased without changing bit packing for drawsurfs
 
 

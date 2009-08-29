@@ -193,8 +193,6 @@ static void RB_SurfacePolychain( surfaceType_t *surface ) {
 	srfPoly_t *p = (srfPoly_t *)surface;
 	int		i;
 	int		numv;
-	GLushort	*indexPtr;
-	GLuint		*indexPtr32;
 	vboVertex_t	*vertexPtr;
 
 	if ( tess.vertexPtr ) {
@@ -214,8 +212,6 @@ static void RB_SurfacePolychain( surfaceType_t *surface ) {
 	}
 
 	if ( tess.indexPtr ) {
-		indexPtr = ptrPlusOffset(tess.indexPtr, tess.indexInc * tess.numIndexes);
-
 		if ( tess.minIndex > numv )
 			tess.minIndex = numv;
 		if ( tess.maxIndex < numv + p->numVerts - 1 )
@@ -223,6 +219,8 @@ static void RB_SurfacePolychain( surfaceType_t *surface ) {
 		
 		// generate fan indexes into the tess array
 		if ( tess.indexInc == sizeof(GLushort) ) {
+			GLushort	*indexPtr;
+			indexPtr = tess.indexPtr + tess.numIndexes;
 			for ( i = 0; i < p->numVerts-2; i++ ) {
 				indexPtr[0] = (GLushort)numv;
 				indexPtr[1] = (GLushort)(numv + i + 1);
@@ -230,7 +228,8 @@ static void RB_SurfacePolychain( surfaceType_t *surface ) {
 				indexPtr += 3;
 			}
 		} else {
-			indexPtr32 = (GLuint *)indexPtr;
+			GLuint		*indexPtr32;
+			indexPtr32 = ((GLuint *)tess.indexPtr) + tess.numIndexes;
 			for ( i = 0; i < p->numVerts-2; i++ ) {
 				indexPtr32[0] = numv;
 				indexPtr32[1] = numv + i + 1;

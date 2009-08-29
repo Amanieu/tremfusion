@@ -638,6 +638,12 @@ void RB_ClearVertexBuffer( void ) {
 void RB_SetupVertexBuffer(shader_t *shader) {
 	size_t	requiredSize;
 
+	if ( r_shadows->integer == 2 && backEnd.currentEntity != &tr.worldEntity ) {
+		// need more room for stencil shadows
+		tess.numVertexes *= 2;
+		tess.numIndexes *= 6;
+	}
+
 	if ( tess.numVertexes > 65536 ) {
 		tess.indexInc = sizeof(GLuint);
 	} else {
@@ -648,6 +654,7 @@ void RB_SetupVertexBuffer(shader_t *shader) {
 		sizeof(vboVertex_t) * tess.numVertexes +
 		tess.indexInc * tess.numIndexes +
 		sizeof(int);
+
 
 	if ( tess.vertexBuffer ) {
 		if ( *(int *)tess.vertexBufferEnd != 0xDEADBEEF) {
