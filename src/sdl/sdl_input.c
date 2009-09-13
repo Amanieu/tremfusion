@@ -315,7 +315,7 @@ static const char *IN_TranslateSDLToQ3Key( SDL_keysym *keysym,
 	{
 		unsigned char ch = (unsigned char)keysym->unicode & 0xFF;
 
-		if( ch >= '0' && ch <= '9' )
+		if( ch >= '0' && ch <= '9' && (keysym->mod & KMOD_NUM) )
 			*key = ch;
 
 		switch( ch )
