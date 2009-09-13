@@ -24,6 +24,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "server.h"
 
+#if id386_sse >= 1 
+#include "../qcommon/qsse.h" 
+clipHandle_t CM_TempBoxModel_sse( v4f mins, v4f maxs, int capsule ); 
+#endif 
+
 /*
 ================
 SV_ClipHandleForEntity
@@ -40,11 +45,21 @@ clipHandle_t SV_ClipHandleForEntity( const sharedEntity_t *ent ) {
 	}
 	if ( ent->r.svFlags & SVF_CAPSULE ) {
 		// create a temp capsule from bounding box sizes
-		return CM_TempBoxModel( ent->r.mins, ent->r.maxs, qtrue );
+#if id386_sse >= 1 
+		if ( com_sse->integer >= 1 ) { 
+                        return CM_TempBoxModel_sse( vec3Load(ent->r.mins), vec3Load(ent->r.maxs), qtrue ); 
+                } 
+#endif
+ 		return CM_TempBoxModel( ent->r.mins, ent->r.maxs, qtrue );
 	}
 
 	// create a temp tree from bounding box sizes
-	return CM_TempBoxModel( ent->r.mins, ent->r.maxs, qfalse );
+#if id386_sse >= 1
+        if ( com_sse->integer >= 1 ) { 
+		return CM_TempBoxModel_sse( vec3Load(ent->r.mins), vec3Load(ent->r.maxs),  qfalse ); 
+	} 
+#endif
+ 	return CM_TempBoxModel( ent->r.mins, ent->r.maxs, qfalse );
 }
 
 

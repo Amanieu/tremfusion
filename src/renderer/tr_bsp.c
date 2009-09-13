@@ -39,6 +39,7 @@ static	byte		*fileBase;
 
 int			c_subdivisions;
 int			c_gridVerts;
+int			lightmapWidth, lightmapHeight;
 
 //===============================================================================
 
@@ -134,10 +135,11 @@ R_LoadLightmaps
 */
 #define	LIGHTMAP_SIZE	128
 static	void R_LoadLightmaps( lump_t *l ) {
-	byte		*buf, *buf_p;
+  byte		*buf, *buf_p;
 	int			len;
-	byte		image[LIGHTMAP_SIZE*LIGHTMAP_SIZE*4];
-	int			i, j;
+	byte		*image, *image_p;
+	int			i, j, k, x, y;
+	int		numLightmaps;
 	float maxIntensity = 0;
 	double sumIntensity = 0;
 
@@ -152,62 +154,105 @@ static	void R_LoadLightmaps( lump_t *l ) {
 
 	// create all the lightmaps
 	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
-	if ( tr.numLightmaps == 1 ) {
-		//FIXME: HACK: maps with only one lightmap turn up fullbright for some reason.
-		//this avoids this, but isn't the correct solution.
-		tr.numLightmaps++;
-	} else if ( tr.numLightmaps >= MAX_LIGHTMAPS ) { // 20051020 misantropia
+	if ( tr.numLightmaps >= MAX_LIGHTMAPS ) { // 20051020 misantropia
 		ri.Printf( PRINT_WARNING, "WARNING: number of lightmaps > MAX_LIGHTMAPS\n" );
 		tr.numLightmaps = MAX_LIGHTMAPS;
 	}
 
 	// if we are in r_vertexLight mode, we don't need the lightmaps at all
 	if ( r_vertexLight->integer || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
+		lightmapWidth = lightmapHeight = 1;
 		return;
 	}
+	
+	// see how many lightmaps we can stuff into one texture
+	lightmapWidth = lightmapHeight = 1;
+	while ( lightmapWidth * LIGHTMAP_SIZE < glConfig.maxTextureSize &&
+		lightmapWidth * lightmapHeight < tr.numLightmaps ) {
+		lightmapWidth *= 2;
+		if ( lightmapWidth * lightmapHeight >= tr.numLightmaps )
+			break;
+		lightmapHeight *= 2;
+	}
+	image = Hunk_AllocateTempMemory( lightmapWidth * lightmapHeight *
+	                                 LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4 );
+	Com_Memset( image, 0, lightmapWidth * lightmapHeight *
+	            LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4);
 
-	for ( i = 0 ; i < tr.numLightmaps ; i++ ) {
-		// expand the 24 bit on-disk to 32 bit
-		buf_p = buf + i * LIGHTMAP_SIZE*LIGHTMAP_SIZE * 3;
 
-		if ( r_lightmap->integer == 2 )
-		{	// color code by intensity as development tool	(FIXME: check range)
-			for ( j = 0; j < LIGHTMAP_SIZE * LIGHTMAP_SIZE; j++ )
-			{
-				float r = buf_p[j*3+0];
-				float g = buf_p[j*3+1];
-				float b = buf_p[j*3+2];
-				float intensity;
-				float out[3] = {0.0, 0.0, 0.0};
+	// calculate number of resulting lightmap textures
+	numLightmaps = (tr.numLightmaps + lightmapWidth * lightmapHeight - 1)
+		/ (lightmapWidth * lightmapHeight);
+	
+	for ( i = 0 ; i < numLightmaps; i++ ) {
+		for ( y = 0; y < lightmapHeight; y++ ) {
+			if ( (i * lightmapHeight + y) * lightmapWidth >= tr.numLightmaps)
+				break;
+			
+			for ( x = 0; x < lightmapWidth; x++ ) {
+				if ( (i * lightmapHeight + y) * lightmapWidth + x >= tr.numLightmaps)
+					break;
+			
+				// expand the 24 bit on-disk to 32 bit
+				buf_p = buf + ((i*lightmapHeight + y) * lightmapWidth + x) * LIGHTMAP_SIZE*LIGHTMAP_SIZE * 3;
+				image_p = image + (y * LIGHTMAP_SIZE * lightmapWidth + x) * LIGHTMAP_SIZE * 4;
 
-				intensity = 0.33f * r + 0.685f * g + 0.063f * b;
+				if ( r_lightmap->integer == 2 )
+				{	// color code by intensity as development tool	(FIXME: check range)
+					for ( j = 0; j < LIGHTMAP_SIZE ; j++ ) {
+						for ( k = 0; k < LIGHTMAP_SIZE; k++ ) {
+							float r = buf_p[(j * LIGHTMAP_SIZE + k)*3+0];
+							float g = buf_p[(j * LIGHTMAP_SIZE + k)*3+1];
+							float b = buf_p[(j * LIGHTMAP_SIZE + k)*3+2];
+							float intensity;
+							float out[3] = {0.0, 0.0, 0.0};
 
-				if ( intensity > 255 )
-					intensity = 1.0f;
-				else
-					intensity /= 255.0f;
+							intensity = 0.33f * r + 0.685f * g + 0.063f * b;
 
-				if ( intensity > maxIntensity )
-					maxIntensity = intensity;
+							if ( intensity > 255 )
+								intensity = 1.0f;
+							else
+								intensity /= 255.0f;
 
-				HSVtoRGB( intensity, 1.00, 0.50, out );
+							if ( intensity > maxIntensity )
+								maxIntensity = intensity;
 
-				image[j*4+0] = out[0] * 255;
-				image[j*4+1] = out[1] * 255;
-				image[j*4+2] = out[2] * 255;
-				image[j*4+3] = 255;
+							HSVtoRGB( intensity, 1.00, 0.50, out );
 
-				sumIntensity += intensity;
-			}
-		} else {
-			for ( j = 0 ; j < LIGHTMAP_SIZE * LIGHTMAP_SIZE; j++ ) {
-				R_ColorShiftLightingBytes( &buf_p[j*3], &image[j*4] );
-				image[j*4+3] = 255;
+							image_p[k*4+0] = out[0] * 255;
+							image_p[k*4+1] = out[1] * 255;
+							image_p[k*4+2] = out[2] * 255;
+							image_p[k*4+3] = 255;
+
+							sumIntensity += intensity;
+						}
+						// go to next line
+						image_p += lightmapWidth*LIGHTMAP_SIZE*4;
+					}
+				} else {
+					for ( j = 0; j < LIGHTMAP_SIZE ; j++ ) {
+						for ( k = 0; k < LIGHTMAP_SIZE; k++ ) {
+							R_ColorShiftLightingBytes( &buf_p[(j * LIGHTMAP_SIZE + k)*3], &image_p[k*4+0] );
+							image_p[k*4+3] = 255;
+						}
+						// go to next line
+						image_p += lightmapWidth*LIGHTMAP_SIZE*4;
+					}
+				}
 			}
 		}
 		tr.lightmaps[i] = R_CreateImage( va("*lightmap%d",i), image, 
-			LIGHTMAP_SIZE, LIGHTMAP_SIZE, qfalse, qfalse, GL_CLAMP_TO_EDGE );
+						 LIGHTMAP_SIZE * lightmapWidth, LIGHTMAP_SIZE * lightmapHeight,
+						 qfalse, qfalse, GL_CLAMP_TO_EDGE );
+		ri.Printf( PRINT_DEVELOPER, "lightmaps[%i]=%i\n", i, tr.lightmaps[i]->texnum);
 	}
+	// dummy lightmap
+	tr.lightmaps[i] = R_CreateImage( va("*lightmap%d",i), image, 
+					 LIGHTMAP_SIZE, LIGHTMAP_SIZE,
+					 qfalse, qfalse, GL_CLAMP_TO_EDGE );
+	Hunk_FreeTempMemory( image );
+
+	tr.numLightmaps = i;
 
 	if ( r_lightmap->integer == 2 )	{
 		ri.Printf( PRINT_DEVELOPER, "Brightest lightmap value: %d\n", ( int ) ( maxIntensity * 255 ) );
@@ -308,10 +353,16 @@ static void ParseFace( dsurface_t *ds, drawVert_t *verts, msurface_t *surf, int 
 	int			i, j;
 	srfSurfaceFace_t	*cv;
 	int			numPoints, numIndexes;
-	int			lightmapNum;
+	int			lightmapNum, lightmapX, lightmapY;
 	int			sfaceSize, ofsIndexes;
 
 	lightmapNum = LittleLong( ds->lightmapNum );
+	if (lightmapNum >= 0) {
+		lightmapX = lightmapNum & (lightmapWidth - 1);
+		lightmapNum /= lightmapWidth;
+		lightmapY = lightmapNum & (lightmapHeight - 1);
+		lightmapNum /= lightmapHeight;
+	}
 
 	// get fog volume
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
@@ -352,6 +403,12 @@ static void ParseFace( dsurface_t *ds, drawVert_t *verts, msurface_t *surf, int 
 			cv->points[i][5+j] = LittleFloat( verts[i].lightmap[j] );
 		}
 		R_ColorShiftLightingBytes( verts[i].color, (byte *)&cv->points[i][7] );
+
+		if (lightmapNum >= 0) {
+			// adjust lightmap coords
+			cv->points[i][5] = (cv->points[i][5] + lightmapX) / lightmapWidth;
+			cv->points[i][6] = (cv->points[i][6] + lightmapY) / lightmapHeight;
+		}
 	}
 
 	indexes += LittleLong( ds->firstIndex );
@@ -381,12 +438,20 @@ static void ParseMesh ( dsurface_t *ds, drawVert_t *verts, msurface_t *surf ) {
 	int				i, j;
 	int				width, height, numPoints;
 	drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
-	int				lightmapNum;
+	int				lightmapNum, lightmapX, lightmapY;
 	vec3_t			bounds[2];
 	vec3_t			tmpVec;
 	static surfaceType_t	skipData = SF_SKIP;
 
 	lightmapNum = LittleLong( ds->lightmapNum );
+	if (lightmapNum >= 0) {
+		lightmapX = lightmapNum & (lightmapWidth - 1);
+		lightmapNum /= lightmapWidth;
+		lightmapY = lightmapNum & (lightmapHeight - 1);
+		lightmapNum /= lightmapHeight;
+	} else {
+		lightmapX = lightmapY = 0;
+	}
 
 	// get fog volume
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
@@ -419,6 +484,12 @@ static void ParseMesh ( dsurface_t *ds, drawVert_t *verts, msurface_t *surf ) {
 			points[i].lightmap[j] = LittleFloat( verts[i].lightmap[j] );
 		}
 		R_ColorShiftLightingBytes( verts[i].color, points[i].color );
+
+		if (lightmapNum >= 0) {
+			// adjust lightmap coords
+			points[i].lightmap[0] = (points[i].lightmap[0] + lightmapX) / lightmapWidth;
+			points[i].lightmap[1] = (points[i].lightmap[1] + lightmapY) / lightmapHeight;
+		}
 	}
 
 	// pre-tesseleate
@@ -1295,6 +1366,54 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 
 	ri.Printf( PRINT_DEVELOPER, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", 
 		numFaces, numMeshes, numTriSurfs, numFlares );
+
+	if ( r_ext_vertex_buffer_object->integer ) {
+		// render all vertexes into a VBO
+		RB_ClearVertexBuffer( );
+		tess.shader = NULL;
+		
+		for ( i = 0, out = s_worldData.surfaces; i < count;
+		      i++, out++ ) {
+			switch( *out->data ) {
+			case SF_FACE:
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			case SF_GRID:
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			case SF_TRIANGLES:
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			default:
+				break;
+			}
+		}
+		
+		RB_SetupVBOBuffer( &backEnd.worldVBO );
+		for ( i = 0, out = s_worldData.surfaces; i < count;
+		      i++, out++ ) {
+			switch( *out->data ) {
+			case SF_FACE:
+				((srfSurfaceFace_t *)(out->data))->vboStart = tess.numVertexes;
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			case SF_GRID:
+				((srfGridMesh_t *)(out->data))->vboStart = tess.numVertexes;
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			case SF_TRIANGLES:
+				((srfTriangles_t *)(out->data))->vboStart = tess.numVertexes;
+				(*rb_surfaceTable[*out->data])(out->data);
+				break;
+			default:
+				break;
+			}
+		}
+		
+		backEnd.worldVertexes = tess.numVertexes;
+		
+		qglUnmapBufferARB(GL_ARRAY_BUFFER_ARB);
+	}
 }
 
 
@@ -1368,6 +1487,7 @@ static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump) {
 	dnode_t		*in;
 	dleaf_t		*inLeaf;
 	mnode_t 	*out;
+	mcluster_t	*clusters;
 	int			numNodes, numLeafs;
 
 	in = (void *)(fileBase + nodeLump->fileofs);
@@ -1432,6 +1552,20 @@ static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump) {
 
 	// chain decendants
 	R_SetParent (s_worldData.nodes, NULL);
+
+	// calculate cluster bounds
+	clusters = ri.Hunk_Alloc ( s_worldData.numClusters * sizeof(mcluster_t), h_low);
+	tr.clusters = s_worldData.clusters = clusters;
+	for ( i = 0; i < s_worldData.numClusters; i++ ) {
+		ClearBounds( clusters[i].mins, clusters[i].maxs );
+	}
+	out = s_worldData.nodes + numNodes;
+	for ( i = 0; i < numLeafs; i++ ) {
+		if ( ( j = out[i].cluster ) >= 0 ) {
+			AddPointToBounds( out[i].mins, clusters[j].mins, clusters[j].maxs );
+			AddPointToBounds( out[i].maxs, clusters[j].mins, clusters[j].maxs );
+		}
+	}
 }
 
 //=============================================================================

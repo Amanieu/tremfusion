@@ -338,15 +338,6 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
         LL(surf->ofsXyzNormals);
         LL(surf->ofsEnd);
 		
-		if ( surf->numVerts > SHADER_MAX_VERTEXES ) {
-			ri.Error (ERR_DROP, "R_LoadMD3: %s has more than %i verts on a surface (%i)",
-				mod_name, SHADER_MAX_VERTEXES, surf->numVerts );
-		}
-		if ( surf->numTriangles*3 > SHADER_MAX_INDEXES ) {
-			ri.Error (ERR_DROP, "R_LoadMD3: %s has more than %i triangles on a surface (%i)",
-				mod_name, SHADER_MAX_INDEXES / 3, surf->numTriangles );
-		}
-	
 		// change to surface identifier
 		surf->ident = SF_MD3;
 
@@ -612,19 +603,6 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 			surf->numTriangles = LittleLong(cursurf->numTriangles);
 			// numBoneReferences and BoneReferences generally seem to be unused
 			
-			// now do the checks that may fail.
-			if ( surf->numVerts > SHADER_MAX_VERTEXES ) 
-			{
-				ri.Printf(PRINT_WARNING, "R_LoadMDR: %s has more than %i verts on a surface (%i)",
-					  mod_name, SHADER_MAX_VERTEXES, surf->numVerts );
-				return qfalse;
-			}
-			if ( surf->numTriangles*3 > SHADER_MAX_INDEXES ) 
-			{
-				ri.Printf(PRINT_WARNING, "R_LoadMDR: %s has more than %i triangles on a surface (%i)",
-					  mod_name, SHADER_MAX_INDEXES / 3, surf->numTriangles );
-				return qfalse;
-			}
 			// lowercase the surface name so skin compares are faster
 			Q_strlwr( surf->name );
 
@@ -829,15 +807,6 @@ static qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 			LL(surf->ofsVerts);
 			LL(surf->ofsEnd);
 			
-			if ( surf->numVerts > SHADER_MAX_VERTEXES ) {
-				ri.Error (ERR_DROP, "R_LoadMD3: %s has more than %i verts on a surface (%i)",
-					mod_name, SHADER_MAX_VERTEXES, surf->numVerts );
-			}
-			if ( surf->numTriangles*3 > SHADER_MAX_INDEXES ) {
-				ri.Error (ERR_DROP, "R_LoadMD3: %s has more than %i triangles on a surface (%i)",
-					mod_name, SHADER_MAX_INDEXES / 3, surf->numTriangles );
-			}
-
 			// change to surface identifier
 			surf->ident = SF_MD4;
 
@@ -916,7 +885,7 @@ void RE_BeginRegistration( glconfig_t *glconfigOut ) {
 
 	R_SyncRenderThread();
 
-	tr.viewCluster = -1;		// force markleafs to regenerate
+	tr.viewParms.viewCluster = -1;		// force markleafs to regenerate
 	R_ClearFlares();
 	RE_ClearScene();
 

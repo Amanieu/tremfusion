@@ -37,10 +37,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #if (defined _M_IX86 || defined __i386__) && !defined(C_ONLY)
 #define id386 1
-#ifdef USE_SSE2
+#ifdef __SSE2__
 #define id386_sse 2
 #else
-#ifdef USE_SSE
+#ifdef __SSE__
 #define id386_sse 1
 #else
 #define id386_sse 0
@@ -49,10 +49,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #else
 #define id386 0
 #if defined __x86_64__ && !defined(C_ONLY)
-#ifdef USE_SSE2
+#ifdef __SSE2__
 #define id386_sse 2
 #else
-#ifdef USE_SSE
+#ifdef __SSE__
 #define id386_sse 1
 #else
 #define id386_sse 0

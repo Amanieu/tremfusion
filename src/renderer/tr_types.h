@@ -25,7 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __TR_TYPES_H
 
 
-#define	MAX_DLIGHTS		32		// can't be increased, because bit flags are used on surfaces
+#define	MAX_DLIGHTS		256
+#define MAX_TEXTURE_DLIGHTS	32		// can't be increased, because bit flags are used on surfaces
 #define	MAX_ENTITIES		1023		// can't be increased without changing drawsurf bit packing
 
 // renderfx flags
@@ -212,7 +213,9 @@ typedef struct {
 
 	qboolean				textureFilterAnisotropic;
 	int							maxAnisotropy;
-                
+	qboolean				vertexBufferObjects;
+	qboolean				vertexShaders;
+	
 } glconfig_t;
 
 #endif	// __TR_TYPES_H

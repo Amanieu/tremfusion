@@ -454,6 +454,7 @@ the projection matrix.
 void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, float zProj, float stereoSep)
 {
 	vec3_t ofsorigin;
+	vec3_t	corner[4];
 	float oppleg, adjleg, length;
 	int i;
 	
@@ -471,6 +472,13 @@ void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, floa
 
 		VectorScale(dest->or.axis[0], oppleg, dest->frustum[1].normal);
 		VectorMA(dest->frustum[1].normal, -adjleg, dest->or.axis[1], dest->frustum[1].normal);
+		
+		VectorScale(dest->or.axis[0], zProj, corner[0]);
+		VectorCopy(corner[0], corner[2]);
+		VectorMA(corner[0], xmax, dest->or.axis[1], corner[0]);
+		VectorCopy(corner[0], corner[1]);
+		VectorMA(corner[2], xmin, dest->or.axis[1], corner[2]);
+		VectorCopy(corner[2], corner[3]);
 	}
 	else
 	{
@@ -483,10 +491,18 @@ void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, floa
 		VectorScale(dest->or.axis[0], oppleg / length, dest->frustum[0].normal);
 		VectorMA(dest->frustum[0].normal, zProj / length, dest->or.axis[1], dest->frustum[0].normal);
 
+		VectorScale(dest->or.axis[0], zProj, corner[0]);
+		VectorCopy(corner[0], corner[2]);
+		VectorMA(corner[0], oppleg, dest->or.axis[1], corner[0]);
+		VectorCopy(corner[0], corner[1]);
+
 		oppleg = xmin + stereoSep;
 		length = sqrt(oppleg * oppleg + zProj * zProj);
 		VectorScale(dest->or.axis[0], -oppleg / length, dest->frustum[1].normal);
 		VectorMA(dest->frustum[1].normal, -zProj / length, dest->or.axis[1], dest->frustum[1].normal);
+
+		VectorMA(corner[2], oppleg, dest->or.axis[1], corner[2]);
+		VectorCopy(corner[2], corner[3]);
 	}
 
 	length = sqrt(ymax * ymax + zProj * zProj);
@@ -498,11 +514,99 @@ void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, floa
 
 	VectorScale(dest->or.axis[0], oppleg, dest->frustum[3].normal);
 	VectorMA(dest->frustum[3].normal, -adjleg, dest->or.axis[2], dest->frustum[3].normal);
+
+	VectorMA(corner[0], ymax, dest->or.axis[2], corner[0]);
+	VectorMA(corner[1], -ymax, dest->or.axis[2], corner[1]);
+	VectorMA(corner[2], ymax, dest->or.axis[2], corner[2]);
+	VectorMA(corner[3], -ymax, dest->or.axis[2], corner[3]);
 	
 	for (i=0 ; i<4 ; i++) {
 		dest->frustum[i].type = PLANE_NON_AXIAL;
 		dest->frustum[i].dist = DotProduct (ofsorigin, dest->frustum[i].normal);
 		SetPlaneSignbits( &dest->frustum[i] );
+	}
+	
+	if ( r_nocull->integer ) {
+		dest->frustPlanes = 0;
+		dest->frustType = 0;
+	} else if ( qglBindBufferARB && tr.clusters ) {
+		// Find main view direction and try to clip the opposite
+		// side. The distance is not known, it is added in
+		// R_AddWorldSurfaces.
+
+		if ( corner[0][0] >= 0 && corner[1][0] >= 0 &&
+		     corner[2][0] >= 0 && corner[3][0] >= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = 1.0f;
+			dest->frustum[4].normal[1] = 0.0f;
+			dest->frustum[4].normal[2] = 0.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 1;
+		} else if ( corner[0][0] <= 0 && corner[1][0] <= 0 &&
+			    corner[2][0] <= 0 && corner[3][0] <= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = -1.0f;
+			dest->frustum[4].normal[1] = 0.0f;
+			dest->frustum[4].normal[2] = 0.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 2;
+		} else if ( corner[0][1] >= 0 && corner[1][1] >= 0 &&
+			    corner[2][1] >= 0 && corner[3][1] >= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = 0.0f;
+			dest->frustum[4].normal[1] = 1.0f;
+			dest->frustum[4].normal[2] = 0.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 3;
+		} else if ( corner[0][1] <= 0 && corner[1][1] <= 0 &&
+			    corner[2][1] <= 0 && corner[3][1] <= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = 0.0f;
+			dest->frustum[4].normal[1] = -1.0f;
+			dest->frustum[4].normal[2] = 0.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 4;
+		} else if ( corner[0][2] >= 0 && corner[1][2] >= 0 &&
+			    corner[2][2] >= 0 && corner[3][2] >= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = 0.0f;
+			dest->frustum[4].normal[1] = 0.0f;
+			dest->frustum[4].normal[2] = 1.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 5;
+		} else if ( corner[0][2] <= 0 && corner[1][2] <= 0 &&
+			    corner[2][2] <= 0 && corner[3][2] <= 0 ) {
+			dest->frustum[4].type = PLANE_NON_AXIAL;
+			dest->frustum[4].normal[0] = 0.0f;
+			dest->frustum[4].normal[1] = 0.0f;
+			dest->frustum[4].normal[2] = -1.0f;
+
+			SetPlaneSignbits( &dest->frustum[4] );
+			
+			dest->frustPlanes = 16;
+			dest->frustType = 6;
+		} else {
+			dest->frustPlanes = 0;
+			dest->frustType = 0;
+		}
+	} else {
+		dest->frustPlanes = 15;
+		dest->frustType = 0;
 	}
 }
 
@@ -871,16 +975,21 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
 	RB_BeginSurface( shader, fogNum );
+	
+	tess.indexPtr = NULL;
 	rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 
 	assert( tess.numVertexes < 128 );
+
+	RB_SetupVertexBuffer( shader );
+	rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 
 	for ( i = 0; i < tess.numVertexes; i++ )
 	{
 		int j;
 		unsigned int pointFlags = 0;
 
-		R_TransformModelToClip( tess.xyz[i], tr.or.modelMatrix, tr.viewParms.projectionMatrix, eye, clip );
+		R_TransformModelToClip( tess.vertexPtr[i].xyz, tr.or.modelMatrix, tr.viewParms.projectionMatrix, eye, clip );
 
 		for ( j = 0; j < 3; j++ )
 		{
@@ -900,6 +1009,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	// trivially reject
 	if ( pointAnd )
 	{
+		RB_ClearVertexBuffer( );
 		return qtrue;
 	}
 
@@ -916,7 +1026,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 		float dot;
 		float len;
 
-		VectorSubtract( tess.xyz[tess.indexes[i]], tr.viewParms.or.origin, normal );
+		VectorSubtract( tess.vertexPtr[tess.indexPtr[i]].xyz, tr.viewParms.or.origin, normal );
 
 		len = VectorLengthSquared( normal );			// lose the sqrt
 		if ( len < shortest )
@@ -924,11 +1034,12 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 			shortest = len;
 		}
 
-		if ( ( dot = DotProduct( normal, tess.normal[tess.indexes[i]] ) ) >= 0 )
+		if ( ( dot = DotProduct( normal, tess.vertexPtr[tess.indexPtr[i]].normal ) ) >= 0 )
 		{
 			numTriangles--;
 		}
 	}
+	RB_ClearVertexBuffer( );
 	if ( !numTriangles )
 	{
 		return qtrue;
@@ -1128,7 +1239,7 @@ R_DecomposeSort
 void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, 
 					 int *fogNum, int *dlightMap ) {
 	*fogNum = ( sort >> QSORT_FOGNUM_SHIFT ) & 31;
-	*shader = tr.sortedShaders[ ( sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1) ];
+	*shader = tr.lastSortedShaders[ ( sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1) ];
 	*entityNum = ( sort >> QSORT_ENTITYNUM_SHIFT ) & 1023;
 	*dlightMap = sort & 3;
 }

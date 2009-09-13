@@ -36,8 +36,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 // surface geometry should not exceed these limits
-#define	SHADER_MAX_VERTEXES	1000
-#define	SHADER_MAX_INDEXES	(6*SHADER_MAX_VERTEXES)
+//#define	SHADER_MAX_VERTEXES	1000
+//#define	SHADER_MAX_INDEXES	(6*SHADER_MAX_VERTEXES)
 
 
 // the maximum size of game relative pathnames

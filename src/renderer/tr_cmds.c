@@ -53,7 +53,7 @@ void R_PerformanceCounters( void ) {
 			tr.pc.c_sphere_cull_md3_in, tr.pc.c_sphere_cull_md3_clip, tr.pc.c_sphere_cull_md3_out, 
 			tr.pc.c_box_cull_md3_in, tr.pc.c_box_cull_md3_clip, tr.pc.c_box_cull_md3_out );
 	} else if (r_speeds->integer == 3) {
-		ri.Printf (PRINT_ALL, "viewcluster: %i\n", tr.viewCluster );
+		ri.Printf (PRINT_ALL, "viewcluster: %i\n", tr.viewParms.viewCluster );
 	} else if (r_speeds->integer == 4) {
 		if ( backEnd.pc.c_dlightVertexes ) {
 			ri.Printf (PRINT_ALL, "dlight srf:%i  culled:%i  verts:%i  tris:%i\n", 
@@ -327,6 +327,8 @@ void R_SetColorMode(GLboolean *rgba, stereoFrame_t stereoFrame, int colormode)
 }
 
 
+static int newFrame;
+
 /*
 ====================
 RE_BeginFrame
@@ -499,6 +501,32 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 	
 	tr.refdef.stereoFrame = stereoFrame;
+
+	// sort shaders by size of occluded area
+	if ( qglGenQueriesARB && newFrame ) {
+		int shader;
+		GLuint available;
+
+		for ( shader = 0; shader < tr.numShaders; shader++ ) {
+			if ( tr.shaders[shader]->QueryID &&
+			     qglIsQueryARB( tr.shaders[shader]->QueryID) ) {
+				qglGetQueryObjectuivARB( tr.shaders[shader]->QueryID,
+							 GL_QUERY_RESULT_AVAILABLE_ARB,
+							 &available);
+				if ( !available ) {
+					tr.shaders[shader]->QueryResult = (GLuint)(-1);
+					continue;
+				}
+				
+				qglGetQueryObjectivARB( tr.shaders[shader]->QueryID,
+							GL_QUERY_RESULT_ARB,
+							&tr.shaders[shader]->QueryResult);
+			}
+		}
+
+		R_SortShaders( );
+		newFrame = 0;
+	}
 }
 
 
@@ -535,6 +563,8 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
 		*backEndMsec = backEnd.pc.msec;
 	}
 	backEnd.pc.msec = 0;
+	
+	newFrame = 1;
 }
 
 /*

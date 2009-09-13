@@ -42,9 +42,9 @@ typedef struct {
 
 #define	MAX_EDGE_DEFS	32
 
-static	edgeDef_t	edgeDefs[SHADER_MAX_VERTEXES][MAX_EDGE_DEFS];
-static	int			numEdgeDefs[SHADER_MAX_VERTEXES];
-static	int			facing[SHADER_MAX_INDEXES/3];
+static	edgeDef_t	*edgeDefs;
+static	int		*numEdgeDefs;
+static	int		*facing;
 
 void R_AddEdgeDef( int i1, int i2, int facing ) {
 	int		c;
@@ -53,8 +53,8 @@ void R_AddEdgeDef( int i1, int i2, int facing ) {
 	if ( c == MAX_EDGE_DEFS ) {
 		return;		// overflow
 	}
-	edgeDefs[ i1 ][ c ].i2 = i2;
-	edgeDefs[ i1 ][ c ].facing = facing;
+	edgeDefs[ i1 * MAX_EDGE_DEFS + c ].i2 = i2;
+	edgeDefs[ i1 * MAX_EDGE_DEFS + c ].facing = facing;
 
 	numEdgeDefs[ i1 ]++;
 }
@@ -75,19 +75,26 @@ void R_RenderShadowEdges( void ) {
 			continue;
 		}
 
-		i1 = tess.indexes[ i*3 + 0 ];
-		i2 = tess.indexes[ i*3 + 1 ];
-		i3 = tess.indexes[ i*3 + 2 ];
+		if ( tess.indexInc == sizeof( GLuint ) ) {
+			GLuint *indexPtr32 = (GLuint *)tess.indexPtr;
+			i1 = indexPtr32[ i*3 + 0 ];
+			i2 = indexPtr32[ i*3 + 1 ];
+			i3 = indexPtr32[ i*3 + 2 ];
+		} else {
+			i1 = tess.indexPtr[ i*3 + 0 ];
+			i2 = tess.indexPtr[ i*3 + 1 ];
+			i3 = tess.indexPtr[ i*3 + 2 ];
+		}
 
 		qglBegin( GL_TRIANGLE_STRIP );
-		qglVertex3fv( tess.xyz[ i1 ] );
-		qglVertex3fv( tess.xyz[ i1 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i2 ] );
-		qglVertex3fv( tess.xyz[ i2 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i3 ] );
-		qglVertex3fv( tess.xyz[ i3 + tess.numVertexes ] );
-		qglVertex3fv( tess.xyz[ i1 ] );
-		qglVertex3fv( tess.xyz[ i1 + tess.numVertexes ] );
+		qglVertex3fv( tess.vertexPtr[i1].xyz );
+		qglVertex3fv( tess.vertexPtr[i1 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i2].xyz );
+		qglVertex3fv( tess.vertexPtr[i2 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i3].xyz );
+		qglVertex3fv( tess.vertexPtr[i3 + tess.numVertexes].xyz );
+		qglVertex3fv( tess.vertexPtr[i1].xyz );
+		qglVertex3fv( tess.vertexPtr[i1 + tess.numVertexes].xyz );
 		qglEnd();
 	}
 #else
@@ -107,18 +114,18 @@ void R_RenderShadowEdges( void ) {
 	for ( i = 0 ; i < tess.numVertexes ; i++ ) {
 		c = numEdgeDefs[ i ];
 		for ( j = 0 ; j < c ; j++ ) {
-			if ( !edgeDefs[ i ][ j ].facing ) {
+			if ( !edgeDefs[ i * MAX_EDGE_DEFS + j ].facing ) {
 				continue;
 			}
 
 			hit[0] = 0;
 			hit[1] = 0;
 
-			i2 = edgeDefs[ i ][ j ].i2;
+			i2 = edgeDefs[ i * MAX_EDGE_DEFS + j ].i2;
 			c2 = numEdgeDefs[ i2 ];
 			for ( k = 0 ; k < c2 ; k++ ) {
-				if ( edgeDefs[ i2 ][ k ].i2 == i ) {
-					hit[ edgeDefs[ i2 ][ k ].facing ]++;
+				if ( edgeDefs[ i2 * MAX_EDGE_DEFS + k ].i2 == i ) {
+					hit[ edgeDefs[ i2 * MAX_EDGE_DEFS + k ].facing ]++;
 				}
 			}
 
@@ -126,10 +133,10 @@ void R_RenderShadowEdges( void ) {
 			// triangle, it is a sil edge
 			if ( hit[ 1 ] == 0 ) {
 				qglBegin( GL_TRIANGLE_STRIP );
-				qglVertex3fv( tess.xyz[ i ] );
-				qglVertex3fv( tess.xyz[ i + tess.numVertexes ] );
-				qglVertex3fv( tess.xyz[ i2 ] );
-				qglVertex3fv( tess.xyz[ i2 + tess.numVertexes ] );
+				qglVertex3fv( tess.vertexPtr[i].xyz );
+				qglVertex3fv( tess.vertexPtr[i + tess.numVertexes].xyz );
+				qglVertex3fv( tess.vertexPtr[i2].xyz );
+				qglVertex3fv( tess.vertexPtr[i2 + tess.numVertexes].xyz );
 				qglEnd();
 				c_edges++;
 			} else {
@@ -158,11 +165,6 @@ void RB_ShadowTessEnd( void ) {
 	vec3_t	lightDir;
 	GLboolean rgba[4];
 
-	// we can only do this if we have enough space in the vertex buffers
-	if ( tess.numVertexes >= SHADER_MAX_VERTEXES / 2 ) {
-		return;
-	}
-
 	if ( glConfig.stencilBits < 4 ) {
 		return;
 	}
@@ -171,29 +173,40 @@ void RB_ShadowTessEnd( void ) {
 
 	// project vertexes away from light direction
 	for ( i = 0 ; i < tess.numVertexes ; i++ ) {
-		VectorMA( tess.xyz[i], -512, lightDir, tess.xyz[i+tess.numVertexes] );
+		VectorMA( tess.vertexPtr[i].xyz, -512,
+			  lightDir, tess.vertexPtr[i+tess.numVertexes].xyz );
 	}
 
 	// decide which triangles face the light
-	Com_Memset( numEdgeDefs, 0, 4 * tess.numVertexes );
+	numEdgeDefs = ri.Hunk_AllocateTempMemory( sizeof( int ) * tess.numVertexes );
+	edgeDefs = ri.Hunk_AllocateTempMemory( sizeof( edgeDef_t ) * tess.numVertexes * MAX_EDGE_DEFS );
+	facing = ri.Hunk_AllocateTempMemory( sizeof( int ) * tess.numIndexes / 3 );
+	Com_Memset( numEdgeDefs, 0, sizeof(int) * tess.numVertexes );
 
 	numTris = tess.numIndexes / 3;
 	for ( i = 0 ; i < numTris ; i++ ) {
-		int		i1, i2, i3;
+		GLushort	i1, i2, i3;
 		vec3_t	d1, d2, normal;
-		float	*v1, *v2, *v3;
+		vec4_t	*v1, *v2, *v3;
 		float	d;
+		
+		if ( tess.indexInc == sizeof( GLuint ) ) {
+			GLuint *indexPtr32 = (GLuint *)tess.indexPtr;
+			i1 = indexPtr32[ i*3 + 0 ];
+			i2 = indexPtr32[ i*3 + 1 ];
+			i3 = indexPtr32[ i*3 + 2 ];
+		} else {
+			i1 = tess.indexPtr[ i*3 + 0 ];
+			i2 = tess.indexPtr[ i*3 + 1 ];
+			i3 = tess.indexPtr[ i*3 + 2 ];
+		}
+		
+		v1 = &tess.vertexPtr[i1].xyz;
+		v2 = &tess.vertexPtr[i2].xyz;
+		v3 = &tess.vertexPtr[i3].xyz;
 
-		i1 = tess.indexes[ i*3 + 0 ];
-		i2 = tess.indexes[ i*3 + 1 ];
-		i3 = tess.indexes[ i*3 + 2 ];
-
-		v1 = tess.xyz[ i1 ];
-		v2 = tess.xyz[ i2 ];
-		v3 = tess.xyz[ i3 ];
-
-		VectorSubtract( v2, v1, d1 );
-		VectorSubtract( v3, v1, d2 );
+		VectorSubtract( *v2, *v1, d1 );
+		VectorSubtract( *v3, *v1, d2 );
 		CrossProduct( d1, d2, normal );
 
 		d = DotProduct( normal, lightDir );
@@ -249,6 +262,10 @@ void RB_ShadowTessEnd( void ) {
 
 	// reenable writing to the color buffer
 	qglColorMask(rgba[0], rgba[1], rgba[2], rgba[3]);
+
+	ri.Hunk_FreeTempMemory( facing );
+	ri.Hunk_FreeTempMemory( edgeDefs );
+	ri.Hunk_FreeTempMemory( numEdgeDefs );
 }
 
 
@@ -304,7 +321,6 @@ RB_ProjectionShadowDeform
 =================
 */
 void RB_ProjectionShadowDeform( void ) {
-	float	*xyz;
 	int		i;
 	float	h;
 	vec3_t	ground;
@@ -312,8 +328,6 @@ void RB_ProjectionShadowDeform( void ) {
 	float	groundDist;
 	float	d;
 	vec3_t	lightDir;
-
-	xyz = ( float * ) tess.xyz;
 
 	ground[0] = backEnd.or.axis[0][2];
 	ground[1] = backEnd.or.axis[1][2];
@@ -334,11 +348,11 @@ void RB_ProjectionShadowDeform( void ) {
 	light[1] = lightDir[1] * d;
 	light[2] = lightDir[2] * d;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
-		h = DotProduct( xyz, ground ) + groundDist;
+	for ( i = 0; i < tess.numVertexes; i++ ) {
+		h = DotProduct( tess.vertexPtr[i].xyz, ground ) + groundDist;
 
-		xyz[0] -= light[0] * h;
-		xyz[1] -= light[1] * h;
-		xyz[2] -= light[2] * h;
+		tess.vertexPtr[i].xyz[0] -= light[0] * h;
+		tess.vertexPtr[i].xyz[1] -= light[1] * h;
+		tess.vertexPtr[i].xyz[2] -= light[2] * h;
 	}
 }
