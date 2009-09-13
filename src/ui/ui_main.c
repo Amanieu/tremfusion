@@ -3011,8 +3011,6 @@ static void UI_RunMenuScript( char **args )
       Controls_SetConfig( qtrue );
     else if( Q_stricmp( name, "loadControls" ) == 0 )
       Controls_GetConfig();
-    else if( Q_stricmp( name, "clearError" ) == 0 )
-      trap_Cvar_Set( "com_errorMessage", "" );
     else if (Q_stricmp(name, "downloadIgnore") == 0)
       trap_Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
     else if (Q_stricmp(name, "downloadCURL") == 0)
