@@ -936,7 +936,7 @@ unsigned char  *Cin_OGM_GetOutput(int *outWidth, int *outHeight)
 	return g_ogm.outputBuffer;
 }
 
-void Cin_OGM_Shutdown()
+void Cin_OGM_Shutdown(void)
 {
 #ifdef USE_CIN_XVID
 	int             status;
@@ -983,7 +983,7 @@ unsigned char  *Cin_OGM_GetOutput(int *outWidth, int *outHeight)
 	return 0;
 }
 
-void Cin_OGM_Shutdown()
+void Cin_OGM_Shutdown(void)
 {
 }
 #endif

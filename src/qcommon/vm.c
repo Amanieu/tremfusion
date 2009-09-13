@@ -40,11 +40,6 @@ and one exported function: Perform
 #include <windows.h>
 #else
 #include <sys/mman.h>
-#include <limits.h>
-#include <unistd.h>
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
 #endif
 
 
@@ -447,32 +442,9 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 
 	if( alloc ) {
 		// allocate zero filled space for initialized and uninitialized data
-		vm->mmaped = qtrue;
-#ifdef _WIN32
-		vm->dataBase = VirtualAlloc( NULL, dataLength, MEM_COMMIT, PAGE_READWRITE );
-		if(!vm->dataBase) {
-			Com_DPrintf("VM_LoadQVM: VirtualAlloc failed");
-			vm->mmaped = qfalse;
-			vm->dataBase = Hunk_Alloc( dataLength, h_high );
-		}
-#else
-		vm->dataBase = mmap( NULL, dataLength, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
-		if(vm->dataBase == (void*)-1) {
-			Com_DPrintf("VM_LoadQVM: can't mmap memory");
-			vm->mmaped = qfalse;
-			vm->dataBase = Hunk_Alloc( dataLength, h_high );
-		}
-#endif
+		vm->dataBase = Hunk_Alloc( dataLength, h_high );
 		vm->dataMask = dataLength - 1;
 	} else {
-		if ( vm->mmaped ) {
-#ifdef _WIN32
-			DWORD _unused = 0;
-			VirtualProtect( vm->dataBase, 4096, PAGE_READWRITE, &_unused );
-#else
-			mprotect( vm->dataBase, 4096, PROT_READ|PROT_WRITE );
-#endif
-		}
 		// clear the data
 		Com_Memset( vm->dataBase, 0, dataLength );
 	}
@@ -484,18 +456,6 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	// byte swap the longs
 	for ( i = 0 ; i < header.h->dataLength ; i += 4 ) {
 		*(int *)(vm->dataBase + i) = LittleLong( *(int *)(vm->dataBase + i ) );
-	}
-
-	// lock the first page to catch NULL pointers (only do this if the loaded qvm supports it)
-	// Fail silently
-	if ( vm->dataBase[0] == 1 && vm->mmaped ) {
-#ifdef _WIN32
-		DWORD _unused = 0;
-		VirtualProtect( vm->dataBase, 4096, PAGE_NOACCESS, &_unused );
-#else
-		if ( 4096 % sysconf( _SC_PAGESIZE ) == 0 )
-			mprotect( vm->dataBase, 4096, PROT_NONE );
-#endif
 	}
 
 	if( header.h->vmMagic == VM_MAGIC_VER2 ) {
@@ -770,13 +730,6 @@ void VM_Free( vm_t *vm ) {
 	if ( vm->dllHandle ) {
 		Sys_UnloadDll( vm->dllHandle );
 		Com_Memset( vm, 0, sizeof( *vm ) );
-	}
-	if ( vm->dataBase && vm->mmaped ) {
-#ifdef _WIN32
-		VirtualFree( vm->dataBase, 0, MEM_RELEASE );
-#else
-		munmap( vm->dataBase, vm->dataMask + 1 );
-#endif
 	}
 	Com_Memset( vm, 0, sizeof( *vm ) );
 
