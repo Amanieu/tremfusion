@@ -92,6 +92,10 @@ static void SV_Map_f( void ) {
 	if (sv.demoState == DS_PLAYBACK)
 		SV_DemoStopPlayback();
 
+	// switch to the base game if we are on tremfusion game
+	if (!Q_stricmp(Cvar_VariableString("fs_game"), "tremfusion"))
+		Cvar_Set("fs_game", "");
+
 	// save the map name here cause on a map restart we reload the autogen.cfg
 	// and thus nuke the arguments of the map command
 	Q_strncpyz(mapname, map, sizeof(mapname));
