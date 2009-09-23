@@ -385,7 +385,9 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 			switch (i / 4)
 			{
 				case 2 :
-					if (colorbits == 24)
+					if (colorbits == 32)
+						colorbits = 24;
+					else if (colorbits == 24)
 						colorbits = 16;
 					break;
 				case 1 :
@@ -407,6 +409,8 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 
 		if ((i % 4) == 3)
 		{ // reduce colorbits
+			if (tcolorbits == 32)
+				tcolorbits = 24;
 			if (tcolorbits == 24)
 				tcolorbits = 16;
 		}
@@ -429,13 +433,18 @@ static int GLimp_SetMode( qboolean failSafe, qboolean fullscreen )
 				tstencilbits = 0;
 		}
 
-		sdlcolorbits = 4;
-		if (tcolorbits == 24)
+		if (tcolorbits >= 24)
 			sdlcolorbits = 8;
+		else
+			sdlcolorbits = 4;
 
 		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, sdlcolorbits );
 		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, sdlcolorbits );
 		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, sdlcolorbits );
+		if (tcolorbits == 32)
+			SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, sdlcolorbits );
+		else
+			SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, 0 );
 		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, tdepthbits );
 		SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, tstencilbits );
 

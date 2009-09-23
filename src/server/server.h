@@ -277,7 +277,7 @@ extern	cvar_t	*sv_dequeuePeriod;
 extern	cvar_t	*sv_demoState;
 extern	cvar_t	*sv_autoDemo;
 extern	cvar_t	*sv_pure;
-extern	cvar_t	*sv_rateOverride;
+extern	cvar_t	*sv_downloadRate;
 
 #ifdef USE_VOIP
 extern	cvar_t	*sv_voip;

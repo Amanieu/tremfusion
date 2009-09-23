@@ -485,25 +485,17 @@ Block execution for msec or until input is recieved.
 */
 void Sys_Sleep( int msec )
 {
-	fd_set fdset;
-
 	if( msec == 0 )
 		return;
-
-	FD_ZERO(&fdset);
-	FD_SET(fileno(stdin), &fdset);
-	if( msec < 0 )
+	else if( msec < 0 )
 	{
+		fd_set fdset;
+		FD_ZERO(&fdset);
+		FD_SET(fileno(stdin), &fdset);
 		select((fileno(stdin) + 1), &fdset, NULL, NULL, NULL);
 	}
 	else
-	{
-		struct timeval timeout;
-
-		timeout.tv_sec = msec/1000;
-		timeout.tv_usec = (msec%1000)*1000;
-		select((fileno(stdin) + 1), &fdset, NULL, NULL, &timeout);
-	}
+		usleep(msec * 1000);
 }
 
 /*

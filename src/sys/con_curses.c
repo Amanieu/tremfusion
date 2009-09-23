@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/ioctl.h>
 #endif
 
-#define TITLE "^4---[ ^3Tremfusion Console ^4]---"
+#define TITLE "^4---[ ^3" CLIENT_WINDOW_TITLE " Console ^4]---"
 #define PROMPT "^3-> "
 #define INPUT_SCROLL 15
 #define LOG_SCROLL 5

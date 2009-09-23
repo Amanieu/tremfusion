@@ -527,19 +527,10 @@ void Sys_Sleep( int msec )
 {
 	if( msec == 0 )
 		return;
-
-#if DEDICATED || BUILD_TTY_CLIENT
-	if( msec < 0 )
+	else if( msec < 0 )
 		WaitForSingleObject( GetStdHandle( STD_INPUT_HANDLE ), INFINITE );
 	else
-		WaitForSingleObject( GetStdHandle( STD_INPUT_HANDLE ), msec );
-#else
-	// Client Sys_Sleep doesn't support waiting on stdin
-	if( msec < 0 )
-		return;
-
-	Sleep( msec );
-#endif
+		Sleep( msec );
 }
 
 /*
@@ -624,6 +615,7 @@ Sys_PlatformInit
 Windows specific initialisation
 ==============
 */
+static void resetTime(void) {timeEndPeriod(1);}
 void Sys_PlatformInit( void )
 {
 #if !DEDICATED && !BUILD_TTY_CLIENT
@@ -649,4 +641,8 @@ void Sys_PlatformInit( void )
 
 	// Handle Ctrl-C or other console termination
 	SetConsoleCtrlHandler( CON_CtrlHandler, TRUE );
+
+	// Increase sleep resolution
+	timeBeginPeriod(1);
+	atexit(resetTime);
 }

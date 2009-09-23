@@ -441,6 +441,7 @@ SCR_DrawVoipSender
 */
 void SCR_DrawVoipSender( void ) {
 	char	string[256];
+	char	teamColor;
 	
 	// Little bit of a hack here, but its the only thing i could come up with :|
 	if( cls.voipTime < cls.realtime )
@@ -457,11 +458,39 @@ void SCR_DrawVoipSender( void ) {
 	else if (!cl_voip->integer)
 		return;  // client has VoIP support disabled.
 
-	sprintf(string, "Client speaking: %s", Info_ValueForKey(cl.gameState.stringData +
+	switch (atoi(Info_ValueForKey(cl.gameState.stringData +
+		cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "t")))
+	{
+		case TEAM_ALIENS: teamColor = '1'; break;
+		case TEAM_HUMANS: teamColor = '4'; break;
+		default: teamColor = '3';
+	}
+
+	sprintf(string, "VoIP: ^%c%s", teamColor, Info_ValueForKey(cl.gameState.stringData +
 	        cl.gameState.stringOffsets[CS_PLAYERS + cls.voipSender], "n"));
 
-	// I hardcoded the display to be on the left side of the screen, and not to move
-	SCR_DrawStringExt( 6, 310, 12, string, g_color_table[7], qfalse, qfalse );
+	switch (cl_voipSenderPos->integer)
+	{
+	case 0:
+		SCR_DrawStringExt(320 - strlen( string ) * -8, 365, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	case 1:
+		SCR_DrawStringExt(320 - strlen( string ) * 17, 365, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	case 2:
+		SCR_DrawStringExt(320 - strlen( string ) * -9, 100, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	case 3:
+		SCR_DrawStringExt(320 - strlen( string ) * 4, 30, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	case 4:
+		SCR_DrawStringExt(320 - strlen( string ) * 4, 400, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	case 5:
+	default:
+		SCR_DrawStringExt(320 - strlen( string ) * -8, 380, 8, string, g_color_table[7], qfalse, qfalse);
+		break;
+	}
 }
 #endif
 

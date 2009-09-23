@@ -235,13 +235,13 @@ typedef struct directive_s
 
 static int Parse_ReadToken(source_t *source, token_t *token);
 
-int numtokens;
+static int numtokens;
 
 //list with global defines added to every source loaded
-define_t *globaldefines;
+static define_t *globaldefines;
 
 //longer punctuations first
-punctuation_t default_punctuations[] =
+static punctuation_t default_punctuations[] =
 {
   //binary operators
   {">>=",P_RSHIFT_ASSIGN, NULL},
@@ -2844,7 +2844,7 @@ static int Parse_DollarDirective_evalfloat(source_t *source)
 Parse_ReadDollarDirective
 ===============
 */
-directive_t dollardirectives[20] =
+static directive_t dollardirectives[20] =
 {
   {"evalint", Parse_DollarDirective_evalint},
   {"evalfloat", Parse_DollarDirective_evalfloat},
@@ -3128,7 +3128,7 @@ static int Parse_Directive_define(source_t *source)
 Parse_ReadDirective
 ===============
 */
-directive_t directives[20] =
+static directive_t directives[20] =
 {
   {"if", Parse_Directive_if},
   {"ifdef", Parse_Directive_ifdef},
@@ -3473,7 +3473,7 @@ static void Parse_FreeSource(source_t *source)
 
 #define MAX_SOURCEFILES   64
 
-source_t *sourceFiles[MAX_SOURCEFILES];
+static source_t *sourceFiles[MAX_SOURCEFILES];
 
 /*
 ===============

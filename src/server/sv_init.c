@@ -610,7 +610,7 @@ void SV_Init (void) {
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM );
 	sv_pure = Cvar_Get ("sv_pure", "0", CVAR_SYSTEMINFO );
-	sv_rateOverride = Cvar_Get ("sv_rateOverride", "50000", 0 );
+	sv_downloadRate = Cvar_Get ("sv_downloadRate", "50000", 0 );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
 #ifdef USE_VOIP
 	sv_voip = Cvar_Get ("sv_voip", "1", CVAR_SYSTEMINFO | CVAR_LATCH);

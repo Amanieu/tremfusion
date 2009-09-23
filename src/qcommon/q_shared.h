@@ -891,6 +891,7 @@ typedef struct cvar_s {
 	qboolean	integral;
 	float			min;
 	float			max;
+	struct cvar_s *alias;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;
