@@ -982,8 +982,11 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 	}
 	assembler_init(0);
 
-	if(mprotect(vm->codeBase, compiledOfs, PROT_READ|PROT_EXEC))
+	if(mprotect(vm->codeBase, compiledOfs, PROT_READ|PROT_EXEC)) {
+		if (munmap(vm->codeBase, compiledOfs))
+			Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
 		Com_Error(ERR_DROP, "VM_CompileX86: mprotect failed");
+	}
 #endif // USE_GAS
 	
 #ifdef USE_GAS

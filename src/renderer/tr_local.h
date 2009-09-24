@@ -1106,9 +1106,6 @@ extern cvar_t	*r_pixelAspect;
 
 // compatibility
 extern cvar_t   *r_mode;
-extern cvar_t	*r_customwidth;
-extern cvar_t	*r_customheight;
-extern cvar_t	*r_custompixelAspect;
 
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_minimize;

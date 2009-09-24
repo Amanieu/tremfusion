@@ -449,7 +449,9 @@ Sys_ParseArgs
 */
 void Sys_ParseArgs( int argc, char **argv )
 {
+#if defined(USE_CURSES) || defined(_WIN32)
 	int i;
+#endif
 
 	if( argc == 2 )
 	{

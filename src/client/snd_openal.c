@@ -1890,7 +1890,7 @@ void S_AL_InitCapture( qboolean usingAL )
 	// Load QAL if we are called from the base sound driver
 	if( !usingAL )
 	{
-		s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE );
+		s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH );
 		if( !QAL_Init( s_alDriver->string ) )
 		{
 			Com_Printf( "Failed to load library: \"%s\".\n", s_alDriver->string );

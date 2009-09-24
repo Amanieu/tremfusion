@@ -733,19 +733,23 @@ void SV_WriteDownloadToClient( client_t *cl , msg_t *msg )
 	// based on the rate, how many bytes can we fit in the snapMsec time of the client
 	// normal rate / snapshotMsec calculation
 	rate = cl->rate;
-	if ( sv_maxRate->integer ) {
-		if ( sv_maxRate->integer < 1000 ) {
-			Cvar_Set( "sv_MaxRate", "1000" );
+	if ( sv_downloadRate->integer > rate ) {
+		rate = sv_downloadRate->integer;
+	} else {
+		if ( sv_maxRate->integer ) {
+			if ( sv_maxRate->integer < 1000 ) {
+				Cvar_Set( "sv_MaxRate", "1000" );
+			}
+			if ( sv_maxRate->integer < rate ) {
+				rate = sv_maxRate->integer;
+			}
 		}
-		if ( sv_maxRate->integer < rate ) {
-			rate = sv_maxRate->integer;
+		if ( sv_minRate->integer ) {
+			if ( sv_minRate->integer < 1000 )
+				Cvar_Set( "sv_minRate", "1000" );
+			if ( sv_minRate->integer > rate )
+				rate = sv_minRate->integer;
 		}
-	}
-	if ( sv_minRate->integer ) {
-		if ( sv_minRate->integer < 1000 )
-			Cvar_Set( "sv_minRate", "1000" );
-		if ( sv_minRate->integer > rate )
-			rate = sv_minRate->integer;
 	}
 
 	if (!rate) {
@@ -906,8 +910,6 @@ void SV_UserinfoChanged( client_t *cl ) {
 	// internet public server, assume they don't need a rate choke
 	if ( Sys_IsLANAddress( cl->netchan.remoteAddress ) && com_dedicated->integer != 2 && sv_lanForceRate->integer == 1) {
 		cl->rate = 99999;	// lans should not rate limit
-	} else if ( sv_rateOverride->integer ) {
-		cl->rate = sv_rateOverride->integer;
 	} else {
 		val = Info_ValueForKey (cl->userinfo, "rate");
 		if (strlen(val)) {

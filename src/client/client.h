@@ -387,6 +387,9 @@ extern	cvar_t	*cl_freelook;
 extern	cvar_t	*cl_mouseAccel;
 extern	cvar_t	*cl_showMouseRate;
 
+extern  cvar_t  *cl_mouseAccelOffset;
+extern  cvar_t  *cl_mouseAccelStyle;
+
 extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
@@ -448,6 +451,7 @@ extern	cvar_t	*cl_voipGainDuringCapture;
 extern	cvar_t	*cl_voipCaptureMult;
 extern	cvar_t	*cl_voipShowMeter;
 extern	cvar_t	*cl_voipShowSender;
+extern	cvar_t	*cl_voipSenderPos;
 extern	cvar_t	*cl_voip;
 extern	cvar_t	*cl_voipDefaultGain;
 #endif

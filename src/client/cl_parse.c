@@ -610,7 +610,8 @@ static void CL_ParseServerInfo(void)
 	if (clc.sv_dlURL[0] || cl_dlURLOverride->string[0]) {
 		clc.sv_allowDownload |= DLF_ENABLE;
 		clc.sv_allowDownload &= ~DLF_NO_REDIRECT;
-	}
+	} else
+		clc.sv_allowDownload |= DLF_NO_REDIRECT;
 	Cvar_SetValue("ui_serverinfo_allowdl", clc.sv_allowDownload);
 }
 

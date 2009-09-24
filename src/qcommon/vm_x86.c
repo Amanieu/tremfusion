@@ -35,12 +35,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/mman.h> // for PROT_ stuff
 #endif
 
-/* need this on NX enabled systems (i386 with PAE kernel or
- * noexec32=on x86_64) */
-#ifdef __linux__
-#define VM_X86_MMAP
-#endif
-
 /*
 
   eax	scratch
@@ -1068,25 +1062,25 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 
 	// copy to an exact size buffer on the hunk
 	vm->codeLength = compiledOfs;
-#ifdef VM_X86_MMAP
+#ifndef _WIN32
 	vm->codeBase = mmap(NULL, compiledOfs, PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	if(vm->codeBase == (void*)-1)
 		Com_Error(ERR_DROP, "VM_CompileX86: can't mmap memory");
-#elif _WIN32
+#else
 	// allocate memory with EXECUTE permissions under windows.
 	vm->codeBase = VirtualAlloc(NULL, compiledOfs, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	if(!vm->codeBase)
 		Com_Error(ERR_DROP, "VM_CompileX86: VirtualAlloc failed");
-#else
-	vm->codeBase = malloc(compiledOfs);
 #endif
 
 	Com_Memcpy( vm->codeBase, buf, compiledOfs );
 
-#ifdef VM_X86_MMAP
+#ifndef _WIN32
 	if(mprotect(vm->codeBase, compiledOfs, PROT_READ|PROT_EXEC))
+		if (munmap(vm->codeBase, compiledOfs))
+			Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
 		Com_Error(ERR_DROP, "VM_CompileX86: mprotect failed");
-#elif _WIN32
+#else
 	{
 		DWORD oldProtect = 0;
 		

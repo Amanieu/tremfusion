@@ -244,7 +244,16 @@ ifeq ($(USE_SCM_VERSION),1)
     GIT_REV=$(shell LANG=C git svn info | awk '$$1 == "Revision:" {print $$2; exit 0}')
     ifneq ($(GIT_REV),)
       VERSION=$(VERSION_NUMBER)_R$(GIT_REV)
-      USE_GIT=1
+      USE_GIT_SVN=1
+    endif
+  endif
+
+  # For git
+  ifeq ($(wildcard .git),.git)
+    GIT_REV = $(shell LANG=C git show-ref -h -s --abbrev | head -n1)
+    ifneq ($(GIT_REV),)
+      VERSION = $(VERSION_NUMBER)_R$(GIT_REV)
+      USE_GIT = 1
     endif
   endif
 
@@ -2045,10 +2054,16 @@ ifeq ($(USE_SVN),1)
   $(B)/ded/common.o : .svn/entries
 endif
 
-ifeq ($(USE_GIT),1)
+ifeq ($(USE_GIT_SVN),1)
   $(B)/client/cl_console.o : .git/svn/.metadata
   $(B)/client/common.o : .git/svn/.metadata
   $(B)/ded/common.o : .git/svn/.metadata
+endif
+
+ifeq ($(USE_GIT),1)
+  $(B)/client/cl_console.o : .git/index
+  $(B)/client/common.o : .git/index
+  $(B)/ded/common.o : .git/index
 endif
 
 ifeq ($(USE_HG),1)

@@ -43,6 +43,7 @@ cvar_t	*cl_voipGainDuringCapture;
 cvar_t	*cl_voipCaptureMult;
 cvar_t	*cl_voipShowMeter;
 cvar_t	*cl_voipShowSender;
+cvar_t	*cl_voipSenderPos;
 cvar_t	*cl_voip;
 cvar_t	*cl_voipDefaultGain;
 #endif
@@ -78,6 +79,8 @@ cvar_t	*cl_sensitivity;
 
 cvar_t	*cl_mouseAccel;
 cvar_t	*cl_showMouseRate;
+cvar_t  *cl_mouseAccelOffset;
+cvar_t  *cl_mouseAccelStyle;
 
 cvar_t	*m_pitch;
 cvar_t	*m_yaw;
@@ -2069,10 +2072,8 @@ void CL_NextDownload(void) {
 
 	// Don't show a download prompt for tty clients
 #ifdef BUILD_TTY_CLIENT
-		if( cl_allowDownload->integer & DLF_ENABLE )
-			Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_CURL|DLP_UDP ) );
-		else
-			Cvar_Set( "cl_downloadPrompt", va( "%d", DLP_IGNORE ) );
+	cl_showdlPrompt->flags &= ~CVAR_ARCHIVE;
+	Cvar_Set( "cl_showdlPrompt", "0" );
 #endif
 
 		// Prompt if we do not allow automatic downloads
@@ -2296,7 +2297,7 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
 		Com_sprintf( data, sizeof( data ), "connect \"%s\"", info );
 
-		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, data, strlen( data ) + 1 );
+		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, (byte *)data, strlen( data ) + 1 );
 		// the most current userinfo has been sent, so watch for any
 		// newer changes to userinfo variables
 		cvar_modifiedFlags &= ~CVAR_USERINFO;
@@ -3150,6 +3151,7 @@ void CL_InitRef( void ) {
 	ri.FS_FileIsInPAK = FS_FileIsInPAK;
 	ri.FS_FileExists = FS_FileExists;
 	ri.Cvar_Get = Cvar_Get;
+	ri.Cvar_Alias = Cvar_Alias;
 	ri.Cvar_Set = Cvar_Set;
 	ri.Cvar_CheckRange = Cvar_CheckRange;
 
@@ -3374,6 +3376,13 @@ void CL_Init( void ) {
 	cl_mouseAccel = Cvar_Get ("cl_mouseAccel", "0", CVAR_ARCHIVE);
 	cl_freelook = Cvar_Get( "cl_freelook", "1", CVAR_ARCHIVE );
 
+	// 0: legacy mouse acceleration
+	// 1: new implementation
+	cl_mouseAccelStyle = Cvar_Get( "cl_mouseAccelStyle", "0", CVAR_ARCHIVE );
+	// offset for the power function (for style 1, ignored otherwise)
+	// this should be set to the max rate value
+	cl_mouseAccelOffset = Cvar_Get( "cl_mouseAccelOffset", "5", CVAR_ARCHIVE );
+
 	cl_showMouseRate = Cvar_Get ("cl_showmouserate", "0", 0);
 
 	cl_allowDownload = Cvar_Get ("cl_allowDownload", "1", CVAR_ARCHIVE);
@@ -3457,13 +3466,6 @@ void CL_Init( void ) {
 	Cvar_Get ("handicap", "100", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("sex", "male", CVAR_USERINFO | CVAR_ARCHIVE );
 	
-	Cvar_Get( "p_team", "", CVAR_ROM );
-	Cvar_Get( "p_class", "", CVAR_ROM );
-	Cvar_Get( "p_credits", "", CVAR_ROM );
-	Cvar_Get( "p_attacker", "", CVAR_ROM );
-	Cvar_Get( "p_killed", "", CVAR_ROM );
-	Cvar_Get( "p_score", "", CVAR_ROM );
-	
 	Cvar_Get ("password", "", CVAR_USERINFO);
 
 #ifdef USE_MUMBLE
@@ -3479,6 +3481,7 @@ void CL_Init( void ) {
 	cl_voipUseVAD = Cvar_Get ("cl_voipUseVAD", "0", CVAR_ARCHIVE);
 	cl_voipVADThreshold = Cvar_Get ("cl_voipVADThreshold", "0.25", CVAR_ARCHIVE);
 	cl_voipShowMeter = Cvar_Get ("cl_voipShowMeter", "1", CVAR_ARCHIVE);
+	cl_voipSenderPos = Cvar_Get ("cl_voipSenderPos", "0", CVAR_ARCHIVE);
 	cl_voipShowSender = Cvar_Get ("cl_voipShowSender", "1", CVAR_ARCHIVE);
 	cl_voipDefaultGain = Cvar_Get ("cl_voipDefaultGain", "0", CVAR_ARCHIVE);
 	

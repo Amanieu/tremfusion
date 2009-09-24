@@ -93,7 +93,10 @@ static cvar_t *Cvar_FindVar( const char *var_name ) {
 	
 	for (var=hashTable[hash] ; var ; var=var->hashNext) {
 		if (!Q_stricmp(var_name, var->name)) {
-			return var;
+			if( var->alias )
+				return var->alias;
+			else
+				return var;
 		}
 	}
 
@@ -391,6 +394,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var->integer = atoi(var->string);
 	var->resetString = CopyString( var_value );
 	var->validate = qfalse;
+	var->alias = NULL;
 
 	// link the variable in
 	var->next = cvar_vars;
@@ -405,6 +409,19 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	hashTable[hash] = var;
 
 	return var;
+}
+
+/*
+============
+Cvar_Alias
+
+Backwards compatibility provided by aliased variable names
+============
+*/
+void Cvar_Alias( cvar_t *var, const char *var_name )
+{
+	cvar_t *alias = Cvar_Get( var_name, "", 0);
+	alias->alias = var;
 }
 
 /*
@@ -455,14 +472,6 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force ) {
 		var_value = "BADVALUE";
 	}
 #endif
-
-	// legacy mode cvar support hacks 
-	if( !Q_stricmp(var_name, "r_customheight" ) )
-		var_name = "r_height";
-	if( !Q_stricmp(var_name, "r_customwidth" ) )
-		var_name = "r_width";
-	if( !Q_stricmp(var_name, "r_custompixelAspect" ) )
-		var_name = "r_pixelAspect";
 
 	var = Cvar_FindVar (var_name);
 	if (!var) {
@@ -685,17 +694,9 @@ Handles variable inspection and changing from the console
 */
 qboolean Cvar_Command( void ) {
 	cvar_t	*v;
-	char	*cvarname = Cmd_Argv(0);
-
-	if ( !Q_stricmp( cvarname, "r_customheight" ) )
-		cvarname = "r_height";
-	if ( !Q_stricmp( cvarname, "r_customwidth" ) )
-		cvarname = "r_width";
-	if ( !Q_stricmp( cvarname, "r_custompixelAspect" ) )
-		cvarname = "r_pixelAspect";
 
 	// check variables
-	v = Cvar_FindVar (cvarname);
+	v = Cvar_FindVar (Cmd_Argv(0));
 	if (!v) {
 		return qfalse;
 	}
@@ -829,11 +830,6 @@ void Cvar_Set_f( void ) {
 	if( !v ) {
 		return;
 	}
-
-	// don't make these old vars archive even if the client's old autogen told us to
-	if( !Q_stricmp( Cmd_Argv(1), "r_mode" ) || !Q_stricmp( Cmd_Argv(1), "r_customheight" ) ||
-	    !Q_stricmp( Cmd_Argv(1), "r_customwidth" ) || !Q_stricmp( Cmd_Argv(1), "r_custompixelAspect" ) ) 
-		return;
 
 	switch( cmd[3] ) {
 		default:

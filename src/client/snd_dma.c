@@ -1383,13 +1383,17 @@ void S_UpdateBackgroundTrack( void ) {
 	byte	raw[30000];		// just enough to fit in a mac stack frame
 	int		fileBytes;
 	int		r;
+	static	float	musicVolume = 0.5f;
 
 	if(!s_backgroundStream) {
 		return;
 	}
+ 
+	// graeme see if this is OK
+	musicVolume = (musicVolume + (s_musicVolume->value * 2))/4.0f;
 
 	// don't bother playing anything if musicvolume is 0
-	if ( s_musicVolume->value <= 0 ) {
+	if ( musicVolume <= 0 ) {
 		return;
 	}
 
@@ -1423,7 +1427,7 @@ void S_UpdateBackgroundTrack( void ) {
 		{
 			// add to raw buffer
 			S_Base_RawSamples( 0, fileSamples, s_backgroundStream->info.rate,
-				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, s_musicVolume->value );
+				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, musicVolume );
 		}
 		else
 		{

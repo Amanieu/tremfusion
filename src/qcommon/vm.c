@@ -519,6 +519,7 @@ vm_t *VM_Restart( vm_t *vm ) {
 	return vm;
 }
 
+#ifndef NO_VM_COMPILED
 // Cache system to compensate for the slowness of the x86_64 JIT compiler
 
 static ID_INLINE void VM_Cache_Free(vmCache_t *vmc)
@@ -584,6 +585,8 @@ static ID_INLINE void VM_Cache_Add(vm_t *vm, vmHeader_t *header)
 	for (i = 0; i < MAX_CACHE_ENTRIES; i++)
 		vmCache[i].age++;
 }
+
+#endif
 
 /*
 ================
