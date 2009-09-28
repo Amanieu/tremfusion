@@ -1389,8 +1389,12 @@ void S_UpdateBackgroundTrack( void ) {
 		return;
 	}
  
-	// graeme see if this is OK
-	musicVolume = (musicVolume + (s_musicVolume->value * 2))/4.0f;
+	if (!s_musicVolume->value)
+		musicVolume = 0;
+	else if (!musicVolume && s_musicVolume->value)
+		musicVolume = s_musicVolume->value;
+	else
+		musicVolume = (musicVolume + (s_musicVolume->value * 2))/4.0f;
 
 	// don't bother playing anything if musicvolume is 0
 	if ( musicVolume <= 0 ) {
