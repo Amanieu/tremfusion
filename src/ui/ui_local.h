@@ -271,7 +271,6 @@ typedef struct
 
   resolution_t  resolutions[ MAX_RESOLUTIONS ];
   int numResolutions;
-  qboolean oldResolutions;
 
   qboolean inGameLoad;
 

@@ -1309,17 +1309,13 @@ update cl_guid using QKEY_FILE and optional prefix
 static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
-	int len, len2;
+	int len;
 	//get the length of both files
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-	FS_FCloseFile( f );
-	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
 	FS_FCloseFile( f );
 	//check lengths and set cl_guid accordinally
 	if( len == QKEY_SIZE ) {
 		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
-	} else if( len2 == QKEY_SIZE ) {
-		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE_FALLBACK, QKEY_SIZE, prefix, prefix_len ) );
 	} else {
 		Cvar_Set( "cl_guid", "" );
 	}
@@ -3282,21 +3278,14 @@ it by filling it with 2048 bytes of random data.
 static void CL_GenerateQKey(void)
 {
 	int len = 0;
-	int len2 = 0;
 	unsigned char buff[ QKEY_SIZE ];
 	fileHandle_t f;
 
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
-	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
-	FS_FCloseFile( f );
 
 	if( len == QKEY_SIZE ) {
 		Com_Printf( "QKEY found.\n" );
-		return;
-	}
-	else if( len2 == QKEY_SIZE ) {
-		Com_Printf( "QKEY found. (Fallback Location)\n" );
 		return;
 	}
 	else {
