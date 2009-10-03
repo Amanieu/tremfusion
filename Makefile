@@ -1048,16 +1048,12 @@ endif
 
 ifneq ($(BUILD_GAME_SO),0)
   TARGETS += \
-    $(B)/base/cgame$(ARCH).$(SHLIBEXT) \
-    $(B)/base/game$(ARCH).$(SHLIBEXT) \
     $(B)/base/ui$(ARCH).$(SHLIBEXT)
 endif
 
 ifneq ($(BUILD_GAME_QVM),0)
   ifneq ($(CROSS_COMPILING),1)
     TARGETS += \
-      $(B)/base/vm/cgame.qvm \
-      $(B)/base/vm/game.qvm \
       $(B)/base/vm/ui.qvm
   endif
 endif
