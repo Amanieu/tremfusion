@@ -1454,7 +1454,6 @@ extern  buildableInfo_t cg_buildables[ BA_NUM_BUILDABLES ];
 
 extern  markPoly_t      cg_markPolys[ MAX_MARK_POLYS ];
 
-extern  vmCvar_t    cg_version;
 extern  vmCvar_t    cg_teslaTrailTime;
 extern  vmCvar_t    cg_centertime;
 extern  vmCvar_t    cg_runpitch;
@@ -2014,7 +2013,6 @@ void          trap_S_Respatialize( int entityNum, const vec3_t origin, vec3_t ax
 sfxHandle_t   trap_S_RegisterSound( const char *sample, qboolean compressed );    // returns buzz if not found
 void          trap_S_StartBackgroundTrack( const char *intro, const char *loop ); // empty name stops music
 void          trap_S_StopBackgroundTrack( void );
-int           trap_S_SoundDuration( sfxHandle_t handle );
 
 
 void          trap_R_LoadWorldMap( const char *mapname );

@@ -64,7 +64,7 @@ static BOOL WINAPI CON_CtrlHandler( DWORD sig )
 Sys_DefaultHomePath
 ================
 */
-char *Sys_DefaultHomePath( char **path2 )
+char *Sys_DefaultHomePath( void )
 {
 	TCHAR szPath[MAX_PATH];
 	
@@ -78,16 +78,6 @@ char *Sys_DefaultHomePath( char **path2 )
 		}
 		Q_strncpyz( homePath, szPath, sizeof( homePath ) );
 		Q_strcat( homePath, sizeof( homePath ), "\\Tremulous" );
-
-		if( !SUCCEEDED( SHGetFolderPath( NULL, CSIDL_LOCAL_APPDATA,
-						NULL, 0, szPath ) ) )
-		{
-			Com_Printf("Unable to find CSIDL_LOCAL_APPDATA\n");
-			return NULL;
-		}
-		Q_strncpyz( homePathOld, szPath, sizeof( homePath ) );
-		Q_strcat( homePathOld, sizeof( homePathOld ), "\\Tremulous" );
-		*path2 = homePathOld;
 	}
 
 	return homePath;
