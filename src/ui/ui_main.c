@@ -2029,9 +2029,9 @@ static qboolean UI_HideScreen( int modifier )
 static void UI_OwnerDraw( float x, float y, float w, float h,
                           float text_x, float text_y, int ownerDraw,
                           int ownerDrawFlags, int align,
-                          int textalign, int textvalign, float special,
+                          int textalign, int textvalign, float borderSize,
                           float scale, vec4_t foreColor, vec4_t backColor,
-                          qhandle_t shader, int textStyle )
+                          qhandle_t shader, int textStyle, int modifier )
 {
   rectDef_t       rect;
 
@@ -2108,7 +2108,7 @@ static void UI_OwnerDraw( float x, float y, float w, float h,
       break;
 
     case UI_SCREEN:
-      UI_DrawScreen( &rect, special );
+      UI_DrawScreen( &rect, modifier );
       break;
 
     default:
@@ -2194,7 +2194,7 @@ static qboolean UI_OwnerDrawVisible( int flags )
   return vis;
 }
 
-static qboolean UI_NetSource_HandleKey( int flags, float *special, int key )
+static qboolean UI_NetSource_HandleKey( int key )
 {
   if( key == K_MOUSE1 || key == K_MOUSE2 || key == K_ENTER || key == K_KP_ENTER )
   {
@@ -2230,12 +2230,12 @@ static qboolean UI_NetSource_HandleKey( int flags, float *special, int key )
   return qfalse;
 }
 
-static qboolean UI_OwnerDrawHandleKey( int ownerDraw, int flags, float *special, int key )
+static qboolean UI_OwnerDrawHandleKey( int ownerDraw, int key )
 {
   switch( ownerDraw )
   {
     case UI_NETSOURCE:
-      UI_NetSource_HandleKey( flags, special, key );
+      UI_NetSource_HandleKey( key );
       break;
 
     default:
