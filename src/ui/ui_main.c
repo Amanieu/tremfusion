@@ -2847,7 +2847,6 @@ static void UI_Update( const char *name )
         trap_Cvar_SetValue( "r_fastSky", 0 );
         trap_Cvar_SetValue( "r_inGameVideo", 1 );
         trap_Cvar_SetValue( "cg_shadows", 1 );
-        trap_Cvar_SetValue( "cg_brassTime", 2500 );
         trap_Cvar_SetValue( "cg_bounceParticles", 1 );
         trap_Cvar_Set( "r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
         break;
@@ -2862,7 +2861,6 @@ static void UI_Update( const char *name )
         trap_Cvar_SetValue( "r_texturebits", 0 );
         trap_Cvar_SetValue( "r_fastSky", 0 );
         trap_Cvar_SetValue( "r_inGameVideo", 1 );
-        trap_Cvar_SetValue( "cg_brassTime", 2500 );
         trap_Cvar_Set( "r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
         trap_Cvar_SetValue( "cg_shadows", 0 );
         trap_Cvar_SetValue( "cg_bounceParticles", 0 );
@@ -2879,7 +2877,6 @@ static void UI_Update( const char *name )
         trap_Cvar_SetValue( "cg_shadows", 0 );
         trap_Cvar_SetValue( "r_fastSky", 1 );
         trap_Cvar_SetValue( "r_inGameVideo", 0 );
-        trap_Cvar_SetValue( "cg_brassTime", 0 );
         trap_Cvar_SetValue( "cg_bounceParticles", 0 );
         trap_Cvar_Set( "r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
         break;
@@ -2893,7 +2890,6 @@ static void UI_Update( const char *name )
         trap_Cvar_SetValue( "r_picmip", 2 );
         trap_Cvar_SetValue( "r_texturebits", 16 );
         trap_Cvar_SetValue( "cg_shadows", 0 );
-        trap_Cvar_SetValue( "cg_brassTime", 0 );
         trap_Cvar_SetValue( "r_fastSky", 1 );
         trap_Cvar_SetValue( "r_inGameVideo", 0 );
         trap_Cvar_SetValue( "cg_bounceParticles", 0 );
@@ -3157,7 +3153,7 @@ static void UI_RunMenuScript( char **args )
 
       if( !buffer[ 0 ] ) {}
       else if( uiInfo.chatTargetClientNum != -1 )
-        trap_Cmd_ExecuteText( EXEC_APPEND, va( "tell %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "m %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
       else if( uiInfo.chatTeam )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_team \"%s\"\n", buffer ) );
       else if( uiInfo.chatAdmins )
