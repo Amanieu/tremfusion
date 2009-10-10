@@ -508,7 +508,10 @@ void CL_SystemInfoChanged( void ) {
 	// check pure server string
 	s = Info_ValueForKey( systemInfo, "sv_paks" );
 	t = Info_ValueForKey( systemInfo, "sv_pakNames" );
-	FS_PureServerSetLoadedPaks( s, t );
+	if ( clc.demoplaying )
+		FS_PureServerSetLoadedPaks( "", "" );
+	else
+		FS_PureServerSetLoadedPaks( s, t );
 
 	s = Info_ValueForKey( systemInfo, "sv_referencedPaks" );
 	t = Info_ValueForKey( systemInfo, "sv_referencedPakNames" );
