@@ -6413,6 +6413,8 @@ void Item_Paint( itemDef_t *item )
   {
     if( DC->hideScreen( item->modifier ) )
       item->window.flags &= ~WINDOW_VISIBLE;
+    else
+      item->window.flags |= WINDOW_VISIBLE;
   }
 
   if( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) )
