@@ -1082,16 +1082,22 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 
 #ifndef _WIN32
 	if(mprotect(vm->codeBase, compiledOfs, PROT_READ|PROT_EXEC))
+	{
 		if (munmap(vm->codeBase, compiledOfs))
 			Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
 		Com_Error(ERR_DROP, "VM_CompileX86: mprotect failed");
+	}
 #else
 	{
 		DWORD oldProtect = 0;
 		
 		// remove write permissions.
 		if(!VirtualProtect(vm->codeBase, compiledOfs, PAGE_EXECUTE_READ, &oldProtect))
+		{
+			if (!VirtualFree(vm->codeBase, 0, MEM_RELEASE))
+				Com_Printf(S_COLOR_RED "Memory unmap failed, possible memory leak\n");
 			Com_Error(ERR_DROP, "VM_CompileX86: VirtualProtect failed");
+		}
 	}
 #endif
 
