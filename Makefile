@@ -202,31 +202,39 @@ LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
 
-# set PKG_CONFIG_PATH to influence this, e.g.
-# PKG_CONFIG_PATH=/opt/cross/i386-mingw32msvc/lib/pkgconfig
-ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
-  CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
-  CURL_LIBS=$(shell pkg-config --libs libcurl)
-  OPENAL_CFLAGS=$(shell pkg-config --cflags openal)
-  OPENAL_LIBS=$(shell pkg-config --libs openal)
-  # FIXME: introduce CLIENT_CFLAGS
-  SDL_CFLAGS=$(shell pkg-config --cflags sdl|sed 's/-Dmain=SDL_main//')
-  SDL_LIBS=$(shell pkg-config --libs sdl)
-  OGG_CFLAGS=$(shell pkg-config --cflags ogg vorbis vorbisfile)
-  OGG_LIBS=$(shell pkg-config --libs ogg vorbis vorbisfile)
-  # Some distros still use the old pkgconfig string
-  THEORA_CFLAGS=$(shell pkg-config --cflags theoradec 2> /dev/null)
-  THEORA_LIBS=$(shell pkg-config --libs theoradec 2> /dev/null)
-  ifeq ($(THEORA_LIBS),)
-    THEORA_CFLAGS=$(shell pkg-config --cflags theora)
-	THEORA_LIBS=$(shell pkg-config --libs theora)
+# We won't need this if we only build the server
+ifneq ($(BUILD_CLIENT),0)
+  # set PKG_CONFIG_PATH to influence this, e.g.
+  # PKG_CONFIG_PATH=/opt/cross/i386-mingw32msvc/lib/pkgconfig
+  ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
+    CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
+    CURL_LIBS=$(shell pkg-config --libs libcurl)
+    OPENAL_CFLAGS=$(shell pkg-config --cflags openal)
+    OPENAL_LIBS=$(shell pkg-config --libs openal)
+    # FIXME: introduce CLIENT_CFLAGS
+    SDL_CFLAGS=$(shell pkg-config --cflags sdl|sed 's/-Dmain=SDL_main//')
+    SDL_LIBS=$(shell pkg-config --libs sdl)
+    OGG_CFLAGS=$(shell pkg-config --cflags ogg vorbis vorbisfile)
+    OGG_LIBS=$(shell pkg-config --libs ogg vorbis vorbisfile)
+    # Some distros still use the old pkgconfig string
+    THEORA_CFLAGS=$(shell pkg-config --cflags theoradec 2> /dev/null)
+    THEORA_LIBS=$(shell pkg-config --libs theoradec 2> /dev/null)
+    ifeq ($(THEORA_LIBS),)
+      THEORA_CFLAGS=$(shell pkg-config --cflags theora)
+      THEORA_LIBS=$(shell pkg-config --libs theora)
+    endif
   endif
-endif
-# Use sdl-config if all else fails
-ifeq ($(SDL_CFLAGS),)
-  ifeq ($(shell which sdl-config > /dev/null; echo $$?),0)
-    SDL_CFLAGS=$(shell sdl-config --cflags)
-    SDL_LIBS=$(shell sdl-config --libs)
+  # Use sdl-config if all else fails
+  ifeq ($(SDL_CFLAGS),)
+    ifeq ($(shell which sdl-config > /dev/null; echo $$?),0)
+      SDL_CFLAGS=$(shell sdl-config --cflags)
+      SDL_LIBS=$(shell sdl-config --libs)
+    endif
+  endif
+else
+  ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
+    CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
+    CURL_LIBS=$(shell pkg-config --libs libcurl)
   endif
 endif
 
