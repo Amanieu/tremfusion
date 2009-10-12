@@ -645,7 +645,7 @@ void CL_ConsolePrint( char *txt ) {
 		*p = '\0';
 
 		Com_sprintf( buf, sizeof(buf), "!namelog %s", text );
-		CL_AddReliableCommand( buf );
+		CL_AddReliableCommand( buf, qfalse );
 		}
 	}
 /* end auto-namelog code */

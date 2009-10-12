@@ -571,7 +571,16 @@ int main( int argc, char **argv )
 			continue;
 		if( !strcmp( argv[ i ], "+showconsole" ) )
 			continue;
+
+		const qboolean containsSpaces = strchr(argv[i], ' ') != NULL;
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
 		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
+
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 

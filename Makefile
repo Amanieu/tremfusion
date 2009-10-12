@@ -75,6 +75,10 @@ else
 endif
 export CROSS_COMPILING
 
+ifndef COPYBINDIR
+COPYBINDIR=$(COPYDIR)
+endif
+
 ifndef MOUNT_DIR
   MOUNT_DIR=src
 endif
@@ -406,7 +410,7 @@ ifeq ($(PLATFORM),linux)
   endif
 
   SHLIBEXT=so
-  SHLIBCFLAGS=-fPIC
+  SHLIBCFLAGS=-fPIC -fvisibility=hidden
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
   BASE_CFLAGS+=-I/usr/X11R6/include
@@ -866,16 +870,20 @@ ifeq ($(PLATFORM),openbsd)
     endif
   endif
 
-  BASE_CFLAGS += -DNO_VM_COMPILED -I/usr/X11R6/include -I/usr/local/include
-  RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG -O3 \
-    -march=pentium -fomit-frame-pointer -pipe \
-    -falign-loops=2 -falign-jumps=2 -falign-functions=2 \
-    -funroll-loops -fstrength-reduce
+  ifeq ($(USE_CURL),1)
+    BASE_CFLAGS += -DUSE_CURL $(CURL_CFLAGS)
+    USE_CURL_DLOPEN=0
+  endif
+
+  BASE_CFLAGS += -DNO_VM_COMPILED -pthread
+  RELEASE_CFLAGS=$(BASE_CFLAGS) -DNDEBUG
+
   HAVE_VM_COMPILED=false
 
   DEBUG_CFLAGS=$(BASE_CFLAGS) -g
 
   SHLIBEXT=so
+  SHLIBNAME=.$(SHLIBEXT)
   SHLIBCFLAGS=-fPIC
   SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
 
@@ -891,6 +899,12 @@ ifeq ($(PLATFORM),openbsd)
 
   ifeq ($(USE_CODEC_VORBIS),1)
     CLIENT_LIBS += $(OGG_LIBS)
+  endif
+
+  ifeq ($(USE_CURL),1) 
+    ifneq ($(USE_CURL_DLOPEN),1)
+      CLIENT_LIBS += -lcurl
+    endif
   endif
 
 else # ifeq openbsd
@@ -1034,21 +1048,29 @@ endif #SunOS
 
 TARGETS =
 
+ifndef FULLBINEXT
+  FULLBINEXT=.$(ARCH)$(BINEXT)
+endif
+
+ifndef SHLIBNAME
+ SHLIBNAME=$(ARCH).$(SHLIBEXT)
+endif
+
 ifneq ($(BUILD_SERVER),0)
-  TARGETS += $(B)/tremded.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremded$(FULLBINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT),0)
-  TARGETS += $(B)/tremulous.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous$(FULLBINEXT)
 endif
 
 ifneq ($(BUILD_CLIENT_TTY),0)
-  TARGETS += $(B)/tremulous-tty.$(ARCH)$(BINEXT)
+  TARGETS += $(B)/tremulous-tty$(FULLBINEXT)
 endif
 
 ifneq ($(BUILD_GAME_SO),0)
   TARGETS += \
-    $(B)/base/ui$(ARCH).$(SHLIBEXT)
+    $(B)/base/ui$(SHLIBNAME)
 endif
 
 ifneq ($(BUILD_GAME_QVM),0)
@@ -1068,7 +1090,7 @@ ifeq ($(USE_VOIP),1)
   ifeq ($(USE_INTERNAL_SPEEX),1)
     BASE_CFLAGS += -DFLOATING_POINT -DUSE_ALLOCA -I$(SPEEXDIR)/include
   else
-    CLIENT_LIBS += -lspeex
+    CLIENT_LIBS += -lspeex -lspeexdsp
   endif
   TTYC_CFLAGS += -UUSE_VOIP
 endif
@@ -1091,6 +1113,12 @@ ifeq ($(GENERATE_DEPENDENCIES),1)
   DEPEND_CFLAGS = -MMD
 else
   DEPEND_CFLAGS =
+endif
+
+ifeq ($(NO_STRIP),1)
+  STRIP_FLAG =
+else
+  STRIP_FLAG = -s
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
@@ -1260,16 +1288,16 @@ install: release run-tremfusion.sh
 	@if [ ! -d $(BUILDROOT)$(LIBDIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(LIBDIR)/tremfusion;fi
 	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
 ifeq ($(BUILD_CLIENT),1)
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremulous$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
 endif
 ifeq ($(BUILD_CLIENT_TTY),1)
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremulous-tty.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremulous-tty$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
 endif
 ifeq ($(BUILD_SERVER),1)
-	@$(Q)$(INSTALL) -vpm 755 $(BR)/tremded.$(ARCH)$(BINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremded$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
+	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
 endif
 
 run-tremfusion.sh:
@@ -1282,10 +1310,10 @@ run-tremfusion.sh:
 #############################################################################
 
 TOOLS_OPTIMIZE = -O2 -Wall -fno-strict-aliasing
-TOOLS_CFLAGS = $(TOOLS_OPTIMIZE) \
-               -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
-               -I$(Q3LCCSRCDIR) \
-               -I$(LBURGDIR)
+TOOLS_CFLAGS += $(TOOLS_OPTIMIZE) \
+                -DTEMPDIR=\"$(TEMPDIR)\" -DSYSTEM=\"\" \
+                -I$(Q3LCCSRCDIR) \
+                -I$(LBURGDIR)
 TOOLS_LIBS =
 TOOLS_LDFLAGS =
 
@@ -1658,6 +1686,11 @@ else
     $(B)/client/con_tty.o
 endif
 
+ifeq ($(PLATFORM),darwin)
+  Q3OBJ += \
+    $(B)/client/sys_cocoa.o
+endif
+
 ifeq ($(USE_MUMBLE),1)
   Q3OBJ += \
     $(B)/client/libmumblelink.o
@@ -1666,13 +1699,13 @@ endif
 Q3TOBJ += $(subst /client/,/clienttty/,$(Q3OBJ_))
 Q3OBJ += $(Q3OBJ_)
 
-$(B)/tremulous.$(ARCH)$(BINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
+$(B)/tremulous$(FULLBINEXT): $(Q3OBJ) $(LIBSDLMAIN) $(LIBOGG) $(LIBVORBIS) $(LIBVORBISFILE) $(LIBFREETYPE)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3OBJ) $(CLIENT_LIBS) $(LIBS) \
         $(LIBSDLMAIN) $(LIBVORBISFILE) $(LIBVORBIS) $(LIBOGG) $(LIBFREETYPE)
 
-$(B)/tremulous-tty.$(ARCH)$(BINEXT): $(Q3TOBJ)
+$(B)/tremulous-tty$(FULLBINEXT): $(Q3TOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(TTYC_CFLAGS) $(TTYC_LDFLAGS) $(LDFLAGS) \
 	    -o $@ $(Q3TOBJ) $(TTYC_LIBS) $(LIBS)
@@ -1821,7 +1854,13 @@ else
     $(B)/ded/con_tty.o
 endif
 
-$(B)/tremded.$(ARCH)$(BINEXT): $(Q3DOBJ)
+# Not currently referenced in the dedicated server.
+#ifeq ($(PLATFORM),darwin)
+#  Q3DOBJ += \
+#    $(B)/ded/sys_cocoa.o
+#endif
+
+$(B)/tremded$(FULLBINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
@@ -1869,7 +1908,7 @@ CGOBJ_ = \
 CGOBJ = $(CGOBJ_) $(B)/base/cgame/cg_syscalls.o
 CGVMOBJ = $(CGOBJ_:%.o=%.asm)
 
-$(B)/base/cgame$(ARCH).$(SHLIBEXT): $(CGOBJ)
+$(B)/base/cgame$(SHLIBNAME): $(CGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(CGOBJ)
 
@@ -1918,7 +1957,7 @@ GOBJ_ = \
 GOBJ = $(GOBJ_) $(B)/base/game/g_syscalls.o
 GVMOBJ = $(GOBJ_:%.o=%.asm)
 
-$(B)/base/game$(ARCH).$(SHLIBEXT): $(GOBJ)
+$(B)/base/game$(SHLIBNAME): $(GOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(GOBJ)
 
@@ -1946,7 +1985,7 @@ UIOBJ_ = \
 UIOBJ = $(UIOBJ_) $(B)/base/ui/ui_syscalls.o
 UIVMOBJ = $(UIOBJ_:%.o=%.asm)
 
-$(B)/base/ui$(ARCH).$(SHLIBEXT): $(UIOBJ)
+$(B)/base/ui$(SHLIBNAME): $(UIOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(UIOBJ)
 
@@ -1988,6 +2027,9 @@ $(B)/client/%.o: $(SDLDIR)/%.c
 	$(DO_CC)
 
 $(B)/client/%.o: $(SYSDIR)/%.c
+	$(DO_CC)
+
+$(B)/client/%.o: $(SYSDIR)/%.m
 	$(DO_CC)
 
 $(B)/client/%.o: $(SYSDIR)/%.rc
@@ -2035,6 +2077,9 @@ $(B)/ded/%.o: $(ZDIR)/%.c
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.c
+	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(SYSDIR)/%.m
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(SYSDIR)/%.rc

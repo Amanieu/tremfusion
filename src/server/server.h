@@ -215,6 +215,7 @@ typedef struct {
 	int			clientChallenge;	// challenge number coming from the client
 	int			time;				// time the first challenge response was sent to client
 	int			pingTime;			// time the last challenge response was sent to client
+	qboolean	wasrefused;
 	qboolean	connected;
 } challenge_t;
 

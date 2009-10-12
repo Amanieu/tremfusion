@@ -224,8 +224,6 @@ static	int			fs_loadCount;			// total files read
 static	int			fs_loadStack;			// total files in memory
 static	int			fs_packFiles;			// total number of files in packs
 
-static qboolean fs_unpureReferenced = qfalse;
-static qboolean fs_unpureAllowed = qfalse;
 static int fs_checksumFeed;
 
 typedef union qfile_gus {
@@ -451,7 +449,7 @@ FS_CreatePath
 Creates any directories needed to store the given filename
 ============
 */
-static qboolean FS_CreatePath (char *OSPath) {
+qboolean FS_CreatePath (char *OSPath) {
 	char	*ofs;
 	
 	// make absolutely sure that it can't back up the path
@@ -1134,7 +1132,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			//   this test can make the search fail although the file is in the directory
 			// I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
 			// turned out I used FS_FileExists instead
-			if ( fs_numServerPaks && !fs_unpureAllowed ) {
+			if ( fs_numServerPaks ) {
 
 				if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
 					&& Q_stricmp( filename + l - 4, ".otf" )
@@ -1153,16 +1151,6 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean uniqueF
 			fsh[*file].handleFiles.file.o = fopen (netpath, "rb");
 			if ( !fsh[*file].handleFiles.file.o ) {
 				continue;
-			}
-
-			if ( Q_stricmp( filename + l - 4, ".cfg" )		// for config files
-				&& Q_stricmp( filename + l - 4, ".ttf" )
-				&& Q_stricmp( filename + l - 4, ".otf" )
-				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
-				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
-				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
-				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
-				fs_unpureReferenced = qtrue;
 			}
 
 			Q_strncpyz( fsh[*file].name, filename, sizeof( fsh[*file].name ) );
@@ -1910,7 +1898,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 			char	*name;
 
 			// don't scan directories for files if we are pure or restricted
-			if ( fs_numServerPaks && !fs_unpureAllowed ) {
+			if ( fs_numServerPaks ) {
 		        continue;
 		    } else {
 				netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
@@ -2707,9 +2695,6 @@ void FS_Shutdown( qboolean closemfp ) {
 	// any FS_ calls will now be an error until reinitialized
 	fs_searchpaths = NULL;
 
-	// clear all references
-	fs_unpureReferenced = qfalse;
-
 	Cmd_RemoveCommand( "path" );
 	Cmd_RemoveCommand( "dir" );
 	Cmd_RemoveCommand( "fdir" );
@@ -3010,11 +2995,6 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 				numPaks++;
 			}
 		}
-	}
-
-	if (fs_unpureReferenced) {
-		// only added if a non-pure file is referenced
-		Q_strcat( info, sizeof( info ), "0 " );
 	}
 
 	// last checksum is the encoded number of referenced pk3s

@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/stat.h>
 #include <errno.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -509,29 +510,61 @@ void Sys_ErrorDialog( const char *error )
 {
 	char buffer[ 1024 ];
 	unsigned int size;
-	fileHandle_t f;
+	int f = -1;
+	const char *homepath = Cvar_VariableString( "fs_homepath" );
+	const char *gamedir = Cvar_VariableString( "fs_gamedir" );
 	const char *fileName = "crashlog.txt";
+	char *ospath = FS_BuildOSPath( homepath, gamedir, fileName );
 
 	// Shut down now so that the curses console doesn't clear the screen when it's really shut down
 	CON_Shutdown( );
 
 	Sys_Print( va( "%s\n", error ) );
 
-	// Write console log to file and to stderr
-	f = FS_SV_FOpenFileWrite( fileName );
-	if( !f )
+#if defined(MACOS_X) && !DEDICATED
+	/* This function has to be in a separate file, compiled as Objective-C. */
+	extern void Cocoa_MsgBox( const char *text );
+	if (!com_dedicated || !com_dedicated->integer)
+		Cocoa_MsgBox(error);
+#endif
+
+	/* make sure the write path for the crashlog exists... */
+	if( FS_CreatePath( ospath ) ) {
+		Com_Printf( "ERROR: couldn't create path '%s' for crash log.\n", ospath );
+		return;
+	}
+
+	/* we might be crashing because we maxed out the Quake MAX_FILE_HANDLES,
+	   which will come through here, so we don't want to recurse forever by
+	   calling FS_FOpenFileWrite()...use the Unix system APIs instead. */
+	f = open(ospath, O_CREAT | O_TRUNC | O_WRONLY, 0640);
+	if( f == -1 )
 	{
 		Com_Printf( "ERROR: couldn't open %s\n", fileName );
 		return;
 	}
 
-	while( ( size = CON_LogRead( buffer, sizeof( buffer ) ) ) > 0 )
-	{
-		FS_Write( buffer, size, f );
-		fputs( buffer, stderr );
+	/* We're crashing, so we don't care much if write() or close() fails. */
+	while( ( size = CON_LogRead( buffer, sizeof( buffer ) ) ) > 0 ) {
+		if (write( f, buffer, size ) != size) {
+			Com_Printf( "ERROR: couldn't fully write to %s\n", fileName );
+			break;
+		}
 	}
 
-	FS_FCloseFile( f );
+	close(f);
+}
+
+/*
+==============
+Sys_GLimpSafeInit
+
+Unix specific "safe" GL implementation initialisation
+==============
+*/
+void Sys_GLimpSafeInit( void )
+{
+	// NOP
 }
 
 /*

@@ -65,7 +65,7 @@ void SV_GetChallenge(netadr_t from)
 	// see if we already have a challenge for this ip
 	challenge = &svs.challenges[0];
 	for (i = 0 ; i < MAX_CHALLENGES ; i++, challenge++) {
-		if ( !challenge->connected && NET_CompareAdr( from, challenge->adr ) ) {
+		if (!challenge->connected && NET_CompareAdr( from, challenge->adr ) ) {
 			break;
 		}
 		if ( challenge->time < oldestTime ) {
@@ -77,11 +77,14 @@ void SV_GetChallenge(netadr_t from)
 	if (i == MAX_CHALLENGES) {
 		// this is the first time this client has asked for a challenge
 		challenge = &svs.challenges[oldest];
-		challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
 		challenge->adr = from;
 		challenge->time = svs.time;
 		challenge->connected = qfalse;
 	}
+
+	// always generate a new challenge number, so the client cannot circumvent sv_maxping
+	challenge->challenge = ( (rand() << 16) ^ rand() ) ^ svs.time;
+	challenge->wasrefused = qfalse;
 
 	// send the challengeResponse
 	challenge->pingTime = svs.time;
@@ -156,32 +159,48 @@ void SV_DirectConnect( netadr_t from ) {
 	Info_SetValueForKey( userinfo, "ip", ip );
 
 	// see if the challenge is valid (LAN clients don't need to challenge)
-	if ( !NET_IsLocalAddress (from) ) {
-		int		ping;
+	if (!NET_IsLocalAddress(from))
+	{
+		int ping;
+		challenge_t *challengeptr;
 
-		for (i=0 ; i<MAX_CHALLENGES ; i++) {
-			if (NET_CompareAdr(from, svs.challenges[i].adr)) {
-				if ( challenge == svs.challenges[i].challenge )
+		for (i=0; i<MAX_CHALLENGES; i++)
+		{
+			if (NET_CompareAdr(from, svs.challenges[i].adr))
+			{
+				if(challenge == svs.challenges[i].challenge)
 					break;
 			}
 		}
-		if (i == MAX_CHALLENGES) {
-			NET_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address\n" );
+
+		if (i == MAX_CHALLENGES)
+		{
+			NET_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for your address.\n" );
 			return;
 		}
 
-		ping = svs.time - svs.challenges[i].pingTime;
-		Com_Printf( "Client %i connecting with %i challenge ping\n", i, ping );
-		svs.challenges[i].connected = qtrue;
+		challengeptr = &svs.challenges[i];
+		
+		if(challengeptr->wasrefused)
+		{
+			// Return silently, so that error messages written by the server keep being displayed.
+ 			return;
+ 		}
+
+		ping = svs.time - challengeptr->pingTime;
 
 		// never reject a LAN client based on ping
 		if ( !Sys_IsLANAddress( from ) ) {
 			if ( sv_maxPing->value && ping > sv_maxPing->value ) {
 				NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is for low pings only\n" );
 				Com_DPrintf ("Client %i rejected on a too high ping\n", i);
+				challengeptr->wasrefused = qtrue;
 				return;
 			}
 		}
+
+		Com_Printf("Client %i connecting with %i challenge ping\n", i, ping);
+		challengeptr->connected = qtrue;
 	}
 
 	newcl = &temp;
@@ -346,7 +365,6 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 
 	// tell everyone why they got dropped
 	SV_SendServerCommand( NULL, "print \"%s" S_COLOR_WHITE " %s\n\"", drop->name, reason );
-
 
 	if (drop->download)	{
 		FS_FCloseFile( drop->download );
@@ -1003,7 +1021,7 @@ void SV_UpdateVoipIgnore(client_t *cl, const char *idstr, qboolean ignore)
 
 /*
 ==================
-SV_UpdateUserinfo_f
+SV_Voip_f
 ==================
 */
 static void SV_Voip_f( client_t *cl ) {
@@ -1195,7 +1213,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	// also use the message acknowledge
 	key ^= cl->messageAcknowledge;
 	// also use the last acknowledged server command in the key
-	key ^= Com_HashKey(cl->reliableCommands[ cl->reliableAcknowledge & (MAX_RELIABLE_COMMANDS-1) ], 32);
+	key ^= MSG_HashKey(cl->reliableCommands[ cl->reliableAcknowledge & (MAX_RELIABLE_COMMANDS-1) ], 32);
 
 	Com_Memset( &nullcmd, 0, sizeof(nullcmd) );
 	oldcmd = &nullcmd;

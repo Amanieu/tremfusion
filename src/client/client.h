@@ -465,7 +465,7 @@ extern	cvar_t	*cl_voipDefaultGain;
 void CL_Init (void);
 void CL_FlushMemory(qboolean defaultUI);
 void CL_ShutdownAll(void);
-void CL_AddReliableCommand( const char *cmd );
+void CL_AddReliableCommand(const char *cmd, qboolean isDisconnectCmd);
 
 void CL_StartHunkUsers( qboolean rendererOnly );
 

@@ -35,7 +35,7 @@ SV_Netchan_Encode
 ==============
 */
 static void SV_Netchan_Encode( client_t *client, msg_t *msg ) {
-	long reliableAcknowledge, i, index;
+	long i, index;
 	byte key, *string;
 	int	srdc, sbit;
 	qboolean soob;
@@ -52,7 +52,7 @@ static void SV_Netchan_Encode( client_t *client, msg_t *msg ) {
 	msg->readcount = 0;
 	msg->oob = qfalse;
 
-	reliableAcknowledge = MSG_ReadLong(msg);
+	/* reliableAcknowledge = */ MSG_ReadLong(msg);
 
 	msg->oob = soob;
 	msg->bit = sbit;
@@ -139,7 +139,7 @@ void SV_Netchan_TransmitNextFragment( client_t *client ) {
 	if (!client->netchan.unsentFragments)
 	{
 		// make sure the netchan queue has been properly initialized (you never know)
-		if (!client->netchan_end_queue) {
+		if ((!client->netchan_end_queue) && (client->state >= CS_CONNECTED)) {
 			Com_Error(ERR_DROP, "netchan queue is not properly initialized in SV_Netchan_TransmitNextFragment\n");
 		}
 		// the last fragment was transmitted, check wether we have queued messages

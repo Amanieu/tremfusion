@@ -942,7 +942,7 @@ void S_ByteSwapRawSamples( int samples, int width, int s_channels, const byte *d
 
 /*
 ============
-S_RawSamples
+S_Base_RawSamples
 
 Music streaming
 ============
@@ -963,10 +963,10 @@ void S_Base_RawSamples( int stream, int samples, int rate, int width, int s_chan
 	}
 	rawsamples = s_rawsamples[stream];
 
-	intVolume = 256 * volume;
+	intVolume = 256 * volume * s_volume->value;
 
 	if ( s_rawend[stream] < s_soundtime ) {
-		Com_DPrintf( "S_RawSamples: resetting minimum: %i < %i\n", s_rawend[stream], s_soundtime );
+		Com_DPrintf( "S_Base_RawSamples: resetting minimum: %i < %i\n", s_rawend[stream], s_soundtime );
 		s_rawend[stream] = s_soundtime;
 	}
 
@@ -1044,7 +1044,7 @@ void S_Base_RawSamples( int stream, int samples, int rate, int width, int s_chan
 	}
 
 	if ( s_rawend[stream] > s_soundtime + MAX_RAW_SAMPLES ) {
-		Com_DPrintf( "S_RawSamples: overflowed %i > %i\n", s_rawend[stream], s_soundtime );
+		Com_DPrintf( "S_Base_RawSamples: overflowed %i > %i\n", s_rawend[stream], s_soundtime );
 	}
 }
 
@@ -1383,21 +1383,13 @@ void S_UpdateBackgroundTrack( void ) {
 	byte	raw[30000];		// just enough to fit in a mac stack frame
 	int		fileBytes;
 	int		r;
-	static	float	musicVolume = 0.5f;
 
 	if(!s_backgroundStream) {
 		return;
 	}
- 
-	if (!s_musicVolume->value)
-		musicVolume = 0;
-	else if (!musicVolume && s_musicVolume->value)
-		musicVolume = s_musicVolume->value;
-	else
-		musicVolume = (musicVolume + (s_musicVolume->value * 2))/4.0f;
 
 	// don't bother playing anything if musicvolume is 0
-	if ( musicVolume <= 0 ) {
+	if ( s_musicVolume->value <= 0 ) {
 		return;
 	}
 
@@ -1411,6 +1403,9 @@ void S_UpdateBackgroundTrack( void ) {
 
 		// decide how much data needs to be read from the file
 		fileSamples = bufferSamples * s_backgroundStream->info.rate / dma.speed;
+
+		if (!fileSamples)
+			return;
 
 		// our max buffer size
 		fileBytes = fileSamples * (s_backgroundStream->info.width * s_backgroundStream->info.channels);
@@ -1431,7 +1426,7 @@ void S_UpdateBackgroundTrack( void ) {
 		{
 			// add to raw buffer
 			S_Base_RawSamples( 0, fileSamples, s_backgroundStream->info.rate,
-				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, musicVolume );
+				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, s_musicVolume->value );
 		}
 		else
 		{
