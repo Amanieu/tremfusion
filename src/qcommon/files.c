@@ -654,6 +654,49 @@ fileHandle_t FS_SV_FOpenFileWrite( const char *filename ) {
 	return f;
 }
 
+
+/*
+===========
+FS_SV_FOpenFileAppend
+
+===========
+*/
+fileHandle_t FS_SV_FOpenFileAppend( const char *filename ) {
+	char *ospath;
+	fileHandle_t	f;
+
+	if ( !fs_searchpaths ) {
+		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
+	}
+
+	ospath = FS_BuildOSPath( fs_homepath->string, filename, "" );
+	ospath[strlen(ospath)-1] = '\0';
+
+	f = FS_HandleForFile();
+	fsh[f].zipFile = qfalse;
+
+	if ( fs_debug->integer ) {
+		Com_Printf( "FS_SV_FOpenFileAppend: %s\n", ospath );
+	}
+
+	FS_CheckFilenameIsNotExecutable( ospath, __func__ );
+
+	if( FS_CreatePath( ospath ) ) {
+		return 0;
+	}
+
+	Com_DPrintf( "appending to: %s\n", ospath );
+	fsh[f].handleFiles.file.o = fopen( ospath, "ab" );
+
+	Q_strncpyz( fsh[f].name, filename, sizeof( fsh[f].name ) );
+
+	fsh[f].handleSync = qfalse;
+	if (!fsh[f].handleFiles.file.o) {
+		f = 0;
+	}
+	return f;
+}
+
 /*
 ===========
 FS_SV_FOpenFileRead

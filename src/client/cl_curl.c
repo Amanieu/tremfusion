@@ -257,7 +257,7 @@ void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 			"failed\n");
 		return;
 	}
-	clc.download = FS_SV_FOpenFileWrite(clc.downloadTempName);
+	clc.download = FS_SV_FOpenFileAppend(clc.downloadTempName);
 	if(!clc.download) {
 		Com_Error(ERR_DROP, "CL_cURL_BeginDownload: failed to open "
 			"%s for writing\n", clc.downloadTempName);
@@ -282,6 +282,7 @@ void CL_cURL_BeginDownload( const char *localName, const char *remoteURL )
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_FAILONERROR, 1);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_FOLLOWLOCATION, 1);
 	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_MAXREDIRS, 5);
+	qcurl_easy_setopt(clc.downloadCURL, CURLOPT_RESUME_FROM, FS_FTell(clc.download));
 	clc.downloadCURLM = qcurl_multi_init();	
 	if(!clc.downloadCURLM) {
 		qcurl_easy_cleanup(clc.downloadCURL);
