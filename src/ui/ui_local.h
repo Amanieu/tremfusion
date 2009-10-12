@@ -102,6 +102,7 @@ typedef struct serverStatus_s
   int    currentServer;
   int    displayServers[MAX_DISPLAY_SERVERS];
   int    numDisplayServers;
+  int    numFeaturedServers;
   int    numPlayersOnServers;
   int    nextDisplayRefresh;
   int    nextSortTime;
@@ -271,7 +272,6 @@ typedef struct
 
   resolution_t  resolutions[ MAX_RESOLUTIONS ];
   int numResolutions;
-  qboolean oldResolutions;
 
   qboolean inGameLoad;
 

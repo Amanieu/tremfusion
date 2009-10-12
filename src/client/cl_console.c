@@ -101,42 +101,6 @@ void Con_ToggleConsole_f (void) {
 
 /*
 ================
-Con_MessageMode_f
-================
-*/
-void Con_MessageMode_f (void) {
-	chat_playerNum = -1;
-	chat_team = qfalse;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 30;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
-Con_MessageMode2_f
-================
-*/
-void Con_MessageMode2_f (void) {
-	chat_playerNum = -1;
-	chat_team = qtrue;
-	chat_admins = qfalse;
-	chat_clans = qfalse;
-	prompt.active = qfalse;
-	Field_Clear( &chatField );
-	chatField.widthInChars = 25;
-	Q_strncpyz( chatField.buffer, Cmd_Args( ), sizeof( chatField.buffer ) );
-	chatField.cursor = strlen( chatField.buffer );
-	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_MESSAGE );
-}
-
-/*
-================
 Con_MessageMode3_f
 ================
 */
@@ -146,7 +110,6 @@ void Con_MessageMode3_f (void) {
 		chat_playerNum = -1;
 		return;
 	}
-	chat_team = qfalse;
 	chat_admins = qfalse;
 	chat_clans = qfalse;
 	prompt.active = qfalse;
@@ -168,7 +131,6 @@ void Con_MessageMode4_f (void) {
 		chat_playerNum = -1;
 		return;
 	}
-	chat_team = qfalse;
 	chat_admins = qfalse;
 	chat_clans = qfalse;
 	prompt.active = qfalse;
@@ -186,7 +148,6 @@ Con_MessageMode5_f
 */
 void Con_MessageMode5_f (void) {
 	chat_playerNum = -1;
-	chat_team = qfalse;
 	chat_admins = qtrue;
 	chat_clans = qfalse;
 	prompt.active = qfalse;
@@ -210,7 +171,6 @@ void Con_Prompt_f (void) {
 	}
 
 	chat_playerNum = -1;
-	chat_team = qfalse;
 	chat_admins = qfalse;
 	chat_clans = qfalse;
 	prompt.active = qtrue;
@@ -233,7 +193,6 @@ Con_MessageMode6_f
 */
 void Con_MessageMode6_f (void) {
 	chat_playerNum = -1;
-	chat_team = qfalse;
 	chat_admins = qfalse;
 	chat_clans = qtrue;
 	prompt.active = qfalse;
@@ -578,8 +537,6 @@ void Con_Init (void) {
 	g_consoleField.widthInChars = g_console_field_width;
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
-	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
-	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
 	Cmd_AddCommand ("messagemode3", Con_MessageMode3_f);
 	Cmd_AddCommand ("messagemode4", Con_MessageMode4_f);
 	Cmd_AddCommand ("messagemode5", Con_MessageMode5_f);
@@ -973,12 +930,7 @@ void Con_DrawConsole( void ) {
 	{
 		int skip;
 
-		if( chat_team )
-		{
-			SCR_DrawBigString( 8, 232, "Team Say:", 1.0f, qfalse );
-			skip = 11;
-		}
-		else if( chat_admins )
+		if( chat_admins )
 		{
 			SCR_DrawBigString( 8, 232, "Admin Say:", 1.0f, qfalse );
 			skip = 11;
@@ -992,11 +944,6 @@ void Con_DrawConsole( void ) {
 		{
 			SCR_DrawBigString( 8, 232, "Clan Say:", 1.0f, qfalse );
 			skip = 11;
-		}
-		else
-		{ 
-			SCR_DrawBigString( 8, 232, "Say:", 1.0f, qfalse );
-			skip = 5;
 		}
 
 		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, 232, qtrue, qtrue );

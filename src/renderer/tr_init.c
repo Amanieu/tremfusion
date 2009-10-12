@@ -142,9 +142,6 @@ cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_pixelAspect;
 
-// compatibility
-cvar_t  *r_mode;
-
 cvar_t	*r_overBrightBits;
 cvar_t	*r_mapOverBrightBits;
 
@@ -939,13 +936,6 @@ void R_Register( void )
 	r_height = ri.Cvar_Get( "r_height", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
-	// legacy variables
-	r_mode = ri.Cvar_Get( "r_mode", "-1", 0 );
-	ri.Cvar_CheckRange( r_mode, -1, 11, qtrue );
-	ri.Cvar_Alias(r_width, "r_customwidth");
-	ri.Cvar_Alias(r_height, "r_customheight");
-	ri.Cvar_Alias(r_pixelAspect, "r_custompixelAspect");
-
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
@@ -1018,7 +1008,7 @@ void R_Register( void )
 
 	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
 	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
-	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
+	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", CVAR_CHEAT );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
 
 	r_flareSize = ri.Cvar_Get ("r_flareSize", "40", CVAR_CHEAT);

@@ -2792,26 +2792,20 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-	char *homePath, *extraPath;
+	char *homePath;
 
 	Com_Printf( "----- FS_Startup -----\n" );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	homePath = Sys_DefaultHomePath(&extraPath);
+	homePath = Sys_DefaultHomePath();
 	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
 	}
 	FS_CreatePath(homePath);
-	if (!extraPath) {
-		extraPath = "";
-	}
-	if (extraPath[0]) {
-		FS_CreatePath(extraPath);
-	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
-	fs_extrapath = Cvar_Get ("fs_extrapath", extraPath, CVAR_INIT|CVAR_PROTECTED );
+	fs_extrapath = Cvar_Get ("fs_extrapath", "", CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_LATCH|CVAR_SYSTEMINFO );
 	fs_autogen = Cvar_Get ("fs_autogen", Q3CONFIG_CFG, CVAR_INIT );
 

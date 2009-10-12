@@ -356,6 +356,8 @@ static void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 		
 		Info_SetValueForKey( info, "hostname", server->hostName);
 		Info_SetValueForKey( info, "mapname", server->mapName);
+		if( server->label )
+			Info_SetValueForKey( info, "label", server->label);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));
 		Info_SetValueForKey( info, "sv_maxclients", va("%i",server->maxClients));
 		Info_SetValueForKey( info, "ping", va("%i",server->ping));
@@ -446,6 +448,15 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 		return 0;
 	}
 
+	// featured servers on top
+	// this is not so that they are more noticeable but that codewise it
+	// makes it much simpler to have them contiguous in the list
+	// so changing this also requires changing the feederID counting and
+	// similar code that depends on them coming first
+	res = Q_stricmpn( server1->label, server2->label, MAX_FEATLABEL_CHARS );
+	if( res )
+		return -res;
+
 	res = 0;
 	switch( sortKey ) {
 		case SORT_HOST:
@@ -488,7 +499,6 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 			}
 			break;
 		case SORT_PING:
-		case 4: // Hack to make 1.1 ui work
 			if (server1->ping < server2->ping) {
 				res = -1;
 			}
@@ -979,10 +989,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;	
 
 	case UI_CROSSHAIR_PLAYER:
-		return VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+			return VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
 
 	case UI_LAST_ATTACKER:
-		return VM_Call( cgvm, CG_LAST_ATTACKER );
+			return VM_Call( cgvm, CG_LAST_ATTACKER );
 
 	case UI_R_REGISTERFONT:
 		re.RegisterFont( VMA(1), args[2], VMA(3));
@@ -1092,14 +1102,6 @@ CL_InitUI
 */
 #define UI_OLD_API_VERSION	4
 
-void Con_MessageMode_f(void);
-void Con_MessageMode2_f(void);
-void Con_MessageMode3_f(void);
-void Con_MessageMode4_f(void);
-void Con_MessageMode5_f(void);
-void Con_MessageMode6_f(void);
-void Con_Prompt_f(void);
-
 void CL_InitUI( void ) {
 	int		v;
 	vmInterpret_t		interpret;
@@ -1116,9 +1118,6 @@ void CL_InitUI( void ) {
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 	}
-	
-	// Don't use ui messagemode unless it askes us to
-	Cvar_Set( "ui_useMessagemode", "0" );
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
@@ -1129,43 +1128,6 @@ void CL_InitUI( void ) {
 	else {
 		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
 		cls.uiStarted = qfalse;
-	}
-	
-	// See who gets control of messagemodes
-	if ( !Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
-	{
-		// client messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
-		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
-		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
-		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
-		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
-		Cmd_AddCommand( "messagemode6", Con_MessageMode6_f );
-		Cmd_AddCommand( "prompt", Con_Prompt_f );
-	}
-	else {
-		// ui messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", NULL );
-		Cmd_AddCommand( "messagemode2", NULL );
-		Cmd_AddCommand( "messagemode3", NULL );
-		Cmd_AddCommand( "messagemode4", NULL );
-		Cmd_AddCommand( "messagemode5", NULL );
-		Cmd_AddCommand( "messagemode6", NULL );
-		Cmd_AddCommand( "prompt", NULL );
 	}
 
 	// reset any CVAR_CHEAT cvars registered by ui
