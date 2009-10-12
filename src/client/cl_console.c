@@ -836,18 +836,18 @@ void Con_DrawSolidConsole( float frac ) {
 		
 		SCR_FillRect( 0, y, SCREEN_WIDTH, scr_conBarSize->value, color );
 	} else {
-		color[0] = 0.05f;
-		color[1] = 0.25f;
-		color[2] = 0.30f;
-		color[3] = frac * 0.85f;
+		color[0] = scr_conColorRed->value;
+		color[1] = scr_conColorGreen->value;
+		color[2] = scr_conColorBlue->value;
+		color[3] = frac * 2 * scr_conColorAlpha->value;
 		SCR_FillRect(10, 10, 620, 460 * scr_conHeight->integer * 0.01, color);
 
-		color[0] = 0.7f;
-		color[1] = 0.7f;
-		color[2] = 0.9f;
-		color[3] = frac * 0.75f;
+		color[0] = scr_conBarColorRed->value;
+		color[1] = scr_conBarColorGreen->value;
+		color[2] = scr_conBarColorBlue->value;
+		color[3] = frac * 2 * scr_conBarColorAlpha->value;
 		SCR_FillRect(10, 10, 620, 1, color);	//top
-		SCR_FillRect(10, 460 * scr_conHeight->integer * 0.01 + 10, 620, 1, color);	//buttom
+		SCR_FillRect(10, 460 * scr_conHeight->integer * 0.01 + 10, 621, 1, color);	//bottom
 		SCR_FillRect(10, 10, 1, 460 * scr_conHeight->integer * 0.01, color);	//left
 		SCR_FillRect(630, 10, 1, 460 * scr_conHeight->integer * 0.01, color);	//right
 	}
