@@ -2024,6 +2024,60 @@ static qboolean UI_HideScreen( int modifier )
     return qfalse;
 }
 
+static void UI_DrawBackground( rectDef_t *rect )
+{
+  static qhandle_t backgrounds[ 64 ];
+  static int num_backgrounds = -1;
+  static int start_time;
+  int now_time, now_background;
+  int i;
+  const char *string;
+  char buffer[ 8192 ];
+
+  // Get the list of backgrounds
+  if ( num_backgrounds == -1 )
+  {
+    num_backgrounds = trap_FS_GetFileList( "ui/assets/menu/backgrounds", NULL, buffer, sizeof( buffer ));
+    if ( num_backgrounds > 64 )
+      num_backgrounds = 64;
+    string = buffer;
+    for (i = 0; i < num_backgrounds; i++)
+    {
+      backgrounds[ i ] = trap_R_RegisterShaderNoMip( va( "ui/assets/menu/backgrounds/%s", string ) );
+      string += strlen( string ) + 1;
+      if ( !backgrounds[ i ] )
+      {
+        i--;
+        num_backgrounds--;
+      }
+    }
+    start_time = uiInfo.uiDC.realTime;
+  }
+
+  // No backgrounds
+  if ( !num_backgrounds )
+    return;
+
+  // Figure out which background we should draw
+  now_time = ( uiInfo.uiDC.realTime - start_time ) % ( 10000 * num_backgrounds );
+  now_background = now_time / 10000;
+  now_time %= 10000;
+  UI_SetColor( NULL );
+  UI_DrawHandlePic( rect->x, rect->y, rect->w, rect->h, backgrounds[ now_background ] );
+  if ( now_time >= 9000 )
+  {
+    // Draw next on top of current with alpha
+    vec4_t color;
+    color[ 0 ] = 1;
+    color[ 1 ] = 1;
+    color[ 2 ] = 1;
+    color[ 3 ] = (float)(now_time - 9000) / 1000;
+    UI_SetColor( color );
+    UI_DrawHandlePic( rect->x, rect->y, rect->w, rect->h, backgrounds[ ( now_background + 1 ) % num_backgrounds ] );
+    UI_SetColor( NULL );
+  }
+}
+
 // FIXME: table drive
 //
 static void UI_OwnerDraw( float x, float y, float w, float h,
@@ -2109,6 +2163,10 @@ static void UI_OwnerDraw( float x, float y, float w, float h,
 
     case UI_SCREEN:
       UI_DrawScreen( &rect, modifier );
+      break;
+
+    case UI_BACKGROUND:
+      UI_DrawBackground( &rect );
       break;
 
     default:

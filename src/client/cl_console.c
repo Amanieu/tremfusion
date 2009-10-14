@@ -672,7 +672,7 @@ void CL_ConsolePrint( char *txt ) {
 		con.initialized = qtrue;
 	}
 
-	if( !skipnotify && !con_skipnotify->integer ) {
+	if( !skipnotify && (!con_skipnotify || !con_skipnotify->integer) ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame

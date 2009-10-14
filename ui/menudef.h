@@ -216,7 +216,8 @@ enum
   UI_HELPINFOPANE,
 
   UI_CREDITS,
-  UI_SCREEN
+  UI_SCREEN,
+  UI_BACKGROUND
 };
 
 #endif
