@@ -56,6 +56,8 @@ console_t	con;
 
 cvar_t		*cl_autoNamelog;
 
+cvar_t		*con_skipnotify;
+
 cvar_t		*con_conspeed;
 
 cvar_t		*scr_conUseOld;
@@ -554,6 +556,8 @@ void Con_Init (void) {
 	
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
 	
+	con_skipnotify = Cvar_Get ("con_skipnotify", "0", 0);
+	
 	scr_conUseOld = Cvar_Get ("scr_conUseOld", "0", CVAR_ARCHIVE|CVAR_LATCH);
 	
 	// Defines cvar for color and alpha for console/bar under console
@@ -668,7 +672,7 @@ void CL_ConsolePrint( char *txt ) {
 		con.initialized = qtrue;
 	}
 
-	if( !skipnotify ) {
+	if( !skipnotify && !con_skipnotify->integer ) {
 		Cmd_SaveCmdContext( );
 
 		// feed the text to cgame
