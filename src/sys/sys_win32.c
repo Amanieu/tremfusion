@@ -664,4 +664,7 @@ void Sys_PlatformInit( void )
 	// Increase sleep resolution
 	timeBeginPeriod(1);
 	atexit(resetTime);
+
+	// Don't redirect to stdout.txt and stderr.txt
+	_putenv( "SDL_STDIO_REDIRECT=0" );
 }

@@ -202,36 +202,39 @@ LIBSDIR=$(MOUNT_DIR)/libs
 MASTERDIR=$(MOUNT_DIR)/master
 TEMPDIR=/tmp
 
+bin_path=$(shell which $(1) 2> /dev/null)
+
 # We won't need this if we only build the server
 ifneq ($(BUILD_CLIENT),0)
   # set PKG_CONFIG_PATH to influence this, e.g.
   # PKG_CONFIG_PATH=/opt/cross/i386-mingw32msvc/lib/pkgconfig
-  ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
-    CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
-    CURL_LIBS=$(shell pkg-config --libs libcurl)
-    OPENAL_CFLAGS=$(shell pkg-config --cflags openal)
-    OPENAL_LIBS=$(shell pkg-config --libs openal)
+  ifneq ($(call bin_path, pkg-config),)
+    CURL_CFLAGS=$(shell pkg-config --silence-errors --cflags libcurl)
+    CURL_LIBS=$(shell pkg-config --silence-errors --libs libcurl)
+    OPENAL_CFLAGS=$(shell pkg-config --silence-errors --cflags openal)
+    OPENAL_LIBS=$(shell pkg-config --silence-errors --libs openal)
     # FIXME: introduce CLIENT_CFLAGS
-    SDL_CFLAGS=$(shell pkg-config --cflags sdl|sed 's/-Dmain=SDL_main//')
-    SDL_LIBS=$(shell pkg-config --libs sdl)
-    OGG_CFLAGS=$(shell pkg-config --cflags ogg vorbis vorbisfile)
-    OGG_LIBS=$(shell pkg-config --libs ogg vorbis vorbisfile)
+    SDL_CFLAGS=$(shell pkg-config --silence-errors --cflags sdl|sed 's/-Dmain=SDL_main//')
+    SDL_LIBS=$(shell pkg-config --silence-errors --libs sdl)
+    OGG_CFLAGS=$(shell pkg-config --silence-errors --cflags ogg vorbis vorbisfile)
+    OGG_LIBS=$(shell pkg-config --silence-errors --libs ogg vorbis vorbisfile)
     # Some distros still use the old pkgconfig string
-    THEORA_CFLAGS=$(shell pkg-config --cflags theoradec 2> /dev/null)
-    THEORA_LIBS=$(shell pkg-config --libs theoradec 2> /dev/null)
+    THEORA_CFLAGS=$(shell pkg-config --silence-errors --cflags theoradec)
+    THEORA_LIBS=$(shell pkg-config --silence-errors --libs theoradec)
     ifeq ($(THEORA_LIBS),)
-      THEORA_CFLAGS=$(shell pkg-config --cflags theora)
-      THEORA_LIBS=$(shell pkg-config --libs theora)
+      THEORA_CFLAGS=$(shell pkg-config --silence-errors --cflags theora)
+      THEORA_LIBS=$(shell pkg-config --silence-errors --libs theora)
     endif
   endif
   # Use sdl-config if all else fails
   ifeq ($(SDL_CFLAGS),)
-    ifeq ($(shell which sdl-config > /dev/null; echo $$?),0)
+    ifneq ($(call bin_path, sdl-config),)
       SDL_CFLAGS=$(shell sdl-config --cflags)
       SDL_LIBS=$(shell sdl-config --libs)
     endif
   endif
 else
+  # We still need curl for the tty client
   ifeq ($(shell which pkg-config > /dev/null; echo $$?),0)
     CURL_CFLAGS=$(shell pkg-config --cflags libcurl)
     CURL_LIBS=$(shell pkg-config --libs libcurl)
@@ -630,6 +633,12 @@ else # ifeq darwin
 #############################################################################
 
 ifeq ($(PLATFORM),mingw32)
+ 
+  # Some MinGW installations define CC to cc, but don't actually provide cc,
+  # so explicitly use gcc instead (which is the only option anyway)
+  ifeq ($(call bin_path, $(CC)),)
+    CC=gcc
+  endif
 
   ifndef WINDRES
     WINDRES=windres
@@ -2212,11 +2221,14 @@ distclean:
 # DEPENDENCIES
 #############################################################################
 
-OBJ_D_FILES=$(filter %.d,$(OBJ:%.o=%.d))
-TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
--include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
+ifneq ($(B),)
+  OBJ_D_FILES=$(filter %.d,$(OBJ:%.o=%.d))
+  TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
+  -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
+endif
 
 .PHONY: all clean clean2 clean-debug clean-release copyfiles \
 	debug default distclean makedirs \
 	release targets \
-	toolsclean toolsclean2 toolsclean-debug toolsclean-release
+	toolsclean toolsclean2 toolsclean-debug toolsclean-release \
+	$(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
