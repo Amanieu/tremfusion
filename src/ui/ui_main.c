@@ -46,9 +46,9 @@ static const char *MonthAbbrev[ ] =
 
 static const char *netSources[ ] =
 {
-  "LAN",
-  "Mplayer",
   "Internet",
+  "Mplayer",
+  "LAN",
   "Favorites"
 };
 
@@ -179,6 +179,12 @@ Q_EXPORT intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
       UI_MouseEvent( arg0, arg1 );
       return 0;
 
+    case UI_MOUSE_POSITION:
+      return UI_MousePosition( );
+
+    case UI_SET_MOUSE_POSITION:
+      UI_SetMousePosition( arg0, arg1 );
+
     case UI_REFRESH:
       UI_Refresh( arg0 );
       return 0;
@@ -196,12 +202,6 @@ Q_EXPORT intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
     case UI_DRAW_CONNECT_SCREEN:
       UI_DrawConnectScreen( arg0 );
       return 0;
-
-    case UI_MOUSE_POSITION:
-      return UI_MousePosition( );
-
-    case UI_SET_MOUSE_POSITION:
-      UI_SetMousePosition( arg0, arg1 );
       return 0;
   }
 
@@ -974,6 +974,8 @@ static void UI_BuildServerDisplayList( qboolean force )
       if( ping > 0 )
       {
         trap_LAN_MarkServerVisible( ui_netSource.integer, i, qfalse );
+        if( Info_ValueForKey( info, "label" )[0] )
+          uiInfo.serverStatus.numFeaturedServers++;
         numinvisible++;
       }
     }
@@ -1110,6 +1112,7 @@ static void UI_StartServerRefresh( qboolean full )
   uiInfo.serverStatus.nextDisplayRefresh = uiInfo.uiDC.realTime + 1000;
   // clear number of displayed servers
   uiInfo.serverStatus.numDisplayServers = 0;
+  uiInfo.serverStatus.numFeaturedServers = 0;
   uiInfo.serverStatus.numPlayersOnServers = 0;
   // mark all servers as visible so we store ping updates for them
   trap_LAN_MarkServerVisible( ui_netSource.integer, -1, qtrue );
@@ -3571,7 +3574,10 @@ static int UI_FeederCount( float feederID )
   else if( feederID == FEEDER_MAPS )
     return uiInfo.mapCount;
   else if( feederID == FEEDER_SERVERS )
-    return uiInfo.serverStatus.numDisplayServers;
+    return uiInfo.serverStatus.numDisplayServers -
+           uiInfo.serverStatus.numFeaturedServers;
+  else if( feederID == FEEDER_FEATURED )
+    return uiInfo.serverStatus.numFeaturedServers;
   else if( feederID == FEEDER_SERVERSTATUS )
     return uiInfo.serverStatusInfo.numLines;
   else if( feederID == FEEDER_FINDPLAYER )
@@ -3663,11 +3669,14 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
     int actual;
     return UI_SelectedMap( index, &actual );
   }
-  else if( feederID == FEEDER_SERVERS )
+  else if( feederID == FEEDER_SERVERS || feederID == FEEDER_FEATURED )
   {
-    if( index >= 0 && index < uiInfo.serverStatus.numDisplayServers )
+    if( index >= 0 && index < UI_FeederCount( feederID ) )
     {
       int ping;
+
+      if( feederID == FEEDER_SERVERS )
+        index += UI_FeederCount( FEEDER_FEATURED );
 
       if( lastColumn != column || lastTime > uiInfo.uiDC.realTime + 5000 )
       {
@@ -3845,41 +3854,21 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-    {
-      int mode = trap_Cvar_VariableValue( "r_mode" );
-      if ( mode < 0 || mode >= uiInfo.numResolutions )
-      {
-        Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)",
-                     (int)trap_Cvar_VariableValue( "r_customWidth" ),
-                     (int)trap_Cvar_VariableValue( "r_customHeight" ) );
-      }
-      else
-      {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d",
-                     uiInfo.resolutions[ mode ].w,
-                     uiInfo.resolutions[ mode ].h );
-      }
-      return resolution;
-    }
-    else
-    {
-      int i;
-      int w = trap_Cvar_VariableValue( "r_width" );
-      int h = trap_Cvar_VariableValue( "r_height" );
+    int i;
+    int w = trap_Cvar_VariableValue( "r_width" );
+    int h = trap_Cvar_VariableValue( "r_height" );
 
-      for( i = 0; i < uiInfo.numResolutions; i++ )
+    for( i = 0; i < uiInfo.numResolutions; i++ )
+    {
+      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
       {
-        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-        {
-          Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
-          return resolution;
-        }
+        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+        return resolution;
       }
-
-      Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
-      return resolution;
     }
+
+    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+    return resolution;
   }
 
   return "";
@@ -4009,13 +3998,8 @@ static void UI_FeederSelection( float feederID, int index )
     uiInfo.humanBuildIndex = index;
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-      trap_Cvar_Set( "r_mode", va( "%d", index ) );
-    else
-    {
-      trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
-      trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
-    }
+    trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
+    trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
   }
 }
 
@@ -4023,19 +4007,14 @@ static int UI_FeederInitialise( float feederID )
 {
   if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-      return trap_Cvar_VariableValue( "r_mode" );
-    else
-    {
-      int i;
-      int w = trap_Cvar_VariableValue( "r_width" );
-      int h = trap_Cvar_VariableValue( "r_height" );
+    int i;
+    int w = trap_Cvar_VariableValue( "r_width" );
+    int h = trap_Cvar_VariableValue( "r_height" );
 
-      for( i = 0; i < uiInfo.numResolutions; i++ )
-      {
-        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-          return i;
-      }
+    for( i = 0; i < uiInfo.numResolutions; i++ )
+    {
+      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+        return i;
     }
   }
 
@@ -4113,16 +4092,7 @@ void UI_ParseResolutions( void )
   char        *s = NULL;
 
   trap_Cvar_VariableStringBuffer( "r_availableModes", buf, sizeof( buf ) );
-  if ( buf[0] )
-  {
-    p = buf;
-    uiInfo.oldResolutions = qfalse;
-  }
-  else
-  {
-    p = "320x240 400x300 512x384 640x480 800x600 960x720 1024x768 1152x864 1280x1024 1600x1200 2048x1536 856x480";
-    uiInfo.oldResolutions = qtrue;
-  }
+	p = buf;
   uiInfo.numResolutions = 0;
 
   while( String_Parse( &p, &out ) )
@@ -4720,9 +4690,6 @@ void UI_RegisterCvars( void )
 
   for( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ )
     trap_Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
-
-  // use ui messagemode
-  trap_Cvar_Set( "ui_useMessagemode", "1" );
 }
 
 /*

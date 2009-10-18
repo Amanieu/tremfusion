@@ -1047,9 +1047,6 @@ extern cvar_t	*r_width;
 extern cvar_t	*r_height;
 extern cvar_t	*r_pixelAspect;
 
-// compatibility
-extern cvar_t   *r_mode;
-
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_minimize;
 extern cvar_t	*r_gamma;
@@ -1122,8 +1119,6 @@ extern	cvar_t	*r_debugSort;
 
 extern	cvar_t	*r_printShaders;
 extern	cvar_t	*r_saveFontData;
-
-extern cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_GLlibCoolDownMsec;
 
