@@ -878,7 +878,7 @@ void Cmd_RunAlias_f(void)
 	// Find existing alias
 	for (alias = cmd_aliases; alias; alias=alias->next)
 	{
-		if (!strcmp( name, alias->name ))
+		if (!Q_stricmp( name, alias->name ))
 			break;
 	}
 
@@ -981,7 +981,7 @@ void Cmd_UnAlias_f(void)
 		alias = *back;
 		if (!alias)
 			return;
-		if (!strcmp(name, alias->name))
+		if (!Q_stricmp(name, alias->name))
 		{
 			*back = alias->next;
 			Z_Free(alias->name);
@@ -1019,7 +1019,7 @@ void Cmd_Alias_f(void)
 	// Find existing alias
 	for (alias = cmd_aliases; alias; alias = alias->next)
 	{
-		if (!strcmp(name, alias->name))
+		if (!Q_stricmp(name, alias->name))
 			break;
 	}
 
@@ -1029,7 +1029,7 @@ void Cmd_Alias_f(void)
 		cmd_function_t	*cmd;
 
 		// Crude protection from infinite loops
-		if (!strcmp(Cmd_Argv(2), name))
+		if (!Q_stricmp(Cmd_Argv(2), name))
 		{
 			Com_Printf("Can't make an alias to itself\n");
 			return;
