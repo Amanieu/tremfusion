@@ -233,6 +233,58 @@ void CL_UpdateVoipGain(const char *idstr, float gain)
 	}
 }
 
+/*
+================
+CL_VoipParseTargets
+
+Sets clc.voipTarget{1,2,3} by asking the cgame to produce a string and then
+parsing it as a series of client numbers
+Perhaps it would be better to allow the cgame to set the three integers
+directly, but this way we can change the net protocol without changing the
+vmcall
+================
+*/
+static void CL_VoipParseTargets( void )
+{
+  const char *target = cl_voipSendTarget->string;
+  intptr_t p = VM_Call( cgvm, CG_VOIP_STRING );
+
+  if( p )
+    target = VM_ExplicitArgPtr( cgvm, p );
+
+  if( !target[ 0 ] || Q_stricmp( target, "all" ) == 0 )
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0x7FFFFFFF;
+  else if( Q_stricmp( target, "none" ) == 0 )
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+  else
+  {
+    char *end;
+    int val;
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+
+    while( 1 )
+    {
+      while( *target && !isdigit( *target ) )
+        target++;
+      if( !*target )
+        break;
+
+      val = strtol( target, &end, 10 );
+      assert( target != end );
+      if( val < 0 || val >= MAX_CLIENTS )
+        Com_Printf( S_COLOR_YELLOW "WARNING: VoIP target %d is not a valid "
+                    "client number\n", val );
+      else if( val < 31 )
+        clc.voipTarget1 |= 1 << val;
+      else if( ( val -= 31 ) < 31 )
+        clc.voipTarget2 |= 1 << val;
+      else if( ( val -= 31 ) < 31 )
+        clc.voipTarget3 |= 1 << val;
+      target = end;
+    }
+  }
+}
+
 void CL_Voip_f( void )
 {
 	const char *cmd = Cmd_Argv(1);
@@ -320,106 +372,6 @@ void CL_Voip_f( void )
 		Com_Printf("usage: voip [un]ignore <playerID#>\n"
 		           "       voip [un]muteall\n"
 		           "       voip gain <playerID#> [value]\n");
-	}
-}
-
-/*
-============
-CL_VoipParseTargets
-
-Sets clc.voipTarget[123] according to cl_voipSendTarget
-Generally we don't want who's listening to change during a transmission,
-so this is only called when the first key is pressed
-============
-*/
-void CL_VoipParseTargets( void )
-{
-	char buffer[32];
-	const char *target = cl_voipSendTarget->string;
-
-	if( Q_stricmp( target, "attacker" ) == 0 )
-	{
-		int player = VM_Call( cgvm, CG_LAST_ATTACKER );
-		if( player < 0 )
-			Q_strncpyz( buffer, "none", sizeof( buffer ) );
-		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
-		target = buffer;
-	}
-	else if( Q_stricmp( target, "crosshair" ) == 0 )
-	{
-		int player = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
-		if( player < 0 )
-			Q_strncpyz( buffer, "none", sizeof( buffer ) );
-		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
-		target = buffer;
-	}
-
-	if( !target[0] || Q_stricmp( target, "all" ) == 0 )
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = INT_MAX;
-	else if( Q_stricmp( target, "none" ) == 0 )
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-	else if( Q_stricmp( target, "team" ) == 0 )
-	{
-		char *t = Info_ValueForKey( cl.gameState.stringData +
-			cl.gameState.stringOffsets[CS_PLAYERS + clc.clientNum],
-			"t" );
-		int i, myteam;
-		if( t[0] )
-			myteam = atoi( t );
-		else
-		{
-			myteam = -1;
-			Com_Printf( S_COLOR_RED "Couldn't retrieve client team "
-				"information\n" );
-		}
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-		for( i = 0; i < MAX_CLIENTS; i++ )
-		{
-			if( i == clc.clientNum )
-				continue;
-			t = Info_ValueForKey( cl.gameState.stringData +
-				cl.gameState.stringOffsets[CS_PLAYERS +
-					clc.clientNum], "t" );
-			if( !t[0] )
-				continue;
-			if( myteam == atoi( t ) )
-			{
-				if( i <= 30 )
-					clc.voipTarget1 |= 1 << i;
-				else if( ( i - 31 ) <= 30 )
-					clc.voipTarget2 |= 1 << ( i - 31 );
-				else if( ( i - 62 ) <= 30 )
-					clc.voipTarget3 |= 1 << ( i - 62 );
-			}
-		}
-	}
-	else
-	{
-		char *end;
-		int val;
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-		while( 1 )
-		{
-			while( *target && !isdigit(*target ) )
-				target++;
-			if( !*target )
-				break;
-			val = strtol( target, &end, 10 );
-			assert( target != end );
-			if( val < 0 || val >= MAX_CLIENTS )
-				Com_Printf( S_COLOR_YELLOW "WARNING: VoIP "
-					"target %d is not a valid client "
-					"number\n", val );
-			else if( val <= 31 )
-				clc.voipTarget1 |= 1 << val;
-			else if( ( val -= 32 ) <= 31 )
-				clc.voipTarget2 |= 1 << val;
-			else if( ( val -= 32 ) <= 31 )
-				clc.voipTarget3 |= 1 << val;
-			target = end;
-		}
 	}
 }
 
@@ -1957,11 +1909,13 @@ void CL_DownloadsComplete( void ) {
 		CL_cURL_Shutdown();
 		if( clc.cURLDisconnected ) {
 			if(clc.downloadRestart) {
-				FS_Restart(clc.checksumFeed);
+                if( !clc.activeCURLNotGameRelated )
+                    FS_Restart(clc.checksumFeed);
 				clc.downloadRestart = qfalse;
 			}
 			clc.cURLDisconnected = qfalse;
-			CL_Reconnect_f();
+            if( !clc.activeCURLNotGameRelated )
+                CL_Reconnect_f();
 			return;
 		}
 	}
@@ -2375,7 +2329,7 @@ void CL_InitServerInfo( serverInfo_t *server, netadr_t *address ) {
 	server->clients = 0;
 	server->hostName[0] = '\0';
 	server->mapName[0] = '\0';
-	server->label = NULL;
+	server->label[0] = '\0';
 	server->maxClients = 0;
 	server->maxPing = 0;
 	server->minPing = 0;
@@ -2438,47 +2392,25 @@ CL_GSRFeaturedLabel
 
 Parses from the data an arbitrary text string labelling the servers in the
 following getserversresponse packet.
-Either this matches an existing label, or it is copied into a new one.
-The relevant buffer, or NULL, is returned, and *data is advanced as appropriate
+The result is copied to *buf, and *data is advanced as appropriate
 ===================
 */
-char *CL_GSRFeaturedLabel( byte **data )
+void CL_GSRFeaturedLabel( byte **data, char *buf, int size )
 {
-	char label[ MAX_FEATLABEL_CHARS ] = { 0 }, *l = label;
-	int  i;
+	char *l = buf;
+	buf[0] = '\0';
 
 	// copy until '\0' which indicates field break
 	// or slash which indicates beginning of server list
 	while( **data && **data != '\\' && **data != '/' )
 	{
-		if( l < &label[ sizeof( label ) - 1 ] )
+		if( l < &buf[ size - 1 ] )
 			*l = **data;
-		else if( l == &label[ sizeof( label ) - 1 ] )
+		else if( l == &buf[ size - 1 ] )
 			Com_DPrintf( S_COLOR_YELLOW "Warning: "
 				"CL_GSRFeaturedLabel: overflow\n" );
 		l++, (*data)++;
 	}
-
-	if( !label[ 0 ] )
-		return NULL;
-
-	// find the label in the stored array
-	for( i = 0; i < cls.numFeaturedServerLabels; i++ )
-	{
-		l = cls.featuredServerLabels[ i ];
-		if( strcmp( label, l ) == 0 )
-			return l;
-	}
-	if( i == MAX_FEATURED_LABELS )
-	{
-		Com_DPrintf( S_COLOR_YELLOW "Warning: CL_GSRFeaturedLabel: "
-			"ran out of label space, dropping %s\n", label );
-		return NULL;
-	}
-	if( i == 0 )
-		l = cls.featuredServerLabels[ 0 ];
-	Q_strncpyz( l, label, sizeof( *cls.featuredServerLabels ) );
-	return l;
 }
 
 #define MAX_SERVERSPERPACKET	256
@@ -2494,7 +2426,7 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 	int				numservers;
 	byte*			buffptr;
 	byte*			buffend;
-	char			*label = NULL;
+	char			label[MAX_FEATLABEL_CHARS] = "";
 
 	Com_DPrintf("CL_ServersResponsePacket%s\n",
 		(extended) ? " (extended)" : "");
@@ -2505,7 +2437,6 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 		cls.numGlobalServerAddresses = 0;
 		cls.numMasterPackets = 0;
 		cls.receivedMasterPackets = 0;
-		cls.numFeaturedServerLabels = 0;
 	}
 
 	// parse through server response string
@@ -2547,8 +2478,7 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 				"%d of %d\n", ind, cls.numMasterPackets );
 			cls.receivedMasterPackets |= ( 1 << ( ind - 1 ) );
 
-			label = CL_GSRFeaturedLabel( &buffptr );
-			Com_DPrintf( "CL_GSRFeaturedLabel: %s\n", label );
+			CL_GSRFeaturedLabel( &buffptr, label, sizeof( label ) );
 		}
 		// now skip to the server list
 		for(; buffptr < buffend && *buffptr != '\\' && *buffptr != '/';
@@ -2609,7 +2539,7 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 		serverInfo_t *server = &cls.globalServers[count];
 
 		CL_InitServerInfo( server, &addresses[i] );
-		server->label = label;
+		Q_strncpyz( server->label, label, sizeof( server->label ) );
 		// advance to next slot
 		count++;
 	}

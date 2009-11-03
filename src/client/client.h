@@ -204,6 +204,7 @@ typedef struct {
 	char		downloadURL[MAX_OSPATH];
 	CURL		*downloadCURL;
 	CURLM		*downloadCURLM;
+	qboolean	activeCURLNotGameRelated;
 #endif /* USE_CURL */
 	int		sv_allowDownload;
 	char		sv_dlURL[MAX_CVAR_VALUE_STRING];
@@ -213,6 +214,7 @@ typedef struct {
 	int			downloadSize;	// how many bytes we got
 	char		downloadList[MAX_INFO_STRING]; // list of paks we need to download
 	qboolean	downloadRestart;	// if true, we need to do another FS_Restart because we downloaded a pak
+	char		newsString[ MAX_NEWS_STRING ];
 
 	// demo information
 	char		demoName[MAX_QPATH];
@@ -283,12 +285,13 @@ typedef struct {
 	char		info[MAX_INFO_STRING];
 } ping_t;
 
+#define MAX_FEATLABEL_CHARS  1024
 typedef struct {
 	netadr_t	adr;
 	char	  	hostName[MAX_HOSTNAME_LENGTH];
 	char	  	mapName[MAX_NAME_LENGTH];
 	char	  	game[MAX_NAME_LENGTH];
-	char		*label; // for featured servers, NULL otherwise
+	char		label[MAX_FEATLABEL_CHARS]; // for featured servers, NULL otherwise
 	int			netType;
 	int			gameType;
 	int		  	clients;
@@ -298,9 +301,6 @@ typedef struct {
 	int			ping;
 	qboolean	visible;
 } serverInfo_t;
-
-#define MAX_FEATURED_LABELS  8
-#define MAX_FEATLABEL_CHARS  1024
 
 typedef struct {
 	connstate_t	state;				// connection status
@@ -337,9 +337,6 @@ typedef struct {
 
 	int			numfavoriteservers;
 	serverInfo_t	favoriteServers[MAX_OTHER_SERVERS];
-
-	int  numFeaturedServerLabels;
-	char featuredServerLabels[ MAX_FEATURED_LABELS ][ MAX_FEATLABEL_CHARS ];
 
 	int pingUpdateSource;		// source currently pinging or updating
 

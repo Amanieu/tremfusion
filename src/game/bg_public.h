@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremfusion.
+This file is part of Tremulous.
 
-Tremfusion is free software; you can redistribute it
+Tremulous is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremfusion is distributed in the hope that it will be
+Tremulous is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremfusion; if not, write to the Free Software
+along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
-#define GAME_VERSION            "tremfusion"
+#define GAME_VERSION            "base"
 
 #define DEFAULT_GRAVITY         800
 
@@ -38,7 +38,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define DEFAULT_VIEWHEIGHT      26
 #define CROUCH_VIEWHEIGHT       12
 #define DEAD_VIEWHEIGHT         4 // height from ground
-//#define DEAD_VIEWHEIGHT         -14 // watch for mins[ 2 ] less than this causing
 
 //
 // config strings are a general means of communicating variable length strings
@@ -53,14 +52,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // 6 UNUSED
 // 7 UNUSED
 #define CS_VOTE_TIME        8
-#define CS_VOTE_STRING      9
-#define CS_VOTE_YES         10
-#define CS_VOTE_NO          11
-
-#define CS_TEAMVOTE_TIME    12
-#define CS_TEAMVOTE_STRING  14
-#define CS_TEAMVOTE_YES     16
-#define CS_TEAMVOTE_NO      18
+#define CS_VOTE_STRING      (CS_VOTE_TIME + NUM_TEAMS)
+#define CS_VOTE_YES         (CS_VOTE_STRING + NUM_TEAMS)
+#define CS_VOTE_NO          (CS_VOTE_YES + NUM_TEAMS)
 
 #define CS_GAME_VERSION     20
 #define CS_LEVEL_START_TIME 21    // so the timer only shows the current level
@@ -70,8 +64,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CS_BOTINFO          25
 #define CS_CLIENTS_READY    26
 
-#define CS_BUILDPOINTS      28
-#define CS_STAGES           29
+#define CS_ALIEN_STAGES     29
+#define CS_HUMAN_STAGES     30
 
 #define CS_MODELS           33
 #define CS_SOUNDS           (CS_MODELS+MAX_MODELS)
@@ -114,7 +108,7 @@ typedef enum
   PM_GRABBED,       // like dead, but for when the player is still live
   PM_DEAD,          // no acceleration or turning, but free falling
   PM_FREEZE,        // stuck in place with no control
-  PM_INTERMISSION,  // no movement or status bar
+  PM_INTERMISSION   // no movement or status bar
 } pmtype_t;
 
 // pmtype_t categories
@@ -134,26 +128,25 @@ typedef enum
 } weaponstate_t;
 
 // pmove->pm_flags
-#define PMF_DUCKED          1
-#define PMF_JUMP_HELD       2
-#define PMF_CROUCH_HELD     4
-#define PMF_BACKWARDS_JUMP  8       // go into backwards land
-#define PMF_BACKWARDS_RUN   16      // coast down to backwards run
-#define PMF_TIME_LAND       32      // pm_time is time before rejump
-#define PMF_TIME_KNOCKBACK  64      // pm_time is an air-accelerate only time
-#define PMF_TIME_KNOCKOFF   128     // pm_time is no-wallwalk time
-#define PMF_TIME_WATERJUMP  256     // pm_time is waterjump
-#define PMF_RESPAWNED       512     // clear after attack and jump buttons come up
-#define PMF_USE_ITEM_HELD   1024
-#define PMF_WEAPON_RELOAD   2048    // force a weapon switch
-#define PMF_FOLLOW          4096    // spectate following another player
-#define PMF_QUEUED          8192    // player is queued
-#define PMF_TIME_WALLJUMP   16384   // for limiting wall jumping
-#define PMF_CHARGE          32768   // keep track of pouncing
-#define PMF_WEAPON_SWITCH   65536   // force a weapon switch
+#define PMF_DUCKED          0x0001
+#define PMF_JUMP_HELD       0x0002
+#define PMF_CROUCH_HELD     0x0004
+#define PMF_BACKWARDS_JUMP  0x0008 // go into backwards land
+#define PMF_BACKWARDS_RUN   0x0010 // coast down to backwards run
+#define PMF_TIME_LAND       0x0020 // pm_time is time before rejump
+#define PMF_TIME_KNOCKBACK  0x0040 // pm_time is an air-accelerate only time
+#define PMF_TIME_WATERJUMP  0x0080 // pm_time is waterjump
+#define PMF_RESPAWNED       0x0100 // clear after attack and jump buttons come up
+#define PMF_USE_ITEM_HELD   0x0200
+#define PMF_WEAPON_RELOAD   0x0400 // force a weapon switch
+#define PMF_FOLLOW          0x0800 // spectate following another player
+#define PMF_QUEUED          0x1000 // player is queued
+#define PMF_TIME_WALLJUMP   0x2000 // for limiting wall jumping
+#define PMF_CHARGE          0x4000 // keep track of pouncing
+#define PMF_WEAPON_SWITCH   0x8000 // force a weapon switch
 
 
-#define PMF_ALL_TIMES (PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK|PMF_TIME_KNOCKOFF|PMF_TIME_WALLJUMP)
+#define PMF_ALL_TIMES (PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK|PMF_TIME_WALLJUMP)
 
 typedef struct
 {
@@ -224,7 +217,7 @@ typedef enum
   STAT_BUILDABLE, // which ghost model to display for building
   STAT_FALLDIST,  // the distance the player fell
   STAT_VIEWLOCK   // direction to lock the view in
-  // netcode has space for 1 more
+  // netcode has space for 3 more
 } statIndex_t;
 
 #define SCA_WALLCLIMBER         0x00000001
@@ -235,20 +228,20 @@ typedef enum
 #define SCA_CANUSELADDERS       0x00000020
 #define SCA_WALLJUMPER          0x00000040
 
-#define SS_WALLCLIMBING         0x0001
-#define SS_CREEPSLOWED          0x0002
-#define SS_SPEEDBOOST           0x0004
-#define SS_GRABBED              0x0008
-#define SS_BLOBLOCKED           0x0010
-#define SS_POISONED             0x0020
-#define SS_HOVELING             0x0040
-#define SS_BOOSTED              0x0080
-#define SS_BOOSTEDWARNING       0x0100 // booster poison is running out
-#define SS_SLOWLOCKED           0x0200
-#define SS_CHARGING             0x0400
-#define SS_HEALING_ACTIVE       0x0800 // medistat for humans, creep for aliens
-#define SS_HEALING_2X           0x1000 // medkit or double healing rate
-#define SS_HEALING_3X           0x2000 // triple healing rate
+#define SS_WALLCLIMBING         0x00000001
+#define SS_CREEPSLOWED          0x00000002
+#define SS_SPEEDBOOST           0x00000004
+#define SS_GRABBED              0x00000008
+#define SS_BLOBLOCKED           0x00000010
+#define SS_POISONED             0x00000020
+#define SS_HOVELING             0x00000040
+#define SS_BOOSTED              0x00000080
+#define SS_BOOSTEDWARNING       0x00000100 // booster poison is running out
+#define SS_SLOWLOCKED           0x00000200
+#define SS_CHARGING             0x00000400
+#define SS_HEALING_ACTIVE       0x00000800 // medistat for humans, creep for aliens
+#define SS_HEALING_2X           0x00001000 // medkit or double healing rate
+#define SS_HEALING_3X           0x00002000 // triple healing rate
 
 #define SB_VALID_TOGGLEBIT      0x00004000
 
@@ -270,8 +263,9 @@ typedef enum
   PERS_STATE,
   PERS_CREDIT,    // human credit
   PERS_QUEUEPOS,  // position in the spawn queue
-  PERS_NEWWEAPON  // weapon to switch to
-  // netcode has space for 5 more
+  PERS_NEWWEAPON,  // weapon to switch to
+  PERS_BP
+  // netcode has space for 4 more
 } persEnum_t;
 
 #define PS_WALLCLIMBINGFOLLOW   0x00000001
@@ -298,10 +292,18 @@ typedef enum
 #define EF_MOVER_STOP       0x00001000    // will push otherwise
 #define EF_POISONCLOUDED    0x00002000    // player hit with basilisk gas
 #define EF_CONNECTION       0x00004000    // draw a connection trouble sprite
-#define EF_VOTED            0x00008000    // already cast a vote
-#define EF_TEAMVOTED        0x00010000    // already cast a vote
 #define EF_BLOBLOCKED       0x00020000    // caught by a trapper
 #define EF_WARN_CHARGE      0x00040000    // Lucifer Cannon is about to overcharge
+
+typedef enum
+{
+  HI_NONE,
+
+  HI_TELEPORTER,
+  HI_MEDKIT,
+
+  HI_NUM_HOLDABLE
+} holdable_t;
 
 typedef enum
 {
@@ -336,8 +338,8 @@ typedef enum
   WP_LAS_GUN,
   WP_MASS_DRIVER,
   WP_CHAINGUN,
-  WP_PULSE_RIFLE,
   WP_FLAMER,
+  WP_PULSE_RIFLE,
   WP_LUCIFER_CANNON,
   WP_GRENADE,
 
@@ -346,24 +348,14 @@ typedef enum
   WP_TESLAGEN,
   WP_MGTURRET,
 
+  //build weapons must remain in a block
   WP_ABUILD,
   WP_ABUILD2,
   WP_HBUILD,
+  //ok?
 
   WP_NUM_WEAPONS
 } weapon_t;
-
-typedef enum
-{
-   AFEEDBACK_HIT,
-   AFEEDBACK_MISS,
-   AFEEDBACK_TEAMHIT,
-   AFEEDBACK_RANGED_HIT,
-   AFEEDBACK_RANGED_MISS,
-   AFEEDBACK_RANGED_TEAMHIT,
-
-   AFEEDBACK_NUM
-} alienFeedback_t;
 
 typedef enum
 {
@@ -422,8 +414,10 @@ typedef enum
   BA_NUM_BUILDABLES
 } buildable_t;
 
-
-#define B_HEALTH_MASK 255
+// reward sounds (stored in ps->persistant[PERS_PLAYEREVENTS])
+#define PLAYEREVENT_DENIEDREWARD      0x0001
+#define PLAYEREVENT_GAUNTLETREWARD    0x0002
+#define PLAYEREVENT_HOLYSHIT          0x0004
 
 // entityState_t->event values
 // entity events are for effects that take place reletive
@@ -540,23 +534,20 @@ typedef enum
   EV_MGTURRET_SPINUP, // turret spinup sound should play
 
   EV_RPTUSE_SOUND,    // trigger a sound
-  
-  EV_ALIEN_HIT,       // Alien attack feedback hit enemy
-  EV_ALIEN_MISS,      // Alien attack feedback miss enemy
-  EV_ALIEN_TEAMHIT,   // Alien attack feedback hit teammate
-
-  EV_ALIENRANGED_HIT,       // Alien ranged attack feedback hit enemy
-  EV_ALIENRANGED_MISS,      // Alien ranged attack feedback miss enemy
-  EV_ALIENRANGED_TEAMHIT,   // Alien ranged attack feedback hit teammate
-  
   EV_LEV2_ZAP
 } entity_event_t;
 
 typedef enum
 {
+  MN_NONE,
+
   MN_TEAM,
   MN_A_TEAMFULL,
   MN_H_TEAMFULL,
+  MN_A_TEAMLOCKED,
+  MN_H_TEAMLOCKED,
+  MN_PLAYERLIMIT,
+  MN_WARMUP,
 
   // cmd stuff
   MN_CMD_CHEAT,
@@ -799,10 +790,7 @@ typedef struct animation_s
 #define ANIM_FORCEBIT     0x40
 
 // Time between location updates
-#define TEAM_LOCATION_UPDATE_TIME   1000
-
-// How many players on the overlay
-#define TEAM_MAXOVERLAY   32
+#define TEAM_LOCATION_UPDATE_TIME   500
 
 // player classes
 typedef enum
@@ -850,6 +838,18 @@ typedef enum
   NUM_TEAMS
 } team_t;
 
+// modes of text communication
+typedef enum
+{
+  SAY_ALL,
+  SAY_TEAM,
+  SAY_PRIVMSG,
+  SAY_TPRIVMSG,
+  SAY_AREA,
+  SAY_ADMINS,
+  SAY_ADMINS_PUBLIC,
+  SAY_RAW
+} saymode_t;
 
 // means of death
 typedef enum
@@ -875,8 +875,6 @@ typedef enum
   MOD_TELEFRAG,
   MOD_FALLING,
   MOD_SUICIDE,
-  MOD_DECONSTRUCT,
-  MOD_NOCREEP,
   MOD_TARGET_LASER,
   MOD_TRIGGER_HURT,
 
@@ -904,7 +902,10 @@ typedef enum
 
   MOD_ASPAWN,
   MOD_ATUBE,
-  MOD_OVERMIND
+  MOD_OVERMIND,
+  MOD_DECONSTRUCT,
+  MOD_REPLACE,
+  MOD_NOCREEP
 } meansOfDeath_t;
 
 
@@ -965,6 +966,7 @@ typedef struct
   int       viewheight;
   int       crouchViewheight;
   float     zOffset;
+  vec3_t    shoulderOffsets;
 } classConfig_t;
 
 //stages
@@ -1024,7 +1026,7 @@ typedef struct
   qboolean      transparentTest;
   qboolean      uniqueTest;
   
-  int           value;
+  int       value;
 } buildableAttributes_t;
 
 typedef struct
@@ -1098,7 +1100,7 @@ typedef struct
 
 qboolean  BG_WeaponIsFull( weapon_t weapon, int stats[ ], int ammo, int clips );
 qboolean  BG_InventoryContainsWeapon( int weapon, int stats[ ] );
-int       BG_CalculateSlotsForInventory( int stats[ ] );
+int       BG_SlotsForInventory( int stats[ ] );
 void      BG_AddUpgradeToInventory( int item, int stats[ ] );
 void      BG_RemoveUpgradeFromInventory( int item, int stats[ ] );
 qboolean  BG_InventoryContainsUpgrade( int item, int stats[ ] );
@@ -1114,13 +1116,13 @@ void      BG_PositionBuildableRelativeToPlayer( const playerState_t *ps,
                                                                const vec3_t, const vec3_t, int, int ),
                                                 vec3_t outOrigin, vec3_t outAngles, trace_t *tr );
 int       BG_GetValueOfPlayer( playerState_t *ps );
+qboolean  BG_PlayerCanChangeWeapon( playerState_t *ps );
 int       BG_PlayerPoisonCloudTime( playerState_t *ps );
 weapon_t  BG_GetPlayerWeapon( playerState_t *ps );
 qboolean  BG_HasEnergyWeapon( playerState_t *ps );
-qboolean  BG_PlayerCanChangeWeapon( playerState_t *ps );
 
-void BG_PackZapTargets( entityState_t *es, int creator, const int *entityNums, int count );
-void BG_UnpackZapTargets( entityState_t *es, int *creator, int *entityNums, int count );
+void      BG_PackEntityNumbers( entityState_t *es, const int *entityNums, int count );
+int       BG_UnpackEntityNumbers( entityState_t *es, int *entityNums, int count );
 
 const buildableAttributes_t *BG_BuildableByName( const char *name );
 const buildableAttributes_t *BG_BuildableByEntityName( const char *name );
@@ -1146,8 +1148,8 @@ void                        BG_ClassBoundingBox( class_t class, vec3_t mins,
 qboolean                    BG_ClassHasAbility( class_t class, int ability );
 int                         BG_ClassCanEvolveFromTo( class_t fclass,
                                                      class_t tclass,
-                                                     int credits, int stage, 
-                                                     int cost );
+                                                     int credits, int alienStage, int num );
+qboolean                    BG_AlienCanEvolve( class_t class, int credits, int alienStage );
 
 void                        BG_InitClassConfigs( void );
 
@@ -1240,19 +1242,7 @@ qboolean BG_WeaponIsAllowed( weapon_t weapon );
 qboolean BG_UpgradeIsAllowed( upgrade_t upgrade );
 qboolean BG_ClassIsAllowed( class_t class );
 qboolean BG_BuildableIsAllowed( buildable_t buildable );
-qboolean BG_AlienCanEvolve( class_t pclass, int credits, int stage );
 weapon_t BG_PrimaryWeapon( int stats[ ] );
-
-typedef struct 
-{
-  unsigned int hi;
-  unsigned int lo;
-} clientList_t;
-qboolean BG_ClientListTest( clientList_t *list, int clientNum );
-void BG_ClientListAdd( clientList_t *list, int clientNum );
-void BG_ClientListRemove( clientList_t *list, int clientNum );
-char *BG_ClientListString( clientList_t *list );
-void BG_ClientListParse( clientList_t *list, const char *s );
 
 // Friendly Fire Flags
 #define FFF_HUMANS         1

@@ -120,6 +120,7 @@ typedef enum
   CG_R_ADDLIGHTTOSCENE,
   CG_R_RENDERSCENE,
   CG_R_SETCOLOR,
+  CG_R_SETCLIPREGION,
   CG_R_DRAWSTRETCHPIC,
   CG_R_MODELBOUNDS,
   CG_R_LERPTAG,
@@ -244,10 +245,14 @@ typedef enum
   CG_EVENT_HANDLING,
   // void (*CG_EventHandling)(int type);
 
-  CG_CONSOLE_TEXT
+  CG_CONSOLE_TEXT,
   // void (*CG_ConsoleText)( void );
   // pass text that has been printed to the console to cgame
   // use Cmd_Argc() / Cmd_Argv() to read it
+
+  CG_VOIP_STRING
+  // char *(*CG_VoIPString)( void );
+  // returns a string of comma-delimited clientnums based on cl_voipSendTarget
 } cgameExport_t;
 
 //----------------------------------------------

@@ -327,7 +327,6 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	{
 		// p_* cvars
 		playerState_t *ps = &cl.snap.ps;
-		char *info = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_STAGES ];
 
 		Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
 		switch( ps->stats[ STAT_TEAM ] )
@@ -337,11 +336,11 @@ void CL_ParseSnapshot( msg_t *msg ) {
 			return;
 		case TEAM_ALIENS:
 			Cvar_Set( "p_teamname", "^1Alien" );
-			Cvar_SetValue( "p_stage", atoi(info) );
+			Cvar_SetValue( "p_stage", atoi(cl.gameState.stringData + cl.gameState.stringOffsets[ CS_ALIEN_STAGES ]) );
 			break;
 		case TEAM_HUMANS:
 			Cvar_Set( "p_teamname", "^4Human" );
-			Cvar_SetValue( "p_stage", atoi(info + 2) );
+			Cvar_SetValue( "p_stage", atoi(cl.gameState.stringData + cl.gameState.stringOffsets[ CS_HUMAN_STAGES ]) );
 			break;
 		}
 		Cvar_SetValue( "p_hp", ps->stats[ STAT_HEALTH ] );
