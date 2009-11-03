@@ -946,6 +946,8 @@ typedef struct {
 	frontEndCounters_t		pc;
 	int						frontEndMsec;		// not in pc due to clearing issue
 
+	vec4_t					clipRegion;			// 2D clipping region
+
 	//
 	// put large tables at the end, so most elements will be
 	// within the +/32K indexed range on risc processors
@@ -1047,9 +1049,6 @@ extern cvar_t	*r_width;
 extern cvar_t	*r_height;
 extern cvar_t	*r_pixelAspect;
 
-// compatibility
-extern cvar_t   *r_mode;
-
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_minimize;
 extern cvar_t	*r_gamma;
@@ -1122,8 +1121,6 @@ extern	cvar_t	*r_debugSort;
 
 extern	cvar_t	*r_printShaders;
 extern	cvar_t	*r_saveFontData;
-
-extern cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_GLlibCoolDownMsec;
 
@@ -1708,6 +1705,7 @@ void R_SyncRenderThread( void );
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 
 void RE_SetColor( const float *rgba );
+void RE_SetClipRegion( const float *region );
 void RE_StretchPic ( float x, float y, float w, float h, 
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_BeginFrame( stereoFrame_t stereoFrame );

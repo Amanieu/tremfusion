@@ -802,6 +802,7 @@ netField_t	entityStateFields[] =
 { NETF(angles2[1]), 0 },
 { NETF(eType), 8 },
 { NETF(torsoAnim), 8 },
+{ NETF(weaponAnim), 8 },
 { NETF(eventParm), 8 },
 { NETF(legsAnim), 8 },
 { NETF(groundEntityNum), GENTITYNUM_BITS },
@@ -821,7 +822,7 @@ netField_t	entityStateFields[] =
 { NETF(modelindex), 8 },
 { NETF(otherEntityNum2), GENTITYNUM_BITS },
 { NETF(loopSound), 8 },
-{ NETF(generic1), 8 },
+{ NETF(generic1), 10 },
 { NETF(origin2[2]), 0 },
 { NETF(origin2[0]), 0 },
 { NETF(origin2[1]), 0 },
@@ -1318,6 +1319,7 @@ netField_t	playerStateFields[] =
 { PSF(pm_time), -16 },
 { PSF(eventSequence), 16 },
 { PSF(torsoAnim), 8 },
+{ PSF(weaponAnim), 8 },
 { PSF(movementDir), 4 },
 { PSF(events[0]), 8 },
 { PSF(legsAnim), 8 },
@@ -1336,7 +1338,9 @@ netField_t	playerStateFields[] =
 { PSF(damageYaw), 8 },
 { PSF(damagePitch), 8 },
 { PSF(damageCount), 8 },
-{ PSF(generic1), 8 },
+{ PSF(ammo), 12 },
+{ PSF(clips), 4 },
+{ PSF(generic1), 10 },
 { PSF(pm_type), 8 },					
 { PSF(delta_angles[0]), 16 },
 { PSF(delta_angles[2]), 16 },
@@ -1364,7 +1368,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 	playerState_t	dummy;
 	int				statsbits;
 	int				persistantbits;
-	int				ammobits;
 	int				miscbits;
 	int				numFields;
 	int				c;
@@ -1445,13 +1448,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 			persistantbits |= 1<<i;
 		}
 	}
-	// backporting: 1.1 expects an array here
-	ammobits = (to->ammo != from->ammo) | (to->clips != from->clips)<<1;
-	for (i=0 ; i<14 ; i++) {
-		if (to->ammo_extra[i] != from->ammo_extra[i]) {
-			ammobits |= 4<<i;
-		}
-	}
 	miscbits = 0;
 	for (i=0 ; i<MAX_MISC ; i++) {
 		if (to->misc[i] != from->misc[i]) {
@@ -1459,7 +1455,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 		}
 	}
 
-	if (!statsbits && !persistantbits && !ammobits && !miscbits) {
+	if (!statsbits && !persistantbits && !miscbits) {
 		MSG_WriteBits( msg, 0, 1 );	// no change
 		oldsize += 4;
 		return;
@@ -1486,22 +1482,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 	} else {
 		MSG_WriteBits( msg, 0, 1 );	// no change
 	}
-
-
-	if ( ammobits ) {
-		MSG_WriteBits( msg, 1, 1 );	// changed
-		MSG_WriteBits( msg, ammobits, 16 );
-		if (ammobits & 1)
-			MSG_WriteShort (msg, to->ammo);
-		if (ammobits & 2)
-			MSG_WriteShort (msg, to->clips);
-		for (i=0 ; i<14 ; i++)
-			if (ammobits & (4<<i))
-				MSG_WriteShort (msg, to->ammo_extra[i]);
-	} else {
-		MSG_WriteBits( msg, 0, 1 );	// no change
-	}
-
 
 
 	if ( miscbits ) {
@@ -1619,21 +1599,6 @@ void MSG_ReadDeltaPlayerstate (msg_t *msg, playerState_t *from, playerState_t *t
 			for (i=0 ; i<MAX_PERSISTANT ; i++) {
 				if (bits & (1<<i) ) {
 					to->persistant[i] = MSG_ReadShort(msg);
-				}
-			}
-		}
-
-		// parse ammo data
-		if ( MSG_ReadBits( msg, 1 ) ) {
-			LOG("PS_AMMO");
-			bits = MSG_ReadBits (msg, 16);
-			if (bits & 1)
-				to->ammo = MSG_ReadShort(msg);
-			if (bits & 2)
-				to->clips = MSG_ReadShort(msg);
-			for (i=0 ; i<14 ; i++) {
-				if (bits & (4<<i) ) {
-					to->ammo_extra[i] = MSG_ReadShort(msg);
 				}
 			}
 		}

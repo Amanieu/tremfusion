@@ -1938,8 +1938,24 @@ void Script_Delay( itemDef_t *item, char **args )
   }
 }
 
-static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
-                                  int *length, qhandle_t *h, int *width )
+void UI_EscapeEmoticons( char *dest, const char *src, int destsize )
+{
+  int len;
+  qboolean escaped;
+  for( ; *src && destsize > 1; src++, destsize-- )
+  {
+    if ( UI_Text_Emoticon( src, &escaped, &len, NULL, NULL ) && !escaped )
+    {
+      *dest++ = '[';
+      destsize--;
+    }
+    *dest++ = *src;
+  }
+  *dest++ = '\0';
+}
+
+qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
+                           int *length, qhandle_t *h, int *width )
 {
   char name[ MAX_EMOTICON_NAME_LEN ] = {""};
   const char *p = s;
@@ -4426,7 +4442,7 @@ void Item_TextColor( itemDef_t *item, vec4_t *newColor )
   }
 }
 
-static const char *Item_Text_Wrap( const char *text, float scale, float width )
+const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
   static char   out[ 8192 ] = "";
   char          *paint = out;

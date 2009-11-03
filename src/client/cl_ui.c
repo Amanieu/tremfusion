@@ -81,6 +81,52 @@ void LAN_SaveServersToCache( void ) {
 	FS_FCloseFile(fileOut);
 }
 
+/*
+====================
+GetNews
+====================
+*/
+qboolean GetNews( qboolean begin )
+{
+#ifdef USE_CURL
+	qboolean finished = qfalse;
+	fileHandle_t fileIn;
+	int readSize;
+
+	if( begin ) { // if not already using curl, start the download
+		if( !clc.downloadCURLM ) { 
+			if(!CL_cURL_Init()) {
+				Cvar_Set( "cl_newsString", "^1Error: Could not load cURL library" );
+				return qtrue;
+			}
+			clc.activeCURLNotGameRelated = qtrue;
+			CL_cURL_BeginDownload("news.dat", 
+				"http://tremulous.net/clientnews.txt");
+			return qfalse;
+		}
+	}
+
+	if ( !clc.downloadCURLM && FS_SV_FOpenFileRead("news.dat", &fileIn)) {
+		readSize = FS_Read(clc.newsString, sizeof( clc.newsString ), fileIn);
+		FS_FCloseFile(fileIn);
+		clc.newsString[ readSize ] = '\0';
+		if( readSize > 0 ) {
+			finished = qtrue;
+			clc.cURLUsed = qfalse;
+			CL_cURL_Shutdown();
+			clc.activeCURLNotGameRelated = qfalse;
+		}
+	}
+	if( !finished ) 
+		strcpy( clc.newsString, "Retrieving..." );
+#else
+	Cvar_Set( "cl_newsString", 
+		"^1You must compile your client with CURL support to use this feature" );
+	return qtrue;
+#endif
+	Cvar_Set( "cl_newsString", clc.newsString );
+	return finished;
+}
 
 /*
 ====================
@@ -356,6 +402,7 @@ static void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 		
 		Info_SetValueForKey( info, "hostname", server->hostName);
 		Info_SetValueForKey( info, "mapname", server->mapName);
+		Info_SetValueForKey( info, "label", server->label);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));
 		Info_SetValueForKey( info, "sv_maxclients", va("%i",server->maxClients));
 		Info_SetValueForKey( info, "ping", va("%i",server->ping));
@@ -446,6 +493,15 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 		return 0;
 	}
 
+	// featured servers on top
+	// this is not so that they are more noticeable but that codewise it
+	// makes it much simpler to have them contiguous in the list
+	// so changing this also requires changing the feederID counting and
+	// similar code that depends on them coming first
+	res = Q_stricmpn( server1->label, server2->label, MAX_FEATLABEL_CHARS );
+	if( res )
+		return -res;
+
 	res = 0;
 	switch( sortKey ) {
 		case SORT_HOST:
@@ -488,7 +544,6 @@ static int LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int
 			}
 			break;
 		case SORT_PING:
-		case 4: // Hack to make 1.1 ui work
 			if (server1->ping < server2->ping) {
 				res = -1;
 			}
@@ -836,6 +891,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		re.SetColor( VMA(1) );
 		return 0;
 
+	case UI_R_SETCLIPREGION:
+		re.SetClipRegion( VMA(1) );
+		return 0;
+
 	case UI_R_DRAWSTRETCHPIC:
 		re.DrawStretchPic( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), args[9] );
 		return 0;
@@ -969,6 +1028,9 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 	case UI_LAN_SERVERSTATUS:
 		return LAN_GetServerStatus( VMA(1), VMA(2), args[3] );
 
+	case UI_GETNEWS:
+		return GetNews( args[1] );
+
 	case UI_LAN_COMPARESERVERS:
 		return LAN_CompareServers( args[1], args[2], args[3], args[4], args[5] );
 
@@ -979,10 +1041,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;	
 
 	case UI_CROSSHAIR_PLAYER:
-		return VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
+			return VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
 
 	case UI_LAST_ATTACKER:
-		return VM_Call( cgvm, CG_LAST_ATTACKER );
+			return VM_Call( cgvm, CG_LAST_ATTACKER );
 
 	case UI_R_REGISTERFONT:
 		re.RegisterFont( VMA(1), args[2], VMA(3));
@@ -1092,14 +1154,6 @@ CL_InitUI
 */
 #define UI_OLD_API_VERSION	4
 
-void Con_MessageMode_f(void);
-void Con_MessageMode2_f(void);
-void Con_MessageMode3_f(void);
-void Con_MessageMode4_f(void);
-void Con_MessageMode5_f(void);
-void Con_MessageMode6_f(void);
-void Con_Prompt_f(void);
-
 void CL_InitUI( void ) {
 	int		v;
 	vmInterpret_t		interpret;
@@ -1116,9 +1170,6 @@ void CL_InitUI( void ) {
 	if ( !uivm ) {
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 	}
-	
-	// Don't use ui messagemode unless it askes us to
-	Cvar_Set( "ui_useMessagemode", "0" );
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
@@ -1130,47 +1181,12 @@ void CL_InitUI( void ) {
 		Com_Error( ERR_DROP, "User Interface is version %d, expected %d", v, UI_API_VERSION );
 		cls.uiStarted = qfalse;
 	}
-	
-	// See who gets control of messagemodes
-	if ( !Cvar_VariableIntegerValue( "ui_useMessagemode" ) )
-	{
-		// client messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", Con_MessageMode_f );
-		Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
-		Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
-		Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
-		Cmd_AddCommand( "messagemode5", Con_MessageMode5_f );
-		Cmd_AddCommand( "messagemode6", Con_MessageMode6_f );
-		Cmd_AddCommand( "prompt", Con_Prompt_f );
-	}
-	else {
-		// ui messagemode commands
-		Cmd_RemoveCommand( "messagemode" );
-		Cmd_RemoveCommand( "messagemode2" );
-		Cmd_RemoveCommand( "messagemode3" );
-		Cmd_RemoveCommand( "messagemode4" );
-		Cmd_RemoveCommand( "messagemode5" );
-		Cmd_RemoveCommand( "messagemode6" );
-		Cmd_RemoveCommand( "prompt" );
-		Cmd_AddCommand( "messagemode", NULL );
-		Cmd_AddCommand( "messagemode2", NULL );
-		Cmd_AddCommand( "messagemode3", NULL );
-		Cmd_AddCommand( "messagemode4", NULL );
-		Cmd_AddCommand( "messagemode5", NULL );
-		Cmd_AddCommand( "messagemode6", NULL );
-		Cmd_AddCommand( "prompt", NULL );
-	}
 
 	// reset any CVAR_CHEAT cvars registered by ui
 	if ( !clc.demoplaying && !cl_connectedToCheatServer ) 
 		Cvar_SetCheatState();
+
+    clc.newsString[ 0 ] = '\0';
 }
 
 /*
