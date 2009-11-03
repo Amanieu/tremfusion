@@ -728,7 +728,7 @@ void Message_Key( int key ) {
 		if ( chatField.buffer[0] && cls.state == CA_ACTIVE ) {
 			if (chat_playerNum != -1 )
 
-				Com_sprintf( buffer, sizeof( buffer ), "tell %i \"%s\"\n", chat_playerNum, chatField.buffer );
+				Com_sprintf( buffer, sizeof( buffer ), "m %i \"%s\"\n", chat_playerNum, chatField.buffer );
 
 			else if (chat_team)
 
@@ -736,7 +736,7 @@ void Message_Key( int key ) {
 
 			else if (chat_admins)
 
-				Com_sprintf( buffer, sizeof( buffer ), "say_admins \"%s\"\n", chatField.buffer );
+				Com_sprintf( buffer, sizeof( buffer ), "a \"%s\"\n", chatField.buffer );
 
 			else if (chat_clans) {
 
