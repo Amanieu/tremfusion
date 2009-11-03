@@ -2240,6 +2240,16 @@ static void UI_Text_Paint_Generic( float x, float y, float scale, float gapAdjus
         }
       }
     }
+    else
+    {
+      if( Q_IsColorString( s ) )
+      {
+        memcpy( newColor, g_color_table[ColorIndex( *( s+1 ) )],
+                sizeof( newColor ) );
+        newColor[3] = color[3];
+        DC->setColor( newColor );
+      }
+    }
 
     if( style == ITEM_TEXTSTYLE_SHADOWED ||
        style == ITEM_TEXTSTYLE_SHADOWEDMORE )
