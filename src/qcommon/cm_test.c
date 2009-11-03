@@ -289,6 +289,9 @@ int CM_PointContents_sse( v4f p, clipHandle_t model ) {
 		leaf = &cm.leafs[leafnum];
 	}
 
+	if(leaf->area == -1)
+		return CONTENTS_SOLID;
+
 	contents = 0;
 	for (k=0 ; k<leaf->numLeafBrushes ; k++) {
 		brushnum = cm.leafbrushes[leaf->firstLeafBrush+k];
