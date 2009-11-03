@@ -41,6 +41,7 @@ int UI_AdjustTimeByGame( int time );
 void UI_ClearScores( void );
 void UI_LoadArenas( void );
 void UI_ServerInfo( void );
+void UI_UpdateNews( qboolean );
 
 void UI_RegisterCvars( void );
 void UI_UpdateCvars( void );
@@ -53,6 +54,8 @@ void UI_DrawConnectScreen( qboolean overlay );
 #define MAX_DISPLAY_SERVERS 2048
 #define MAX_SERVERSTATUS_LINES 128
 #define MAX_SERVERSTATUS_TEXT 1024
+#define MAX_NEWS_LINES 50
+#define MAX_NEWS_LINEWIDTH 85
 #define MAX_FOUNDPLAYER_SERVERS 16
 #define MAX_MODS 64
 #define MAX_DEMOS 256
@@ -102,7 +105,6 @@ typedef struct serverStatus_s
   int    currentServer;
   int    displayServers[MAX_DISPLAY_SERVERS];
   int    numDisplayServers;
-  int    numFeaturedServers;
   int    numPlayersOnServers;
   int    nextDisplayRefresh;
   int    nextSortTime;
@@ -138,6 +140,15 @@ typedef struct
   int numLines;
 }
 serverStatusInfo_t;
+
+typedef struct
+{
+  char text[MAX_NEWS_LINES][MAX_NEWS_LINEWIDTH];
+  int numLines;
+  qboolean refreshActive;
+  int refreshtime;
+}
+newsInfo_t;
 
 typedef struct
 {
@@ -256,6 +267,9 @@ typedef struct
 
   serverStatus_t serverStatus;
 
+  // for showing the game news window
+  newsInfo_t newsInfo;
+
   // for the showing the status of a server
   char serverStatusAddress[MAX_ADDRESSLENGTH];
   serverStatusInfo_t serverStatusInfo;
@@ -327,6 +341,7 @@ void      trap_R_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVer
 void      trap_R_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void      trap_R_RenderScene( const refdef_t *fd );
 void      trap_R_SetColor( const float *rgba );
+void      trap_R_SetClipRegion( const float *region );
 void      trap_R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void      trap_R_ModelBounds( clipHandle_t model, vec3_t mins, vec3_t maxs );
 void      trap_UpdateScreen( void );
@@ -363,6 +378,7 @@ int        trap_LAN_AddServer( int source, const char *name, const char *addr );
 void      trap_LAN_RemoveServer( int source, const char *addr );
 void      trap_LAN_ResetPings( int n );
 int        trap_LAN_ServerStatus( const char *serverAddress, char *serverStatus, int maxLen );
+qboolean    trap_GetNews( qboolean force );
 int        trap_LAN_CompareServers( int source, int sortKey, int sortDir, int s1, int s2 );
 int        trap_MemoryRemaining( void );
 void      trap_R_RegisterFont( const char *pFontname, int pointSize, fontInfo_t *font );
