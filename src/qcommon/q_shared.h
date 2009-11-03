@@ -377,7 +377,7 @@ extern	vec4_t		colorMdGrey;
 extern	vec4_t		colorDkGrey;
 
 #define Q_COLOR_ESCAPE	'^'
-#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1)) )
+#define Q_IsColorString(p)	( (p) && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1)) )
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -1383,9 +1383,6 @@ typedef enum {
 #define	MAX_OTHER_SERVERS					128
 #define MAX_PINGREQUESTS					32
 #define MAX_SERVERSTATUSREQUESTS	16
-
-#define SAY_ALL		0
-#define SAY_TEAM	1
 
 #define MAX_EMOTICON_NAME_LEN 16
 #define MAX_EMOTICONS 64

@@ -187,6 +187,7 @@ GDIR=$(MOUNT_DIR)/game
 CGDIR=$(MOUNT_DIR)/cgame
 NDIR=$(MOUNT_DIR)/null
 UIDIR=$(MOUNT_DIR)/ui
+GDIR=$(MOUNT_DIR)/game
 JPDIR=$(MOUNT_DIR)/jpeg-6b
 SPEEXDIR=$(MOUNT_DIR)/libspeex
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
@@ -1297,15 +1298,15 @@ install: release run-tremfusion.sh
 	@if [ ! -d $(BUILDROOT)$(DATADIR)/tremfusion ];then $(MKDIR) -p $(BUILDROOT)$(DATADIR)/tremfusion;fi
 ifeq ($(BUILD_CLIENT),1)
 	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremulous$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion
-	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion
 endif
 ifeq ($(BUILD_CLIENT_TTY),1)
 	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremulous-tty$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusion-tty
-	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusion-tty
 endif
 ifeq ($(BUILD_SERVER),1)
 	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 $(BR)/tremded$(FULLBINEXT) $(BUILDROOT)$(LIBDIR)/tremfusion/tremfusionded
-	@$(Q)$(INSTALL) $(STRIP_FLAG) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
+	@$(Q)$(INSTALL) -vpm 755 run-tremfusion.sh $(BUILDROOT)$(BINDIR)/tremfusionded
 endif
 
 run-tremfusion.sh:
