@@ -100,8 +100,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL3_POUNCE_RANGE         54.0f
 #define LEVEL3_POUNCE_UPG_RANGE     LEVEL3_POUNCE_RANGE + 3.0f
 #define LEVEL3_POUNCE_WIDTH         14.0f
-#define LEVEL3_POUNCE_TIME          900      // msec for full Dragoon pounce
-#define LEVEL3_POUNCE_TIME_UPG      900      // msec for full Adv. Dragoon pounce
+#define LEVEL3_POUNCE_TIME          800      // msec for full Dragoon pounce
+#define LEVEL3_POUNCE_TIME_UPG      800      // msec for full Adv. Dragoon pounce
 #define LEVEL3_POUNCE_TIME_MIN      200      // msec before which pounce cancels  
 #define LEVEL3_POUNCE_REPEAT        400      // msec before a new pounce starts
 #define LEVEL3_POUNCE_SPEED_MOD     0.75f    // walking speed modifier for pounce charging
@@ -639,6 +639,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define STAMINA_JUMP_TAKE           250
 #define STAMINA_DODGE_TAKE          250
 #define STAMINA_BREATHING_LEVEL     0
+#define STAMINA_SLOW_LEVEL          -500
+#define STAMINA_BLACKOUT_LEVEL      -800
 
 #define HUMAN_SPAWN_REPEAT_TIME     10000
 #define HUMAN_REGEN_DAMAGE_TIME     2000 //msec since damage before dcc repairs

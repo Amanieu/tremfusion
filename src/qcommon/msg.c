@@ -505,7 +505,7 @@ int MSG_HashKey(const char *string, int maxlen) {
 
 	hash = 0;
 	for (i = 0; i < maxlen && string[i] != '\0'; i++) {
-		if (string[i] & 0x80 || string[i] == '%')
+		if (string[i] & 0x80)
 			hash += '.' * (119 + i);
 		else
 			hash += string[i] * (119 + i);
@@ -1324,7 +1324,7 @@ netField_t	playerStateFields[] =
 { PSF(events[0]), 8 },
 { PSF(legsAnim), 8 },
 { PSF(events[1]), 8 },
-{ PSF(pm_flags), 16 },
+{ PSF(pm_flags), 24 },
 { PSF(groundEntityNum), GENTITYNUM_BITS },
 { PSF(weaponstate), 4 },
 { PSF(eFlags), 16 },
@@ -1345,6 +1345,7 @@ netField_t	playerStateFields[] =
 { PSF(delta_angles[0]), 16 },
 { PSF(delta_angles[2]), 16 },
 { PSF(torsoTimer), 12 },
+{ PSF(tauntTimer), 12 },
 { PSF(eventParms[0]), 8 },
 { PSF(eventParms[1]), 8 },
 { PSF(clientNum), 8 },
