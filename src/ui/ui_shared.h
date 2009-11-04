@@ -542,6 +542,7 @@ void Controls_SetDefaults( void );
 
 //for cg_draw.c
 void Item_Text_Wrapped_Paint( itemDef_t *item );
+const char *Item_Text_Wrap( const char *text, float scale, float width );
 void UI_DrawTextBlock( rectDef_t *rect, float text_x, float text_y, vec4_t color,
                        float scale, int textalign, int textvalign,
                        int textStyle, const char *text );
@@ -552,6 +553,8 @@ float UI_Text_Width( const char *text, float scale, int limit );
 float UI_Text_Height( const char *text, float scale, int limit );
 float UI_Text_EmWidth( float scale );
 float UI_Text_EmHeight( float scale );
+qboolean UI_Text_IsEmoticon( const char *s, qboolean *escaped, int *length, qhandle_t *h, int *width );
+void UI_EscapeEmoticons( char *dest, const char *src, int destsize );
 
 int      trap_Parse_AddGlobalDefine( char *define );
 int      trap_Parse_LoadSource( const char *filename );

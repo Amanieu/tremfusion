@@ -66,6 +66,7 @@ typedef enum
   UI_R_ADDLIGHTTOSCENE,
   UI_R_RENDERSCENE,
   UI_R_SETCOLOR,
+  UI_R_SETCLIPREGION,
   UI_R_DRAWSTRETCHPIC,
   UI_UPDATESCREEN,
   UI_CM_LERPTAG,
@@ -94,11 +95,6 @@ typedef enum
   UI_MEMORY_REMAINING,
   UI_R_REGISTERFONT,
   UI_R_MODELBOUNDS,
-  UI_PARSE_ADD_GLOBAL_DEFINE,
-  UI_PARSE_LOAD_SOURCE,
-  UI_PARSE_FREE_SOURCE,
-  UI_PARSE_READ_TOKEN,
-  UI_PARSE_SOURCE_FILE_AND_LINE,
   UI_S_STOPBACKGROUNDTRACK,
   UI_S_STARTBACKGROUNDTRACK,
   UI_REAL_TIME,
@@ -125,6 +121,14 @@ typedef enum
   // 1.32
   UI_FS_SEEK,
   UI_SET_PBCLSTATUS,
+
+  UI_PARSE_ADD_GLOBAL_DEFINE,
+  UI_PARSE_LOAD_SOURCE,
+  UI_PARSE_FREE_SOURCE,
+  UI_PARSE_READ_TOKEN,
+  UI_PARSE_SOURCE_FILE_AND_LINE,
+  UI_GETNEWS,
+
   UI_CROSSHAIR_PLAYER,
   UI_LAST_ATTACKER,
 
@@ -173,6 +177,12 @@ typedef enum
   UI_MOUSE_EVENT,
   //  void  UI_MouseEvent( int dx, int dy );
 
+  UI_MOUSE_POSITION,
+  //  int   UI_MousePosition( void );
+
+  UI_SET_MOUSE_POSITION,
+  //  void  UI_SetMousePosition( int x, int y );
+
   UI_REFRESH,
   //  void  UI_Refresh( int time );
 
@@ -185,18 +195,12 @@ typedef enum
   UI_CONSOLE_COMMAND,
   //  qboolean UI_ConsoleCommand( int realTime );
 
-  UI_DRAW_CONNECT_SCREEN,
+  UI_DRAW_CONNECT_SCREEN
   //  void  UI_DrawConnectScreen( qboolean overlay );
 
   // if !overlay, the background will be drawn, otherwise it will be
   // overlayed over whatever the cgame has drawn.
   // a GetClientState syscall will be made to get the current strings
-
-  UI_MOUSE_POSITION,
-  //  int   UI_MousePosition( void );
-
-  UI_SET_MOUSE_POSITION
-  //  void  UI_SetMousePosition( int x, int y );
 }
 uiExport_t;
 

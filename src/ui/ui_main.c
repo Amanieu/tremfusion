@@ -46,9 +46,9 @@ static const char *MonthAbbrev[ ] =
 
 static const char *netSources[ ] =
 {
-  "LAN",
-  "Mplayer",
   "Internet",
+  "Mplayer",
+  "LAN",
   "Favorites"
 };
 
@@ -180,6 +180,13 @@ Q_EXPORT intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
       UI_MouseEvent( arg0, arg1 );
       return 0;
 
+    case UI_MOUSE_POSITION:
+      return UI_MousePosition( );
+
+    case UI_SET_MOUSE_POSITION:
+      UI_SetMousePosition( arg0, arg1 );
+      return 0;
+
     case UI_REFRESH:
       UI_Refresh( arg0 );
       return 0;
@@ -196,13 +203,6 @@ Q_EXPORT intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3,
 
     case UI_DRAW_CONNECT_SCREEN:
       UI_DrawConnectScreen( arg0 );
-      return 0;
-
-    case UI_MOUSE_POSITION:
-      return UI_MousePosition( );
-
-    case UI_SET_MOUSE_POSITION:
-      UI_SetMousePosition( arg0, arg1 );
       return 0;
   }
 
@@ -346,17 +346,53 @@ void UI_FillRoundedRect( float x, float y, float width, float height, float size
 
 /*
 ==================
+UI_ServerInfoIsValid
+
+Return false if the infostring contains nonprinting characters, 
+ or if the hostname is blank/undefined
+==================
+*/
+static qboolean UI_ServerInfoIsValid( char *info )
+{
+  char *c;
+  int  len = 0;
+
+  for( c = info; *c; c++ )
+  {
+    if( !isprint( *c ) )
+      return qfalse;
+  }
+
+  for( c = Info_ValueForKey( info, "hostname" ); *c; c++ )
+  {
+    if( isgraph( *c ) )
+      len++;
+  }
+
+  if( len )
+    return qtrue;
+  else
+    return qfalse;
+}
+
+/*
+==================
 UI_InsertServerIntoDisplayList
 ==================
 */
 static void UI_InsertServerIntoDisplayList( int num, int position )
 {
-  int i;
+  int         i;
+  static char info[MAX_STRING_CHARS];
 
   if( position < 0 || position > uiInfo.serverStatus.numDisplayServers )
     return;
 
-  //
+  trap_LAN_GetServerInfo( ui_netSource.integer, num, info, MAX_STRING_CHARS );
+
+  if( !UI_ServerInfoIsValid( info ) ) // don't list servers with invalid info
+    return;
+
   uiInfo.serverStatus.numDisplayServers++;
 
   for( i = uiInfo.serverStatus.numDisplayServers; i > position; i-- )
@@ -373,12 +409,15 @@ UI_RemoveServerFromDisplayList
 static void UI_RemoveServerFromDisplayList( int num )
 {
   int i, j;
+  static char info[MAX_STRING_CHARS];
 
   for( i = 0; i < uiInfo.serverStatus.numDisplayServers; i++ )
   {
     if( uiInfo.serverStatus.displayServers[i] == num )
     {
       uiInfo.serverStatus.numDisplayServers--;
+
+      trap_LAN_GetServerInfo( ui_netSource.integer, num, info, MAX_STRING_CHARS );
 
       for( j = i; j < uiInfo.serverStatus.numDisplayServers; j++ )
         uiInfo.serverStatus.displayServers[j] = uiInfo.serverStatus.displayServers[j+1];
@@ -1030,7 +1069,8 @@ static void UI_StopServerRefresh( void )
 
   if( count - uiInfo.serverStatus.numDisplayServers > 0 )
   {
-    /*Com_Printf( "%d servers not listed due to packet loss or pings higher than %d\n",
+    /*Com_Printf( "%d servers not listed due to packet loss, invalid info,"
+                " or pings higher than %d\n",
                 count - uiInfo.serverStatus.numDisplayServers,
                 ( int ) trap_Cvar_VariableValue( "cl_maxPing" ) );*/
   }
@@ -1207,6 +1247,8 @@ void UI_Refresh( int realtime )
     UI_BuildServerStatus( qfalse );
     // refresh find player list
     UI_BuildFindPlayerList( qfalse );
+    // refresh news
+    UI_UpdateNews( qfalse );
   }
 
   // draw cursor
@@ -1642,7 +1684,7 @@ static void UI_DrawInfoPane( menuItem_t *item, rectDef_t *rect, float text_x, fl
     case INFOTYPE_CLASS:
       value = ( BG_ClassCanEvolveFromTo( class, item->v.pclass, credits,
                                          UI_GetCurrentStage(), 0 ) +
-                ALIEN_CREDITS_PER_FRAG - 1 ) / ALIEN_CREDITS_PER_FRAG;
+                ALIEN_CREDITS_PER_KILL - 1 ) / ALIEN_CREDITS_PER_KILL;
 
       if( value < 1 )
       {
@@ -1904,7 +1946,7 @@ static void UI_BuildPlayerList( void )
 
     if( info[0] )
     {
-      BG_ClientListParse( &uiInfo.ignoreList[ uiInfo.playerCount ],
+      Com_ClientListParse( &uiInfo.ignoreList[ uiInfo.playerCount ],
                           Info_ValueForKey( info, "ig" ) );
       Q_strncpyz( uiInfo.rawPlayerNames[uiInfo.playerCount],
                   Info_ValueForKey( info, "n" ), MAX_NAME_LENGTH );
@@ -3077,6 +3119,8 @@ static void UI_RunMenuScript( char **args )
     }
     else if( Q_stricmp( name, "loadServerInfo" ) == 0 )
       UI_ServerInfo();
+    else if( Q_stricmp( name, "getNews" ) == 0 )
+      UI_UpdateNews( qtrue );
     else if( Q_stricmp( name, "saveControls" ) == 0 )
       Controls_SetConfig( qtrue );
     else if( Q_stricmp( name, "loadControls" ) == 0 )
@@ -3542,17 +3586,17 @@ static void UI_RunMenuScript( char **args )
     {
       if( uiInfo.ignoreIndex >= 0 && uiInfo.ignoreIndex < uiInfo.playerCount )
       {
-        if( BG_ClientListTest( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+        if( Com_ClientListContains( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] ) )
         {
-          BG_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+          Com_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] );
           trap_Cmd_ExecuteText( EXEC_APPEND, va( "unignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
         }
         else
         {
-          BG_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+          Com_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                             uiInfo.clientNums[ uiInfo.ignoreIndex ] );
           trap_Cmd_ExecuteText( EXEC_APPEND, va( "ignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
@@ -3563,10 +3607,10 @@ static void UI_RunMenuScript( char **args )
     {
       if( uiInfo.ignoreIndex >= 0 && uiInfo.ignoreIndex < uiInfo.playerCount )
       {
-        if( !BG_ClientListTest( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+        if( !Com_ClientListContains( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                 uiInfo.clientNums[ uiInfo.ignoreIndex ] ) )
         {
-          BG_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+          Com_ClientListAdd( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                             uiInfo.clientNums[ uiInfo.ignoreIndex ] );
           trap_Cmd_ExecuteText( EXEC_APPEND, va( "ignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
@@ -3577,10 +3621,10 @@ static void UI_RunMenuScript( char **args )
     {
       if( uiInfo.ignoreIndex >= 0 && uiInfo.ignoreIndex < uiInfo.playerCount )
       {
-        if( BG_ClientListTest( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+        if( Com_ClientListContains( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] ) )
         {
-          BG_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+          Com_ClientListRemove( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                uiInfo.clientNums[ uiInfo.ignoreIndex ] );
           trap_Cmd_ExecuteText( EXEC_APPEND, va( "unignore %i\n",
                                               uiInfo.clientNums[ uiInfo.ignoreIndex ] ) );
@@ -3611,6 +3655,8 @@ static int UI_FeederCount( float feederID )
     return uiInfo.serverStatus.numDisplayServers;
   else if( feederID == FEEDER_SERVERSTATUS )
     return uiInfo.serverStatusInfo.numLines;
+  else if( feederID == FEEDER_NEWS )
+    return uiInfo.newsInfo.numLines;
   else if( feederID == FEEDER_FINDPLAYER )
     return uiInfo.numFoundPlayerServers;
   else if( feederID == FEEDER_PLAYER_LIST )
@@ -3687,6 +3733,7 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
 {
   static char info[MAX_STRING_CHARS];
   static char hostname[1024];
+  static char cleaned[1024];
   static char clientBuff[32];
   static char resolution[MAX_STRING_CHARS];
   static int lastColumn = -1;
@@ -3702,7 +3749,7 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_SERVERS )
   {
-    if( index >= 0 && index < uiInfo.serverStatus.numDisplayServers )
+    if( index >= 0 && index < UI_FeederCount( feederID ) )
     {
       int ping;
 
@@ -3722,6 +3769,8 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
         // UI_UpdatePendingPings();
       }
 
+      UI_EscapeEmoticons( cleaned, Info_ValueForKey( info, "hostname" ), sizeof( cleaned ) );
+
       switch( column )
       {
         case SORT_HOST:
@@ -3732,15 +3781,30 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
             if( ui_netSource.integer == AS_LOCAL )
             {
               Com_sprintf( hostname, sizeof( hostname ), "%s [%s]",
-                           Info_ValueForKey( info, "hostname" ),
+                           cleaned, 
                            netnames[atoi( Info_ValueForKey( info, "nettype" ) )] );
               return hostname;
             }
             else
             {
               char *text;
+              char *label;
 
-              Com_sprintf( hostname, sizeof( hostname ), "%s", Info_ValueForKey( info, "hostname" ) );
+              label = Info_ValueForKey( info, "label" );
+              if( label[0] )
+              {
+                // First char of the label response is a sorting tag. Skip it.
+                label+= 1;
+
+                Com_sprintf( hostname, sizeof( hostname ), "%s %s", 
+                            label,
+                            cleaned );
+              }
+              else
+              {
+                Com_sprintf( hostname, sizeof( hostname ), "%s", 
+                            cleaned );
+              }
 
               // Strip leading whitespace
               text = hostname;
@@ -3776,6 +3840,13 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
         return uiInfo.serverStatusInfo.lines[index][column];
     }
   }
+  else if( feederID == FEEDER_NEWS )
+  {
+    if( index >= 0 && index < uiInfo.newsInfo.numLines )
+    {
+      return uiInfo.newsInfo.text[index];
+    }
+  }
   else if( feederID == FEEDER_FINDPLAYER )
   {
     if( index >= 0 && index < uiInfo.numFoundPlayerServers )
@@ -3802,12 +3873,12 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
       {
         case 1:
           // am I ignoring him
-          return ( BG_ClientListTest( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
+          return ( Com_ClientListContains( &uiInfo.ignoreList[ uiInfo.myPlayerIndex ],
                                       uiInfo.clientNums[ index ] ) ) ? "X" : "";
 
         case 2:
           // is he ignoring me
-          return ( BG_ClientListTest( &uiInfo.ignoreList[ index ],
+          return ( Com_ClientListContains( &uiInfo.ignoreList[ index ],
                                       uiInfo.playerNumber ) ) ? "X" : "";
 
         default:
@@ -3882,41 +3953,21 @@ static const char *UI_FeederItemText( float feederID, int index, int column, qha
   }
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-    {
-      int mode = trap_Cvar_VariableValue( "r_mode" );
-      if ( mode < 0 || mode >= uiInfo.numResolutions )
-      {
-        Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)",
-                     (int)trap_Cvar_VariableValue( "r_customWidth" ),
-                     (int)trap_Cvar_VariableValue( "r_customHeight" ) );
-      }
-      else
-      {
-        Com_sprintf( resolution, sizeof( resolution ), "%dx%d",
-                     uiInfo.resolutions[ mode ].w,
-                     uiInfo.resolutions[ mode ].h );
-      }
-      return resolution;
-    }
-    else
-    {
-      int i;
-      int w = trap_Cvar_VariableValue( "r_width" );
-      int h = trap_Cvar_VariableValue( "r_height" );
+    int i;
+    int w = trap_Cvar_VariableValue( "r_width" );
+    int h = trap_Cvar_VariableValue( "r_height" );
 
-      for( i = 0; i < uiInfo.numResolutions; i++ )
+    for( i = 0; i < uiInfo.numResolutions; i++ )
+    {
+      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
       {
-        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-        {
-          Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
-          return resolution;
-        }
+        Com_sprintf( resolution, sizeof( resolution ), "%dx%d", w, h );
+        return resolution;
       }
-
-      Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
-      return resolution;
     }
+
+    Com_sprintf( resolution, sizeof( resolution ), "Custom (%dx%d)", w, h );
+    return resolution;
   }
 
   return "";
@@ -3969,6 +4020,7 @@ static void UI_FeederSelection( float feederID, int index )
   else if( feederID == FEEDER_SERVERS )
   {
     const char *mapName = NULL;
+
     uiInfo.serverStatus.currentServer = index;
     trap_LAN_GetServerInfo( ui_netSource.integer, uiInfo.serverStatus.displayServers[index],
                             info, MAX_STRING_CHARS );
@@ -4046,13 +4098,8 @@ static void UI_FeederSelection( float feederID, int index )
     uiInfo.humanBuildIndex = index;
   else if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-      trap_Cvar_Set( "r_mode", va( "%d", index ) );
-    else
-    {
-      trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
-      trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
-    }
+    trap_Cvar_Set( "r_width", va( "%d", uiInfo.resolutions[ index ].w ) );
+    trap_Cvar_Set( "r_height", va( "%d", uiInfo.resolutions[ index ].h ) );
   }
 }
 
@@ -4060,19 +4107,14 @@ static int UI_FeederInitialise( float feederID )
 {
   if( feederID == FEEDER_RESOLUTIONS )
   {
-    if ( uiInfo.oldResolutions )
-      return trap_Cvar_VariableValue( "r_mode" );
-    else
-    {
-      int i;
-      int w = trap_Cvar_VariableValue( "r_width" );
-      int h = trap_Cvar_VariableValue( "r_height" );
+    int i;
+    int w = trap_Cvar_VariableValue( "r_width" );
+    int h = trap_Cvar_VariableValue( "r_height" );
 
-      for( i = 0; i < uiInfo.numResolutions; i++ )
-      {
-        if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
-          return i;
-      }
+    for( i = 0; i < uiInfo.numResolutions; i++ )
+    {
+      if( w == uiInfo.resolutions[ i ].w && h == uiInfo.resolutions[ i ].h )
+        return i;
     }
   }
 
@@ -4150,16 +4192,7 @@ void UI_ParseResolutions( void )
   char        *s = NULL;
 
   trap_Cvar_VariableStringBuffer( "r_availableModes", buf, sizeof( buf ) );
-  if ( buf[0] )
-  {
-    p = buf;
-    uiInfo.oldResolutions = qfalse;
-  }
-  else
-  {
-    p = "320x240 400x300 512x384 640x480 800x600 960x720 1024x768 1152x864 1280x1024 1600x1200 2048x1536 856x480";
-    uiInfo.oldResolutions = qtrue;
-  }
+	p = buf;
   uiInfo.numResolutions = 0;
 
   while( String_Parse( &p, &out ) )
@@ -4757,9 +4790,6 @@ void UI_RegisterCvars( void )
 
   for( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ )
     trap_Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
-
-  // use ui messagemode
-  trap_Cvar_Set( "ui_useMessagemode", "1" );
 }
 
 /*
@@ -4775,3 +4805,68 @@ void UI_UpdateCvars( void )
   for( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ )
     trap_Cvar_Update( cv->vmCvar );
 }
+
+/*
+=================
+UI_UpdateNews
+=================
+*/
+void UI_UpdateNews( qboolean begin )
+{
+  char newsString[ MAX_NEWS_STRING ];
+  const char *c;
+  const char *wrapped;
+  int line = 0;
+  int linePos = 0;
+  qboolean finished;
+
+  if( begin && !uiInfo.newsInfo.refreshActive ) {
+    uiInfo.newsInfo.refreshtime = uiInfo.uiDC.realTime + 10000;
+    uiInfo.newsInfo.refreshActive = qtrue;
+  }
+  else if( !uiInfo.newsInfo.refreshActive ) // do nothing
+    return; 
+  else if( uiInfo.uiDC.realTime > uiInfo.newsInfo.refreshtime ) {
+    strcpy( uiInfo.newsInfo.text[ 0 ], 
+      "^1Error: Timed out while contacting the server.");
+    uiInfo.newsInfo.numLines = 1;
+    return; 
+  }
+
+  // start the news fetching
+  finished = trap_GetNews( begin );
+
+  // parse what comes back. Parse newlines and otherwise chop when necessary
+  trap_Cvar_VariableStringBuffer( "cl_newsString", newsString, 
+    sizeof( newsString ) );
+
+  wrapped = Item_Text_Wrap( newsString, .25, 325 * uiInfo.uiDC.aspectScale );
+
+  for( c = wrapped; *c != '\0'; ++c ) {
+    if( linePos == (MAX_NEWS_LINEWIDTH - 1) || *c == '\n' ) {
+      uiInfo.newsInfo.text[ line ][ linePos ] = '\0';
+
+      if( line == ( MAX_NEWS_LINES  - 1 ) )
+        break;
+
+      linePos = 0;
+      line++;
+
+      if( *c != '\n' ) {
+        uiInfo.newsInfo.text[ line ][ linePos ] = *c;
+        linePos++;
+      }
+    } else if( isprint( *c ) ) {
+      uiInfo.newsInfo.text[ line ][ linePos ] = *c;
+      linePos++;
+    }
+  }
+
+  uiInfo.newsInfo.text[ line ] [linePos ] = '\0';
+  uiInfo.newsInfo.numLines = line + 1;
+
+  if( finished )
+    uiInfo.newsInfo.refreshActive = qfalse;
+
+}
+

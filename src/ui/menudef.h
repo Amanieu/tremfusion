@@ -100,6 +100,7 @@ enum
   FEEDER_HUMANTEAM_LIST, // human team members
   FEEDER_TEAM_LIST,      // team members for team voting
   FEEDER_PLAYER_LIST,    // players
+  FEEDER_NEWS,           // news
   FEEDER_MODS,           // list of available mods
   FEEDER_DEMOS,          // list of available demo files
   FEEDER_SERVERSTATUS,   // server status
@@ -162,6 +163,7 @@ enum
   CG_PLAYER_CHARGE_BAR,
   CG_PLAYER_CROSSHAIR,
   CG_PLAYER_LOCATION,
+  CG_TEAMOVERLAY,
   CG_PLAYER_CREDITS_FRACTION,
 
   CG_KILLER,
@@ -188,6 +190,7 @@ enum
   CG_TIMER_SECS,
   CG_SNAPSHOT,
   CG_LAGOMETER,
+  CG_SPEEDOMETER,
   CG_PLAYER_CROSSHAIRNAMES,
   CG_STAGE_REPORT_TEXT,
   CG_ALIENS_SCORE_LABEL,
