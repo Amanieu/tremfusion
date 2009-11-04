@@ -197,6 +197,11 @@ void trap_R_SetColor( const float *rgba )
   syscall( UI_R_SETCOLOR, rgba );
 }
 
+void  trap_R_SetClipRegion( const float *region )
+{
+  syscall( UI_R_SETCLIPREGION, region );
+}
+
 void trap_R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader )
 {
   syscall( UI_R_DRAWSTRETCHPIC, PASSFLOAT( x ), PASSFLOAT( y ), PASSFLOAT( w ), PASSFLOAT( h ), PASSFLOAT( s1 ), PASSFLOAT( t1 ), PASSFLOAT( s2 ), PASSFLOAT( t2 ), hShader );
@@ -320,6 +325,11 @@ int trap_LAN_GetPingQueueCount( void )
 int trap_LAN_ServerStatus( const char *serverAddress, char *serverStatus, int maxLen )
 {
   return syscall( UI_LAN_SERVERSTATUS, serverAddress, serverStatus, maxLen );
+}
+
+qboolean trap_GetNews( qboolean force )
+{
+  return syscall( UI_GETNEWS, force );
 }
 
 void trap_LAN_SaveCachedServers( void )
