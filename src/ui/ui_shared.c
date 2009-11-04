@@ -2005,6 +2005,32 @@ qboolean UI_Text_IsEmoticon( const char *s, qboolean *escaped,
   return qfalse;
 }
 
+static float UI_Parse_Indent( const char **text )
+{
+  char  indentWidth[ MAX_STRING_CHARS ];
+  char  *p = indentWidth;
+  int   numChars;
+  float pixels;
+
+  Q_strncpyz( indentWidth, *text, MAX_STRING_CHARS );
+
+  while( isdigit( *p ) || *p == '.' )
+    p++;
+
+  if( *p != INDENT_MARKER )
+    return 0.0f;
+
+  *p++ = '\0';
+  numChars = ( p - indentWidth );
+  p = indentWidth;
+
+  if( !Float_Parse( &p, &pixels ) )
+    return 0.0f;
+
+  (*text) += numChars;
+
+  return pixels;
+}
 
 float UI_Text_Width( const char *text, float scale, int limit )
 {
@@ -2019,6 +2045,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
   float       emoticonW;
   int         emoticonWidth;
   int         emoticons = 0;
+  float       indentWidth = 0.0f;
 
   if( scale <= DC->getCVarValue( "ui_smallFont" ) )
     font = &DC->Assets.smallFont;
@@ -2037,6 +2064,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
       len = limit;
 
     count = 0;
+    indentWidth = UI_Parse_Indent( &s );
 
     while( s && *s && count < len )
     {
@@ -2045,6 +2073,12 @@ float UI_Text_Width( const char *text, float scale, int limit )
       if( Q_IsColorString( s ) )
       {
         s += 2;
+        continue;
+      }
+
+      if( *s == INDENT_MARKER )
+      {
+        s++;
         continue;
       }
 
@@ -2067,7 +2101,7 @@ float UI_Text_Width( const char *text, float scale, int limit )
     }
   }
 
-  return ( out * useScale ) + ( emoticons * emoticonW );
+  return ( out * useScale ) + ( emoticons * emoticonW ) + indentWidth;
 }
 
 float UI_Text_Height( const char *text, float scale, int limit )
@@ -2214,6 +2248,8 @@ static void UI_Text_Paint_Generic( float x, float y, float scale, float gapAdjus
   DC->setColor( color );
   memcpy( &newColor[0], &color[0], sizeof( vec4_t ) );
 
+  x += UI_Parse_Indent( &s );
+
   while( s && *s && count < len )
   {
     glyph = &font->glyphs[ (int)*s ];
@@ -2233,6 +2269,12 @@ static void UI_Text_Paint_Generic( float x, float y, float scale, float gapAdjus
         newColor[3] = color[3];
         DC->setColor( newColor );
         s += 2;
+        continue;
+      }
+
+      if( *s == INDENT_MARKER )
+      {
+        s++;
         continue;
       }
 
@@ -4522,9 +4564,11 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
   char          c[ 3 ] = "^7";
   const char    *p = text;
   const char    *eol;
-  const char    *q = NULL, *qMinus1 = NULL;
+  const char    *q = NULL;
   unsigned int  testLength;
   unsigned int  i;
+  float         indentWidth = 0.0f;
+  float         testWidth;
 
   if( strlen( text ) >= sizeof( out ) )
     return NULL;
@@ -4533,14 +4577,17 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
 
   while( *p )
   {
-    testLength = 1;
     eol = p;
     q = p + 1;
+    testLength = 0;
+    testWidth = width - indentWidth;
 
     SkipColorCodes( &q, c );
 
-    while( UI_Text_Width( p, scale, testLength ) < width )
+    while( testLength == 0 || UI_Text_Width( p, scale, testLength ) < testWidth )
     {
+      qboolean previousCharIsSpace = qfalse;
+
       // Remaining string is too short to wrap
       if( testLength >= strlen( p ) )
       {
@@ -4554,9 +4601,12 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
         SkipColorCodes( &q, c );
         SkipEmoticons( &q );
 
-        qMinus1 = q;
+        previousCharIsSpace = isspace( *q );
         q++;
       }
+
+      if( testLength > 0 && *q == INDENT_MARKER )
+        indentWidth = UI_Text_Width( p, scale, testLength );
 
       // Some color escapes might still be present
       SkipColorCodes( &q, c );
@@ -4569,7 +4619,7 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
         break;
       }
 
-      if( !isspace( *qMinus1 ) && isspace( *q ) )
+      if( !previousCharIsSpace && isspace( *q ) )
         eol = q;
 
       testLength++;
@@ -4589,13 +4639,19 @@ const char *Item_Text_Wrap( const char *text, float scale, float width )
 
     if( out[ strlen( out ) - 1 ] == '\n' )
     {
-      // The line is deliberately broken, clear the color
+      // The line is deliberately broken, clear the color and
+      // any current indent
       c[ 0 ] = '\0';
+      indentWidth = 0.0f;
     }
     else
     {
       // Add a \n if it's not there already
       Q_strcat( out, sizeof( out ), "\n" );
+
+      // Insert a pixel indent on the next line
+      if( indentWidth > 0.0f )
+        Q_strcat( out, sizeof( out ), va( "%f%c", indentWidth, INDENT_MARKER ) );
 
       // Skip leading whitespace on next line and save the
       // last color code
