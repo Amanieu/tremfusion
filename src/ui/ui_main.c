@@ -102,9 +102,9 @@ vmCvar_t  ui_screen;
 vmCvar_t  ui_screens;
 vmCvar_t  ui_screenname;
 
-vmCvar_t  ui_winner;
-
 vmCvar_t  ui_emoticons;
+vmCvar_t  ui_winner;
+vmCvar_t  ui_chatCommands;
 
 static cvarTable_t    cvarTable[ ] =
 {
@@ -130,6 +130,7 @@ static cvarTable_t    cvarTable[ ] =
   { &ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT },
   { &ui_emoticons, "cg_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE },
   { &ui_winner, "ui_winner", "", CVAR_ROM },
+  { &ui_chatCommands, "ui_chatCommands", "1", CVAR_ARCHIVE },
   { &ui_screen, "ui_screen", "0", CVAR_ROM },
   { &ui_screens, "ui_screens", "0", CVAR_ROM },
   { &ui_screenname, "ui_screenname", "", CVAR_ROM }
@@ -3221,24 +3222,37 @@ static void UI_RunMenuScript( char **args )
       char buffer[ MAX_CVAR_VALUE_STRING ];
       trap_Cvar_VariableStringBuffer( "ui_sayBuffer", buffer, sizeof( buffer ) );
 
-      if( !buffer[ 0 ] ) {}
-      else if( uiInfo.chatTargetClientNum != -1 )
-        trap_Cmd_ExecuteText( EXEC_APPEND, va( "m %i \"%s\"\n", uiInfo.chatTargetClientNum, buffer  ) );
+      if( !buffer[ 0 ] )
+        ;
+      else if( ui_chatCommands.integer && ( buffer[ 0 ] == '/' ||
+        buffer[ 0 ] == '\\' ) )
+      {
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "%s\n", buffer + 1 ) );
+      }
       else if( uiInfo.chatTeam )
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_team \"%s\"\n", buffer ) );
-      else if( uiInfo.chatAdmins )
-        trap_Cmd_ExecuteText( EXEC_APPEND, va( "say_admins \"%s\"\n", buffer ) );
-      else if( uiInfo.chatClan )
-      {
-        char clantagDecolored[ 32 ];
-        trap_Cvar_VariableStringBuffer( "cl_clantag", clantagDecolored, sizeof( clantagDecolored ) );
-        Q_CleanStr( clantagDecolored );
-        trap_Cmd_ExecuteText( EXEC_APPEND, va( "m \"%s\" \"%s\"\n", clantagDecolored, buffer ) );
-      }
-      else if( uiInfo.chatPrompt )
-        trap_Cmd_ExecuteText( EXEC_APPEND, va( "vstr \"%s\"\n", uiInfo.chatPromptCallback ) );
       else
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "say \"%s\"\n", buffer ) );
+    }
+    else if( Q_stricmp( name, "SayKeydown" ) == 0 )
+    {
+      if( ui_chatCommands.integer )
+      {
+        char buffer[ MAX_CVAR_VALUE_STRING ];
+        trap_Cvar_VariableStringBuffer( "ui_sayBuffer", buffer, sizeof( buffer ) );
+
+        if( buffer[ 0 ] == '/' || buffer[ 0 ] == '\\' )
+        {
+            Menus_ReplaceActiveByName( "say_command" );
+        }
+        else
+        {
+            if( !uiInfo.chatTeam )
+            Menus_ReplaceActiveByName( "say" );
+            else
+            Menus_ReplaceActiveByName( "say_team" );
+        }
+      }
     }
     else if( Q_stricmp( name, "playMovie" ) == 0 )
     {
@@ -3370,6 +3384,14 @@ static void UI_RunMenuScript( char **args )
       if( ui_selectedMap.integer >= 0 && ui_selectedMap.integer < uiInfo.mapCount )
       {
         trap_Cmd_ExecuteText( EXEC_APPEND, va( "callvote map %s\n",
+                              uiInfo.mapList[ui_selectedMap.integer].mapLoadName ) );
+      }
+    }
+    else if( Q_stricmp( name, "voteNextMap" ) == 0 )
+    {
+      if( ui_selectedMap.integer >= 0 && ui_selectedMap.integer < uiInfo.mapCount )
+      {
+        trap_Cmd_ExecuteText( EXEC_APPEND, va( "callvote nextmap %s\n",
                               uiInfo.mapList[ui_selectedMap.integer].mapLoadName ) );
       }
     }

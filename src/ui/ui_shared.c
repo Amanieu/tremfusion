@@ -89,6 +89,7 @@ static int lastListBoxClickTime = 0;
 
 void Item_RunScript( itemDef_t *item, const char *s );
 void Item_SetupKeywordHash( void );
+static ID_INLINE qboolean Item_IsEditField( itemDef_t *item );
 void Menu_SetupKeywordHash( void );
 int BindingIDFromName( const char *name );
 qboolean Item_Bind_HandleKey( itemDef_t *item, int key, qboolean down );
@@ -1629,6 +1630,7 @@ void Menus_CloseAll( qboolean force )
   for( i = 0; i < menuCount; i++ )
     if( !( Menus[i].window.flags & WINDOW_DONTCLOSEALL ) || force )
       Menus_Close( &Menus[ i ] );
+
   if( force )
   {
     openMenuCount = 0;
@@ -1816,7 +1818,7 @@ void Script_SetFocus( itemDef_t *item, char **args )
         Item_RunScript( focusItem, focusItem->onFocus );
 
       // Edit fields get activated too
-      if( focusItem->type == ITEM_TYPE_EDITFIELD || focusItem->type == ITEM_TYPE_NUMERICFIELD )
+      if( Item_IsEditField( focusItem ) )
       {
         g_editingField = qtrue;
         g_editItem = focusItem;
@@ -1938,8 +1940,8 @@ void Script_Delay( itemDef_t *item, char **args )
   }
 }
 
-static qboolean UI_Text_Emoticon( const char *s, qboolean *escaped,
-                                  int *length, qhandle_t *h, int *width )
+static qboolean UI_Text_IsEmoticon( const char *s, qboolean *escaped,
+                                    int *length, qhandle_t *h, int *width )
 {
   char name[ MAX_EMOTICON_NAME_LEN ] = {""};
   const char *p = s;
@@ -2030,8 +2032,8 @@ float UI_Text_Width( const char *text, float scale, int limit )
         continue;
       }
 
-      if ( UI_Text_Emoticon( s, &emoticonEscaped, &emoticonLen, 
-                             NULL, &emoticonWidth ) )
+      if( UI_Text_IsEmoticon( s, &emoticonEscaped, &emoticonLen,
+                              NULL, &emoticonWidth ) )
       {
         if( emoticonEscaped )
           s++;
@@ -2218,8 +2220,8 @@ static void UI_Text_Paint_Generic( float x, float y, float scale, float gapAdjus
         continue;
       }
 
-      if( UI_Text_Emoticon( s, &emoticonEscaped, &emoticonLen,
-                            &emoticonHandle, &emoticonWidth ) )
+      if( UI_Text_IsEmoticon( s, &emoticonEscaped, &emoticonLen,
+                              &emoticonHandle, &emoticonWidth ) )
       {
         if( emoticonEscaped )
           s++;
@@ -2291,9 +2293,10 @@ static void UI_Text_Paint_Generic( float x, float y, float scale, float gapAdjus
     s++;
     count++;
 
-    if( maxX )
-      *maxX = x;
   }
+
+  if( maxX )
+      *maxX = x;
 
   // paint cursor
   if( cursorPos >= 0 )
@@ -2337,38 +2340,42 @@ void UI_Text_PaintWithCursor( float x, float y, float scale, vec4_t color, const
 
 commandDef_t commandList[] =
   {
+    {"close", &Script_Close},                     // menu
+    {"conditionalopen", &Script_ConditionalOpen}, // menu
+    {"delay", &Script_Delay},                     // group/name
+    {"exec", &Script_Exec},                       // group/name
     {"fadein", &Script_FadeIn},                   // group/name
     {"fadeout", &Script_FadeOut},                 // group/name
-    {"show", &Script_Show},                       // group/name
     {"hide", &Script_Hide},                       // group/name
-    {"setcolor", &Script_SetColor},               // works on this
     {"open", &Script_Open},                       // menu
-    {"conditionalopen", &Script_ConditionalOpen}, // menu
-    {"close", &Script_Close},                     // menu
-    {"setasset", &Script_SetAsset},               // works on this
-    {"setbackground", &Script_SetBackground},     // works on this
-    {"setitemcolor", &Script_SetItemColor},       // group/name
-    {"setfocus", &Script_SetFocus},               // sets this background color to team color
-    {"reset", &Script_Reset},                     // resets the state of the item argument
-    {"setplayermodel", &Script_SetPlayerModel},   // sets this background color to team color
-    {"setplayerhead", &Script_SetPlayerHead},     // sets this background color to team color
-    {"transition", &Script_Transition},           // group/name
-    {"setcvar", &Script_SetCvar},                 // group/name
-    {"exec", &Script_Exec},                       // group/name
+    {"orbit", &Script_Orbit},                     // group/name
     {"play", &Script_Play},                       // group/name
     {"playlooped", &Script_playLooped},           // group/name
-    {"orbit", &Script_Orbit},                     // group/name
-    {"delay", &Script_Delay},                     // group/name
+    {"reset", &Script_Reset},                     // resets the state of the item argument
+    {"setasset", &Script_SetAsset},               // works on this
+    {"setbackground", &Script_SetBackground},     // works on this
+    {"setcolor", &Script_SetColor},               // works on this
+    {"setcvar", &Script_SetCvar},                 // group/name
+    {"setfocus", &Script_SetFocus},               // sets this background color to team color
+    {"setitemcolor", &Script_SetItemColor},       // group/name
+    {"setplayerhead", &Script_SetPlayerHead},     // sets this background color to team color
+    {"setplayermodel", &Script_SetPlayerModel},   // sets this background color to team color
+    {"show", &Script_Show},                       // group/name
+    {"transition", &Script_Transition},           // group/name
   };
 
-int scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
+static size_t scriptCommandCount = sizeof( commandList ) / sizeof( commandDef_t );
 
+// despite what lcc thinks, we do not get cmdcmp here
+static int commandComp( const void *a, const void *b )
+{
+  return Q_stricmp( (const char *)a, ((commandDef_t *)b)->name );
+}
 
 void Item_RunScript( itemDef_t *item, const char *s )
 {
   char script[1024], *p;
-  int i;
-  qboolean bRan;
+  commandDef_t *cmd;
   memset( script, 0, sizeof( script ) );
 
   if( item && s && s[0] )
@@ -2387,20 +2394,12 @@ void Item_RunScript( itemDef_t *item, const char *s )
       if( command[0] == ';' && command[1] == '\0' )
         continue;
 
-      bRan = qfalse;
-
-      for( i = 0; i < scriptCommandCount; i++ )
-      {
-        if( Q_stricmp( command, commandList[i].name ) == 0 )
-        {
-          ( commandList[i].handler( item, &p ) );
-          bRan = qtrue;
-          break;
-        }
-      }
-
+      cmd = bsearch( command, commandList, scriptCommandCount,
+        sizeof( commandDef_t ), commandComp );
+      if( cmd )
+        cmd->handler( item, &p );
+      else
       // not in our auto list, pass to handler
-      if( !bRan )
         DC->runScript( &p );
     }
   }
@@ -3587,10 +3586,16 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
         case K_KP_DOWNARROW:
         case K_UPARROW:
         case K_KP_UPARROW:
+          // Ignore these keys from the say field
+          if( item->type == ITEM_TYPE_SAYFIELD )
+            break;
+
           newItem = Menu_SetNextCursorItem( item->parent );
 
-          if( newItem && ( newItem->type == ITEM_TYPE_EDITFIELD || newItem->type == ITEM_TYPE_NUMERICFIELD ) )
+          if( newItem && Item_IsEditField( newItem ) )
+          {
             g_editItem = newItem;
+          }
           else
           {
             releaseFocus = qtrue;
@@ -3599,13 +3604,17 @@ qboolean Item_TextField_HandleKey( itemDef_t *item, int key )
 
           break;
 
-        case K_ENTER:
-        case K_KP_ENTER:
-        case K_ESCAPE:
         case K_MOUSE1:
         case K_MOUSE2:
         case K_MOUSE3:
         case K_MOUSE4:
+          // Ignore these buttons from the say field
+          if( item->type == ITEM_TYPE_SAYFIELD )
+            break;
+          // FALLTHROUGH
+        case K_ENTER:
+        case K_KP_ENTER:
+        case K_ESCAPE:
           releaseFocus = qtrue;
           goto exit;
 
@@ -3745,6 +3754,7 @@ void Item_StartCapture( itemDef_t *item, int key )
   switch( item->type )
   {
     case ITEM_TYPE_EDITFIELD:
+    case ITEM_TYPE_SAYFIELD:
     case ITEM_TYPE_NUMERICFIELD:
     case ITEM_TYPE_LISTBOX:
     {
@@ -3852,63 +3862,45 @@ qboolean Item_HandleKey( itemDef_t *item, int key, qboolean down )
   if( !down )
     return qfalse;
 
+  // Edit fields are handled specially
+  if( Item_IsEditField( item ) )
+    return qfalse;
+
   switch( item->type )
   {
     case ITEM_TYPE_BUTTON:
       return qfalse;
-      break;
 
     case ITEM_TYPE_RADIOBUTTON:
       return qfalse;
-      break;
 
     case ITEM_TYPE_CHECKBOX:
       return qfalse;
-      break;
-
-    case ITEM_TYPE_EDITFIELD:
-    case ITEM_TYPE_NUMERICFIELD:
-      //return Item_TextField_HandleKey(item, key);
-      return qfalse;
-      break;
 
     case ITEM_TYPE_COMBO:
       return Item_Combobox_HandleKey( item, key );
-      break;
 
     case ITEM_TYPE_LISTBOX:
       return Item_ListBox_HandleKey( item, key, down, qfalse );
-      break;
 
     case ITEM_TYPE_YESNO:
       return Item_YesNo_HandleKey( item, key );
-      break;
 
     case ITEM_TYPE_MULTI:
       return Item_Multi_HandleKey( item, key );
-      break;
 
     case ITEM_TYPE_OWNERDRAW:
       return Item_OwnerDraw_HandleKey( item, key );
-      break;
 
     case ITEM_TYPE_BIND:
       return Item_Bind_HandleKey( item, key, down );
-      break;
 
     case ITEM_TYPE_SLIDER:
       return Item_Slider_HandleKey( item, key, down );
-      break;
-      //case ITEM_TYPE_IMAGE:
-      //  Item_Image_Paint(item);
-      //  break;
 
     default:
       return qfalse;
-      break;
   }
-
-  //return qfalse;
 }
 
 void Item_Action( itemDef_t *item )
@@ -4068,6 +4060,55 @@ void  Menus_Activate( menuDef_t *menu )
   }
 }
 
+qboolean Menus_ReplaceActive( menuDef_t *menu )
+{
+  int i;
+  menuDef_t *active;
+
+  if( openMenuCount < 1 )
+    return qfalse;
+
+  active = menuStack[ openMenuCount - 1]; 
+
+  if( !( active->window.flags & WINDOW_HASFOCUS )  ||
+     !( active->window.flags & WINDOW_VISIBLE ) )
+  {
+    return qfalse;
+  }
+
+  if( menu == active )
+    return qfalse;
+
+  if( menu->itemCount != active->itemCount )
+    return qfalse;
+  
+  for( i = 0; i < menu->itemCount; i++ ) 
+  {
+    if( menu->items[ i ]->type != active->items[ i ]->type )
+      return qfalse;
+  }
+
+  active->window.flags &= ~( WINDOW_FADINGOUT | WINDOW_VISIBLE );
+  menu->window.flags |= ( WINDOW_HASFOCUS | WINDOW_VISIBLE );
+
+  menuStack[ openMenuCount - 1 ] = menu;
+  if( menu->onOpen )
+  {
+    itemDef_t item;
+    item.parent = menu;
+    Item_RunScript( &item, menu->onOpen );
+  }
+  
+  for( i = 0; i < menu->itemCount; i++ ) 
+  {
+      menu->items[ i ]->cursorPos = active->items[ i ]->cursorPos;
+      menu->items[ i ]->typeData.list->startPos = active->items[ i ]->typeData.list->startPos;
+      menu->items[ i ]->feederID = active->items[ i ]->feederID;
+      menu->items[ i ]->typeData.combo->cursorPos = active->items[ i ]->typeData.combo->cursorPos;
+  }
+  return qtrue;
+}
+
 int Display_VisibleMenuCount( void )
 {
   int i, count;
@@ -4158,15 +4199,10 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
       g_editItem = NULL;
       return;
     }
-    else if( key == K_MOUSE1 || key == K_MOUSE2 || key == K_MOUSE3 )
+    else
     {
-      g_editingField = qfalse;
-      Item_RunScript( g_editItem, g_editItem->onTextEntry );
-      g_editItem = NULL;
-      Display_MouseMove( NULL, DC->cursorx, DC->cursory );
+      Item_RunScript( g_editItem, g_editItem->onCharEntry );
     }
-    else if( key == K_TAB || key == K_UPARROW || key == K_DOWNARROW )
-      return;
   }
 
   if( menu == NULL )
@@ -4243,7 +4279,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
           if( Rect_ContainsPoint( Item_CorrectedTextRect( item ), DC->cursorx, DC->cursory ) )
             Item_Action( item );
         }
-        else if( item->type == ITEM_TYPE_EDITFIELD || item->type == ITEM_TYPE_NUMERICFIELD )
+        else if( Item_IsEditField( item ) )
         {
           if( Rect_ContainsPoint( &item->window.rect, DC->cursorx, DC->cursory ) )
           {
@@ -4296,7 +4332,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down )
     case K_ENTER:
       if( item )
       {
-        if( item->type == ITEM_TYPE_EDITFIELD || item->type == ITEM_TYPE_NUMERICFIELD )
+        if( Item_IsEditField( item ) )
         {
           char buffer[ MAX_STRING_CHARS ] = { 0 };
 
@@ -4426,6 +4462,43 @@ void Item_TextColor( itemDef_t *item, vec4_t *newColor )
   }
 }
 
+static void SkipColorCodes( const char **text, char *lastColor )
+{
+  while( Q_IsColorString( *text ) )
+  {
+    lastColor[ 0 ] = (*text)[ 0 ];
+    lastColor[ 1 ] = (*text)[ 1 ];
+    (*text) += 2;
+  }
+}
+
+static void SkipWhiteSpace( const char **text, char *lastColor )
+{
+  while( **text )
+  {
+    SkipColorCodes( text, lastColor );
+
+    if( **text != '\n' && isspace( **text ) )
+      (*text)++;
+    else
+      break;
+  }
+}
+
+static void SkipEmoticons( const char **text )
+{
+  int      emoticonLen;
+  qboolean emoticonEscaped;
+
+  while( UI_Text_IsEmoticon( *text, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
+  {
+    if( emoticonEscaped )
+      (*text)++;
+    else
+      (*text) += emoticonLen;
+  }
+}
+
 static const char *Item_Text_Wrap( const char *text, float scale, float width )
 {
   static char   out[ 8192 ] = "";
@@ -4436,8 +4509,6 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
   const char    *q = NULL, *qMinus1 = NULL;
   unsigned int  testLength;
   unsigned int  i;
-  int           emoticonLen;
-  qboolean      emoticonEscaped;
 
   if( strlen( text ) >= sizeof( out ) )
     return NULL;
@@ -4446,42 +4517,15 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
 
   while( *p )
   {
-    // Skip leading whitespace
-
-    while( *p )
-    {
-      if( Q_IsColorString( p ) )
-      {
-        c[ 0 ] = p[ 0 ];
-        c[ 1 ] = p[ 1 ];
-        p += 2;
-      }
-      else if( *p != '\n' && isspace( *p ) )
-        p++;
-      else
-        break;
-    }
-
-    if( !*p )
-      break;
-
-    Q_strcat( paint, out + sizeof( out ) - paint, c );
-
     testLength = 1;
-
     eol = p;
-
     q = p + 1;
 
-    while( Q_IsColorString( q ) )
-    {
-      c[ 0 ] = q[ 0 ];
-      c[ 1 ] = q[ 1 ];
-      q += 2;
-    }
+    SkipColorCodes( &q, c );
 
     while( UI_Text_Width( p, scale, testLength ) < width )
     {
+      // Remaining string is too short to wrap
       if( testLength >= strlen( p ) )
       {
         eol = p + strlen( p );
@@ -4489,44 +4533,18 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
       }
 
       // Point q at the end of the current testLength
-      q = p;
-
-      for( i = 0; i < testLength; )
+      for( q = p, i = 0; i < testLength; i++ )
       {
-        // Skip color escapes
-        while( Q_IsColorString( q ) )
-        {
-          c[ 0 ] = q[ 0 ];
-          c[ 1 ] = q[ 1 ];
-          q += 2;
-        }
-        while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
-        {
-          if( emoticonEscaped )
-            q++;
-          else
-            q += emoticonLen;
-        }
+        SkipColorCodes( &q, c );
+        SkipEmoticons( &q );
 
         qMinus1 = q;
         q++;
-        i++;
       }
 
       // Some color escapes might still be present
-      while( Q_IsColorString( q ) )
-      {
-        c[ 0 ] = q[ 0 ];
-        c[ 1 ] = q[ 1 ];
-        q += 2;
-      }
-      while( UI_Text_Emoticon( q, &emoticonEscaped, &emoticonLen, NULL, NULL ) )
-      {
-        if( emoticonEscaped )
-          q++;
-        else
-          q += emoticonLen;
-      }
+      SkipColorCodes( &q, c );
+      SkipEmoticons( &q );
 
       // Manual line break
       if( *q == '\n' )
@@ -4551,19 +4569,26 @@ static const char *Item_Text_Wrap( const char *text, float scale, float width )
     strncpy( paint, p, eol - p );
 
     paint[ eol - p ] = '\0';
+    p = eol;
 
-    // Add a \n if it's not there already
-    if( out[ strlen( out ) - 1 ] != '\n' )
+    if( out[ strlen( out ) - 1 ] == '\n' )
     {
-      Q_strcat( out, sizeof( out ), "\n " );
-      Q_strcat( out, sizeof( out ), c );
+      // The line is deliberately broken, clear the color
+      c[ 0 ] = '\0';
     }
     else
-      c[ 0 ] = '\0';
+    {
+      // Add a \n if it's not there already
+      Q_strcat( out, sizeof( out ), "\n" );
+
+      // Skip leading whitespace on next line and save the
+      // last color code
+      SkipWhiteSpace( &p, c );
+    }
+
+    Q_strcat( out, sizeof( out ), c );
 
     paint = out + strlen( out );
-
-    p = eol;
   }
 
   return out;
@@ -5113,6 +5138,7 @@ static bind_t g_bindings[] =
     { "teamvote no",  K_F4,          -1, -1, -1 },
     { "scoresUp",      K_KP_PGUP,    -1, -1, -1 },
     { "scoresDown",    K_KP_PGDN,    -1, -1, -1 },
+    { "screenshotJPEG",-1,           -1, -1, -1 },
     { "messagemode",  -1,            -1, -1, -1 },
     { "messagemode2", -1,            -1, -1, -1 },
     { "messagemode3", -1,            -1, -1, -1 },
@@ -6216,11 +6242,6 @@ void Item_Paint( itemDef_t *item )
     case ITEM_TYPE_CHECKBOX:
       break;
 
-    case ITEM_TYPE_EDITFIELD:
-    case ITEM_TYPE_NUMERICFIELD:
-      Item_TextField_Paint( item );
-      break;
-
     case ITEM_TYPE_COMBO:
       Item_Combobox_Paint( item );
       break;
@@ -6254,6 +6275,9 @@ void Item_Paint( itemDef_t *item )
       break;
 
     default:
+      if( Item_IsEditField( item ) )
+        Item_TextField_Paint( item );
+
       break;
   }
 
@@ -6388,6 +6412,26 @@ menuDef_t *Menus_ActivateByName( const char *p )
       Menus[i].window.flags &= ~WINDOW_HASFOCUS;
   }
 
+  return m;
+}
+
+menuDef_t *Menus_ReplaceActiveByName( const char *p )
+{
+  int i;
+  menuDef_t *m = NULL;
+
+  // Activate one menu
+
+  for( i = 0; i < menuCount; i++ )
+  {
+    if( Q_stricmp( Menus[i].window.name, p ) == 0 )
+    {
+      m = &Menus[i];
+      if(! Menus_ReplaceActive( m ) )
+        return NULL;
+      break;
+    }
+  }
   return m;
 }
 
@@ -6645,6 +6689,7 @@ itemDataType_t Item_DataType( itemDef_t *item )
 
     case ITEM_TYPE_EDITFIELD:
     case ITEM_TYPE_NUMERICFIELD:
+    case ITEM_TYPE_SAYFIELD:
     case ITEM_TYPE_YESNO:
     case ITEM_TYPE_BIND:
     case ITEM_TYPE_SLIDER:
@@ -6656,6 +6701,25 @@ itemDataType_t Item_DataType( itemDef_t *item )
 
     case ITEM_TYPE_MODEL:
       return TYPE_MODEL;
+  }
+}
+
+/*
+===============
+Item_IsEditField
+===============
+*/
+static ID_INLINE qboolean Item_IsEditField( itemDef_t *item )
+{
+  switch( item->type )
+  {
+    case ITEM_TYPE_EDITFIELD:
+    case ITEM_TYPE_NUMERICFIELD:
+    case ITEM_TYPE_SAYFIELD:
+      return qtrue;
+
+    default:
+      return qfalse;
   }
 }
 
@@ -6881,6 +6945,7 @@ qboolean ItemParse_type( itemDef_t *item, int handle )
       break;
 
     case ITEM_TYPE_EDITFIELD:
+    case ITEM_TYPE_SAYFIELD:
     case ITEM_TYPE_NUMERICFIELD:
     case ITEM_TYPE_YESNO:
     case ITEM_TYPE_BIND:
@@ -6889,7 +6954,7 @@ qboolean ItemParse_type( itemDef_t *item, int handle )
       item->typeData.edit = UI_Alloc( sizeof( editFieldDef_t ) );
       memset( item->typeData.edit, 0, sizeof( editFieldDef_t ) );
 
-      if( item->type == ITEM_TYPE_EDITFIELD )
+      if( item->type == ITEM_TYPE_EDITFIELD || item->type == ITEM_TYPE_SAYFIELD )
         item->typeData.edit->maxPaintChars = MAX_EDITFIELD;
       break;
 
@@ -7222,6 +7287,15 @@ qboolean ItemParse_delayEvent( itemDef_t *item, int handle )
   return qtrue;
 }
 
+
+qboolean ItemParse_onCharEntry( itemDef_t *item, int handle )
+{
+  if( !PC_Script_Parse( handle, &item->onCharEntry ) )
+    return qfalse;
+
+  return qtrue;
+}
+
 qboolean ItemParse_action( itemDef_t *item, int handle )
 {
   if( !PC_Script_Parse( handle, &item->action ) )
@@ -7533,6 +7607,7 @@ keywordHash_t itemParseKeywords[] = {
   {"mouseEnterText", ItemParse_mouseEnterText, TYPE_ANY},
   {"mouseExitText", ItemParse_mouseExitText, TYPE_ANY},
   {"onTextEntry", ItemParse_onTextEntry, TYPE_ANY},
+  {"onCharEntry", ItemParse_onCharEntry, TYPE_ANY},
   {"delayEvent", ItemParse_delayEvent, TYPE_ANY},
   {"action", ItemParse_action, TYPE_ANY},
   {"modifier", ItemParse_modifier, TYPE_ANY},

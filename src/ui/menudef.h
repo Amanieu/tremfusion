@@ -10,6 +10,7 @@ enum
   ITEM_TYPE_RADIOBUTTON,  // toggle button, may be grouped
   ITEM_TYPE_CHECKBOX,     // check box
   ITEM_TYPE_EDITFIELD,    // editable text, associated with a cvar
+  ITEM_TYPE_SAYFIELD,     // the chat field
   ITEM_TYPE_COMBO,        // drop down list
   ITEM_TYPE_LISTBOX,      // scrollable list
   ITEM_TYPE_MODEL,        // model
@@ -21,19 +22,22 @@ enum
   ITEM_TYPE_BIND          // keyboard control configuration
 };
 
+// The first items in these enums are the defaults if menus do not specify
 enum
 {
   ALIGN_LEFT,   // left alignment
   ALIGN_CENTER, // center alignment
   ALIGN_RIGHT,  // right alignment
-  ASPECT_NONE   // no aspect compensation
+  ASPECT_NONE,  // no aspect compensation
+  ALIGN_NONE
 };
 
 enum
 {
   VALIGN_BOTTOM, // bottom alignment
   VALIGN_CENTER, // center alignment
-  VALIGN_TOP     // top alignment
+  VALIGN_TOP,    // top alignment
+  VALIGN_NONE
 };
 
 enum

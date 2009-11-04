@@ -209,14 +209,13 @@ static void UI_Prompt_f( void )
   }
 }
 
-struct
+struct uicmd
 {
   char *cmd;
   void ( *function )( void );
 } commands[ ] = {
-  { "ui_load", UI_Load },
-  { "ui_report", UI_Report },
-  { "ui_cache", UI_Cache_f },
+  { "closemenus", UI_CloseMenus_f },
+  { "menu", UI_Menu_f },
   { "messagemode", UI_MessageMode_f },
   { "messagemode2", UI_MessageMode_f },
   { "messagemode3", UI_MessageMode_f },
@@ -224,8 +223,9 @@ struct
   { "messagemode5", UI_MessageMode_f },
   { "messagemode6", UI_MessageMode_f },
   { "prompt", UI_Prompt_f },
-  { "menu", UI_Menu_f },
-  { "closemenus", UI_CloseMenus_f }
+  { "ui_load", UI_Load },
+  { "ui_report", UI_Report },
+  { "ui_cache", UI_Cache_f }
 };
 
 /*
@@ -235,20 +235,17 @@ UI_ConsoleCommand
 */
 qboolean UI_ConsoleCommand( int realTime )
 {
-  char  *cmd;
-  int   i;
+  struct uicmd *cmd = bsearch( UI_Argv( 0 ), commands,
+    sizeof( commands ) / sizeof( commands[ 0 ] ), sizeof( commands[ 0 ] ),
+    cmdcmp );
 
   uiInfo.uiDC.frameTime = realTime - uiInfo.uiDC.realTime;
   uiInfo.uiDC.realTime = realTime;
 
-  cmd = UI_Argv( 0 );
-  for( i = 0; i < sizeof( commands ) / sizeof( commands[ 0 ] ); i++ )
+  if( cmd )
   {
-    if( Q_stricmp( commands[ i ].cmd, cmd ) == 0 )
-    {
-      commands[ i ].function( );
-      return qtrue;
-    }
+    cmd->function( );
+    return qtrue;
   }
 
   return qfalse;
