@@ -228,7 +228,7 @@ void CON_Init( void )
 	// Make stdin reads non-blocking
 	fcntl( STDIN_FILENO, F_SETFL, fcntl( STDIN_FILENO, F_GETFL, 0 ) | O_NONBLOCK );
 
-	if (isatty(STDIN_FILENO)!=1 || isatty(STDOUT_FILENO)!=1 || isatty(STDERR_FILENO)!=1 ||
+	if (isatty(STDIN_FILENO)!=1 || isatty(STDOUT_FILENO)!=1 ||
 	    (term && (!strcmp(term, "raw") || !strcmp(term, "dumb"))))
 	{
 		Com_DPrintf( "tty console mode disabled\n");
@@ -406,7 +406,7 @@ void CON_Print( const char *msg )
 	if( ttycon_on && com_ansiColor && com_ansiColor->integer )
 		Sys_AnsiColorPrint( msg );
 	else
-		fputs( msg, stderr );
+		puts( msg );
 
 	CON_Show( );
 }

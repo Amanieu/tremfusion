@@ -308,7 +308,7 @@ void CON_Init(void)
 #endif
 
 	// Make sure we're on a tty
-	if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO) || !isatty(STDERR_FILENO)) {
+	if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) {
 		CON_Init_tty();
 		return;
 	}
@@ -345,6 +345,9 @@ void CON_Init(void)
 			init_pair(7, COLOR_MAGENTA, -1);
 			init_pair(8, -1, -1);
 		}
+
+		// Prevent bad libraries from messing up the console
+		fclose(stderr);
 	}
 
 	// Create the border

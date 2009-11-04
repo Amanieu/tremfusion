@@ -282,7 +282,7 @@ CON_Print
 */
 void CON_Print( const char *msg )
 {
-	fputs( msg, stderr );
+	puts( msg );
 
 	CON_Show( );
 }

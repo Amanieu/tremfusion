@@ -230,14 +230,14 @@ void Sys_AnsiColorPrint( const char *msg )
 			if( length > 0 )
 			{
 				buffer[ length ] = '\0';
-				fputs( buffer, stderr );
+				puts( buffer );
 				length = 0;
 			}
 
 			if( *msg == '\n' )
 			{
 				// Issue a reset and then the newline
-				fputs( "\033[0m\n", stderr );
+				puts( "\033[0m\n" );
 				msg++;
 			}
 			else
@@ -245,7 +245,7 @@ void Sys_AnsiColorPrint( const char *msg )
 				// Print the color code
 				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm",
 						q3ToAnsi[ ColorIndex( *( msg + 1 ) ) ] );
-				fputs( buffer, stderr );
+				puts( buffer );
 				msg += 2;
 			}
 		}
@@ -264,7 +264,7 @@ void Sys_AnsiColorPrint( const char *msg )
 	if( length > 0 )
 	{
 		buffer[ length ] = '\0';
-		fputs( buffer, stderr );
+		puts( buffer );
 	}
 }
 
@@ -503,7 +503,7 @@ void Sys_SigHandler( int signal )
 {
 	if( signalcaught )
 	{
-		fprintf( stderr, "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n",
+		printf( "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n",
 			signal );
 	}
 	else
