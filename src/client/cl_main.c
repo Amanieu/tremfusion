@@ -2058,27 +2058,42 @@ CL_NextDownload
 A download completed or failed
 =================
 */
-void CL_NextDownload(void) {
+void CL_NextDownload(void)
+{
 	char *s;
 	char *remoteName, *localName;
 	qboolean useCURL = qfalse;
 	int prompt;
 
+	// A download has finished, check whether this matches a referenced checksum
+	if(*clc.downloadName)
+	{
+		char *zippath = FS_BuildOSPath(Cvar_VariableString("fs_homepath"), clc.downloadName, "");
+		zippath[strlen(zippath)-1] = '\0';
+
+		if(!FS_CompareZipChecksum(zippath))
+			Com_Error(ERR_DROP, "Incorrect checksum for file: %s", clc.downloadName);
+	}
+
+	*clc.downloadTempName = *clc.downloadName = 0;
+	Cvar_Set("cl_downloadName", "");
+
 	// We are looking to start a download here
 	if (*clc.downloadList) {
 
-	// Don't show a download prompt for tty clients
 #ifdef BUILD_TTY_CLIENT
-	cl_showdlPrompt->flags &= ~CVAR_ARCHIVE;
-	Cvar_Set( "cl_showdlPrompt", "0" );
+		// Don't show a download prompt for tty clients
+		cl_showdlPrompt->flags &= ~CVAR_ARCHIVE;
+		Cvar_Set( "cl_showdlPrompt", "0" );
 #endif
 
 		// Prompt if we do not allow automatic downloads
 		prompt = cl_downloadPrompt->integer;
 		if( !( prompt & DLP_TYPE_MASK ) && cl_showdlPrompt->integer ) {
-		    char files[ MAX_INFO_STRING ], *name, *head, *pure_msg,
-		         *url_msg = "";
-		    int i = 0, others = 0, swap = 0, max_list = 12;
+			char files[ MAX_INFO_STRING ];
+			char *name, *head, *pure_msg;
+			char *url_msg = "";
+			int i = 0, others = 0, swap = 0, max_list = 12;
 
 			// Set the download URL message
 			if( ( clc.sv_allowDownload & DLF_ENABLE ) &&
@@ -2089,35 +2104,35 @@ void CL_NextDownload(void) {
 			}
 
 			// Make a pretty version of the download list
-		    name = clc.downloadList;
-		    if( *name == '@' )
-		    	name++;
-		    do {
-		    	// Copy remote name
-		    	head = name;
-		    	while( *head && *head != '@' )
-		    		head++;
-		    	swap = *head;
-		    	*head = 0;
-		    	if( i++ < max_list )
-			    	Com_sprintf( files, sizeof( files ), "%s%s%s",
-			    	             files, i > 1 ? ", " : "", name );
-			    else
-			    	others++;
-		    	*head = swap;
-		    	if( !swap )
-		    		break;
+			name = clc.downloadList;
+			if( *name == '@' )
+				name++;
+			do {
+				// Copy remote name
+				head = name;
+				while( *head && *head != '@' )
+					head++;
+				swap = *head;
+				*head = 0;
+				if( i++ < max_list ) {
+					if( i > 1 )
+						Q_strcat( files, sizeof( files ), ", " );
+					Q_strcat( files, sizeof( files ), name );
+				} else
+					others++;
+				*head = swap;
+				if( !swap )
+					break;
 
-		    	// Skip local name
-		    	head++;
-		    	while( *head && *head != '@' )
-		    		head++;
-		    	name = head + 1;
-		    } while( *head );
-		    if( others )
-		    	Com_sprintf( files, sizeof( files ),
-		    	             "%s (%d other file%s)\n", files, others,
-		    	             others > 1 ? "s" : "" );
+				// Skip local name
+				head++;
+				while( *head && *head != '@' )
+					head++;
+				name = head + 1;
+			} while( *head );
+			if( others )
+				Q_strcat( files, sizeof( files ), va( "(%d other file%s)\n", 
+						  others, others > 1 ? "s" : "" ) );
 
 			// Set the pure message
 			if( !( clc.sv_allowDownload & DLF_ENABLE ) ||
@@ -2240,6 +2255,10 @@ void CL_InitDownloads(void) {
 		Cvar_Set( "cl_downloadPrompt", "0" );
 		if ( *clc.downloadList ) {
 			cls.state = CA_CONNECTED;
+
+			*clc.downloadTempName = *clc.downloadName = 0;
+			Cvar_Set( "cl_downloadName", "" );
+
 			CL_NextDownload();
 			return;
 		}

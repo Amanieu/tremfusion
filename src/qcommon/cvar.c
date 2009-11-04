@@ -841,7 +841,6 @@ void Cvar_Set_f( void ) {
 			flag = CVAR_SERVERINFO;
 			break;
 		case 'a':
-		case '\0':
 			flag = CVAR_ARCHIVE;
 			break;
 	}
