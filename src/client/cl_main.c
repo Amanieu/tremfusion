@@ -1502,7 +1502,7 @@ void CL_GetMotd_f( void ) {
 	char		info[MAX_INFO_STRING];
 
 	Com_DPrintf( "Resolving %s\n", MOTD_SERVER_NAME );
-	switch( NET_StringToAdr( MASTER_SERVER_NAME, &cls.updateServer,
+	switch( NET_StringToAdr( MOTD_SERVER_NAME, &cls.updateServer,
 	                         NA_UNSPEC ) )
 	{
 		case 0:
@@ -1515,7 +1515,7 @@ void CL_GetMotd_f( void ) {
 			break;
  	}
 
-	Com_DPrintf( "%s resolved to %s\n", MASTER_SERVER_NAME,
+	Com_DPrintf( "%s resolved to %s\n", MOTD_SERVER_NAME,
 	            NET_AdrToStringwPort( cls.updateServer ) );
 
 	info[0] = 0;
