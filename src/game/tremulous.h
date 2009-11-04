@@ -3,20 +3,20 @@
 Copyright (C) 1999-2005 Id Software, Inc.
 Copyright (C) 2000-2006 Tim Angus
 
-This file is part of Tremfusion.
+This file is part of Tremulous.
 
-Tremfusion is free software; you can redistribute it
+Tremulous is free software; you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2 of the License,
 or (at your option) any later version.
 
-Tremfusion is distributed in the hope that it will be
+Tremulous is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Tremfusion; if not, write to the Free Software
+along with Tremulous; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -50,17 +50,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL0_BITE_DMG             ADM(36)
 #define LEVEL0_BITE_RANGE           64.0f
 #define LEVEL0_BITE_WIDTH           6.0f
-#define LEVEL0_BITE_REPEAT          700
+#define LEVEL0_BITE_REPEAT          500
 #define LEVEL0_BITE_K_SCALE         1.0f
 
 #define LEVEL1_CLAW_DMG             ADM(32)
 #define LEVEL1_CLAW_RANGE           64.0f
+#define LEVEL1_CLAW_U_RANGE         LEVEL1_CLAW_RANGE + 3.0f
 #define LEVEL1_CLAW_WIDTH           10.0f
 #define LEVEL1_CLAW_REPEAT          600
 #define LEVEL1_CLAW_U_REPEAT        500
 #define LEVEL1_CLAW_K_SCALE         1.0f
 #define LEVEL1_CLAW_U_K_SCALE       1.0f
 #define LEVEL1_GRAB_RANGE           96.0f
+#define LEVEL1_GRAB_U_RANGE         LEVEL1_GRAB_RANGE + 3.0f
 #define LEVEL1_GRAB_TIME            300
 #define LEVEL1_GRAB_U_TIME          300
 #define LEVEL1_PCLOUD_DMG           ADM(4)
@@ -72,6 +74,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define LEVEL2_CLAW_DMG             ADM(40)
 #define LEVEL2_CLAW_RANGE           80.0f
+#define LEVEL2_CLAW_U_RANGE         LEVEL2_CLAW_RANGE + 2.0f
 #define LEVEL2_CLAW_WIDTH           14.0f
 #define LEVEL2_CLAW_REPEAT          500
 #define LEVEL2_CLAW_K_SCALE         1.0f
@@ -84,26 +87,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL2_AREAZAP_TIME         1000
 #define LEVEL2_AREAZAP_MAX_TARGETS  5
 #define LEVEL2_WALLJUMP_MAXSPEED    1000.0f
-#define LEVEL2_WALLJUMP_NORMAL      1.0      // magnitude scale from surface
-#define LEVEL2_WALLJUMP_FORWARD     1.5      // magnitude scale in view direction
-#define LEVEL2_WALLJUMP_UP          0.0      // magnitude scale up
-#define LEVEL2_WALLJUMP_REPEAT      400      // msec before new jump
-#define LEVEL2_WALLJUMP_RANGE       8.0      // how far away the wall can be
 
 #define LEVEL3_CLAW_DMG             ADM(80)
 #define LEVEL3_CLAW_RANGE           72.0f
-#define LEVEL3_CLAW_UPG_RANGE       LEVEL3_CLAW_RANGE + 6.0f          
+#define LEVEL3_CLAW_UPG_RANGE       LEVEL3_CLAW_RANGE + 3.0f          
 #define LEVEL3_CLAW_WIDTH           12.0f
-#define LEVEL3_CLAW_REPEAT          700
+#define LEVEL3_CLAW_REPEAT          900
 #define LEVEL3_CLAW_K_SCALE         1.0f
-#define LEVEL3_CLAW_U_REPEAT        600
+#define LEVEL3_CLAW_U_REPEAT        800
 #define LEVEL3_CLAW_U_K_SCALE       1.0f
 #define LEVEL3_POUNCE_DMG           ADM(100)
 #define LEVEL3_POUNCE_RANGE         54.0f
-#define LEVEL3_POUNCE_UPG_RANGE     LEVEL3_POUNCE_RANGE + 6.0f
+#define LEVEL3_POUNCE_UPG_RANGE     LEVEL3_POUNCE_RANGE + 3.0f
 #define LEVEL3_POUNCE_WIDTH         14.0f
-#define LEVEL3_POUNCE_TIME          700      // msec for full Dragoon pounce
-#define LEVEL3_POUNCE_TIME_UPG      700      // msec for full Adv. Dragoon pounce
+#define LEVEL3_POUNCE_TIME          800      // msec for full Dragoon pounce
+#define LEVEL3_POUNCE_TIME_UPG      800      // msec for full Adv. Dragoon pounce
 #define LEVEL3_POUNCE_TIME_MIN      200      // msec before which pounce cancels  
 #define LEVEL3_POUNCE_REPEAT        400      // msec before a new pounce starts
 #define LEVEL3_POUNCE_SPEED_MOD     0.75f    // walking speed modifier for pounce charging
@@ -119,7 +117,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL4_CLAW_RANGE           100.0f
 #define LEVEL4_CLAW_WIDTH           14.0f
 #define LEVEL4_CLAW_HEIGHT          20.0f
-#define LEVEL4_CLAW_REPEAT          750
+#define LEVEL4_CLAW_REPEAT          800
 #define LEVEL4_CLAW_K_SCALE         1.0f
 
 #define LEVEL4_TRAMPLE_DMG             ADM(111)
@@ -128,9 +126,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define LEVEL4_TRAMPLE_CHARGE_MAX      1000  // msec to maximum charge stored
 #define LEVEL4_TRAMPLE_CHARGE_TRIGGER  3000  // msec charge starts on its own
 #define LEVEL4_TRAMPLE_DURATION        3000  // msec trample lasts on full charge
-//#define LEVEL4_TRAMPLE_STOP_PERCENTAGE 20    // removed from the end of trample when it isn't very useful
 #define LEVEL4_TRAMPLE_STOP_PENALTY    1     // charge lost per msec when stopped
-#define LEVEL4_TRAMPLE_REPEAT          100 // msec before a trample will rehit a player
+#define LEVEL4_TRAMPLE_REPEAT          100   // msec before a trample will rehit a player
 
 #define LEVEL4_CRUSH_DAMAGE_PER_V      0.5f  // damage per falling velocity
 #define LEVEL4_CRUSH_DAMAGE            120   // to players only
@@ -149,70 +146,68 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ALIEN_HLTH_MODIFIER         1.0f
 #define AHM(h)                      ((int)((float)h*ALIEN_HLTH_MODIFIER))
 
-#define ALIEN_VALUE_MODIFIER        1.2f
+#define ALIEN_VALUE_MODIFIER        1.0f
 #define AVM(h)                      ((int)((float)h*ALIEN_VALUE_MODIFIER))
 
 #define ABUILDER_SPEED              0.9f
-#define ABUILDER_VALUE              AVM(200)
+#define ABUILDER_VALUE              AVM(240)
 #define ABUILDER_HEALTH             AHM(50)
 #define ABUILDER_REGEN              (0.04f * ABUILDER_HEALTH)
 #define ABUILDER_COST               0
 
 #define ABUILDER_UPG_SPEED          0.9f
-#define ABUILDER_UPG_VALUE          AVM(250)
+#define ABUILDER_UPG_VALUE          AVM(300)
 #define ABUILDER_UPG_HEALTH         AHM(75)
 #define ABUILDER_UPG_REGEN          (0.04f * ABUILDER_UPG_HEALTH)
 #define ABUILDER_UPG_COST           0
 
 #define LEVEL0_SPEED                1.4f
-#define LEVEL0_VALUE                AVM(150)
+#define LEVEL0_VALUE                AVM(180)
 #define LEVEL0_HEALTH               AHM(25)
 #define LEVEL0_REGEN                (0.05f * LEVEL0_HEALTH)
 #define LEVEL0_COST                 0
 
 #define LEVEL1_SPEED                1.25f
-#define LEVEL1_VALUE                AVM(225)
+#define LEVEL1_VALUE                AVM(270)
 #define LEVEL1_HEALTH               AHM(60)
 #define LEVEL1_REGEN                (0.03f * LEVEL1_HEALTH)
 #define LEVEL1_COST                 1
 
 #define LEVEL1_UPG_SPEED            1.25f
-#define LEVEL1_UPG_VALUE            AVM(275)
+#define LEVEL1_UPG_VALUE            AVM(330)
 #define LEVEL1_UPG_HEALTH           AHM(80)
 #define LEVEL1_UPG_REGEN            (0.03f * LEVEL1_UPG_HEALTH)
 #define LEVEL1_UPG_COST             1
 
 #define LEVEL2_SPEED                1.2f
-#define LEVEL2_VALUE                AVM(350)
+#define LEVEL2_VALUE                AVM(420)
 #define LEVEL2_HEALTH               AHM(150)
 #define LEVEL2_REGEN                (0.03f * LEVEL2_HEALTH)
 #define LEVEL2_COST                 1
 
 #define LEVEL2_UPG_SPEED            1.2f
-#define LEVEL2_UPG_VALUE            AVM(450)
+#define LEVEL2_UPG_VALUE            AVM(540)
 #define LEVEL2_UPG_HEALTH           AHM(175)
 #define LEVEL2_UPG_REGEN            (0.03f * LEVEL2_UPG_HEALTH)
 #define LEVEL2_UPG_COST             1
 
 #define LEVEL3_SPEED                1.1f
-#define LEVEL3_VALUE                AVM(500)
+#define LEVEL3_VALUE                AVM(600)
 #define LEVEL3_HEALTH               AHM(200)
 #define LEVEL3_REGEN                (0.03f * LEVEL3_HEALTH)
 #define LEVEL3_COST                 1
 
 #define LEVEL3_UPG_SPEED            1.1f
-#define LEVEL3_UPG_VALUE            AVM(600)
+#define LEVEL3_UPG_VALUE            AVM(720)
 #define LEVEL3_UPG_HEALTH           AHM(250)
 #define LEVEL3_UPG_REGEN            (0.03f * LEVEL3_UPG_HEALTH)
 #define LEVEL3_UPG_COST             1
 
 #define LEVEL4_SPEED                1.2f
-#define LEVEL4_VALUE                AVM(800)
+#define LEVEL4_VALUE                AVM(960)
 #define LEVEL4_HEALTH               AHM(350)
 #define LEVEL4_REGEN                (0.025f * LEVEL4_HEALTH)
 #define LEVEL4_COST                 2
-
-
 
 /*
  * ALIEN buildables
@@ -231,7 +226,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ALIEN_BHLTH_MODIFIER        1.0f
 #define ABHM(h)                     ((int)((float)h*ALIEN_BHLTH_MODIFIER))
 #define ALIEN_BVALUE_MODIFIER       90.0f
-#define ABVM(h)                      ((int)((float)h*ALIEN_BVALUE_MODIFIER))
+#define ABVM(h)                     ((int)((float)h*ALIEN_BVALUE_MODIFIER))
 
 #define CREEP_BASESIZE              700
 #define CREEP_TIMEOUT               1000
@@ -289,17 +284,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define HIVE_BP                     12
 #define HIVE_BT                     20000
-#define HIVE_HEALTH                 ABHM(175)
+#define HIVE_HEALTH                 ABHM(125)
 #define HIVE_REGEN                  10
 #define HIVE_SPLASHDAMAGE           30
 #define HIVE_SPLASHRADIUS           200
 #define HIVE_CREEPSIZE              120
 #define HIVE_SENSE_RANGE            500.0f
-#define HIVE_LIFETIME               6000
+#define HIVE_LIFETIME               3000
 #define HIVE_REPEAT                 3000
 #define HIVE_K_SCALE                1.0f
-#define HIVE_DMG                    100
-#define HIVE_SPEED                  384.0f
+#define HIVE_DMG                    80
+#define HIVE_SPEED                  320.0f
 #define HIVE_DIR_CHANGE_PERIOD      500
 #define HIVE_VALUE                  ABVM(HIVE_BP)
 
@@ -338,8 +333,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HOVEL_CREEPSIZE             120
 #define HOVEL_VALUE                 ABVM(8)
 
-
-
 /*
  * ALIEN misc
  *
@@ -360,12 +353,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ALIEN_REGEN_NOCREEP_MOD     (1.0f/3.0f) //regen off creep
 
 #define ALIEN_MAX_FRAGS             9
-#define ALIEN_MAX_CREDITS           (ALIEN_MAX_FRAGS*ALIEN_CREDITS_PER_FRAG)
-#define ALIEN_CREDITS_PER_FRAG      400
+#define ALIEN_MAX_CREDITS           (ALIEN_MAX_FRAGS*ALIEN_CREDITS_PER_KILL)
+#define ALIEN_CREDITS_PER_KILL      400
 #define ALIEN_TK_SUICIDE_PENALTY    350
-
-// Allow Aliens to wallwalk on any entity (buildables, etc) but not players
-#define ALIEN_WALLWALK_ENTITIES
 
 /*
  * HUMAN weapons
@@ -402,8 +392,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define PAINSAW_K_SCALE             1.0f
 #define PAINSAW_DAMAGE              HDM(11)
 #define PAINSAW_RANGE               64.0f
-#define PAINSAW_WIDTH               0.f
-#define PAINSAW_HEIGHT              8.f
+#define PAINSAW_WIDTH               0.0f
+#define PAINSAW_HEIGHT              8.0f
 
 #define GRENADE_PRICE               200
 #define GRENADE_REPEAT              0
@@ -414,7 +404,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define SHOTGUN_PRICE               150
 #define SHOTGUN_SHELLS              8
-#define SHOTGUN_PELLETS             12 //used to sync server and client side
+#define SHOTGUN_PELLETS             14 //used to sync server and client side
 #define SHOTGUN_MAXCLIPS            3
 #define SHOTGUN_REPEAT              1000
 #define SHOTGUN_K_SCALE             1.0f
@@ -433,11 +423,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MDRIVER_PRICE               350
 #define MDRIVER_CLIPSIZE            5
 #define MDRIVER_MAXCLIPS            4
-#define MDRIVER_DMG                 HDM(38)
+#define MDRIVER_DMG                 HDM(40)
 #define MDRIVER_REPEAT              1000
 #define MDRIVER_K_SCALE             1.0f
 #define MDRIVER_RELOAD              2000
-#define MDRIVER_MAX_HITS            16
 
 #define CHAINGUN_PRICE              400
 #define CHAINGUN_BULLETS            300
@@ -446,26 +435,26 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CHAINGUN_SPREAD             900
 #define CHAINGUN_DMG                HDM(5)
 
-#define PRIFLE_PRICE                400
-#define PRIFLE_CLIPS                50
-#define PRIFLE_MAXCLIPS             4
+#define FLAMER_PRICE                400
+#define FLAMER_GAS                  150
+#define FLAMER_REPEAT               200
+#define FLAMER_K_SCALE              1.0f
+#define FLAMER_DMG                  HDM(20)
+#define FLAMER_RADIUS               50       // splash radius
+#define FLAMER_SIZE                 15        // missile bounding box
+#define FLAMER_LIFETIME             700.0f
+#define FLAMER_SPEED                300.0f
+#define FLAMER_LAG                  0.65f    // the amount of player velocity that is added to the fireball
+
+#define PRIFLE_PRICE                450
+#define PRIFLE_CLIPS                40
+#define PRIFLE_MAXCLIPS             5
 #define PRIFLE_REPEAT               100
 #define PRIFLE_K_SCALE              1.0f
 #define PRIFLE_RELOAD               2000
 #define PRIFLE_DMG                  HDM(9)
 #define PRIFLE_SPEED                1200
 #define PRIFLE_SIZE                 5
-
-#define FLAMER_PRICE                450
-#define FLAMER_GAS                  150
-#define FLAMER_REPEAT               200
-#define FLAMER_K_SCALE              1.0f
-#define FLAMER_DMG                  HDM(20)
-#define FLAMER_RADIUS               50       // splash radius
-#define FLAMER_SIZE                 15       // missile bounding box
-#define FLAMER_LIFETIME             700.0f
-#define FLAMER_SPEED                300.0f
-#define FLAMER_LAG                  0.65f  //the amount of player velocity that is added to the fireball
 
 #define LCANNON_PRICE               600
 #define LCANNON_AMMO                80
@@ -489,8 +478,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HBUILD_PRICE                0
 #define HBUILD_REPEAT               1000
 #define HBUILD_HEALRATE             18
-
-
 
 /*
  * HUMAN upgrades
@@ -530,7 +517,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MEDKIT_STARTUP_TIME         4000
 #define MEDKIT_STARTUP_SPEED        5
 
-
 /*
  * HUMAN buildables
  *
@@ -548,7 +534,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HUMAN_BHLTH_MODIFIER        1.0f
 #define HBHM(h)                     ((int)((float)h*HUMAN_BHLTH_MODIFIER))
 #define HUMAN_BVALUE_MODIFIER       240.0f
-#define HBVM(h)                     ((int)((float)h*(float)HUMAN_BVALUE_MODIFIER)) // remember these are measured in credits not frags (c.f. ALIEN_CREDITS_PER_FRAG)
+#define HBVM(h)                     ((int)((float)h*(float)HUMAN_BVALUE_MODIFIER)) // remember these are measured in credits not frags (c.f. ALIEN_CREDITS_PER_KILL)
 
 #define REACTOR_BASESIZE            1000
 #define REPEATER_BASESIZE           500
@@ -574,7 +560,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MGTURRET_SPLASHDAMAGE       100
 #define MGTURRET_SPLASHRADIUS       100
 #define MGTURRET_ANGULARSPEED       12
-#define MGTURRET_ANGULARSPEED_GRAB  8
 #define MGTURRET_ACCURACY_TO_FIRE   0
 #define MGTURRET_VERTICALCAP        30  // +/- maximum pitch
 #define MGTURRET_REPEAT             150
@@ -583,7 +568,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MGTURRET_SPREAD             200
 #define MGTURRET_DMG                HDM(8)
 #define MGTURRET_SPINUP_TIME        750 // time between target sighted and fire
-#define MGTURRET_DROOPSCALE         0.5f // rate at which turret droops when unpowered
 #define MGTURRET_VALUE              HBVM(MGTURRET_BP)
 
 #define TESLAGEN_BP                 10
@@ -604,7 +588,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define DC_SPLASHRADIUS             100
 #define DC_ATTACK_PERIOD            10000 // how often to spam "under attack"
 #define DC_HEALRATE                 3
-#define DC_RANGE                    10000
+#define DC_RANGE                    1000
 #define DC_VALUE                    HBVM(DC_BP)
 
 #define ARMOURY_BP                  10
@@ -627,12 +611,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define REACTOR_ATTACK_DCC_DAMAGE   40
 #define REACTOR_VALUE               HBVM(30)
 
-#define REPEATER_BP                 0
+#define REPEATER_BP                 4
 #define REPEATER_BT                 10000
 #define REPEATER_HEALTH             HBHM(250)
 #define REPEATER_SPLASHDAMAGE       50
 #define REPEATER_SPLASHRADIUS       100
-#define REPEATER_INACTIVE_TIME      90000
 #define REPEATER_VALUE              HBVM(2)
 
 /*
@@ -644,9 +627,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HUMAN_BACK_MODIFIER         0.8f
 #define HUMAN_SIDE_MODIFIER         0.9f
 #define HUMAN_DODGE_SIDE_MODIFIER   2.9f
+#define HUMAN_DODGE_SLOWED_MODIFIER 0.9f
 #define HUMAN_DODGE_UP_MODIFIER     0.5f
 #define HUMAN_DODGE_TIMEOUT         500
-#define HUMAN_LAND_FRICTION         3.f
+#define HUMAN_LAND_FRICTION         3.0f
 
 #define STAMINA_STOP_RESTORE        25
 #define STAMINA_WALK_RESTORE        15
@@ -655,6 +639,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define STAMINA_JUMP_TAKE           250
 #define STAMINA_DODGE_TAKE          250
 #define STAMINA_BREATHING_LEVEL     0
+#define STAMINA_SLOW_LEVEL          -500
+#define STAMINA_BLACKOUT_LEVEL      -800
 
 #define HUMAN_SPAWN_REPEAT_TIME     10000
 #define HUMAN_REGEN_DAMAGE_TIME     2000 //msec since damage before dcc repairs
@@ -665,6 +651,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define HUMAN_BUILDER_SCOREINC      50       // builders receive this many points every 10 seconds
 #define ALIEN_BUILDER_SCOREINC      AVM(50)  // builders receive this many points every 10 seconds
 
+#define HUMAN_BUILDABLE_INACTIVE_TIME 90000
+
 /*
  * Misc
  */
@@ -673,18 +661,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_FALL_DISTANCE           120.0f //the fall distance at which maximum damage is dealt
 #define AVG_FALL_DISTANCE           ((MIN_FALL_DISTANCE+MAX_FALL_DISTANCE)/2.0f)
 
-#define FREEKILL_PERIOD             120000 //msec
-#define FREEKILL_ALIEN              ALIEN_CREDITS_PER_FRAG
+#define DEFAULT_FREEKILL_PERIOD     "120" //seconds
+#define FREEKILL_ALIEN              ALIEN_CREDITS_PER_KILL
 #define FREEKILL_HUMAN              LEVEL0_VALUE
 
-#define DEFAULT_ALIEN_BUILDPOINTS   "100"
-#define DEFAULT_ALIEN_QUEUE_TIME    "1250"
-#define DEFAULT_ALIEN_STAGE_THRESH "8000"
+#define DEFAULT_ALIEN_BUILDPOINTS   "150"
+#define DEFAULT_ALIEN_QUEUE_TIME    "12000"
+#define DEFAULT_ALIEN_STAGE2_THRESH "8000"
+#define DEFAULT_ALIEN_STAGE3_THRESH "16000"
 #define DEFAULT_ALIEN_MAX_STAGE     "2"
 #define DEFAULT_HUMAN_BUILDPOINTS   "100"
-#define DEFAULT_HUMAN_QUEUE_TIME    "1250"
-#define DEFAULT_HUMAN_STAGE_THRESH "4000"
-
+#define DEFAULT_HUMAN_QUEUE_TIME    "8000"
+#define DEFAULT_HUMAN_REPEATER_BUILDPOINTS "20"
+#define DEFAULT_HUMAN_REPEATER_QUEUE_TIME "0"
+#define DEFAULT_HUMAN_REPEATER_MAX_ZONES "500"
+#define DEFAULT_HUMAN_STAGE2_THRESH "4000"
+#define DEFAULT_HUMAN_STAGE3_THRESH "8000"
 #define DEFAULT_HUMAN_MAX_STAGE     "2"
 
 #define DAMAGE_FRACTION_FOR_KILL    0.5f //how much damage players (versus structures) need to

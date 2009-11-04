@@ -327,28 +327,26 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	{
 		// p_* cvars
 		playerState_t *ps = &cl.snap.ps;
-		char *info = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_STAGES ];
-		int tempammo = 0;
 
-		Cvar_SetValue( "p_team", ps->stats[ 8 ] );
-		switch( ps->stats[ 8 ] )
+		Cvar_SetValue( "p_team", ps->stats[ STAT_TEAM ] );
+		switch( ps->stats[ STAT_TEAM ] )
 		{
 		case TEAM_NONE:
 			Cvar_Set( "p_teamname", "^3Spectator" );
 			return;
 		case TEAM_ALIENS:
 			Cvar_Set( "p_teamname", "^1Alien" );
-			Cvar_SetValue( "p_stage", atoi(info) );
+			Cvar_SetValue( "p_stage", atoi(cl.gameState.stringData + cl.gameState.stringOffsets[ CS_ALIEN_STAGES ]) );
 			break;
 		case TEAM_HUMANS:
 			Cvar_Set( "p_teamname", "^4Human" );
-			Cvar_SetValue( "p_stage", atoi(info + 2) );
+			Cvar_SetValue( "p_stage", atoi(cl.gameState.stringData + cl.gameState.stringOffsets[ CS_HUMAN_STAGES ]) );
 			break;
 		}
-		Cvar_SetValue( "p_hp", ps->stats[ 0 ] );
-		Cvar_SetValue( "p_maxhp", ps->stats[ 6 ] );
-		Cvar_SetValue( "p_class", ps->stats[ 7 ] );
-		switch ( ps->stats[ 7 ] )
+		Cvar_SetValue( "p_hp", ps->stats[ STAT_HEALTH ] );
+		Cvar_SetValue( "p_maxhp", ps->stats[ STAT_MAX_HEALTH ] );
+		Cvar_SetValue( "p_class", ps->stats[ STAT_CLASS ] );
+		switch ( ps->stats[ STAT_CLASS ] )
 		{
 		case PCL_ALIEN_BUILDER0:
 			Cvar_Set( "p_classname", "Builder" );
@@ -392,14 +390,11 @@ void CL_ParseSnapshot( msg_t *msg ) {
 			Cvar_Set( "p_classname", "Unknown" );
 			break; 
 		}
-		Cvar_SetValue( "p_weapon", ps->weapon );
-		switch ( ps->weapon )
+		Cvar_SetValue( "p_weapon", ps->stats[ STAT_WEAPON ] );
+		switch ( ps->stats[ STAT_WEAPON ] )
 		{
 		case WP_HBUILD:
 			Cvar_Set( "p_weaponname", "Construction Kit" );
-			break; 
-		case WP_HBUILD+1:
-			Cvar_Set( "p_weaponname", "Advanced Construction Kit" );
 			break; 
 		case WP_BLASTER:
 			Cvar_Set( "p_weaponname", "Blaster" );
@@ -438,19 +433,10 @@ void CL_ParseSnapshot( msg_t *msg ) {
 			Cvar_Set( "p_weaponname", "Unknown" );
 			break;
 		}
-		Cvar_SetValue( "p_credits", ps->persistant[ 8 ] );
-		Cvar_SetValue( "p_score", ps->persistant[ 0 ] );
-
-		if (ps->weapon == 0)
-			tempammo = ps->ammo;
-		else if (ps->weapon == 1)
-			tempammo = ps->clips;
-		else if (ps->weapon < 16)
-			tempammo = ps->ammo_extra[ps->weapon - 2];
-		else if (ps->weapon < 32)
-			tempammo = ps->misc[ps->weapon - 16];
-		Cvar_SetValue( "p_ammo", tempammo & 0x0FFF );
-		Cvar_SetValue( "p_clips", (tempammo >> 12) & 0x0F );
+		Cvar_SetValue( "p_credits", ps->persistant[ PERS_CREDIT ] );
+		Cvar_SetValue( "p_score", ps->persistant[ PERS_SCORE ] );
+		Cvar_SetValue( "p_ammo", ps->ammo );
+		Cvar_SetValue( "p_clips", ps->clips );
 	}
 }
 
@@ -604,11 +590,6 @@ static void CL_ParseServerInfo(void)
 	Q_strncpyz(clc.sv_dlURL,
 		Info_ValueForKey(serverInfo, "sv_dlURL"),
 		sizeof(clc.sv_dlURL));
-	if (!clc.sv_dlURL[0]) {
-		Q_strncpyz(clc.sv_dlURL,
-			Info_ValueForKey(systemInfo, "sv_wwwBaseURL"),
-			sizeof(clc.sv_dlURL));
-	}
 	// If we have an URL, assume we can use HTTP
 	if (clc.sv_dlURL[0] || cl_dlURLOverride->string[0]) {
 		clc.sv_allowDownload |= DLF_ENABLE;

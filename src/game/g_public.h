@@ -155,6 +155,8 @@ typedef enum {
 
   G_GET_CONFIGSTRING, // ( int num, char *buffer, int bufferSize );
 
+  G_SET_CONFIGSTRING_RESTRICTIONS, // ( int num, const clientList* clientList );
+
   G_GET_USERINFO,   // ( int num, char *buffer, int bufferSize );
   // userinfo strings are maintained by the server system, so they
   // are persistant across level loads, while all other game visible
@@ -221,6 +223,10 @@ typedef enum {
   G_PARSE_SOURCE_FILE_AND_LINE,
 
   G_SEND_GAMESTAT,
+
+  G_ADDCOMMAND,
+  G_REMOVECOMMAND,
+
   G_DEMO_COMMAND
 } gameImport_t;
 

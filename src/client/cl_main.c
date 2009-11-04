@@ -233,6 +233,58 @@ void CL_UpdateVoipGain(const char *idstr, float gain)
 	}
 }
 
+/*
+================
+CL_VoipParseTargets
+
+Sets clc.voipTarget{1,2,3} by asking the cgame to produce a string and then
+parsing it as a series of client numbers
+Perhaps it would be better to allow the cgame to set the three integers
+directly, but this way we can change the net protocol without changing the
+vmcall
+================
+*/
+static void CL_VoipParseTargets( void )
+{
+  const char *target = cl_voipSendTarget->string;
+  intptr_t p = VM_Call( cgvm, CG_VOIP_STRING );
+
+  if( p )
+    target = VM_ExplicitArgPtr( cgvm, p );
+
+  if( !target[ 0 ] || Q_stricmp( target, "all" ) == 0 )
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0x7FFFFFFF;
+  else if( Q_stricmp( target, "none" ) == 0 )
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+  else
+  {
+    char *end;
+    int val;
+    clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
+
+    while( 1 )
+    {
+      while( *target && !isdigit( *target ) )
+        target++;
+      if( !*target )
+        break;
+
+      val = strtol( target, &end, 10 );
+      assert( target != end );
+      if( val < 0 || val >= MAX_CLIENTS )
+        Com_Printf( S_COLOR_YELLOW "WARNING: VoIP target %d is not a valid "
+                    "client number\n", val );
+      else if( val < 31 )
+        clc.voipTarget1 |= 1 << val;
+      else if( ( val -= 31 ) < 31 )
+        clc.voipTarget2 |= 1 << val;
+      else if( ( val -= 31 ) < 31 )
+        clc.voipTarget3 |= 1 << val;
+      target = end;
+    }
+  }
+}
+
 void CL_Voip_f( void )
 {
 	const char *cmd = Cmd_Argv(1);
@@ -320,106 +372,6 @@ void CL_Voip_f( void )
 		Com_Printf("usage: voip [un]ignore <playerID#>\n"
 		           "       voip [un]muteall\n"
 		           "       voip gain <playerID#> [value]\n");
-	}
-}
-
-/*
-============
-CL_VoipParseTargets
-
-Sets clc.voipTarget[123] according to cl_voipSendTarget
-Generally we don't want who's listening to change during a transmission,
-so this is only called when the first key is pressed
-============
-*/
-void CL_VoipParseTargets( void )
-{
-	char buffer[32];
-	const char *target = cl_voipSendTarget->string;
-
-	if( Q_stricmp( target, "attacker" ) == 0 )
-	{
-		int player = VM_Call( cgvm, CG_LAST_ATTACKER );
-		if( player < 0 )
-			Q_strncpyz( buffer, "none", sizeof( buffer ) );
-		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
-		target = buffer;
-	}
-	else if( Q_stricmp( target, "crosshair" ) == 0 )
-	{
-		int player = VM_Call( cgvm, CG_CROSSHAIR_PLAYER );
-		if( player < 0 )
-			Q_strncpyz( buffer, "none", sizeof( buffer ) );
-		else
-			Com_sprintf( buffer, sizeof( buffer ), "%d", player );
-		target = buffer;
-	}
-
-	if( !target[0] || Q_stricmp( target, "all" ) == 0 )
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = INT_MAX;
-	else if( Q_stricmp( target, "none" ) == 0 )
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-	else if( Q_stricmp( target, "team" ) == 0 )
-	{
-		char *t = Info_ValueForKey( cl.gameState.stringData +
-			cl.gameState.stringOffsets[CS_PLAYERS + clc.clientNum],
-			"t" );
-		int i, myteam;
-		if( t[0] )
-			myteam = atoi( t );
-		else
-		{
-			myteam = -1;
-			Com_Printf( S_COLOR_RED "Couldn't retrieve client team "
-				"information\n" );
-		}
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-		for( i = 0; i < MAX_CLIENTS; i++ )
-		{
-			if( i == clc.clientNum )
-				continue;
-			t = Info_ValueForKey( cl.gameState.stringData +
-				cl.gameState.stringOffsets[CS_PLAYERS +
-					clc.clientNum], "t" );
-			if( !t[0] )
-				continue;
-			if( myteam == atoi( t ) )
-			{
-				if( i <= 30 )
-					clc.voipTarget1 |= 1 << i;
-				else if( ( i - 31 ) <= 30 )
-					clc.voipTarget2 |= 1 << ( i - 31 );
-				else if( ( i - 62 ) <= 30 )
-					clc.voipTarget3 |= 1 << ( i - 62 );
-			}
-		}
-	}
-	else
-	{
-		char *end;
-		int val;
-		clc.voipTarget1 = clc.voipTarget2 = clc.voipTarget3 = 0;
-		while( 1 )
-		{
-			while( *target && !isdigit(*target ) )
-				target++;
-			if( !*target )
-				break;
-			val = strtol( target, &end, 10 );
-			assert( target != end );
-			if( val < 0 || val >= MAX_CLIENTS )
-				Com_Printf( S_COLOR_YELLOW "WARNING: VoIP "
-					"target %d is not a valid client "
-					"number\n", val );
-			else if( val <= 31 )
-				clc.voipTarget1 |= 1 << val;
-			else if( ( val -= 32 ) <= 31 )
-				clc.voipTarget2 |= 1 << val;
-			else if( ( val -= 32 ) <= 31 )
-				clc.voipTarget3 |= 1 << val;
-			target = end;
-		}
 	}
 }
 
@@ -1335,17 +1287,13 @@ update cl_guid using QKEY_FILE and optional prefix
 static void CL_UpdateGUID( const char *prefix, int prefix_len )
 {
 	fileHandle_t f;
-	int len, len2;
+	int len;
 	//get the length of both files
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-	FS_FCloseFile( f );
-	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
 	FS_FCloseFile( f );
 	//check lengths and set cl_guid accordinally
 	if( len == QKEY_SIZE ) {
 		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE, prefix, prefix_len ) );
-	} else if( len2 == QKEY_SIZE ) {
-		Cvar_Set( "cl_guid", Com_MD5File( QKEY_FILE_FALLBACK, QKEY_SIZE, prefix, prefix_len ) );
 	} else {
 		Cvar_Set( "cl_guid", "" );
 	}
@@ -1961,11 +1909,13 @@ void CL_DownloadsComplete( void ) {
 		CL_cURL_Shutdown();
 		if( clc.cURLDisconnected ) {
 			if(clc.downloadRestart) {
-				FS_Restart(clc.checksumFeed);
+                if( !clc.activeCURLNotGameRelated )
+                    FS_Restart(clc.checksumFeed);
 				clc.downloadRestart = qfalse;
 			}
 			clc.cURLDisconnected = qfalse;
-			CL_Reconnect_f();
+            if( !clc.activeCURLNotGameRelated )
+                CL_Reconnect_f();
 			return;
 		}
 	}
@@ -2066,7 +2016,7 @@ void CL_NextDownload(void)
 	int prompt;
 
 	// A download has finished, check whether this matches a referenced checksum
-	if(*clc.downloadName)
+	if(*clc.downloadName && !clc.activeCURLNotGameRelated)
 	{
 		char *zippath = FS_BuildOSPath(Cvar_VariableString("fs_homepath"), clc.downloadName, "");
 		zippath[strlen(zippath)-1] = '\0';
@@ -2398,6 +2348,7 @@ void CL_InitServerInfo( serverInfo_t *server, netadr_t *address ) {
 	server->clients = 0;
 	server->hostName[0] = '\0';
 	server->mapName[0] = '\0';
+	server->label[0] = '\0';
 	server->maxClients = 0;
 	server->maxPing = 0;
 	server->minPing = 0;
@@ -2405,6 +2356,80 @@ void CL_InitServerInfo( serverInfo_t *server, netadr_t *address ) {
 	server->game[0] = '\0';
 	server->gameType = 0;
 	server->netType = 0;
+}
+
+/*
+===================
+CL_GSRSequenceInformation
+
+Parses this packet's index and the number of packets from a master server's
+response. Updates the packet count and returns the index. Advances the data
+pointer as appropriate (but only when parsing was successful)
+
+The sequencing information isn't terribly useful at present (we can skip
+duplicate packets, but we don't bother to make sure we've got all of them).
+===================
+*/
+int CL_GSRSequenceInformation( byte **data )
+{
+	char *p = (char *)*data, *e;
+	int ind, num;
+	// '\0'-delimited fields: this packet's index, total number of packets
+	if( *p++ != '\0' )
+		return -1;
+
+	ind = strtol( p, (char **)&e, 10 );
+	if( *e++ != '\0' )
+		return -1;
+
+	num = strtol( e, (char **)&p, 10 );
+	if( *p++ != '\0' )
+		return -1;
+
+	if( num <= 0 || ind <= 0 || ind > num )
+		return -1; // nonsensical response
+
+	if( cls.numMasterPackets > 0 && num != cls.numMasterPackets )
+	{
+		// Assume we sent two getservers and somehow they changed in
+		// between - only use the results that arrive later
+		Com_DPrintf( "Master changed its mind about packet count!\n" );
+		cls.receivedMasterPackets = 0;
+		cls.numglobalservers = 0;
+		cls.numGlobalServerAddresses = 0;
+	}
+	cls.numMasterPackets = num;
+
+	// successfully parsed
+	*data = (byte *)p;
+	return ind;
+}
+
+/*
+===================
+CL_GSRFeaturedLabel
+
+Parses from the data an arbitrary text string labelling the servers in the
+following getserversresponse packet.
+The result is copied to *buf, and *data is advanced as appropriate
+===================
+*/
+void CL_GSRFeaturedLabel( byte **data, char *buf, int size )
+{
+	char *l = buf;
+	buf[0] = '\0';
+
+	// copy until '\0' which indicates field break
+	// or slash which indicates beginning of server list
+	while( **data && **data != '\\' && **data != '/' )
+	{
+		if( l < &buf[ size - 1 ] )
+			*l = **data;
+		else if( l == &buf[ size - 1 ] )
+			Com_DPrintf( S_COLOR_YELLOW "Warning: "
+				"CL_GSRFeaturedLabel: overflow\n" );
+		l++, (*data)++;
+	}
 }
 
 #define MAX_SERVERSPERPACKET	256
@@ -2420,13 +2445,17 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 	int				numservers;
 	byte*			buffptr;
 	byte*			buffend;
-	
-	Com_DPrintf("CL_ServersResponsePacket\n");
+	char			label[MAX_FEATLABEL_CHARS] = "";
+
+	Com_DPrintf("CL_ServersResponsePacket%s\n",
+		(extended) ? " (extended)" : "");
 
 	if (cls.numglobalservers == -1) {
 		// state to detect lack of servers or lack of response
 		cls.numglobalservers = 0;
 		cls.numGlobalServerAddresses = 0;
+		cls.numMasterPackets = 0;
+		cls.receivedMasterPackets = 0;
 	}
 
 	// parse through server response string
@@ -2434,14 +2463,46 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 	buffptr    = msg->data;
 	buffend    = buffptr + msg->cursize;
 
+	// skip header
+	buffptr += 4;
+
 	// advance to initial token
-	do
+	// I considered using strchr for this but I don't feel like relying
+	// on its behaviour with '\0'
+	while( *buffptr && *buffptr != '\\' && *buffptr != '/' )
 	{
-		if(*buffptr == '\\' || (extended && *buffptr == '/'))
-			break;
-		
 		buffptr++;
-	} while (buffptr < buffend);
+
+		if( buffptr >= buffend )
+			break;
+	}
+
+	if( *buffptr == '\0' )
+	{
+		int ind = CL_GSRSequenceInformation( &buffptr );
+		if( ind >= 0 )
+		{
+			// this denotes the start of new-syntax stuff
+			// have we already received this packet?
+			if( cls.receivedMasterPackets & ( 1 << ( ind - 1 ) ) )
+			{
+				Com_DPrintf( "CL_ServersResponsePacket: "
+					"received packet %d again, ignoring\n",
+					ind );
+				return;
+			}
+			// TODO: detect dropped packets and make another
+			// request
+			Com_DPrintf( "CL_ServersResponsePacket: packet "
+				"%d of %d\n", ind, cls.numMasterPackets );
+			cls.receivedMasterPackets |= ( 1 << ( ind - 1 ) );
+
+			CL_GSRFeaturedLabel( &buffptr, label, sizeof( label ) );
+		}
+		// now skip to the server list
+		for(; buffptr < buffend && *buffptr != '\\' && *buffptr != '/';
+			buffptr++ );
+	}
 
 	while (buffptr + 1 < buffend)
 	{
@@ -2497,6 +2558,7 @@ void CL_ServersResponsePacket( const netadr_t* from, msg_t *msg, qboolean extend
 		serverInfo_t *server = &cls.globalServers[count];
 
 		CL_InitServerInfo( server, &addresses[i] );
+		Q_strncpyz( server->label, label, sizeof( server->label ) );
 		// advance to next slot
 		count++;
 	}
@@ -3305,21 +3367,14 @@ it by filling it with 2048 bytes of random data.
 static void CL_GenerateQKey(void)
 {
 	int len = 0;
-	int len2 = 0;
 	unsigned char buff[ QKEY_SIZE ];
 	fileHandle_t f;
 
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
-	len2 = FS_SV_FOpenFileRead( QKEY_FILE_FALLBACK, &f );
-	FS_FCloseFile( f );
 
 	if( len == QKEY_SIZE ) {
 		Com_Printf( "QKEY found.\n" );
-		return;
-	}
-	else if( len2 == QKEY_SIZE ) {
-		Com_Printf( "QKEY found. (Fallback Location)\n" );
 		return;
 	}
 	else {
@@ -4025,7 +4080,6 @@ void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
 	char		command[1024], *masteraddress;
-	char		*cmdname;
 	
 	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > 4)
 	{
@@ -4060,17 +4114,10 @@ void CL_GlobalServers_f( void ) {
 	cls.numglobalservers = -1;
 	cls.pingUpdateSource = AS_GLOBAL;
 
-	// Use the extended query for IPv6 masters
-	if (to.type == NA_IP6 || to.type == NA_MULTICAST6)
-	{
-		cmdname = "getserversExt " GAMENAME_FOR_MASTER;
-
-		// TODO: test if we only have an IPv6 connection. If it's the case,
-		//       request IPv6 servers only by appending " ipv6" to the command
-	}
-	else
-		cmdname = "getservers";
-	Com_sprintf( command, sizeof(command), "%s %s", cmdname, Cmd_Argv(2) );
+	// TODO: test if we only have an IPv6 connection. If it's the case,
+	//       request IPv6 servers only by appending " ipv6" to the command
+	Com_sprintf( command, sizeof(command), "getserversExt "
+		GAMENAME_FOR_MASTER " %s", Cmd_Argv(2) );
 
 	for (i=3; i < count; i++)
 	{

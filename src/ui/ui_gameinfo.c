@@ -346,6 +346,7 @@ char *UI_GetBotNameByNumber( int num )
 void UI_ServerInfo( void )
 {
   char      info[ MAX_INFO_VALUE ];
+  char      hostname[MAX_HOSTNAME_LENGTH];
 
   info[0] = '\0';
 
@@ -357,6 +358,9 @@ void UI_ServerInfo( void )
                    Info_ValueForKey( info, "timelimit" ) );
     trap_Cvar_Set( "ui_serverinfo_sd",
                    Info_ValueForKey( info, "g_suddenDeathTime" ) );
+    UI_EscapeEmoticons( hostname, Info_ValueForKey( info, "sv_hostname" ),
+                        sizeof( hostname ) );
+    trap_Cvar_Set( "ui_serverinfo_hostname", hostname );
     trap_Cvar_Set( "ui_serverinfo_hostname",
                    Info_ValueForKey( info, "sv_hostname" ) );
     trap_Cvar_Set( "ui_serverinfo_maxclients",
@@ -365,7 +369,9 @@ void UI_ServerInfo( void )
                    Info_ValueForKey( info, "version" ) );
     trap_Cvar_Set( "ui_serverinfo_unlagged",
                    Info_ValueForKey( info, "g_unlagged" ) );
-    trap_Cvar_Set( "ui_serverinfo_ff",
-                   Info_ValueForKey( info, "ff" ) );
+    trap_Cvar_Set( "ui_serverinfo_friendlyFire",
+                   Info_ValueForKey( info, "g_friendlyFire" ) );
+    trap_Cvar_Set( "ui_serverinfo_friendlyBuildableFire",
+                   Info_ValueForKey( info, "g_friendlyBuildableFire" ) );
   }
 }

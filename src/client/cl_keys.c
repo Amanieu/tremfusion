@@ -30,7 +30,6 @@ key up events are sent even if in console mode
 
 field_t		g_consoleField;
 field_t		chatField;
-qboolean	chat_team;
 qboolean	chat_admins;
 qboolean	chat_clans;
 
@@ -730,10 +729,6 @@ void Message_Key( int key ) {
 
 				Com_sprintf( buffer, sizeof( buffer ), "m %i \"%s\"\n", chat_playerNum, chatField.buffer );
 
-			else if (chat_team)
-
-				Com_sprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", chatField.buffer );
-
 			else if (chat_admins)
 
 				Com_sprintf( buffer, sizeof( buffer ), "a \"%s\"\n", chatField.buffer );
@@ -751,9 +746,6 @@ void Message_Key( int key ) {
 				Com_sprintf( buffer, sizeof( buffer ), "vstr %s\n", prompt.callback );
 				Cbuf_ExecuteText( EXEC_NOW, buffer);
 
-			} else {
-				Com_sprintf( buffer, sizeof( buffer ), "say \"%s\"\n", chatField.buffer );
-				Hist_Add( chatField.buffer );
 			}
 
 			if ( !prompt.active )

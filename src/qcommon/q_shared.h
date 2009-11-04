@@ -206,6 +206,7 @@ typedef int		clipHandle_t;
 #define	BIG_INFO_KEY		  8192
 #define	BIG_INFO_VALUE		8192
 
+#define	MAX_NEWS_STRING		10000
 
 #define	MAX_QPATH			64		// max length of a quake game pathname
 #ifdef PATH_MAX
@@ -377,8 +378,7 @@ extern	vec4_t		colorMdGrey;
 extern	vec4_t		colorDkGrey;
 
 #define Q_COLOR_ESCAPE	'^'
-#define Q_IsColorString(p)	( (p) && *(p) == Q_COLOR_ESCAPE && isprint(*((p)+1)) && \
-                              *((p)+1) != Q_COLOR_ESCAPE && !isspace(*((p)+1)) )
+#define Q_IsColorString(p)	( (p) && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1)) )
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -756,6 +756,18 @@ char *Com_SkipCharset( char *s, char *sep );
 
 void Com_RandomBytes( byte *string, int len );
 
+typedef struct 
+{
+  unsigned int hi;
+  unsigned int lo;
+} clientList_t;
+
+qboolean Com_ClientListContains( const clientList_t *list, int clientNum );
+void Com_ClientListAdd( clientList_t *list, int clientNum );
+void Com_ClientListRemove( clientList_t *list, int clientNum );
+char *Com_ClientListString( const clientList_t *list );
+void Com_ClientListParse( clientList_t *list, const char *s );
+
 // mode parm for FS_FOpenFile
 typedef enum {
 	FS_READ,
@@ -1123,6 +1135,10 @@ typedef struct playerState_s {
 	int			torsoTimer;		// don't change low priority animations until this runs out
 	int			torsoAnim;		// mask off ANIM_TOGGLEBIT
 
+	int			tauntTimer;		// don't allow another taunt until this runs out
+
+	int			weaponAnim;		// mask off ANIM_TOGGLEBIT
+
 	int			movementDir;	// a number 0 to 7 that represents the reletive angle
 								// of movement to the view angle (axial and diagonals)
 								// when at rest, the value will remain unchanged
@@ -1158,8 +1174,6 @@ typedef struct playerState_s {
 	int			misc[MAX_MISC];	// misc data
 	int			ammo;			// ammo held
 	int			clips;			// clips held
-
-	int			ammo_extra[14]; // compatibility
 
 	int			generic1;
 	int			loopSound;
@@ -1277,6 +1291,7 @@ typedef struct entityState_s {
 	int		weapon;			// determines weapon and flash model, etc
 	int		legsAnim;		// mask off ANIM_TOGGLEBIT
 	int		torsoAnim;		// mask off ANIM_TOGGLEBIT
+	int		weaponAnim;		// mask off ANIM_TOGGLEBIT
 
 	int		generic1;
 } entityState_t;
@@ -1344,9 +1359,9 @@ typedef struct qtime_s {
 
 // server browser sources
 // AS_MPLAYER is no longer used
-#define AS_GLOBAL			2
+#define AS_GLOBAL			0
 #define AS_MPLAYER		1
-#define AS_LOCAL			0
+#define AS_LOCAL			2
 #define AS_FAVORITES	3
 
 

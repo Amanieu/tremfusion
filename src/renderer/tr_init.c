@@ -142,9 +142,6 @@ cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_pixelAspect;
 
-// compatibility
-cvar_t  *r_mode;
-
 cvar_t	*r_overBrightBits;
 cvar_t	*r_mapOverBrightBits;
 
@@ -164,8 +161,6 @@ cvar_t	*r_saveFontData;
 cvar_t	*r_celshadalgo;
 //. next one for enable/disable cel bordering all together.
 cvar_t	*r_celoutline;
-
-cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_maxpolys;
 int		max_polys;
@@ -941,13 +936,6 @@ void R_Register( void )
 	r_height = ri.Cvar_Get( "r_height", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_pixelAspect = ri.Cvar_Get( "r_pixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
-	// legacy variables
-	r_mode = ri.Cvar_Get( "r_mode", "-1", 0 );
-	ri.Cvar_CheckRange( r_mode, -1, 11, qtrue );
-	ri.Cvar_Alias(r_width, "r_customwidth");
-	ri.Cvar_Alias(r_height, "r_customheight");
-	ri.Cvar_Alias(r_pixelAspect, "r_custompixelAspect");
-
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
@@ -1020,7 +1008,7 @@ void R_Register( void )
 
 	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
 	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
-	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
+	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", CVAR_CHEAT );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
 
 	r_flareSize = ri.Cvar_Get ("r_flareSize", "40", CVAR_CHEAT);
@@ -1053,8 +1041,6 @@ void R_Register( void )
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
 	r_noportals = ri.Cvar_Get ("r_noportals", "0", CVAR_CHEAT);
 	r_shadows = ri.Cvar_Get( "cg_shadows", "1", 0 );
-
-	r_marksOnTriangleMeshes = ri.Cvar_Get("r_marksOnTriangleMeshes", "0", CVAR_ARCHIVE);
 
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
@@ -1276,6 +1262,7 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.RenderScene = RE_RenderScene;
 
 	re.SetColor = RE_SetColor;
+	re.SetClipRegion = RE_SetClipRegion;
 	re.DrawStretchPic = RE_StretchPic;
 	re.DrawStretchRaw = RE_StretchRaw;
 	re.UploadCinematic = RE_UploadCinematic;

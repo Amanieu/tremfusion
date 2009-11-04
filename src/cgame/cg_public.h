@@ -120,6 +120,7 @@ typedef enum
   CG_R_ADDLIGHTTOSCENE,
   CG_R_RENDERSCENE,
   CG_R_SETCOLOR,
+  CG_R_SETCLIPREGION,
   CG_R_DRAWSTRETCHPIC,
   CG_R_MODELBOUNDS,
   CG_R_LERPTAG,
@@ -138,11 +139,6 @@ typedef enum
   CG_KEY_GETCATCHER,
   CG_KEY_SETCATCHER,
   CG_KEY_GETKEY,
-  CG_PARSE_ADD_GLOBAL_DEFINE,
-  CG_PARSE_LOAD_SOURCE,
-  CG_PARSE_FREE_SOURCE,
-  CG_PARSE_READ_TOKEN,
-  CG_PARSE_SOURCE_FILE_AND_LINE,
   CG_S_STOPBACKGROUNDTRACK,
   CG_REAL_TIME,
   CG_SNAPVECTOR,
@@ -176,6 +172,12 @@ typedef enum
   CG_KEY_KEYNUMTOSTRINGBUF,
   CG_KEY_GETBINDINGBUF,
   CG_KEY_SETBINDING,
+
+  CG_PARSE_ADD_GLOBAL_DEFINE,
+  CG_PARSE_LOAD_SOURCE,
+  CG_PARSE_FREE_SOURCE,
+  CG_PARSE_READ_TOKEN,
+  CG_PARSE_SOURCE_FILE_AND_LINE,
 
   CG_KEY_SETOVERSTRIKEMODE,
   CG_KEY_GETOVERSTRIKEMODE,
@@ -243,10 +245,14 @@ typedef enum
   CG_EVENT_HANDLING,
   // void (*CG_EventHandling)(int type);
 
-  CG_CONSOLE_TEXT
+  CG_CONSOLE_TEXT,
   // void (*CG_ConsoleText)( void );
   // pass text that has been printed to the console to cgame
   // use Cmd_Argc() / Cmd_Argv() to read it
+
+  CG_VOIP_STRING
+  // char *(*CG_VoIPString)( void );
+  // returns a string of comma-delimited clientnums based on cl_voipSendTarget
 } cgameExport_t;
 
 //----------------------------------------------
