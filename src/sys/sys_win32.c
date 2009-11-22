@@ -587,7 +587,7 @@ Windows specific "safe" GL implementation initialisation
 */
 void Sys_GLimpSafeInit( void )
 {
-#ifndef DEDICATED
+#if !DEDICATED && !BUILD_TTY_CLIENT
 	if( !SDL_VIDEODRIVER_externallySet )
 	{
 		// Here, we want to let SDL decide what do to unless
