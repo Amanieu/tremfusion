@@ -80,7 +80,7 @@ static	int		ftolPtr = (int)qftol0F7F;
 #endif
 
 void AsmCall(void);
-static void (*const asmCallPtr)(void) = AsmCall;
+static void (*const asmCallPtr)(void);
 
 
 static	int		callMask = 0;
@@ -589,6 +589,7 @@ void VM_Compile( vm_t *vm, vmHeader_t *header ) {
 			Emit4( (int)vm->dataBase );
 			Emit4( pc );
 			EmitString( "FF 15" );		// call asmCallPtr
+			asmCallPtr = AsmCall;
 			Emit4( (int)&asmCallPtr );
 			break;
 		case OP_PUSH:
