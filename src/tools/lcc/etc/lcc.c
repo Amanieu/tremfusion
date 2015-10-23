@@ -343,7 +343,7 @@ static int callsys(char **av) {
 		}
 		argv[j] = NULL;
 		executable = strsave( argv[0] );
-		argv[0] = stringf( "\"%s\"", argv[0] );
+		argv[0] = stringf( "%s", argv[0] );
 		if (verbose > 0) {
 			int k;
 			fprintf(stderr, "%s", argv[0]);
