@@ -420,7 +420,7 @@ ifeq ($(PLATFORM),linux)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC -fvisibility=hidden
-  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   BASE_CFLAGS+=-I/usr/X11R6/include
   CLIENT_LDFLAGS=-L/usr/X11R6/$(LIB)
@@ -617,7 +617,7 @@ ifeq ($(PLATFORM),darwin)
 
   SHLIBEXT=dylib
   SHLIBCFLAGS=-fPIC -fno-common
-  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   NOTSHLIBCFLAGS=-mdynamic-no-pic
 
@@ -700,7 +700,7 @@ ifeq ($(PLATFORM),mingw32)
 
   SHLIBEXT=dll
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared $(LDFLAGS)--no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   BINEXT=.exe
 
@@ -837,7 +837,7 @@ ifeq ($(PLATFORM),freebsd)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   # don't need -ldl (FreeBSD)
   LIBS+=-lm
@@ -900,7 +900,7 @@ ifeq ($(PLATFORM),openbsd)
   SHLIBEXT=so
   SHLIBNAME=.$(SHLIBEXT)
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   LIBS=-lm
 
@@ -933,7 +933,7 @@ ifeq ($(PLATFORM),netbsd)
   LIBS=-lm
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
   CLIENT_LIBS=-lpthread
 
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
@@ -967,7 +967,7 @@ ifeq ($(PLATFORM),irix64)
 
   SHLIBEXT=so
   SHLIBCFLAGS=
-  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared -Wl,--no-allow-shlib-undefined
 
   LIBS=-ldl -lm -lgen
   # FIXME: The X libraries probably aren't necessary?
@@ -1033,7 +1033,7 @@ ifeq ($(PLATFORM),sunos)
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS) --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared $(LDFLAGS) -Wl,--no-allow-shlib-undefined
 
   LIBS=-lsocket -lnsl -ldl -lm
 
@@ -1050,7 +1050,7 @@ else # ifeq sunos
 
   SHLIBEXT=so
   SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared --no-allow-shlib-undefined
+  SHLIBLDFLAGS=-shared -Wl,--no-allow-shlib-undefined
 
 endif #Linux
 endif #darwin
